@@ -252,12 +252,13 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* Landing page without Layout (no header/chain selector) */}
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/landing" element={<LandingPage />} />
         
         {/* All other routes with Layout */}
         <Route path="/*" element={
           <Layout>
             <Routes>
+              <Route path="/" element={<MainPage />} />
               <Route path="/home" element={<MainPage />} />
               <Route path="/notifications" element={<Notification/>} />
               <Route path="connect-wallet" element={<ConnectWallet/>} />

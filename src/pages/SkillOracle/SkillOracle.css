@@ -1,3 +1,4 @@
+/* Original styles */
 .experience-percent {
     width: 100%;
 }
@@ -8,4 +9,32 @@
     justify-content: flex-end;
     align-items: center;
     padding-right: 32px;
+}
+
+/* Progress bar styles (for resolution accuracy) */
+.vote-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.progress-bar-container {
+    flex: 1;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.vote-percentage {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    min-width: 45px;
 }
