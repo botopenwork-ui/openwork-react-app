@@ -1,10 +1,68 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import BackButtonProposal from '../../components/BackButtonProposal/BackButtonProposal';
+import { getProposalDetails } from '../../services/daoService';
 import './TreasuryProposalView.css';
 
 const TreasuryProposalView = () => {
   const navigate = useNavigate();
+  const { proposalId, chain } = useParams();
+  const [proposal, setProposal] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function loadProposal() {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getProposalDetails(proposalId, chain);
+        setProposal(data);
+      } catch (err) {
+        console.error('Error loading proposal:', err);
+        setError('Failed to load proposal details');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (proposalId && chain) {
+      loadProposal();
+    }
+  }, [proposalId, chain]);
+
+  if (loading) {
+    return (
+      <div className="proposalViewContainer">
+        <div className="proposalHeaderSection">
+          <div className="back">
+            <BackButtonProposal to="/dao" />
+            <div className="proposalMainTitleWrapper">
+              <h1 className="proposalMainTitle">Loading Proposal...</h1>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !proposal) {
+    return (
+      <div className="proposalViewContainer">
+        <div className="proposalHeaderSection">
+          <div className="back">
+            <BackButtonProposal to="/dao" />
+            <div className="proposalMainTitleWrapper">
+              <h1 className="proposalMainTitle">Error Loading Proposal</h1>
+            </div>
+          </div>
+        </div>
+        <div className="proposalViewCard">
+          <p>{error || 'Proposal not found'}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="proposalViewContainer">
@@ -13,8 +71,8 @@ const TreasuryProposalView = () => {
         <div className="back">
           <BackButtonProposal to="/dao" />
           <div className="proposalMainTitleWrapper">
-            <h1 className="proposalMainTitle">OpenWork DAO Smart Contract Proposal</h1>
-            <div className="proposalStatusBadge">Open</div>
+            <h1 className="proposalMainTitle">Proposal #{proposalId.substring(0, 3)}...{proposalId.substring(proposalId.length - 3)}</h1>
+            <div className="proposalStatusBadge">{proposal.stateText}</div>
           </div>
         </div>
       </div>
@@ -31,7 +89,7 @@ const TreasuryProposalView = () => {
         <div className="proposalDetailsHeaderSection">
           <div className="proposalDetailsHeader">
             <h2 className="proposalSectionTitle">Proposal Details</h2>
-            <span className="timeLeft">2 days left</span>
+            <span className="timeLeft">{proposal.timeLeft}</span>
           </div>
         </div>
 
@@ -41,7 +99,7 @@ const TreasuryProposalView = () => {
           <div className="proposerInfo">
             <div className="proposerLeft">
               <img src="/avatar-profile.png" alt="Proposer" className="proposerAvatar" />
-              <span className="proposerName">Brijesh Pandey</span>
+              <span className="proposerName">{proposal.proposer.substring(0, 6)}...{proposal.proposer.substring(38)}</span>
             </div>
             <button className="viewProfileButton">
               <span>View Profile</span>
@@ -97,7 +155,7 @@ const TreasuryProposalView = () => {
             <div className="tokenCount">
               <span className="tokenLabel">TOKENS IN FAVOUR</span>
               <div className="tokenValue">
-                <span className="tokenNumber">1M</span>
+                <span className="tokenNumber">{parseFloat(proposal.votes.for).toFixed(0)}</span>
                 <div className="openworkToken">
                   <img src="/token-bg-circle.svg" alt="" className="tokenBgCircle" />
                   <img src="/openwork-logomark.svg" alt="" className="tokenLogomark" />
@@ -107,7 +165,7 @@ const TreasuryProposalView = () => {
             <div className="tokenCount">
               <span className="tokenLabel">TOKENS AGAINST</span>
               <div className="tokenValue">
-                <span className="tokenNumber">250K</span>
+                <span className="tokenNumber">{parseFloat(proposal.votes.against).toFixed(0)}</span>
                 <div className="openworkToken">
                   <img src="/token-bg-circle.svg" alt="" className="tokenBgCircle" />
                   <img src="/openwork-logomark.svg" alt="" className="tokenLogomark" />
@@ -122,21 +180,21 @@ const TreasuryProposalView = () => {
             </div>
             <div className="progressBarContainer">
               <div className="progressBar">
-                <div className="progressBarFill favor"></div>
-                <div className="progressBarFill against"></div>
+                <div className="progressBarFill favor" style={{width: `${proposal.percentages.for}%`}}></div>
+                <div className="progressBarFill against" style={{width: `${proposal.percentages.against}%`}}></div>
               </div>
               <div className="thresholdLine"></div>
             </div>
             <div className="progressLegend">
-              <span className="totalVotesLabel">0.25M TOTAL VOTES</span>
+              <span className="totalVotesLabel">{parseFloat(proposal.votes.for) + parseFloat(proposal.votes.against)} TOTAL VOTES</span>
               <div className="legendItems">
                 <div className="legendItem">
                   <img src="/ellipse-green.svg" alt="In Favor" />
-                  <span>0.25M IN FAVOUR</span>
+                  <span>{parseFloat(proposal.votes.for).toFixed(0)} IN FAVOUR ({proposal.percentages.for}%)</span>
                 </div>
                 <div className="legendItem">
                   <img src="/ellipse-red.svg" alt="Against" />
-                  <span>0 AGAINST</span>
+                  <span>{parseFloat(proposal.votes.against).toFixed(0)} AGAINST ({proposal.percentages.against}%)</span>
                 </div>
               </div>
             </div>

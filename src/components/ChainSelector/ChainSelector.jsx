@@ -1,35 +1,66 @@
 import React, { useState } from "react";
 import "./ChainSelector.css";
+import { useChainDetection } from "../../functions/useChainDetection";
 
-const ChainSelector = () => {
-  const [selectedChain, setSelectedChain] = useState("Arbitrum");
-  const [showChainDropdown, setShowChainDropdown] = useState(false);
+/**
+ * Pure UI component for chain selection
+ * All logic is handled by useChainDetection hook
+ */
+const ChainSelector = ({ walletAddress }) => {
+  const [showDropdown, setShowDropdown] = useState(false);
+  
+  // Get all chain state and functions from the hook
+  const {
+    currentChainId,
+    isDetecting,
+    isSwitching,
+    switchToChain,
+    supportedChains
+  } = useChainDetection(walletAddress);
 
-  const chains = [
-    { name: "Arbitrum", icon: "/arbitrum-chain.png" },
-    { name: "Ethereum", icon: "/ethereum-chain.png" },
-    { name: "Polygon", icon: "/polygon-chain.png" },
-    { name: "Optimism", icon: "/optimism-chain.png" },
-    { name: "Base", icon: "/base-chain.png" }
-  ];
+  // Don't render if no wallet connected
+  if (!walletAddress) {
+    return null;
+  }
 
-  const handleChainSelect = (chainName) => {
-    setSelectedChain(chainName);
-    setShowChainDropdown(false);
+  // Show loading state while detecting
+  if (isDetecting || currentChainId === null) {
+    return (
+      <div className="chain-selector-wrapper">
+        <div className="chain-selector-button">
+          <span>Detecting...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Get current chain info (or default to first supported chain if unknown)
+  const currentChain = supportedChains[currentChainId] || Object.values(supportedChains)[0];
+  const isUnknownChain = !supportedChains[currentChainId];
+
+  // Handle chain selection
+  const handleChainClick = async (chainId) => {
+    console.log('🎯 handleChainClick called for chain:', chainId);
+    setShowDropdown(false);
+    await switchToChain(chainId);
   };
 
   return (
     <div className="chain-selector-wrapper">
       <div
         className="chain-selector-button"
-        onClick={() => setShowChainDropdown(!showChainDropdown)}
+        onClick={() => !isSwitching && setShowDropdown(!showDropdown)}
+        style={{ cursor: isSwitching ? 'wait' : 'pointer' }}
       >
         <img
-          src={chains.find(c => c.name === selectedChain)?.icon}
-          alt={selectedChain}
+          src={currentChain.icon}
+          alt={currentChain.name}
           className="chain-icon"
         />
-        <span>{selectedChain}</span>
+        <span>
+          {isSwitching ? "Switching..." : currentChain.name}
+          {isUnknownChain && " (Unknown)"}
+        </span>
         <img
           src="/chevron-down-small.svg"
           alt="dropdown"
@@ -37,28 +68,37 @@ const ChainSelector = () => {
         />
       </div>
 
-      {/* Chain Dropdown Tooltip */}
-      {showChainDropdown && (
+      {/* Chain Dropdown */}
+      {showDropdown && !isSwitching && (
         <div className="chain-dropdown-tooltip">
           <div className="tooltip-arrow"></div>
           <div className="tooltip-content">
             <p className="tooltip-title">SELECT CHAIN</p>
             <div className="chain-options">
-              {chains.map((chain) => (
-                <div
-                  key={chain.name}
-                  className="chain-option"
-                  onClick={() => handleChainSelect(chain.name)}
-                >
-                  <img
-                    src={selectedChain === chain.name ? "/radio-button-checked.svg" : "/radio-button-unchecked.svg"}
-                    alt="radio"
-                    className="radio-icon"
-                  />
-                  <img src={chain.icon} alt={chain.name} className="chain-icon" />
-                  <span>{chain.name}</span>
-                </div>
-              ))}
+              {Object.entries(supportedChains).map(([chainId, chain]) => {
+                const chainIdNum = parseInt(chainId);
+                const isSelected = currentChainId === chainIdNum;
+                
+                return (
+                  <div
+                    key={chainId}
+                    className="chain-option"
+                    onClick={() => handleChainClick(chainIdNum)}
+                  >
+                    <img
+                      src={isSelected ? "/radio-button-checked.svg" : "/radio-button-unchecked.svg"}
+                      alt="radio"
+                      className="radio-icon"
+                    />
+                    <img 
+                      src={chain.icon} 
+                      alt={chain.name} 
+                      className="chain-icon" 
+                    />
+                    <span>{chain.name}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

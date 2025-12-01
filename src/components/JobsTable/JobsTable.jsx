@@ -47,7 +47,7 @@ function Box({icon, title, number, showJoinButton, onJoinClick}) {
     )
 }
 
-export default function JobsTable({ title, tableData, currentPage, totalPages, onPageChange, headers, titleOptions, filterOptions, applyNow, addMember, backUrl='/work', boxSection, customBoxItems, customButtonLabel, customButtonIcon, onCustomButtonClick, ledgerTitle, onReferEarnClick, hideBackButton, hidePostJob, selectedColumns, onColumnToggle, allColumns }) {
+export default function JobsTable({ title, tableData, currentPage, totalPages, onPageChange, headers, titleOptions, filterOptions, applyNow, addMember, backUrl='/work', boxSection, customBoxItems, customButtonLabel, customButtonIcon, onCustomButtonClick, ledgerTitle, onReferEarnClick, hideBackButton, hidePostJob, selectedColumns, onColumnToggle, allColumns, selectedFilter, onFilterChange }) {
     const truncateAddress = (address) => {
         if (!address) return "";
         const start = address.substring(0, 6);
@@ -105,6 +105,7 @@ export default function JobsTable({ title, tableData, currentPage, totalPages, o
                     {
                         filterOptions.map((options, index) => {
                             const isColumnSelector = options.title === "Table Columns";
+                            const isFilter = options.title === "Filter";
                             return (
                                 <FilterOption 
                                     key={index}
@@ -114,10 +115,12 @@ export default function JobsTable({ title, tableData, currentPage, totalPages, o
                                     selectedColumns={isColumnSelector ? selectedColumns : undefined}
                                     onColumnToggle={isColumnSelector ? onColumnToggle : undefined}
                                     allColumns={isColumnSelector ? allColumns : undefined}
+                                    selectedFilter={isFilter ? selectedFilter : undefined}
+                                    onFilterChange={isFilter ? onFilterChange : undefined}
                                 />
                             );
                         })
-                    }   
+                    }
                     {customButtonLabel ? 
                      <BlueButton label={customButtonLabel} icon={customButtonIcon} onClick={onCustomButtonClick || (() => {})} />
                     : applyNow?

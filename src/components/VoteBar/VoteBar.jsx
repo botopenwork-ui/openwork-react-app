@@ -5,10 +5,18 @@ const VoteBar = ({ totalVotes, votesInFavor, votesAgainst, threshold }) => {
   const inFavorPercentage = (votesInFavor / totalVotes) * 100;
   const inAgainstPercentage = (votesAgainst / totalVotes) * 100;
   const thresholdPosition = threshold; // Assuming it's a percentage
+  
+  // Calculate safe left position (never negative, never overflow right)
+  const calculateLeftPosition = () => {
+    const basePosition = thresholdPosition - 10; // Offset for centering
+    if (basePosition < 0) return '0px';
+    if (basePosition > 85) return 'calc(100% - 150px)';
+    return `${basePosition}%`;
+  };
 
   return (
     <div className="vote-bar">
-      <div className='min-threshold' style={{ left: `calc(${thresholdPosition}% - 63px)` }}>
+      <div className='min-threshold' style={{ left: calculateLeftPosition() }}>
         <span>MIN. THRESHOLD {threshold}%</span>
       </div>
 

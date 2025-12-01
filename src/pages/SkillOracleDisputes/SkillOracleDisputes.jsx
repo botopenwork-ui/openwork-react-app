@@ -2,17 +2,41 @@ import React, { useEffect, useMemo, useState } from "react";
 import JobsTable from "../../components/JobsTable/JobsTable";
 import "./SkillOracleDisputes.css";
 import DetailButton from "../../components/DetailButton/DetailButton";
+import { fetchAllDisputes } from "../../services/disputeService";
+import { formatAddress } from "../../utils/oracleHelpers";
 
 export default function SkillOracleDisputes() {
-    const [account, setAccount] = useState(null);
+    const [disputes, setDisputes] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const disputesPerPage = 5; // Number of disputes per page
-    const [walletAddress, setWalletAddress] = useState("");
-    const [loading, setLoading] = useState(true); // Loading state
+    const disputesPerPage = 5;
 
     const headers = ["Request Title", "Proposed By", "Role", "Vote Submissions", "Amount", ""];
 
-    const disputes = [
+    // Fetch disputes from blockchain
+    useEffect(() => {
+        async function loadDisputes() {
+            try {
+                setLoading(true);
+                setError(null);
+                
+                const disputeData = await fetchAllDisputes();
+                setDisputes(disputeData);
+                
+                console.log("Dispute data loaded successfully!");
+            } catch (err) {
+                console.error("Error loading disputes:", err);
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        loadDisputes();
+    }, []);
+
+    const dummyDisputes = [
         {
             id: "0x1234",
             title: 'OpenWork UX/UI',
@@ -121,15 +145,21 @@ export default function SkillOracleDisputes() {
         }
     ] 
 
+    const displayDisputes = disputes.length > 0 ? disputes : dummyDisputes;
+
     const tableData = useMemo(() => {
-        return disputes.map((dispute) => {
+        return displayDisputes.map((dispute) => {
+            const isRealData = dispute.proposedBy && dispute.proposedBy.startsWith('0x');
+            
             return [
                 <div className="dispute-title">
                     <img src="/file-05.svg" alt="File Icon" className="fileIcon" />
                     <span>{dispute.title}</span>
                 </div>,
                 <div className="proposed-by">
-                    <span>{dispute.proposedBy}</span>
+                    <span title={dispute.proposedBy}>
+                        {isRealData ? formatAddress(dispute.proposedBy) : dispute.proposedBy}
+                    </span>
                 </div>,
                 <div className="dispute-role">
                     <span>{dispute.role}</span>
@@ -155,7 +185,7 @@ export default function SkillOracleDisputes() {
                 </div>
             ];
         });
-    }, [disputes])
+    }, [displayDisputes])
 
     const indexOfLastDispute = currentPage * disputesPerPage;
     const indexOfFirstDispute = indexOfLastDispute - disputesPerPage;

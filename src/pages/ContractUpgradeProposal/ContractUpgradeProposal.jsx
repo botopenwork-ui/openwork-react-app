@@ -7,30 +7,24 @@ export default function ContractUpgradeProposal() {
     const navigate = useNavigate();
 
     const contracts = [
-        {
-            id: 1,
-            name: "OpenWork DAO Smart Contract",
-            route: "/contract-upgrade-proposal-step2"
-        },
-        {
-            id: 2,
-            name: "OpenWork Token Smart Contract",
-            route: "/contract-upgrade-token"
-        },
-        {
-            id: 3,
-            name: "OpenWork's Athena (Skill Oracles)",
-            route: "/contract-upgrade-athena"
-        },
-        {
-            id: 4,
-            name: "OpenWork's Job Contract",
-            route: "/contract-upgrade-job"
-        }
+        { id: 1, name: "Main DAO" },
+        { id: 2, name: "Native DAO" },
+        { id: 3, name: "OpenWork Token" },
+        { id: 4, name: "Native OpenWork Job Contract" },
+        { id: 5, name: "Local OpenWork Job Contract" },
+        { id: 6, name: "Native Athena" },
+        { id: 7, name: "Native Athena Oracle Manager" },
+        { id: 8, name: "Athena Client" },
+        { id: 9, name: "Main Rewards" },
+        { id: 10, name: "Native Rewards" },
+        { id: 11, name: "OpenWork Genesis" },
+        { id: 12, name: "Profile Genesis" },
+        { id: 13, name: "Profile Manager" },
+        { id: 14, name: "Contract Registry" }
     ];
 
-    const handleContractClick = (route) => {
-        navigate(route);
+    const handleContractClick = (contractName) => {
+        navigate('/contract-upgrade-proposal-step2', { state: { contractName } });
     };
 
     return (
@@ -50,7 +44,7 @@ export default function ContractUpgradeProposal() {
                             <button
                                 key={contract.id}
                                 className="contract-item"
-                                onClick={() => handleContractClick(contract.route)}
+                                onClick={() => handleContractClick(contract.name)}
                             >
                                 <div className="contract-item-content">
                                     <img 

@@ -2,17 +2,36 @@ import React, { useEffect, useMemo, useState } from "react";
 import JobsTable from "../../components/JobsTable/JobsTable";
 import "./DAOMembers.css";
 import DetailButton from "../../components/DetailButton/DetailButton";
+import { getAllDAOMembers } from "../../services/daoService";
+import { formatAddress } from "../../utils/oracleHelpers";
 
 export default function DAOMembers() {
-    const [account, setAccount] = useState(null);
+    const [members, setMembers] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
-    const membersPerPage = 5; // Number of members per page
-    const [walletAddress, setWalletAddress] = useState("");
-    const [loading, setLoading] = useState(true); // Loading state
+    const membersPerPage = 5;
 
     const headers = ["Member Name", "Proposals Created", "Proposals Voted on", "Last Activity", "Wallet Address", "Tokens Staked"];
 
-    const members = [
+    // Fetch DAO members from both chains
+    useEffect(() => {
+        async function loadMembers() {
+            try {
+                setLoading(true);
+                const memberData = await getAllDAOMembers();
+                setMembers(memberData);
+                console.log("DAO members loaded successfully!");
+            } catch (error) {
+                console.error("Error loading DAO members:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        loadMembers();
+    }, []);
+
+    const dummyMembers = [
         {
             id: 0,
             name: 'Mollie Hall',
@@ -101,38 +120,50 @@ export default function DAOMembers() {
         }
     ] 
 
+    // Use blockchain data or fallback to dummy
+    const displayMembers = members.length > 0 ? members : dummyMembers;
+
     const tableData = useMemo(() => {
-        return members.map((member) => {
+        return displayMembers.map((member) => {
+            const isRealData = member.address !== undefined;
+            
             return [
                 <div className="member-name">
                     <img src="/avatar-profile.png" alt="User Icon" className="userIcon" />
-                    {member.name && <span>{member.name}</span>}
+                    <span title={member.address}>
+                        {isRealData ? formatAddress(member.address) : member.name}
+                    </span>
                 </div>,
                 <div className="proposals-created">
-                    <span>{member.proposalsCreated}</span>
+                    <span>{isRealData ? "N/A" : member.proposalsCreated}</span>
                 </div>,
                 <div className="proposals-voted">
-                    <span>{member.proposalsVoted}</span>
+                    <span>{isRealData ? member.governanceActions : member.proposalsVoted}</span>
                 </div>,
                 <div className="last-activity">
-                    <span>{member.lastActivity}</span>
+                    <span>{isRealData ? member.lastActivity : member.lastActivity}</span>
                 </div>,
                 <div className="wallet-address">
-                    <span>{member.walletAddress}</span>
+                    <span>{isRealData ? formatAddress(member.address) : member.walletAddress}</span>
                 </div>,
                 <div className="tokens-staked">
-                    <span>{member.tokensStaked.toLocaleString()}</span>
+                    <span>
+                        {isRealData 
+                            ? parseFloat(member.tokensStaked).toLocaleString(undefined, {maximumFractionDigits: 0})
+                            : member.tokensStaked.toLocaleString()
+                        }
+                    </span>
                     <img src="/openwork-token.svg" alt="OW Token" className="tokenIcon" />
                 </div>
             ];
         });
-    }, [members])
+    }, [displayMembers])
 
     const indexOfLastMember = currentPage * membersPerPage;
     const indexOfFirstMember = indexOfLastMember - membersPerPage;
     const currentMembers = tableData.slice(indexOfFirstMember, indexOfLastMember);
 
-    const totalPages = Math.ceil(members.length / membersPerPage);
+    const totalPages = Math.ceil(displayMembers.length / membersPerPage);
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
     return (

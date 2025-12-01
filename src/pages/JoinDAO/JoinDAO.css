@@ -21,6 +21,7 @@
     height: 88px;
     background: #FFFFFF;
     border: 2px solid #FFFFFF;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 24px 24px 0 0;
     display: flex;
     align-items: center;
@@ -72,7 +73,7 @@
 .join-dao-content {
     background: #FFFFFF;
     border: 2px solid #FFFFFF;
-    padding: 60px 32px 32px 32px;
+    padding: 24px 32px 32px 32px;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -214,6 +215,59 @@
     font-size: 14px;
     line-height: 24px;
     color: #050505;
+}
+
+.balance-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 500;
+    font-size: 20px;
+    line-height: 24px;
+    color: #050505;
+    width: 100%;
+}
+
+.balance-input::placeholder {
+    color: #D0D0D0;
+}
+
+.balance-input:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.duration-select {
+    width: 420px;
+    height: 48px;
+    background: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 500;
+    font-size: 20px;
+    line-height: 24px;
+    color: #050505;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%234D4D4D' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 40px;
+}
+
+.duration-select:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.warning-form {
+    width: 100%;
+    margin-top: 8px;
 }
 
 .join-dao-button {

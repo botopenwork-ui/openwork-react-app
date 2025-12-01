@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Web3 from "web3";
-import L1ABI from "../../L1ABI.json";
+import GenesisABI from "../../ABIs/genesis_ABI.json";
 import "./ReviewDispute.css";
 import Button from "../../components/Button/Button";
 import VoteBar from "../../components/VoteBar/VoteBar";
+import { formatAddress } from "../../utils/oracleHelpers";
 
 function JobdetailItem ({title, icon , amount, token}) {
   return (
@@ -31,16 +32,18 @@ function ATTACHMENTS({title}) {
   }
 
 export default function ReviewDispute() {
-  const { jobId } = useParams();
-  const [job, setJob] = useState(null);
-  const [releaseAmount, setReleaseAmount] = useState("");
-  const [note, setNote] = useState("");
+  const params = useParams();
+  const disputeId = params.disputeId || params.jobId; // Support both routes
+  
+  const [dispute, setDispute] = useState(null);
+  const [voters, setVoters] = useState([]);
+  const [jobData, setJobData] = useState(null);
   const [account, setAccount] = useState(null);
   const navigate = useNavigate();
   const [loadingT, setLoadingT] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
   const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [loading, setLoading] = useState(true); // Initialize loading state
+  const [loading, setLoading] = useState(true);
 
   function formatWalletAddressH(address) {
     if (!address) return "";
@@ -114,54 +117,71 @@ export default function ReviewDispute() {
   };
 
   useEffect(() => {
-    async function fetchJobDetails() {
+    async function fetchDisputeDetails() {
+      if (!disputeId) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        const web3 = new Web3("https://erpc.xinfin.network"); // Using the specified RPC endpoint
-        const contractAddress = "0x00844673a088cBC4d4B4D0d63a24a175A2e2E637";
-        const contract = new web3.eth.Contract(L1ABI, contractAddress);
+        console.log("Fetching dispute:", disputeId);
+        
+        const web3 = new Web3(import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL);
+        const genesisAddress = import.meta.env.VITE_GENESIS_CONTRACT_ADDRESS;
+        const genesisContract = new web3.eth.Contract(GenesisABI, genesisAddress);
 
-        // Fetch job details
-        const jobDetails = await contract.methods.getJobDetails(jobId).call();
-        const ipfsHash = jobDetails.jobDetailHash;
-        const ipfsData = await fetchFromIPFS(ipfsHash);
+        // Fetch dispute data
+        const disputeData = await genesisContract.methods.getDispute(disputeId).call();
+        
+        // Fetch voters
+        const votersData = await genesisContract.methods.getDisputeVoters(disputeId).call();
+        
+        console.log("Dispute data:", disputeData);
+        console.log("Voters:", votersData);
 
-        // Fetch proposed amount using getApplicationProposedAmount
-        const proposedAmountWei = await contract.methods
-          .getApplicationProposedAmount(jobId)
-          .call();
+        // Calculate vote percentages
+        const totalVotes = Number(disputeData.votesFor) + Number(disputeData.votesAgainst);
+        const votesForPercent = totalVotes > 0 ? (Number(disputeData.votesFor) / totalVotes) : 0;
+        const votesAgainstPercent = totalVotes > 0 ? (Number(disputeData.votesAgainst) / totalVotes) : 0;
 
-        // Fetch escrow amount using getJobEscrowAmount
-        const escrowAmountWei = await contract.methods
-          .getJobEscrowAmount(jobId)
-          .call();
+        // Format amounts (USDC has 6 decimals)
+        const disputedAmount = (Number(disputeData.disputedAmount) / 1e6).toFixed(2);
+        const feeAmount = (Number(disputeData.fees) / 1e6).toFixed(2);
 
-        // Convert amounts from wei to ether
-        const proposedAmount = web3.utils.fromWei(proposedAmountWei, "ether");
-        const currentEscrowAmount = web3.utils.fromWei(escrowAmountWei, "ether");
+        // Calculate time remaining
+        const votingPeriodSeconds = 60 * 60; // 60 minutes
+        const now = Math.floor(Date.now() / 1000);
+        const elapsed = now - Number(disputeData.timeStamp);
+        const remaining = votingPeriodSeconds - elapsed;
+        const daysLeft = remaining > 0 ? Math.ceil(remaining / (24 * 60 * 60)) : 0;
 
-        const amountReleased = proposedAmount - currentEscrowAmount;
-
-        setJob({
-          jobId,
-          employer: jobDetails.employer,
-          escrowAmount: currentEscrowAmount,
-          isJobOpen: jobDetails.isOpen,
-          totalEscrowAmount: proposedAmount,
-          amountLocked: currentEscrowAmount,
-          amountReleased: amountReleased,
-          ...ipfsData,
+        setDispute(disputeData);
+        setVoters(votersData);
+        setJobData({
+          disputeId,
+          disputedAmount,
+          feeAmount,
+          votesFor: disputeData.votesFor.toString(),
+          votesAgainst: disputeData.votesAgainst.toString(),
+          totalVotes,
+          votesForPercent,
+          votesAgainstPercent,
+          raiser: disputeData.disputeRaiserAddress,
+          isVotingActive: disputeData.isVotingActive,
+          isFinalized: disputeData.isFinalized,
+          daysLeft,
+          hash: disputeData.hash,
         });
 
-        setLoading(false); // Stop loading animation after fetching data
+        setLoading(false);
       } catch (error) {
-        console.error("Error fetching job details:", error);
-        setLoading(false); // Ensure loading stops even if there is an error
+        console.error("Error fetching dispute details:", error);
+        setLoading(false);
       }
     }
 
-    fetchJobDetails();
-  }, [jobId]);
-
+    fetchDisputeDetails();
+  }, [disputeId]);
 
   const fetchFromIPFS = async (hash) => {
     try {
@@ -171,16 +191,6 @@ export default function ReviewDispute() {
       console.error("Error fetching data from IPFS:", error);
       return {};
     }
-  };
-
-  const handleNavigation = () => {
-    window.open("https://drive.google.com/file/d/1tdpuAM3UqiiP_TKJMa5bFtxOG4bU_6ts/view", "_blank");
-  };
-
-  const formatAmount = (amount) => {
-    if (parseFloat(amount) === 0) return "0"; // Handle zero value without decimal
-    const roundedAmount = parseFloat(amount).toFixed(2); // Rounds to 2 decimal places
-    return roundedAmount.length > 5 ? roundedAmount.slice(0, 8) : roundedAmount;
   };
 
  
@@ -253,7 +263,7 @@ export default function ReviewDispute() {
     );
   }
 
-  if (!job) {
+  if (!jobData) {
     return <div>Loading...</div>;
   }
 
@@ -261,13 +271,13 @@ export default function ReviewDispute() {
     <>
       <div className="newTitle">
          <div className="titleTop">
-          <Link className="goBack" to={`/job-details/${jobId}`}><img className="goBackImage" src="/back.svg" alt="Back Button" /></Link>  
-          <div className="titleText" style={{fontWeight:'550'}}>OpenWork UX/UI</div>
-          <Link className="goBack" to={`/job-details/${jobId}`} style={{visibility:'hidden'}}><img className="goBackImage" src="/back.svg" alt="Back Button" /></Link>  
+          <Link className="goBack" to="/skill-oracle-disputes"><img className="goBackImage" src="/back.svg" alt="Back Button" /></Link>  
+          <div className="titleText" style={{fontWeight:'550'}}>Dispute {disputeId}</div>
+          <Link className="goBack" to="/skill-oracle-disputes" style={{visibility:'hidden'}}><img className="goBackImage" src="/back.svg" alt="Back Button" /></Link>  
          </div>
          <div className="titleBottom">
-          <a href="/profile" className="view-profile">
-                <span>View Job</span>
+          <a href={`/profile/${jobData.raiser}`} className="view-profile">
+                <span>View Raiser Profile</span>
                 <img src="/view_profile.svg" alt="" />
             </a>
          </div>
@@ -277,7 +287,7 @@ export default function ReviewDispute() {
         <div className="form-container-release">
           <div className="sectionTitle reviewTitle">
             <span id="rel-title" style={{paddingTop:'0px'}}>Dispute Details</span>
-            <span className="left-days">2 days left</span>
+            <span className="left-days">{jobData.daysLeft} days left</span>
           </div>
           <div className="release-payment-body">
             <div className="form-groupDC">
@@ -285,10 +295,10 @@ export default function ReviewDispute() {
                     <span className="detail-label">RAISED BY</span>
                     <div className="detail-profile">
                     <span className="detail-value-address">
-                        <img src="/user.png" alt="JobGiver" className="Job" />
-                        <p>Mollie Hall</p>
+                        <img src="/user.png" alt="Dispute Raiser" className="Job" />
+                        <p title={jobData.raiser}>{formatAddress(jobData.raiser)}</p>
                     </span>
-                    <a href="/profile" className="view-profile">
+                    <a href={`/profile/${jobData.raiser}`} className="view-profile">
                         <span>View Profile</span>
                         <img src="/view_profile.svg" alt="" />
                     </a>
@@ -297,75 +307,67 @@ export default function ReviewDispute() {
             </div>
             <div className="form-groupDC job-body">
               <div className="job-detail-sectionR">
-                <JobdetailItem title="AMOUNT PAID" amount={job.totalEscrowAmount}/>
-                <JobdetailItem title="TOTAL AMOUNT" amount={job.amountLocked}/>
-                <JobdetailItem title="DISPUTED AMOUNT" amount={job.amountReleased}/>
+                <JobdetailItem title="DISPUTED AMOUNT" amount={jobData.disputedAmount}/>
+                <JobdetailItem title="DISPUTE FEE" amount={jobData.feeAmount}/>
+                <JobdetailItem title="TOTAL VOTERS" amount={voters.length}/>
               </div>
             </div>
             <div className="form-groupDC">
                 <div className="detail-row">
-                    <span className="detail-label">DESCRIPTION</span>
+                    <span className="detail-label">EVIDENCE HASH</span>
                     <div className="detail-value description-value">
-                        <p>I paid a lot of money to this freelancer, but the work that they have done is absolutely shitty. I don’t wanna pay them more money</p>
-                    </div>
-                </div>
-            </div>
-            <div className="form-groupDC">
-                <div className="category attachments">
-                    <span>ATTACHMENTS</span>
-                    <div className="upload-content">
-                    <ATTACHMENTS title={'Scope of work.pdf'}/>
+                        <p>{jobData.hash || "No evidence provided"}</p>
                     </div>
                 </div>
             </div>
             <div className="form-groupDC token-section">
                <div className="job-detail-sectionR" style={{width:'100%'}}>
-                    <JobdetailItem title="TOKENS IN FAVOUR" amount={'1M'} token={true}/>
+                    <JobdetailItem title="TOKENS IN FAVOUR" amount={Web3.utils.fromWei(jobData.votesFor || '0', 'ether').slice(0, 8)} token={true}/>
                </div>
                <div className="job-detail-sectionR" style={{width:'100%'}}>
-                    <JobdetailItem title="TOKENS AGAINST" amount={'250K'} token={true}/>
+                    <JobdetailItem title="TOKENS AGAINST" amount={Web3.utils.fromWei(jobData.votesAgainst || '0', 'ether').slice(0, 8)} token={true}/>
                </div>
             </div>
             <div className="form-groupDC" style={{marginTop:'53px'}}>
                 <VoteBar
                     totalVotes={1}
-                    votesInFavor={0.25}
-                    votesAgainst={0}
-                    threshold={75}
+                    votesInFavor={jobData.votesForPercent}
+                    votesAgainst={jobData.votesAgainstPercent}
+                    threshold={0.5}
                 />
             </div>
             <div className="form-groupDC">
                <div className="job-detail-sectionR vote-conditions">
                     <div className="vote-conditions-header">
-                    CONDITIONS TO BE MET BEFORE TIME LOCK PERIOD
+                    VOTING STATUS
                     </div>
                     <div className="vote-conditions-content">
                         <span>•</span>
-                        <span>1M minimum votes</span>
-                        <span style={{color:'#767676'}}>(Current: 0.25M votes)</span>
+                        <span>Total Votes: {jobData.totalVotes}</span>
                     </div>
                     <div className="vote-conditions-content">
                         <span>•</span>
-                        <span>75% minimum approval percentage</span>
-                        <span style={{color:'#767676'}}>(Current: 0.25M votes)</span>
+                        <span>Status: {jobData.isFinalized ? 'Finalized' : (jobData.isVotingActive ? 'Active' : 'Ended')}</span>
                     </div>
                     <a href="/voting-history" className="vote-conditions-history">
-                        <span>Vote History</span>
+                        <span>Vote History ({voters.length} voters)</span>
                         <img src="/view-history.svg" alt="" />
                     </a>
                </div>
             </div>
             <div className="form-groupDC">
                <div className="job-detail-sectionR">
-                    <JobdetailItem title="RESOLUTION COMPENSATION" icon={true} amount={'250'}/>
+                    <JobdetailItem title="RESOLUTION COMPENSATION" icon={true} amount={jobData.feeAmount}/>
                </div>
             </div>
-            <div className="form-groupDC">
-               <div className="vote-button-section">
-                    <Button label={'Downvote'} icon='/against.svg' buttonCss={'downvote-button'}/>
-                    <Button label={'Upvote'} icon='/favour.svg' buttonCss={'downvote-button upvote-button'}/>
-               </div>
-            </div>
+            {jobData.isVotingActive && !jobData.isFinalized && (
+              <div className="form-groupDC">
+                 <div className="vote-button-section">
+                      <Button label={'Downvote'} icon='/against.svg' buttonCss={'downvote-button'}/>
+                      <Button label={'Upvote'} icon='/favour.svg' buttonCss={'downvote-button upvote-button'}/>
+                 </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

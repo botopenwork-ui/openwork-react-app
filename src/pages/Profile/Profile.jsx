@@ -23,6 +23,9 @@ export default function Profile() {
     // Using the useWalletConnection hook to handle wallet-related state and logic
     const { walletAddress, connectWallet, disconnectWallet } =
       useWalletConnection();
+    
+    // Use address from URL or fallback to connected wallet
+    const displayAddress = address || walletAddress;
   
     // Using the useDropdown hook to manage dropdown visibility state
     const { dropdownVisible, toggleDropdown } = useDropdown();
@@ -59,10 +62,10 @@ export default function Profile() {
     // Fetch profile data from blockchain and IPFS
     useEffect(() => {
       async function fetchProfileData() {
-        if (!address) return;
+        if (!displayAddress) return;
         
         try {
-          console.log("Fetching profile data for:", address);
+          console.log("Fetching profile data for:", displayAddress);
           
           // Get profile from ProfileGenesis contract on Arbitrum Sepolia
           const web3 = new Web3(import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL);
@@ -70,14 +73,14 @@ export default function Profile() {
           const contract = new web3.eth.Contract(ProfileGenesisABI, contractAddress);
           
           // Check if profile exists
-          const profileExists = await contract.methods.hasProfile(address).call();
+          const profileExists = await contract.methods.hasProfile(displayAddress).call();
           
           if (!profileExists) {
             console.log("No profile found for this address");
             return;
           }
           
-          const profile = await contract.methods.getProfile(address).call();
+          const profile = await contract.methods.getProfile(displayAddress).call();
           const ipfsHash = profile.ipfsHash;
           
           console.log("Profile IPFS hash:", ipfsHash);
@@ -107,7 +110,7 @@ export default function Profile() {
       }
       
       fetchProfileData();
-    }, [address]);
+    }, [displayAddress]);
   
     return (
       <main className="container-home">
@@ -181,7 +184,7 @@ export default function Profile() {
   
           {/* Top button - About */}
           <MenuItem
-            to="/profile-about"
+            to={`/profile/${displayAddress}`}
             id="buttonTop-home"
             buttonsVisible={buttonsVisible}
             buttonFlex={buttonFlex}
@@ -207,7 +210,7 @@ export default function Profile() {
   
           {/* Right button - Work */}
           <MenuItem
-            to={`/profile/${address}/jobs`}
+            to={`/profile/${displayAddress}/jobs`}
             id="buttonRight-home"
             buttonsVisible={buttonsVisible}
             buttonFlex={buttonFlex}

@@ -420,7 +420,7 @@ export default function ProfileOwnerView() {
         <>
             <div className="newTitle">
                 <div className="titleTop">
-                <div className="goBack" onClick={() => navigate(`/profile/${address}`)} style={{ cursor: 'pointer' }}>
+                <div className="goBack" onClick={() => navigate(`/profile`)} style={{ cursor: 'pointer' }}>
                     <img className="goBackImage" src="/back.svg" alt="Back Button" />
                 </div>
                 <div className="titleText">{username || "Loading..."}</div>

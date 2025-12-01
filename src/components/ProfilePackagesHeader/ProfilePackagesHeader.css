@@ -42,6 +42,7 @@
 .profile-header-bottom {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 12px;
 }
 
@@ -59,8 +60,7 @@
     height: 20px;
     cursor: pointer;
     transition: opacity 0.2s ease;
-    margin-left: 8px;
-    margin-top: -15px;
+    margin-top: -2px;
 }
 
 .copy-icon:hover {

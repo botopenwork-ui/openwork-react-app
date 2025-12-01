@@ -92,6 +92,7 @@ import ContractUpgradeProposalView from "./pages/ContractUpgradeProposalView/Con
 import TreasuryProposalView from "./pages/TreasuryProposalView/TreasuryProposalView";
 import DissolveOracleProposalView from "./pages/DissolveOracleProposalView/DissolveOracleProposalView";
 import RecruitmentProposalView from "./pages/RecruitmentProposalView/RecruitmentProposalView";
+import GenericProposalView from "./pages/GenericProposalView/GenericProposalView";
 import ChainSwitching from "./pages/ChainSwitching/ChainSwitching";
 import ReferralNotEligible from "./pages/ReferralNotEligible/ReferralNotEligible";
 import ReferralEligible from "./pages/ReferralEligible/ReferralEligible";
@@ -100,6 +101,7 @@ import ReferEarn from "./pages/ReferEarn/ReferEarn";
 import UserReferralSignIn from "./pages/UserReferralSignIn/UserReferralSignIn";
 import SkillVerification from "./pages/SkillVerification/SkillVerification";
 import LandingPage from "./pages/LandingPage/LandingPage";
+import Timeline from "./dev-tools/Timeline/Timeline";
 
 function MainPage() {
   // Using the useWalletConnection hook to handle wallet-related state and logic
@@ -283,6 +285,7 @@ export default function App() {
               <Route path="/profile/:address" element={<ProfileOwnerView/>}/>
               <Route path="/profile-about" element={<ProfileAbout/>}/>
               <Route path="/profile-jobs" element={<ProfileJobs/>}/>
+              <Route path="/profile/:address/jobs" element={<ProfileJobs/>}/>
               <Route path="/application-jobs" element={<ApplicationJobs/>}/>
               <Route path="/profile-portfolio" element={<ProfilePortfolio/>}/>
               <Route path="/profile-portfolio-owner" element={<ProfilePortfolioOwner/>}/>
@@ -307,6 +310,7 @@ export default function App() {
               <Route path="/voting-history/:jobId" element={<VotingHistory/>} />
               <Route path="/add-member" element={<AddMember/>} />
               <Route path="/review-dispute/:jobId" element={<ReviewDispute/>} />
+              <Route path="/dispute-view/:disputeId" element={<ReviewDispute/>} />
               <Route path="/joinee-application/:jobId" element={<JoineeApplication/>} />
               <Route path="/removal-application/:jobId" element={<RemovalApplication/>} />
               <Route path="/recruitment-application/:jobId" element={<RecruitmentApplication/>} />
@@ -339,7 +343,8 @@ export default function App() {
               <Route path="/skilloraclememberremovalstep2" element={<SkillOracleMemberRemovalStep2/>} />
               <Route path="/contract-update-proposal-view" element={<ContractUpdateProposalView/>} />
               <Route path="/contract-upgrade-proposal-view" element={<ContractUpgradeProposalView/>} />
-              <Route path="/treasury-proposal-view" element={<TreasuryProposalView/>} />
+              <Route path="/proposal-view/:proposalId/:chain" element={<GenericProposalView/>} />
+              <Route path="/treasury-proposal-view/:proposalId/:chain" element={<TreasuryProposalView/>} />
               <Route path="/dissolve-oracle-proposal-view" element={<DissolveOracleProposalView/>} />
               <Route path="/recruitment-proposal-view" element={<RecruitmentProposalView/>} />
               <Route path="/chain-switching" element={<ChainSwitching/>} />
@@ -349,6 +354,7 @@ export default function App() {
               <Route path="/refer-earn" element={<ReferEarn/>} />
               <Route path="/user-referral-signin" element={<UserReferralSignIn/>} />
               <Route path="/skill-verification-page" element={<SkillVerification/>} />
+              <Route path="/dev/timeline" element={<Timeline/>} />
             </Routes>
           </Layout>
         } />

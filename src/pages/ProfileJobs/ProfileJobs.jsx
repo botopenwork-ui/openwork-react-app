@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import Web3 from "web3";
-import L1ABI from "../../L1ABI.json";
+import { useNavigate, Link, useParams } from "react-router-dom";
 import JobsTable from "../../components/JobsTable/JobsTable";
 import "./ProfileJobs.css";
 import SkillBox from "../../components/SkillBox/SkillBox";
 import DetailButton from "../../components/DetailButton/DetailButton";
+import { getInProgressJobs, getUserJobs, fetchJobTitles } from "../../services/jobService";
+import { formatAddress } from "../../utils/oracleHelpers";
 
 const OptionItems = [
     'talent1','talent2','talent3',
@@ -20,16 +20,48 @@ function JobStatus({status}) {
 }
 
 export default function ProfileJobs() {
-    //   const [jobs, setJobs] = useState([]);
-    const [account, setAccount] = useState(null);
+    const { address } = useParams();
+    const [jobs, setJobs] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
-    const jobsPerPage = 5; // Number of jobs per page
-    const [walletAddress, setWalletAddress] = useState("");
-    const [loading, setLoading] = useState(true); // Loading state
+    const jobsPerPage = 5;
 
     const headers = ["Job Title", "From", "To", "Status", "Amount", ""];
 
-    const jobs = [
+    // Fetch jobs from blockchain (filtered by user if address provided)
+    useEffect(() => {
+        async function loadJobs() {
+            try {
+                setLoading(true);
+                
+                // If address provided, get user-specific jobs; otherwise get all
+                const jobData = address 
+                    ? await getUserJobs(address)
+                    : await getInProgressJobs();
+                    
+                setJobs(jobData);
+                console.log(`Jobs loaded successfully! (${address ? 'user-filtered' : 'all'})`);
+                
+                // Fetch titles from IPFS in background (progressive enhancement)
+                if (jobData.length > 0) {
+                    fetchJobTitles(jobData).then(jobsWithTitles => {
+                        setJobs(jobsWithTitles);
+                        console.log("Job titles updated from IPFS");
+                    }).catch(error => {
+                        console.error("Error fetching titles:", error);
+                    });
+                }
+            } catch (error) {
+                console.error("Error loading jobs:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        loadJobs();
+    }, [address]);
+
+    const dummyJobs = [
         {
             id: 0,
             title: 'UI for OpenWork',
@@ -129,22 +161,31 @@ export default function ProfileJobs() {
         }
     ] 
 
+    // Use blockchain data or fallback to dummy
+    const displayJobs = jobs.length > 0 ? jobs : dummyJobs;
+
     const tableData = useMemo(() => {
-        return jobs.map((job) => {
+        return displayJobs.map((job) => {
+            const isRealData = job.jobGiver !== undefined;
+            
             return [
                 <div>
                     <img src="/doc.svg" alt="Document Icon" className="docIcon" />
-                    {job.title && <span>{job.title}</span>}
+                    <span>{isRealData ? job.title : job.title}</span>
                 </div>,
                 <div className="job-from">
-                    <span>{job.from}</span>
+                    <span title={job.jobGiver}>
+                        {isRealData ? formatAddress(job.jobGiver) : job.from}
+                    </span>
                     <img src="/arrow-circle-right.svg" alt="" />
                 </div>,
                 <div className="skills-required">
-                    {job.to}
+                    <span title={job.selectedApplicant}>
+                        {isRealData ? formatAddress(job.selectedApplicant) : job.to}
+                    </span>
                 </div>,
                 <div className="">
-                    <JobStatus status={job.status} />
+                    <JobStatus status={isRealData ? job.status : job.status} />
                 </div>,
                 <div className="budget">
                     <span>{job.amount}</span>
@@ -155,13 +196,13 @@ export default function ProfileJobs() {
                 </div>
             ];
         });
-    }, [jobs])
+    }, [displayJobs])
 
     const indexOfLastJob = currentPage * jobsPerPage;
     const indexOfFirstJob = indexOfLastJob - jobsPerPage;
     const currentJobs = tableData.slice(indexOfFirstJob, indexOfLastJob);
 
-    const totalPages = Math.ceil(jobs.length / jobsPerPage);
+    const totalPages = Math.ceil(displayJobs.length / jobsPerPage);
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
     return (

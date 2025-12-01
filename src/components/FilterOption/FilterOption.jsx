@@ -9,7 +9,9 @@ const FilterOption = ({
   isColumnSelector = false,
   selectedColumns = [],
   onColumnToggle,
-  allColumns = []
+  allColumns = [],
+  selectedFilter = 'All',
+  onFilterChange
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState(label);
@@ -73,7 +75,11 @@ const FilterOption = ({
             options.map((option, index) => (
               <React.Fragment key={index}>
                 <li className="dropdown-item">
-                  <ComboBox label={option} />
+                  <ComboBox 
+                    label={option}
+                    isChecked={selectedFilter === option}
+                    onChange={() => onFilterChange && onFilterChange(option)}
+                  />
                 </li>
                 {index !== options.length - 1 && <span className='dropdown-line'/>}
               </React.Fragment>

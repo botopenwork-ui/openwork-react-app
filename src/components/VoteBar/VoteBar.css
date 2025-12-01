@@ -19,6 +19,15 @@
   .min-threshold {
     position: absolute;
     top: -21px;
+    max-width: 150px;
+    white-space: nowrap;
+    /* Prevent overflow on left side */
+    left: clamp(0px, calc(var(--threshold-pos) - 63px), calc(100% - 150px)) !important;
+  }
+  
+  .min-threshold span {
+    display: inline-block;
+    min-width: max-content;
   }
   
   .header {
@@ -96,4 +105,3 @@
   .red-dot {
     background-color: #B42318;
   }
-  

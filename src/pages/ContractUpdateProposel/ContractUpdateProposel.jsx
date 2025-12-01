@@ -7,30 +7,25 @@ export default function ContractUpdateProposel() {
   const navigate = useNavigate();
 
   const contracts = [
-    {
-      id: 1,
-      name: "OpenWork DAO Smart Contract",
-      route: "/contract-update-step2"
-    },
-    {
-      id: 2,
-      name: "OpenWork Token Smart Contract",
-      route: "/token-contract-update-step2"
-    },
-    {
-      id: 3,
-      name: "OpenWork's Athena (Skill Oracles)",
-      route: "/athena-contract-update-step2"
-    },
-    {
-      id: 4,
-      name: "OpenWork's Job Contract",
-      route: "/job-contract-update-step2"
-    }
+    { id: 1, name: "Main DAO" },
+    { id: 2, name: "Native DAO" },
+    { id: 3, name: "Native Athena" },
+    { id: 4, name: "Native Athena Oracle Manager" },
+    { id: 5, name: "Native OpenWork Job Contract" },
+    { id: 6, name: "Local OpenWork Job Contract" },
+    { id: 7, name: "Athena Client" },
+    { id: 8, name: "Main Rewards" },
+    { id: 9, name: "Native Rewards" },
+    { id: 10, name: "Main Chain Bridge" },
+    { id: 11, name: "Native Bridge" },
+    { id: 12, name: "Local Bridge" },
+    { id: 13, name: "Profile Manager" },
+    { id: 14, name: "OpenWork Genesis" },
+    { id: 15, name: "Profile Genesis" }
   ];
 
-  const handleContractClick = (route) => {
-    navigate(route);
+  const handleContractClick = (contractName) => {
+    navigate('/contract-update-step2', { state: { contractName } });
   };
 
   return (
@@ -50,7 +45,7 @@ export default function ContractUpdateProposel() {
               <button
                 key={contract.id}
                 className="contract-update-item"
-                onClick={() => handleContractClick(contract.route)}
+                onClick={() => handleContractClick(contract.name)}
               >
                 <div className="contract-update-item-content">
                   <img src="/file-icon.svg" alt="" className="contract-file-icon" />

@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import Web3 from "web3";
-import L1ABI from "../../L1ABI.json";
 import JobsTable from "../../components/JobsTable/JobsTable";
 import "./ApplicationJobs.css";
 import SkillBox from "../../components/SkillBox/SkillBox";
 import DetailButton from "../../components/DetailButton/DetailButton";
+import { getAllApplications, fetchJobTitles } from "../../services/jobService";
+import { formatAddress } from "../../utils/oracleHelpers";
 
 const OptionItems = [
     'talent1','talent2','talent3',
@@ -20,15 +20,42 @@ function ApplicationStatus({status}) {
 }
 
 export default function ApplicationJobs() {
-    const [account, setAccount] = useState(null);
+    const [applications, setApplications] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
-    const jobsPerPage = 5; // Number of applications per page
-    const [walletAddress, setWalletAddress] = useState("");
-    const [loading, setLoading] = useState(true); // Loading state
+    const jobsPerPage = 5;
 
     const headers = ["Job Title", "Applicant", "Sent To", "Status", "Amount", ""];
 
-    const applications = [
+    // Fetch all applications from blockchain
+    useEffect(() => {
+        async function loadApplications() {
+            try {
+                setLoading(true);
+                const appData = await getAllApplications();
+                setApplications(appData);
+                console.log("Applications loaded successfully!");
+                
+                // Fetch job titles from IPFS in background
+                if (appData.length > 0) {
+                    fetchJobTitles(appData).then(appsWithTitles => {
+                        setApplications(appsWithTitles);
+                        console.log("Application job titles updated from IPFS");
+                    }).catch(error => {
+                        console.error("Error fetching titles:", error);
+                    });
+                }
+            } catch (error) {
+                console.error("Error loading applications:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        loadApplications();
+    }, []);
+
+    const dummyApplications = [
         {
             id: 0,
             title: 'UI for OpenWork',
@@ -129,18 +156,27 @@ export default function ApplicationJobs() {
         }
     ] 
 
+    // Use blockchain data or fallback to dummy
+    const displayApplications = applications.length > 0 ? applications : dummyApplications;
+
     const tableData = useMemo(() => {
-        return applications.map((application) => {
+        return displayApplications.map((application) => {
+            const isRealData = application.applicant && application.applicant.startsWith('0x');
+            
             return [
                 <div className="application-title-cell">
                     <img src="/doc.svg" alt="Document Icon" className="docIcon" />
-                    {application.title && <span>{application.title}</span>}
+                    <span>{application.title}</span>
                 </div>,
                 <div className="applicant-cell">
-                    <span>{application.applicant}</span>
+                    <span title={application.applicant}>
+                        {isRealData ? formatAddress(application.applicant) : application.applicant}
+                    </span>
                 </div>,
                 <div className="sent-to-cell">
-                    <span>{application.sentTo}</span>
+                    <span title={application.sentTo}>
+                        {isRealData ? formatAddress(application.sentTo) : application.sentTo}
+                    </span>
                     <img src="/arrow-circle-right.svg" alt="" />
                 </div>,
                 <div className="status-cell">
@@ -151,17 +187,17 @@ export default function ApplicationJobs() {
                     <img src="/xdc.svg" alt="XDC" />
                 </div>,
                 <div className="view-detail">
-                    <DetailButton to={`/view-job-details/${application.id}`} imgSrc="/view.svg" alt="detail"  />
+                    <DetailButton to={`/view-job-details/${application.jobId || application.id}`} imgSrc="/view.svg" alt="detail"  />
                 </div>
             ];
         });
-    }, [applications])
+    }, [displayApplications])
 
     const indexOfLastApplication = currentPage * jobsPerPage;
     const indexOfFirstApplication = indexOfLastApplication - jobsPerPage;
     const currentApplications = tableData.slice(indexOfFirstApplication, indexOfLastApplication);
 
-    const totalPages = Math.ceil(applications.length / jobsPerPage);
+    const totalPages = Math.ceil(displayApplications.length / jobsPerPage);
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
     return (

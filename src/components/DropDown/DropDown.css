@@ -48,8 +48,11 @@
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
     list-style-type: none;
     padding: 0;
-    width: 100%;
-    z-index: 10;
+    width: max-content;
+    min-width: 100%;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 9999;
   }
   
   .dropdown-item {
@@ -84,4 +87,3 @@
     height: 1px;
     background-color: #f7f7f7;
   }
-  

@@ -6,6 +6,7 @@ const { processStartJob } = require('./flows/start-job');
 const { processReleasePayment } = require('./flows/release-payment');
 const { compileContract } = require('./utils/compiler');
 const deploymentRoutes = require('./routes/deployments');
+const proposalRoutes = require('./routes/proposals');
 
 // Initialize Express
 const app = express();
@@ -14,6 +15,9 @@ app.use(cors()); // Enable CORS for frontend communication
 
 // Mount deployment routes
 app.use('/api/deployments', deploymentRoutes);
+
+// Mount proposal routes
+app.use('/api/proposals', proposalRoutes);
 
 // Track processing jobs to avoid duplicates
 const processingJobs = new Set();

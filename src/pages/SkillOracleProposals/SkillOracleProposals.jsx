@@ -2,17 +2,41 @@ import React, { useEffect, useMemo, useState } from "react";
 import JobsTable from "../../components/JobsTable/JobsTable";
 import "./SkillOracleProposals.css";
 import DetailButton from "../../components/DetailButton/DetailButton";
+import { fetchAllProposals } from "../../services/proposalService";
+import { formatAddress } from "../../utils/oracleHelpers";
 
 export default function SkillOracleProposals() {
-    const [account, setAccount] = useState(null);
+    const [proposals, setProposals] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const proposalsPerPage = 5; // Number of proposals per page
-    const [walletAddress, setWalletAddress] = useState("");
-    const [loading, setLoading] = useState(true); // Loading state
+    const proposalsPerPage = 5;
 
     const headers = ["Request Title", "Submitted By", "Type", "Vote Submissions", ""];
 
-    const proposals = [
+    // Fetch proposals from blockchain
+    useEffect(() => {
+        async function loadProposals() {
+            try {
+                setLoading(true);
+                setError(null);
+                
+                const proposalData = await fetchAllProposals();
+                setProposals(proposalData);
+                
+                console.log("Proposal data loaded successfully!");
+            } catch (err) {
+                console.error("Error loading proposals:", err);
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        loadProposals();
+    }, []);
+
+    const dummyProposals = [
         {
             id: 0,
             title: 'React Development Oracle Recruitment Suggestion',
@@ -114,15 +138,21 @@ export default function SkillOracleProposals() {
         }
     ] 
 
+    const displayProposals = proposals.length > 0 ? proposals : dummyProposals;
+
     const tableData = useMemo(() => {
-        return proposals.map((proposal) => {
+        return displayProposals.map((proposal) => {
+            const isRealData = proposal.submittedBy && proposal.submittedBy.startsWith('0x');
+            
             return [
                 <div className="proposal-title">
                     <img src="/file-05.svg" alt="File Icon" className="fileIcon" />
                     <span>{proposal.title}</span>
                 </div>,
                 <div className="submitted-by">
-                    <span>{proposal.submittedBy}</span>
+                    <span title={proposal.submittedBy}>
+                        {isRealData ? formatAddress(proposal.submittedBy) : proposal.submittedBy}
+                    </span>
                 </div>,
                 <div className="proposal-type">
                     <span>{proposal.type}</span>
@@ -144,13 +174,13 @@ export default function SkillOracleProposals() {
                 </div>
             ];
         });
-    }, [proposals])
+    }, [displayProposals])
 
     const indexOfLastProposal = currentPage * proposalsPerPage;
     const indexOfFirstProposal = indexOfLastProposal - proposalsPerPage;
     const currentProposals = tableData.slice(indexOfFirstProposal, indexOfLastProposal);
 
-    const totalPages = Math.ceil(proposals.length / proposalsPerPage);
+    const totalPages = Math.ceil(displayProposals.length / proposalsPerPage);
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
     return (

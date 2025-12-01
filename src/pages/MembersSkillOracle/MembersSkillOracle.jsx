@@ -3,18 +3,41 @@ import JobsTable from "../../components/JobsTable/JobsTable";
 import "./MembersSkillOracle.css";
 import SkillBox from "../../components/SkillBox/SkillBox";
 import DetailButton from "../../components/DetailButton/DetailButton";
+import { fetchAllOracleData } from "../../services/oracleService";
+import { formatAddress, getAccuracyColor } from "../../utils/oracleHelpers";
 
 export default function MembersSkillOracle() {
-    //   const [jobs, setJobs] = useState([]);
-    const [account, setAccount] = useState(null);
+    const [oracleData, setOracleData] = useState({ oracles: [], members: [] });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const usersPerPage = 5; // Number of jobs per page
-    const [walletAddress, setWalletAddress] = useState("");
-    const [loading, setLoading] = useState(true); // Loading state
+    const usersPerPage = 5;
 
     const headers = ["Member Name", "Rating", "Skills", "Experience", "Resolution Accuracy", ""];
 
-    const users = [
+    // Fetch oracle members from blockchain
+    useEffect(() => {
+        async function loadMemberData() {
+            try {
+                setLoading(true);
+                setError(null);
+                
+                const data = await fetchAllOracleData();
+                setOracleData(data);
+                
+                console.log("Member data loaded successfully!");
+            } catch (err) {
+                console.error("Error loading member data:", err);
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        loadMemberData();
+    }, []);
+
+    const users = oracleData.members.length > 0 ? oracleData.members : [
         {
             id: 0,
             name: 'Mollie Hall',
@@ -123,34 +146,52 @@ export default function MembersSkillOracle() {
 
     const tableData = useMemo(() => {
         return users.map((user) => {
+            // Handle both real blockchain data and dummy data
+            const isRealData = user.address !== undefined;
+            const accuracyColor = isRealData ? getAccuracyColor(user.accuracy) : (user.color || '#FFA500');
+            
             return [
                 <div className="user">
                     <img src="/user.png" alt="User Icon" className="userIcon" />
-                    {user.name && <span>{user.name}</span>}
+                    <span title={user.address}>
+                        {isRealData ? formatAddress(user.address) : user.name}
+                    </span>
                 </div>,
                 <div className="rating">
-                    <span>{user.rating}</span>
+                    <span>{user.rating || 'N/A'}</span>
                     <img src="/star.svg" alt="" />
                 </div>,
                 <div className="skills-required">
-                    <SkillBox title={user.skills}/>
-                    <SkillBox title="+2"/>
+                    <SkillBox title={isRealData ? user.oracle : user.skills}/>
+                    <SkillBox title="+0"/>
                 </div>,
-                <div className="experience">{user.experience+" Years"}</div>,
+                <div className="experience">
+                    {isRealData 
+                        ? (user.daysSinceActivity >= 0 ? `${Math.floor(user.daysSinceActivity / 365)} Years` : "N/A")
+                        : (user.experience + " Years")
+                    }
+                </div>,
                 <div className="vote-progress">
                     <div className="progress-bar-container">
                         <div 
                             className="progress-bar-fill" 
                             style={{ 
-                                width: `${user.prcent}%`,
-                                backgroundColor: user.color 
+                                width: `${isRealData ? user.accuracy : user.prcent}%`,
+                                backgroundColor: accuracyColor
                             }}
                         />
                     </div>
-                    <span className="vote-percentage">{user.prcent}%</span>
+                    <span className="vote-percentage">
+                        {isRealData ? user.accuracy : user.prcent}%
+                    </span>
                 </div>,
                 <div className="view-detail">
-                    <DetailButton to={`/members-governance/0`} title={'Governance'} imgSrc="/view.svg" alt="detail"/>
+                    <DetailButton 
+                        to={isRealData ? `/profile/${user.address}` : `/members-governance/0`}
+                        title={'Governance'} 
+                        imgSrc="/view.svg" 
+                        alt="detail"
+                    />
                 </div>
             ];
         });

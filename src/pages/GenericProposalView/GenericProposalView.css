@@ -1,0 +1,572 @@
+.genericProposalViewContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  background-color: #FEFEFE;
+  min-height: 100vh;
+  animation: fadeIn 0.4s ease-in-out;
+  padding-top: clamp(50px, 10vh, 200px) !important;
+  position: relative;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Header Section with Back Button and Title */
+.genericProposalHeaderSection {
+  width: 100%;
+  max-width: 1440px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 48px 8px 48px !important;
+  margin-bottom: 0px;
+}
+
+.genericProposalHeaderSection .back {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Main Title Wrapper - With Badge */
+.genericProposalMainTitleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Card Container */
+.genericProposalViewCard {
+  width: 520px;
+  background-color: #FFFFFF;
+  border-radius: 24px;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.08);
+  padding: 24px 32px 32px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeInUp 0.5s ease-in-out;
+  margin-top: 32px;
+}
+
+.genericProposalMainTitle {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  color: #4D4D4D;
+  margin: 0;
+  line-height: normal;
+  letter-spacing: 0.48px;
+}
+
+.genericProposalStatusBadge {
+  background-color: #ECFDF3;
+  border: 1px solid #ABEFC6;
+  border-radius: 6px;
+  padding: 4px 10px 6px 10px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  color: #067647;
+}
+
+/* Proposal Details Header Section with Line */
+.genericProposalDetailsHeaderSection {
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  margin: -24px -32px 0 -32px;
+  padding: 24px 32px;
+}
+
+/* Proposal Details Header */
+.genericProposalDetailsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.genericProposalSectionTitle {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  color: #4D4D4D;
+  margin: 0;
+  line-height: normal;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.genericTimeLeft {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #868686;
+  line-height: normal;
+  letter-spacing: 0.28px;
+  white-space: nowrap;
+}
+
+/* Section Styles */
+.genericProposedBySection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.genericSectionLabel {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  color: #767676;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.genericChainInfo {
+  background-color: #F5F5F5;
+  border: 2px solid #FFFFFF;
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+}
+
+.genericChainName {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #050505;
+}
+
+.genericProposerInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.genericProposerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.genericProposerAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 96px;
+  object-fit: cover;
+}
+
+.genericProposerName {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #050505;
+}
+
+.genericViewProfileButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.2s ease;
+}
+
+.genericViewProfileButton:hover {
+  opacity: 0.8;
+}
+
+.genericViewProfileButton span {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #1246FF;
+  line-height: 24px;
+}
+
+.genericViewProfileButton svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Proposal Content */
+.genericProposalContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.genericStatusDescriptionBox {
+  border: 2px solid #FFFFFF;
+  border-radius: 12px;
+  padding: 16px;
+  background-color: #FFFFFF;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.genericStatusDescription {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #4D4D4D;
+  margin: 0;
+  line-height: 24px;
+}
+
+.genericInfoBox {
+  background-color: #F5F5F5;
+  border: 2px solid #FFFFFF;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.genericInfoLabel {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  color: #767676;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  line-height: 20px;
+}
+
+.genericInfoValue {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  color: #4D4D4D;
+  letter-spacing: 0.24px;
+  line-height: normal;
+  word-break: break-all;
+}
+
+/* Voting Section */
+.genericVotingSection {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.genericTokenCounts {
+  display: flex;
+  gap: 16px;
+}
+
+.genericTokenCount {
+  flex: 1;
+  background-color: #F5F5F5;
+  border: 2px solid #FFFFFF;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.genericTokenLabel {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  color: #767676;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0;
+  line-height: 20px;
+}
+
+.genericTokenValue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.genericTokenNumber {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  color: #4D4D4D;
+  letter-spacing: 0.32px;
+  line-height: normal;
+}
+
+/* OpenWork Token Icon */
+.genericOpenworkToken {
+  width: 16px;
+  height: 16px;
+  position: relative;
+  background: linear-gradient(to bottom, #1246FF 23.958%, #4770FF 134.37%);
+  border: 1px solid #1246FF;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.genericTokenBgCircle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.genericTokenLogomark {
+  position: absolute;
+  width: 0.746px;
+  height: 0.601px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+/* Progress Bar Section */
+.genericProgressBarSection {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.genericProgressLabels {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.genericThresholdLabel {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  color: #767676;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  line-height: normal;
+}
+
+.genericProgressBarContainer {
+  height: 8px;
+  position: relative;
+  width: 100%;
+  display: flex;
+  gap: 2px;
+}
+
+.genericProgressBar {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  display: flex;
+  gap: 2px;
+  background-color: #EAECF0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.genericProgressBarFill {
+  height: 8px;
+  position: relative;
+  transition: width 0.3s ease;
+}
+
+.genericProgressBarFill.favor {
+  background-color: #17B26A;
+}
+
+.genericProgressBarFill.against {
+  background-color: #B42318;
+}
+
+.genericThresholdLine {
+  position: absolute;
+  left: 75%;
+  top: -4px;
+  width: 1px;
+  height: 16px;
+  background-color: #000000;
+  z-index: 10;
+}
+
+.genericProgressLegend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.genericTotalVotesLabel {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  color: #767676;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  line-height: normal;
+}
+
+.genericLegendItems {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.genericLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.genericLegendItem img {
+  width: 8px;
+  height: 8px;
+}
+
+.genericLegendItem span {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  color: #767676;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  line-height: normal;
+}
+
+/* Vote Status Message */
+.genericVoteStatus {
+  background-color: #F5F5F5;
+  border: 2px solid #FFFFFF;
+  border-radius: 12px;
+  padding: 12px 16px;
+  text-align: center;
+}
+
+.genericVoteStatus p {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #4D4D4D;
+  margin: 0;
+  line-height: 24px;
+}
+
+/* Execute Button */
+.genericExecuteButton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  height: 48px;
+  border-radius: 12px;
+  border: 4px solid #1246FF;
+  background: linear-gradient(180deg, #1246FF 23.96%, #4770FF 134.37%);
+  font-family: 'Satoshi', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 24px;
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.genericExecuteButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0px 4px 12px rgba(18, 70, 255, 0.3);
+}
+
+.genericExecuteButton:active {
+  transform: translateY(0);
+}
+
+.genericExecuteButton span {
+  line-height: 24px;
+  color: #FFFFFF;
+}
+
+/* Vote Buttons */
+.genericVoteButtonsRow {
+  display: flex;
+  gap: 24px;
+  width: 100%;
+}
+
+.genericDownvoteButton,
+.genericUpvoteButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  height: 48px;
+  border-radius: 12px;
+  border: 4px solid #FFF;
+  background: linear-gradient(180deg, #F4F4F4 0%, #FEFEFE 100%);
+  box-shadow: 0px 0px 0.386px 1.158px rgba(0, 0, 0, 0.05), 0px 4.634px 5.02px -2.317px rgba(0, 0, 0, 0.10);
+  font-family: 'Satoshi', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 24px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  box-sizing: border-box;
+}
+
+.genericDownvoteButton {
+  color: #B42318;
+}
+
+.genericUpvoteButton {
+  color: #067647;
+}
+
+.genericDownvoteButton span,
+.genericUpvoteButton span {
+  line-height: 24px;
+}
+
+.genericVoteIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.genericDownvoteButton:hover,
+.genericUpvoteButton:hover {
+  background-color: #e0e0e0;
+}
+
+.genericDownvoteButton:active,
+.genericUpvoteButton:active {
+  background-color: #d0d0d0;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

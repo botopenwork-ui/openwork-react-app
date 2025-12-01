@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Web3 from "web3";
-import L1ABI from "../../L1ABI.json";
 import JobsTable from "../../components/JobsTable/JobsTable";
 import SkillBox from "../../components/SkillBox/SkillBox";
 import DetailButton from "../../components/DetailButton/DetailButton";

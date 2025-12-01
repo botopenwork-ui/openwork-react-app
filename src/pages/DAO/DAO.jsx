@@ -1,18 +1,60 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import JobsTable from "../../components/JobsTable/JobsTable";
 import "./DAO.css";
 import DetailButton from "../../components/DetailButton/DetailButton";
 import BlueButton from "../../components/BlueButton/BlueButton";
+import { getDAOStats, getAllProposals } from "../../services/daoService";
 
 export default function DAO() {
     const navigate = useNavigate();
     const [currentPage, setCurrentPage] = useState(1);
     const proposalsPerPage = 4;
+    const [daoStats, setDaoStats] = useState(null);
+    const [proposals, setProposals] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [walletAddress, setWalletAddress] = useState("");
+    const [selectedFilter, setSelectedFilter] = useState('All');
 
     const headers = ["Request Title", "Proposed By", "Vote Submissions", "Type", "Time Left", ""];
 
-    const proposals = [
+    // Fetch DAO data from both chains
+    useEffect(() => {
+        async function loadDAOData() {
+            try {
+                setLoading(true);
+                
+                // Get wallet address
+                let userAddr = "";
+                if (window.ethereum) {
+                    const accounts = await window.ethereum.request({ method: "eth_accounts" });
+                    if (accounts.length > 0) {
+                        userAddr = accounts[0];
+                        setWalletAddress(userAddr);
+                    }
+                }
+                
+                // Fetch stats and proposals
+                const [stats, proposalData] = await Promise.all([
+                    getDAOStats(userAddr),
+                    getAllProposals()
+                ]);
+                
+                setDaoStats(stats);
+                setProposals(proposalData);
+                
+                console.log("DAO data loaded successfully!");
+            } catch (error) {
+                console.error("Error loading DAO data:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        loadDAOData();
+    }, []);
+
+    const dummyProposals = [
         {
             id: "0x1234",
             title: "OpenWork Token Contract Upgrade",
@@ -100,13 +142,27 @@ export default function DAO() {
             items: [
                 'All',
                 'Active',
-                'Completed'
+                'Pending',
+                'Succeeded',
+                'Defeated',
+                'Executed',
+                'Canceled',
+                'Queued',
+                'Expired'
             ]
         }
     ];
 
+    // Use blockchain data or fallback to dummy data
+    let displayProposals = proposals.length > 0 ? proposals : dummyProposals;
+    
+    // Apply filter
+    if (selectedFilter !== 'All') {
+        displayProposals = displayProposals.filter(proposal => proposal.type === selectedFilter);
+    }
+
     const tableData = useMemo(() => {
-        return proposals.map((proposal) => {
+        return displayProposals.map((proposal) => {
             return [
                 <div className="proposal-title">
                     <img src="/doc.svg" alt="" className="docIcon" />
@@ -134,32 +190,33 @@ export default function DAO() {
                 </div>
             ];
         });
-    }, [proposals]);
+    }, [displayProposals, navigate]);
 
     // Calculate indices for pagination
     const indexOfLastProposal = currentPage * proposalsPerPage;
     const indexOfFirstProposal = indexOfLastProposal - proposalsPerPage;
     const currentProposals = tableData.slice(indexOfFirstProposal, indexOfLastProposal);
 
-    const totalPages = Math.ceil(proposals.length / proposalsPerPage);
+    const totalPages = Math.ceil(displayProposals.length / proposalsPerPage);
 
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
+    // Use real data from blockchain or fallback to defaults
     const customBoxItems = [
         {
             icon: '/proposals.svg',
             title: 'SKILL ORACLES',
-            number: '12'
+            number: daoStats ? daoStats.skillOracleCount.toString() : '12'
         },
         {
             icon: '/members.svg',
             title: 'DAO MEMBERS',
-            number: '120'
+            number: daoStats ? daoStats.totalMembers.toString() : '120'
         },
         {
             icon: '/stakings.svg',
             title: 'MY CURRENT STAKINGS',
-            number: '0'
+            number: daoStats ? daoStats.userStakings : '0'
         }
     ];
 
@@ -181,6 +238,8 @@ export default function DAO() {
                     headers={headers}
                     titleOptions={titleOptions}
                     filterOptions={filterOptions}
+                    selectedFilter={selectedFilter}
+                    onFilterChange={setSelectedFilter}
                     applyNow={false}
                     boxSection={true}
                     customBoxItems={customBoxItems}
