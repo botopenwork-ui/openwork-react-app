@@ -100,6 +100,7 @@ import ReferEarn from "./pages/ReferEarn/ReferEarn";
 import UserReferralSignIn from "./pages/UserReferralSignIn/UserReferralSignIn";
 import SkillVerification from "./pages/SkillVerification/SkillVerification";
 import LandingPage from "./pages/LandingPage/LandingPage";
+import EditWorkProfile from "./pages/EditWorkProfile/EditWorkProfile";
 
 function MainPage() {
   // Using the useWalletConnection hook to handle wallet-related state and logic
@@ -286,6 +287,7 @@ export default function App() {
               <Route path="/profile-portfolio" element={<ProfilePortfolio/>}/>
               <Route path="/profile-portfolio-owner" element={<ProfilePortfolioOwner/>}/>
               <Route path="/view-work-profile/:id" element={<ViewWorkProfile/>}/>
+              <Route path="/edit-work-profile/:id" element={<EditWorkProfile/>}/>
               <Route path="/profile-packages" element={<ProfilePackages/>}/>
               <Route path="/view-package/:packageId" element={<ViewPackage/>}/>
               <Route path="/create-package" element={<CreatePackage/>}/>
@@ -342,7 +344,7 @@ export default function App() {
               <Route path="/dissolve-oracle-proposal-view" element={<DissolveOracleProposalView/>} />
               <Route path="/recruitment-proposal-view" element={<RecruitmentProposalView/>} />
               <Route path="/chain-switching" element={<ChainSwitching/>} />
-              <Route path="/referral-not-eligible" element={<ReferralNotEligible/>} />
+              <Route path="/referral-not-eligible" element={<ReferralNotEligible/>} />f
               <Route path="/referral-eligible" element={<ReferralEligible/>} />
               <Route path="/refer-earn-not-eligible" element={<ReferEarnNotEligible/>} />
               <Route path="/refer-earn" element={<ReferEarn/>} />

@@ -1,0 +1,687 @@
+.viewwork-page-wrapper {
+  min-height: calc(100vh - 80px);
+  width: 100%;
+  background: transparent;
+  position: relative;
+  font-family: 'Satoshi', sans-serif;
+}
+
+/* Title Section */
+.newTitle {
+  margin-top: 4%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.titleTop {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.titleBottom {
+  display: flex;
+  align-items: center;
+}
+
+.titleText {
+  white-space: pre;
+  font-family: 'Satoshi', sans-serif;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  letter-spacing: 0.02em;
+  color: #4D4D4D;
+}
+
+.goBack {
+  margin-left: -15px;
+  height: 40px;
+  width: 40px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.goBackImage {
+  width: 100%;
+  height: 100%;
+}
+
+.title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.edit-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Title Tooltip */
+.edit-tooltip {
+  position: absolute;
+  top: calc(100% + 16px);
+  left: 0;
+  background: #FFFFFF;
+  border: 1px solid #EAECF0;
+  border-radius: 12px;
+  box-shadow: 0px 12px 12px -4px rgba(16, 24, 40, 0.04), 0px 4px 6px -2px rgba(16, 24, 40, 0.03);
+  padding: 16px;
+  min-width: 277px;
+  z-index: 100;
+}
+
+.tooltip-arrow {
+  position: absolute;
+  top: -6px;
+  left: 20px;
+  width: 12px;
+  height: 12px;
+  background: #FFFFFF;
+  border: 1px solid #EAECF0;
+  border-right: none;
+  border-bottom: none;
+  transform: rotate(45deg);
+}
+
+.tooltip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tooltip-input {
+  width: 100%;
+  height: 48px;
+  background: #FFFFFF;
+  border: 2px solid #FFFFFF;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #868686;
+  outline: none;
+}
+
+.tooltip-input:focus {
+  border-color: #1246FF;
+}
+
+.save-btn-small {
+  height: 32px;
+  background: linear-gradient(180deg, #1246FF 23.96%, #4770FF 134.37%);
+  border: 4px solid #1246FF;
+  border-radius: 10px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: #FFFFFF;
+  cursor: pointer;
+  padding: 0 16px;
+  align-self: flex-end;
+}
+
+.save-btn-small:hover {
+  background: linear-gradient(180deg, #0D3AD6 23.96%, #3A5FE6 134.37%);
+}
+
+/* User Info Section */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Satoshi', sans-serif;
+  font-size: 14px;
+  color: #868686;
+}
+
+.user-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-details {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-name {
+  font-weight: 400;
+  color: #767676;
+}
+
+.user-separator {
+  color: #868686;
+}
+
+.user-package {
+  font-weight: 400;
+  color: #868686;
+}
+
+/* Content Container */
+.viewwork-content {
+  max-width: 876px;
+  margin: 32px auto 0;
+  padding: 0 20px 80px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Header Bar with Badges */
+.viewwork-header-bar {
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.viewwork-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.viewwork-badge,
+.skill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: #FAFAFA;
+  border: 1px solid #EBEBEB;
+  border-radius: 9999px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 18px;
+  color: #4D4D4D;
+  white-space: nowrap;
+}
+
+.skill-badge.verified {
+  padding-right: 8px;
+}
+
+.check-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.add-skill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: #FAFAFA;
+  border: 1px solid #EBEBEB;
+  border-radius: 9999px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 18px;
+  color: #4D4D4D;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-skill-btn:hover {
+  background: #F4F4F4;
+  border-color: #CFCFCF;
+}
+
+/* Main Image */
+.viewwork-main-image {
+  margin-bottom: 24px;
+}
+
+.main-image {
+  width: 100%;
+  height: 491px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #EAEAEA;
+}
+
+/* Image Gallery */
+.viewwork-image-gallery {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.gallery-thumbnail {
+  width: 160px;
+  height: 100px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.gallery-thumbnail.active {
+  border: 1px solid #CFCFCF;
+  border-radius: 16px;
+  padding: 8px;
+}
+
+.thumbnail-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.gallery-thumbnail.active .thumbnail-image {
+  border-radius: 12px;
+}
+
+.delete-btn {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(180deg, #F4F4F4 0%, #FEFEFE 100%);
+  border: 4px solid #FFFFFF;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.gallery-thumbnail.active .delete-btn {
+  top: -4px;
+  right: -4px;
+}
+
+.delete-btn:hover {
+  background: linear-gradient(180deg, #FFE5E5 0%, #FFF5F5 100%);
+}
+
+.upload-container {
+  width: 160px;
+  height: 100px;
+  border: 2px dashed #E0E0E0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #FAFAFA;
+}
+
+.upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 16px;
+  text-align: center;
+}
+
+.upload-label span {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 1.2;
+  color: #989898;
+  letter-spacing: 0.04em;
+}
+
+.upload-label:hover {
+  opacity: 0.8;
+}
+
+/* Description Section */
+.viewwork-description {
+  margin-bottom: 24px;
+}
+
+.description-textarea {
+  width: 100%;
+  min-height: 120px;
+  background: #FFFFFF;
+  border: 2px solid #FFFFFF;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  color: #050505;
+  resize: vertical;
+  outline: none;
+}
+
+.description-textarea:focus {
+  border-color: #1246FF;
+}
+
+/* Save Changes Button */
+.save-changes-container {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.save-changes-btn {
+  height: 48px;
+  background: linear-gradient(180deg, #1246FF 23.96%, #4770FF 134.37%);
+  border: 4px solid #1246FF;
+  border-radius: 12px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 24px;
+  color: #FFFFFF;
+  cursor: pointer;
+  padding: 0 20px;
+}
+
+.save-changes-btn:hover {
+  background: linear-gradient(180deg, #0D3AD6 23.96%, #3A5FE6 134.37%);
+}
+
+/* Skills Tooltip */
+.skills-tooltip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.skill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: #FAFAFA;
+  border: 1px solid #EBEBEB;
+  border-radius: 9999px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 18px;
+  color: #4D4D4D;
+  white-space: nowrap;
+}
+
+.skill-badge.verified {
+  padding-right: 8px;
+}
+
+.check-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.add-skill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: #FAFAFA;
+  border: 1px solid #EBEBEB;
+  border-radius: 9999px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 18px;
+  color: #4D4D4D;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-skill-btn:hover {
+  background: #F4F4F4;
+  border-color: #CFCFCF;
+}
+
+/* Skills Tooltip */
+.skills-tooltip {
+  position: absolute;
+  top: calc(100% + 16px);
+  right: 32px;
+  background: #FFFFFF;
+  border: 1px solid #EAECF0;
+  border-radius: 12px;
+  box-shadow: 0px 12px 12px -4px rgba(16, 24, 40, 0.04), 0px 4px 6px -2px rgba(16, 24, 40, 0.03);
+  padding: 16px;
+  min-width: 277px;
+  z-index: 100;
+}
+
+.skills-tooltip .tooltip-arrow {
+  right: 60px;
+  left: auto;
+}
+
+.tooltip-content-skills {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skills-list {
+  background: #FFFFFF;
+  border: 2px solid #FFFFFF;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.skill-badge-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: #FAFAFA;
+  border: 1px solid #EBEBEB;
+  border-radius: 9999px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 18px;
+  color: #4D4D4D;
+  white-space: nowrap;
+}
+
+/* Main Image */
+.main-image-container {
+  max-width: 876px;
+  margin: 0 auto;
+  padding: 0 32px;
+  margin-bottom: 24px;
+}
+
+.main-image {
+  width: 100%;
+  height: 491px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #EAEAEA;
+}
+
+/* Image Gallery */
+.image-gallery {
+  max-width: 876px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.thumbnail-wrapper {
+  width: 160px;
+  height: 100px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.thumbnail-wrapper.active {
+  border: 1px solid #CFCFCF;
+  border-radius: 16px;
+  padding: 8px;
+}
+
+.thumbnail-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.thumbnail-wrapper.active .thumbnail-image {
+  border-radius: 12px;
+}
+
+.delete-btn {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(180deg, #F4F4F4 0%, #FEFEFE 100%);
+  border: 4px solid #FFFFFF;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.thumbnail-wrapper.active .delete-btn {
+  top: -4px;
+  right: -4px;
+}
+
+.delete-btn:hover {
+  background: linear-gradient(180deg, #FFE5E5 0%, #FFF5F5 100%);
+}
+
+.upload-container {
+  width: 160px;
+  height: 100px;
+  border: 2px dashed #E0E0E0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #FAFAFA;
+}
+
+.upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 16px;
+  text-align: center;
+}
+
+.upload-label span {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 1.2;
+  color: #989898;
+  letter-spacing: 0.04em;
+}
+
+.upload-label:hover {
+  opacity: 0.8;
+}
+
+/* Description Section */
+.description-section {
+  max-width: 876px;
+  margin: 0 auto;
+  padding: 0 32px;
+  margin-bottom: 24px;
+}
+
+.description-textarea {
+  width: 100%;
+  min-height: 120px;
+  background: #FFFFFF;
+  border: 2px solid #FFFFFF;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  color: #050505;
+  resize: vertical;
+  outline: none;
+}
+
+.description-textarea:focus {
+  border-color: #1246FF;
+}
+
+/* Save Changes Button */
+.save-section {
+  max-width: 876px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.save-changes-btn {
+  height: 48px;
+  background: linear-gradient(180deg, #1246FF 23.96%, #4770FF 134.37%);
+  border: 4px solid #1246FF;
+  border-radius: 12px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 24px;
+  color: #FFFFFF;
+  cursor: pointer;
+  padding: 0 20px;
+}
+
+.save-changes-btn:hover {
+  background: linear-gradient(180deg, #0D3AD6 23.96%, #3A5FE6 134.37%);
+}
