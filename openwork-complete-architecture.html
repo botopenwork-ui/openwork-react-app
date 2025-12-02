@@ -66,16 +66,6 @@
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
         }
         
-        svg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 1400px;
-            height: 1400px;
-            pointer-events: none;
-            z-index: 1;
-        }
-        
         .zone {
             position: absolute;
             left: 30px;
@@ -149,14 +139,53 @@
             font-weight: 400;
         }
         
-        path.arrow {
-            transition: all 0.3s;
-            fill: none;
-            stroke-width: 2;
+        /* CSS-based arrows with triangular heads */
+        .arrow-line {
+            position: absolute;
+            height: 3px;
+            background: #2563eb;
+            z-index: 1;
+            transition: opacity 0.3s;
         }
         
-        path.arrow.visible { opacity: 0.6; }
-        path.arrow.hidden { opacity: 0; }
+        .arrow-line.green { background: #16a34a; }
+        
+        .arrow-line::after {
+            content: '';
+            position: absolute;
+            right: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid #2563eb;
+            border-top: 6px solid transparent;
+            border-bottom: 6px solid transparent;
+        }
+        
+        .arrow-line.green::after {
+            border-left-color: #16a34a;
+        }
+        
+        .arrow-line.vertical {
+            width: 3px;
+            height: auto;
+        }
+        
+        .arrow-line.vertical::after {
+            right: auto;
+            left: 50%;
+            bottom: -6px;
+            top: auto;
+            transform: translateX(-50%);
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid #2563eb;
+        }
+        
+        .arrow-line.vertical.green::after {
+            border-top-color: #16a34a;
+        }
         
         .info {
             position: fixed;
@@ -189,39 +218,27 @@
         <button class="btn active" onclick="selectFlow('all')">📊 View All</button>
         <button class="btn" onclick="selectFlow('profile')">👤 Create Profile</button>
         <button class="btn" onclick="selectFlow('post')">📝 Post Job</button>
-        <button class="btn" onclick="selectFlow('apply')">📋 Apply to Job</button>
+        <button class="btn" onclick="selectFlow('apply')">📋 Apply</button>
         <button class="btn" onclick="selectFlow('start')">🔒 Start Job</button>
-        <button class="btn" onclick="selectFlow('submit')">📤 Submit Work</button>
-        <button class="btn" onclick="selectFlow('release')">💸 Release Payment</button>
-        <button class="btn" onclick="selectFlow('dispute')">⚖️ Raise Dispute</button>
-        <button class="btn" onclick="selectFlow('vote')">🗳️ Vote Dispute</button>
-        <button class="btn" onclick="selectFlow('skill')">✅ Skill Verification</button>
-        <button class="btn" onclick="selectFlow('rewards')">🎁 Sync Rewards</button>
-        <button class="btn" onclick="selectFlow('claim')">💰 Claim Tokens</button>
+        <button class="btn" onclick="selectFlow('submit')">📤 Submit</button>
+        <button class="btn" onclick="selectFlow('release')">💸 Release</button>
+        <button class="btn" onclick="selectFlow('dispute')">⚖️ Dispute</button>
+        <button class="btn" onclick="selectFlow('rewards')">🎁 Rewards</button>
+        <button class="btn" onclick="selectFlow('claim')">💰 Claim</button>
     </div>
     
     <div class="canvas-wrapper">
         <div class="canvas">
-            <svg id="svg">
-                <defs>
-                    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-                        <path d="M0,0 L0,10 L10,5 z" fill="#2563eb" />
-                    </marker>
-                    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-                        <path d="M0,0 L0,10 L10,5 z" fill="#16a34a" />
-                    </marker>
-                </defs>
-            </svg>
-            
             <div class="zone" style="top: 40px; height: 300px;"></div>
-            <div class="zone-label" style="top: 20px;">Local Chains (OP & ETH Sepolia)</div>
+            <div class="zone-label" style="top: 20px;">Local Chains</div>
             
             <div class="zone" style="top: 380px; height: 640px;"></div>
-            <div class="zone-label" style="top: 360px;">Native Chain (Arbitrum Sepolia)</div>
+            <div class="zone-label" style="top: 360px;">Native Chain (Arbitrum)</div>
             
             <div class="zone" style="top: 1080px; height: 240px;"></div>
-            <div class="zone-label" style="top: 1060px;">Main Chain (Base Sepolia)</div>
+            <div class="zone-label" style="top: 1060px;">Main Chain (Base)</div>
             
+            <div id="arrows"></div>
             <div id="contracts"></div>
         </div>
     </div>
@@ -229,80 +246,53 @@
     <div class="info" id="info"></div>
     
     <script>
-        const contracts = {
-            // LOCAL - Row 1: OP (better spacing)
+        const C = {
             lowjcOP: { name: 'LOWJC (OP)', type: 'Jobs', x: 80, y: 80, icon: 'jobs.svg' },
             athenaOP: { name: 'Athena (OP)', type: 'Disputes', x: 300, y: 80, icon: 'dispute.svg' },
-            bridgeOP: { name: 'Bridge (OP)', type: 'Messaging', x: 520, y: 80, icon: 'connect.svg' },
+            bridgeOP: { name: 'Bridge (OP)', type: 'Msg', x: 520, y: 80, icon: 'connect.svg' },
             cctpOP: { name: 'CCTP (OP)', type: 'USDC', x: 740, y: 80, icon: 'usdc.svg' },
             
-            // LOCAL - Row 2: ETH
             lowjcETH: { name: 'LOWJC (ETH)', type: 'Jobs', x: 80, y: 210, icon: 'jobs.svg' },
             athenaETH: { name: 'Athena (ETH)', type: 'Disputes', x: 300, y: 210, icon: 'dispute.svg' },
-            bridgeETH: { name: 'Bridge (ETH)', type: 'Messaging', x: 520, y: 210, icon: 'connect.svg' },
+            bridgeETH: { name: 'Bridge (ETH)', type: 'Msg', x: 520, y: 210, icon: 'connect.svg' },
             cctpETH: { name: 'CCTP (ETH)', type: 'USDC', x: 740, y: 210, icon: 'usdc.svg' },
             
-            // NATIVE - Row 1: Communication (more spacing)
             nativeBridge: { name: 'Native Bridge', type: 'Hub', x: 80, y: 420, icon: 'connect.svg' },
             cctpNative: { name: 'CCTP Native', type: 'USDC', x: 300, y: 420, icon: 'usdc.svg' },
             
-            // NATIVE - Row 2: Core Logic (5 cards, well-spaced)
             nowjc: { name: 'NOWJC', type: 'Job Hub', x: 80, y: 570, icon: 'jobs.svg' },
             nativeAthena: { name: 'Native Athena', type: 'Disputes', x: 300, y: 570, icon: 'dispute.svg' },
-            nativeDAO: { name: 'Native DAO', type: 'Governance', x: 520, y: 570, icon: 'dao.svg' },
+            nativeDAO: { name: 'Native DAO', type: 'Gov', x: 520, y: 570, icon: 'dao.svg' },
             nativeRewards: { name: 'Native Rewards', type: 'Tokens', x: 740, y: 570, icon: 'openwork-token.svg' },
-            oracleMgr: { name: 'Oracle Manager', type: 'Oracles', x: 960, y: 570, icon: 'skill-oracle-icon.svg' },
+            oracleMgr: { name: 'Oracle Mgr', type: 'Oracles', x: 960, y: 570, icon: 'skill-oracle-icon.svg' },
             
-            // NATIVE - Row 3: Management
-            profileMgr: { name: 'Profile Manager', type: 'Profiles', x: 80, y: 720, icon: 'profile.svg' },
-            genesisReader: { name: 'Genesis Reader', type: 'Helper', x: 300, y: 720, icon: 'file-icon.svg' },
+            profileMgr: { name: 'Profile Mgr', type: 'Profiles', x: 80, y: 720, icon: 'profile.svg' },
+            genesisReader: { name: 'Reader', type: 'Helper', x: 300, y: 720, icon: 'file-icon.svg' },
             
-            // NATIVE - Row 4: Storage
             genesis: { name: 'Genesis', type: 'Storage', x: 80, y: 870, icon: 'file-icon.svg' },
-            profileGen: { name: 'Profile Genesis', type: 'Storage', x: 300, y: 870, icon: 'profile.svg' },
+            profileGen: { name: 'Profile Gen', type: 'Storage', x: 300, y: 870, icon: 'profile.svg' },
             
-            // MAIN (centered better)
             mainBridge: { name: 'Main Bridge', type: 'Hub', x: 80, y: 1120, icon: 'connect.svg' },
-            mainDAO: { name: 'Main DAO', type: 'Governance', x: 300, y: 1120, icon: 'dao.svg' },
+            mainDAO: { name: 'Main DAO', type: 'Gov', x: 300, y: 1120, icon: 'dao.svg' },
             mainRewards: { name: 'Main Rewards', type: 'Claims', x: 520, y: 1120, icon: 'openwork-token.svg' },
             token: { name: 'OW Token', type: 'ERC20', x: 740, y: 1120, icon: 'OWToken.svg' }
         };
         
         const flows = {
             all: {
-                title: 'All Contracts Overview',
-                desc: 'Complete OpenWork system across 4 chains - showing main data flows',
-                contracts: Object.keys(contracts),
+                title: 'System Overview',
+                desc: 'All contracts with main flows visible',
+                contracts: Object.keys(C),
                 arrows: [
-                    // Local to Native (upward flow)
                     { from: 'lowjcOP', to: 'bridgeOP' },
                     { from: 'bridgeOP', to: 'nativeBridge' },
-                    { from: 'athenaOP', to: 'bridgeOP' },
-                    { from: 'lowjcOP', to: 'cctpOP', color: '#16a34a' },
-                    { from: 'cctpOP', to: 'cctpNative', color: '#16a34a' },
-                    
-                    // Native internal flows
                     { from: 'nativeBridge', to: 'nowjc' },
-                    { from: 'nativeBridge', to: 'nativeAthena' },
-                    { from: 'nativeBridge', to: 'profileMgr' },
-                    { from: 'nowjc', to: 'genesis' },
-                    { from: 'nowjc', to: 'nativeRewards' },
-                    { from: 'nativeAthena', to: 'genesis' },
-                    { from: 'profileMgr', to: 'profileGen' },
-                    
-                    // Native to Main (downward flow)
-                    { from: 'nativeBridge', to: 'mainBridge' },
-                    { from: 'mainBridge', to: 'mainDAO' },
-                    { from: 'mainBridge', to: 'mainRewards' },
-                    
-                    // CCTP bidirectional
-                    { from: 'cctpNative', to: 'nowjc', color: '#16a34a' },
-                    { from: 'nowjc', to: 'cctpNative', color: '#16a34a' }
+                    { from: 'nowjc', to: 'genesis' }
                 ]
             },
             profile: {
                 title: '👤 Create Profile',
-                desc: 'Profile creation flow from local chain to native storage',
+                desc: 'Profile creation from local to native storage',
                 contracts: ['lowjcOP', 'bridgeOP', 'nativeBridge', 'profileMgr', 'profileGen'],
                 arrows: [
                     { from: 'lowjcOP', to: 'bridgeOP' },
@@ -310,11 +300,11 @@
                     { from: 'nativeBridge', to: 'profileMgr' },
                     { from: 'profileMgr', to: 'profileGen' }
                 ],
-                steps: ['User calls LOWJC.createProfile()', 'Message via LayerZero', 'Profile Manager receives', 'Stored in Profile Genesis']
+                steps: ['LOWJC.createProfile()', 'LayerZero message', 'Profile Manager', 'Genesis storage']
             },
             post: {
                 title: '📝 Post Job',
-                desc: 'Job posting flow with cross-chain synchronization',
+                desc: 'Cross-chain job posting',
                 contracts: ['lowjcOP', 'bridgeOP', 'nativeBridge', 'nowjc', 'genesis'],
                 arrows: [
                     { from: 'lowjcOP', to: 'bridgeOP' },
@@ -322,51 +312,11 @@
                     { from: 'nativeBridge', to: 'nowjc' },
                     { from: 'nowjc', to: 'genesis' }
                 ],
-                steps: ['User posts job on LOWJC', 'Bridge routes message', 'NOWJC receives', 'Job stored in Genesis']
-            },
-            start: {
-                title: '🔒 Start Job & Escrow',
-                desc: 'DUAL: USDC via CCTP + Message via LayerZero',
-                contracts: ['lowjcOP', 'cctpOP', 'cctpNative', 'bridgeOP', 'nativeBridge', 'nowjc'],
-                arrows: [
-                    { from: 'lowjcOP', to: 'cctpOP', color: '#16a34a' },
-                    { from: 'cctpOP', to: 'cctpNative', color: '#16a34a' },
-                    { from: 'lowjcOP', to: 'bridgeOP' },
-                    { from: 'bridgeOP', to: 'nativeBridge' },
-                    { from: 'nativeBridge', to: 'nowjc' },
-                    { from: 'cctpNative', to: 'nowjc', color: '#16a34a' }
-                ],
-                steps: ['Start job on LOWJC', 'USDC locked via CCTP', 'Message via LayerZero', 'NOWJC receives both', 'First milestone escrowed']
-            },
-            release: {
-                title: '💸 Release Payment',
-                desc: 'Payment release via CCTP + reward calculation',
-                contracts: ['nowjc', 'cctpNative', 'cctpOP', 'nativeRewards', 'genesis'],
-                arrows: [
-                    { from: 'nowjc', to: 'cctpNative', color: '#16a34a' },
-                    { from: 'cctpNative', to: 'cctpOP', color: '#16a34a' },
-                    { from: 'nowjc', to: 'nativeRewards' },
-                    { from: 'nowjc', to: 'genesis' }
-                ],
-                steps: ['Milestone approved', 'USDC sent via CCTP', 'Rewards calculated', 'Payment recorded']
-            },
-            dispute: {
-                title: '⚖️ Raise Dispute',
-                desc: 'DUAL: Fee via CCTP + Dispute data via LayerZero',
-                contracts: ['athenaOP', 'cctpOP', 'cctpNative', 'bridgeOP', 'nativeBridge', 'nativeAthena', 'genesis'],
-                arrows: [
-                    { from: 'athenaOP', to: 'cctpOP', color: '#16a34a' },
-                    { from: 'cctpOP', to: 'cctpNative', color: '#16a34a' },
-                    { from: 'athenaOP', to: 'bridgeOP' },
-                    { from: 'bridgeOP', to: 'nativeBridge' },
-                    { from: 'nativeBridge', to: 'nativeAthena' },
-                    { from: 'nativeAthena', to: 'genesis' }
-                ],
-                steps: ['Dispute raised with fee', 'Fee via CCTP', 'Data via LayerZero', 'Native Athena receives', 'Stored for voting']
+                steps: ['Post on LOWJC', 'Bridge routes', 'NOWJC receives', 'Stored']
             },
             apply: {
                 title: '📋 Apply to Job',
-                desc: 'Worker applies to job with proposed milestones',
+                desc: 'Worker application flow',
                 contracts: ['lowjcOP', 'bridgeOP', 'nativeBridge', 'nowjc', 'genesis'],
                 arrows: [
                     { from: 'lowjcOP', to: 'bridgeOP' },
@@ -374,11 +324,24 @@
                     { from: 'nativeBridge', to: 'nowjc' },
                     { from: 'nowjc', to: 'genesis' }
                 ],
-                steps: ['Worker applies on LOWJC', 'Application via LayerZero', 'NOWJC receives', 'Application stored in Genesis']
+                steps: ['Apply on LOWJC', 'LayerZero', 'NOWJC', 'Genesis']
+            },
+            start: {
+                title: '🔒 Start Job',
+                desc: 'DUAL: CCTP + LayerZero',
+                contracts: ['lowjcOP', 'cctpOP', 'cctpNative', 'bridgeOP', 'nativeBridge', 'nowjc'],
+                arrows: [
+                    { from: 'lowjcOP', to: 'cctpOP', color: 'green' },
+                    { from: 'cctpOP', to: 'cctpNative', color: 'green' },
+                    { from: 'lowjcOP', to: 'bridgeOP' },
+                    { from: 'bridgeOP', to: 'nativeBridge' },
+                    { from: 'nativeBridge', to: 'nowjc' }
+                ],
+                steps: ['USDC via CCTP', 'Message via LayerZero', 'NOWJC receives both']
             },
             submit: {
                 title: '📤 Submit Work',
-                desc: 'Job taker submits completed milestone work',
+                desc: 'Work submission',
                 contracts: ['lowjcOP', 'bridgeOP', 'nativeBridge', 'nowjc', 'genesis'],
                 arrows: [
                     { from: 'lowjcOP', to: 'bridgeOP' },
@@ -386,37 +349,37 @@
                     { from: 'nativeBridge', to: 'nowjc' },
                     { from: 'nowjc', to: 'genesis' }
                 ],
-                steps: ['Submit work hash on LOWJC', 'Submission via LayerZero', 'NOWJC receives', 'Work submission added to Genesis']
+                steps: ['Submit on LOWJC', 'Route', 'NOWJC', 'Genesis']
             },
-            vote: {
-                title: '🗳️ Vote on Dispute',
-                desc: 'Oracle members vote on dispute resolution',
-                contracts: ['nativeAthena', 'nativeDAO', 'genesis', 'nowjc'],
+            release: {
+                title: '💸 Release Payment',
+                desc: 'CCTP payment + rewards',
+                contracts: ['nowjc', 'cctpNative', 'cctpOP', 'nativeRewards', 'genesis'],
                 arrows: [
-                    { from: 'nativeDAO', to: 'nativeAthena' },
-                    { from: 'nativeAthena', to: 'genesis' },
-                    { from: 'nativeAthena', to: 'nowjc' }
+                    { from: 'nowjc', to: 'cctpNative', color: 'green' },
+                    { from: 'cctpNative', to: 'cctpOP', color: 'green' },
+                    { from: 'nowjc', to: 'nativeRewards' },
+                    { from: 'nowjc', to: 'genesis' }
                 ],
-                steps: ['Oracle member votes', 'Vote recorded in Genesis', 'On settlement, Native Athena calls NOWJC to release funds']
+                steps: ['USDC via CCTP', 'Rewards calc', 'Genesis update']
             },
-            skill: {
-                title: '✅ Skill Verification',
-                desc: 'DUAL: Fee via CCTP + Verification request via LayerZero',
-                contracts: ['athenaOP', 'cctpOP', 'cctpNative', 'bridgeOP', 'nativeBridge', 'nativeAthena', 'oracleMgr', 'genesis'],
+            dispute: {
+                title: '⚖️ Dispute',
+                desc: 'DUAL: Fee + Data',
+                contracts: ['athenaOP', 'cctpOP', 'cctpNative', 'bridgeOP', 'nativeBridge', 'nativeAthena', 'genesis'],
                 arrows: [
-                    { from: 'athenaOP', to: 'cctpOP', color: '#16a34a' },
-                    { from: 'cctpOP', to: 'cctpNative', color: '#16a34a' },
+                    { from: 'athenaOP', to: 'cctpOP', color: 'green' },
+                    { from: 'cctpOP', to: 'cctpNative', color: 'green' },
                     { from: 'athenaOP', to: 'bridgeOP' },
                     { from: 'bridgeOP', to: 'nativeBridge' },
                     { from: 'nativeBridge', to: 'nativeAthena' },
-                    { from: 'nativeAthena', to: 'oracleMgr' },
                     { from: 'nativeAthena', to: 'genesis' }
                 ],
-                steps: ['Submit verification with fee', 'Fee via CCTP', 'Request via LayerZero', 'Oracle Manager validates members', 'Stored for oracle voting']
+                steps: ['Fee via CCTP', 'Data via LZ', 'Athena', 'Genesis']
             },
             rewards: {
-                title: '🎁 Sync Rewards to Main Chain',
-                desc: 'User syncs claimable rewards from Native to Main Chain',
+                title: '🎁 Sync Rewards',
+                desc: 'Native to Main sync',
                 contracts: ['nowjc', 'nativeRewards', 'nativeBridge', 'mainBridge', 'mainRewards'],
                 arrows: [
                     { from: 'nowjc', to: 'nativeRewards' },
@@ -424,11 +387,11 @@
                     { from: 'nativeBridge', to: 'mainBridge' },
                     { from: 'mainBridge', to: 'mainRewards' }
                 ],
-                steps: ['User calls syncRewardsData()', 'Native Rewards calculates claimable', 'Bridge sends to Main Chain', 'Main Rewards receives sync']
+                steps: ['Calculate', 'Send to Native Bridge', 'Main Bridge', 'Main Rewards']
             },
             claim: {
-                title: '💰 Claim OW Tokens',
-                desc: 'User claims earned OpenWork tokens on Main Chain',
+                title: '💰 Claim Tokens',
+                desc: 'Claim OW tokens',
                 contracts: ['mainRewards', 'token', 'mainBridge', 'nativeBridge', 'nowjc'],
                 arrows: [
                     { from: 'mainRewards', to: 'token' },
@@ -436,19 +399,13 @@
                     { from: 'mainBridge', to: 'nativeBridge' },
                     { from: 'nativeBridge', to: 'nowjc' }
                 ],
-                steps: ['User calls claimRewards()', 'OW tokens transferred from contract', 'Claim notification sent back to Native', 'NOWJC updates claim record']
+                steps: ['Claim', 'Tokens transferred', 'Notify Native', 'Update']
             }
         };
         
-        // Render contracts
-        const container = document.createElement('div');
-        container.id = 'contracts';
-        container.style.position = 'relative';
-        container.style.width = '100%';
-        container.style.height = '100%';
-        container.style.zIndex = '2';
-        
-        Object.entries(contracts).forEach(([id, c]) => {
+        // Render
+        const contractsDiv = document.getElementById('contracts');
+        Object.entries(C).forEach(([id, c]) => {
             const el = document.createElement('div');
             el.className = 'contract';
             el.id = id;
@@ -459,24 +416,19 @@
                 <div class="contract-name">${c.name}</div>
                 <div class="contract-type">${c.type}</div>
             `;
-            container.appendChild(el);
+            contractsDiv.appendChild(el);
         });
-        
-        document.querySelector('.canvas').appendChild(container);
         
         function selectFlow(name) {
             const flow = flows[name];
-            const svg = document.getElementById('svg');
+            const arrowsDiv = document.getElementById('arrows');
             const info = document.getElementById('info');
             
-            // Update buttons
             document.querySelectorAll('.btn').forEach((btn, i) => {
-                const flowNames = Object.keys(flows);
-                btn.classList.toggle('active', flowNames[i] === name);
+                btn.classList.toggle('active', Object.keys(flows)[i] === name);
             });
             
-            // Highlight/dim contracts
-            Object.keys(contracts).forEach(id => {
+            Object.keys(C).forEach(id => {
                 const el = document.getElementById(id);
                 if (name === 'all') {
                     el.classList.remove('highlighted', 'dimmed');
@@ -489,34 +441,40 @@
                 }
             });
             
-            // Clear and redraw arrows for this flow
-            svg.querySelectorAll('path').forEach(p => p.remove());
+            // Clear arrows
+            arrowsDiv.innerHTML = '';
             
-            if (name !== 'all') {
-                flow.arrows.forEach(arr => {
-                    const from = contracts[arr.from];
-                    const to = contracts[arr.to];
-                    if (!from || !to) return;
-                    
-                    const x1 = from.x + 70;
-                    const y1 = from.y + 50;
-                    const x2 = to.x + 70;
-                    const y2 = to.y + 50;
-                    
-                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                    const midY = (y1 + y2) / 2;
-                    path.setAttribute('d', `M ${x1} ${y1} Q ${x1} ${midY}, ${x2} ${y2}`);
-                    path.setAttribute('stroke', arr.color || '#2563eb');
-                    path.setAttribute('stroke-width', '3');
-                    path.setAttribute('fill', 'none');
-                    path.setAttribute('opacity', '0.9');
-                    path.setAttribute('marker-end', arr.color === '#16a34a' ? 'url(#arrow-green)' : 'url(#arrow-blue)');
-                    path.setAttribute('class', 'arrow visible');
-                    svg.appendChild(path);
-                });
-            }
+            // Draw CSS arrows
+            flow.arrows.forEach(arr => {
+                const from = C[arr.from];
+                const to = C[arr.to];
+                if (!from || !to) return;
+                
+                const x1 = from.x + 140;
+                const y1 = from.y + 50;
+                const x2 = to.x;
+                const y2 = to.y + 50;
+                
+                // Horizontal arrow
+                if (Math.abs(y2 - y1) < 20) {
+                    const arrow = document.createElement('div');
+                    arrow.className = `arrow-line ${arr.color === 'green' ? 'green' : ''}`;
+                    arrow.style.left = x1 + 'px';
+                    arrow.style.top = y1 + 'px';
+                    arrow.style.width = (x2 - x1) + 'px';
+                    arrowsDiv.appendChild(arrow);
+                }
+                // Vertical arrow
+                else {
+                    const arrow = document.createElement('div');
+                    arrow.className = `arrow-line vertical ${arr.color === 'green' ? 'green' : ''}`;
+                    arrow.style.left = x1 + 'px';
+                    arrow.style.top = (y1 + 120) + 'px';
+                    arrow.style.height = (y2 - y1 - 120) + 'px';
+                    arrowsDiv.appendChild(arrow);
+                }
+            });
             
-            // Update info panel
             info.innerHTML = `
                 <h3>${flow.title}</h3>
                 <p>${flow.desc}</p>
