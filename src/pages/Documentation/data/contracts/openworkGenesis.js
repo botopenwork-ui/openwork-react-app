@@ -710,6 +710,54 @@ const allStakers = await genesis.getAllStakers();`,
     ]
   },
   
+  deployConfig: {
+    type: 'uups',
+    constructor: [
+      {
+        name: '_owner',
+        type: 'address',
+        description: 'Contract owner address (admin who can upgrade and authorize contracts)',
+        placeholder: '0x...'
+      }
+    ],
+    networks: {
+      testnet: {
+        name: 'Arbitrum Sepolia',
+        chainId: 421614,
+        rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc',
+        explorer: 'https://sepolia.arbiscan.io',
+        currency: 'ETH'
+      }
+    },
+    estimatedGas: '5.5M',
+    postDeploy: {
+      message: 'UUPS deployment complete! Next: Initialize and authorize all logic contracts.',
+      nextSteps: [
+        '1. Deploy OpenworkGenesis implementation contract (no constructor params)',
+        '2. Deploy UUPSProxy with implementation address',
+        '3. Call initialize() on proxy via block scanner with:',
+        '   - Owner address (your admin wallet)',
+        '4. ⚠️ CRITICAL: Authorize ALL logic contracts before they can write:',
+        '   - authorizeContract(nowjcAddress, true)',
+        '   - authorizeContract(nativeAthenaAddress, true)',
+        '   - authorizeContract(nativeDAOAddress, true)',
+        '   - authorizeContract(nativeRewardsAddress, true)',
+        '   - authorizeContract(oracleManagerAddress, true)',
+        '   - authorizeContract(profileManagerAddress, true)',
+        '5. Configure all logic contracts with Genesis address:',
+        '   - NOWJC.setGenesis(genesisAddress)',
+        '   - NativeAthena.setGenesis(genesisAddress)',
+        '   - NativeDAO.setGenesis(genesisAddress)',
+        '   - etc.',
+        '6. Test authorization: Try writing from authorized contract',
+        '7. Test view functions: Anyone can read data',
+        '8. Verify both implementation and proxy on Arbiscan',
+        '9. IMPORTANT: Genesis must be deployed FIRST before all other contracts',
+        '10. Monitor storage usage as platform grows'
+      ]
+    }
+  },
+  
   securityConsiderations: [
     'UUPS upgradeable - owner only can upgrade Genesis itself',
     'Authorization required: Only authorized contracts can write data',
@@ -723,5 +771,263 @@ const allStakers = await genesis.getAllStakers();`,
     'Data integrity: Logic contracts responsible for validation',
     'Access isolation: Each contract writes its own data categories',
     'Emergency recovery: Owner can revoke malicious contract authorization'
-  ]
+  ],
+  
+  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/openwork-genesis.sol
+// Truncated version showing key structure
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
+contract OpenworkGenesis is Initializable, UUPSUpgradeable {
+    
+    // ==================== ENUMS ====================
+    enum JobStatus { Open, InProgress, Completed, Cancelled }
+
+    // ==================== STRUCTS ====================
+    struct MilestonePayment {
+        string descriptionHash;
+        uint256 amount;
+    }
+    
+    struct Job {
+        string id;
+        address jobGiver;
+        address[] applicants;
+        string jobDetailHash;
+        JobStatus status;
+        string[] workSubmissions;
+        MilestonePayment[] milestonePayments;
+        MilestonePayment[] finalMilestones;
+        uint256 totalPaid;
+        uint256 currentMilestone;
+        address selectedApplicant;
+        uint256 selectedApplicationId;
+        uint32 paymentTargetChainDomain;
+        address paymentTargetAddress;
+        uint32 applierOriginChainDomain;
+    }
+    
+    struct Oracle {
+        string name;
+        address[] members;
+        string shortDescription;
+        string hashOfDetails;
+        address[] skillVerifiedAddresses;
+    }
+    
+    struct Dispute {
+        string jobId;
+        uint256 disputedAmount;
+        string hash;
+        address disputeRaiserAddress;
+        uint256 votesFor;
+        uint256 votesAgainst;
+        bool result;
+        bool isVotingActive;
+        bool isFinalized;
+        uint256 timeStamp;
+        uint256 fees;
+    }
+    
+    struct Stake {
+        uint256 amount;
+        uint256 unlockTime;
+        uint256 durationMinutes;
+        bool isActive;
+    }
+
+    // ==================== STATE VARIABLES ====================
+    mapping(address => bool) public authorizedContracts;
+    address public owner;
+    
+    // Job data
+    mapping(string => Job) public jobs;
+    mapping(string => mapping(uint256 => Application)) public jobApplications;
+    uint256 public totalPlatformPayments;
+    uint256 public jobCounter;
+    string[] public allJobIds;
+    mapping(address => string[]) public jobsByPoster;
+    
+    // Oracle data
+    mapping(string => Oracle) public oracles;
+    string[] private allOracleNames;
+    uint256 private oracleCount;
+    
+    // Dispute/Voting data
+    mapping(string => Dispute) public disputes;
+    mapping(uint256 => SkillVerificationApplication) public skillApplications;
+    uint256 public applicationCounter;
+    
+    // DAO data
+    mapping(address => Stake) public stakes;
+    mapping(address => address) public delegates;
+    address[] public allStakers;
+    
+    // Rewards data
+    mapping(address => uint256) public userTotalOWTokens;
+    mapping(address => uint256) public userGovernanceActions;
+
+    // ==================== MODIFIERS ====================
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not owner");
+        _;
+    }
+    
+    modifier onlyAuthorized() {
+        require(authorizedContracts[msg.sender] || msg.sender == owner, "Not authorized");
+        _;
+    }
+
+    // ==================== INITIALIZATION ====================
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _owner) public initializer {
+        __UUPSUpgradeable_init();
+        owner = _owner;
+    }
+
+    function _authorizeUpgrade(address) internal view override {
+        require(msg.sender == owner, "Not owner");
+    }
+
+    // ==================== ACCESS CONTROL ====================
+    function authorizeContract(address _contract, bool _authorized) external onlyOwner {
+        authorizedContracts[_contract] = _authorized;
+        emit ContractAuthorized(_contract, _authorized);
+    }
+
+    // ==================== JOB SETTERS ====================
+    function setJob(
+        string memory jobId,
+        address jobGiver,
+        string memory jobDetailHash,
+        string[] memory descriptions,
+        uint256[] memory amounts
+    ) external onlyAuthorized {
+        jobCounter++;
+        allJobIds.push(jobId);
+        jobsByPoster[jobGiver].push(jobId);
+        
+        Job storage newJob = jobs[jobId];
+        newJob.id = jobId;
+        newJob.jobGiver = jobGiver;
+        newJob.jobDetailHash = jobDetailHash;
+        newJob.status = JobStatus.Open;
+        
+        for (uint i = 0; i < descriptions.length; i++) {
+            newJob.milestonePayments.push(MilestonePayment({
+                descriptionHash: descriptions[i],
+                amount: amounts[i]
+            }));
+        }
+    }
+    
+    function updateJobStatus(string memory jobId, JobStatus status) external onlyAuthorized {
+        jobs[jobId].status = status;
+    }
+    
+    function updateJobTotalPaid(string memory jobId, uint256 amount) external onlyAuthorized {
+        jobs[jobId].totalPaid += amount;
+        totalPlatformPayments += amount;
+    }
+
+    // ==================== ORACLE SETTERS ====================
+    function setOracle(
+        string memory name,
+        address[] memory members,
+        string memory shortDescription,
+        string memory hashOfDetails,
+        address[] memory skillVerifiedAddresses
+    ) external onlyAuthorized {
+        if (bytes(oracles[name].name).length == 0) {
+            allOracleNames.push(name);
+            oracleCount++;
+        }
+        oracles[name] = Oracle({
+            name: name,
+            members: members,
+            shortDescription: shortDescription,
+            hashOfDetails: hashOfDetails,
+            skillVerifiedAddresses: skillVerifiedAddresses
+        });
+    }
+
+    // ==================== DISPUTE SETTERS ====================
+    function setDispute(
+        string memory jobId,
+        uint256 disputedAmount,
+        string memory hash,
+        address disputeRaiser,
+        uint256 fees
+    ) external onlyAuthorized {
+        disputes[jobId] = Dispute({
+            jobId: jobId,
+            disputedAmount: disputedAmount,
+            hash: hash,
+            disputeRaiserAddress: disputeRaiser,
+            votesFor: 0,
+            votesAgainst: 0,
+            result: false,
+            isVotingActive: true,
+            isFinalized: false,
+            timeStamp: block.timestamp,
+            fees: fees
+        });
+    }
+
+    // ==================== DAO SETTERS ====================
+    function setStake(
+        address staker,
+        uint256 amount,
+        uint256 unlockTime,
+        uint256 durationMinutes,
+        bool isActive
+    ) external onlyAuthorized {
+        stakes[staker] = Stake({
+            amount: amount,
+            unlockTime: unlockTime,
+            durationMinutes: durationMinutes,
+            isActive: isActive
+        });
+    }
+
+    // ==================== REWARDS SETTERS ====================
+    function setUserTotalOWTokens(address user, uint256 tokens) external onlyAuthorized {
+        userTotalOWTokens[user] = tokens;
+    }
+
+    function incrementUserGovernanceActions(address user) external onlyAuthorized {
+        userGovernanceActions[user]++;
+    }
+
+    // ==================== GETTERS ====================
+    function getJob(string memory jobId) external view returns (Job memory) {
+        return jobs[jobId];
+    }
+    
+    function getOracle(string memory oracleName) external view returns (Oracle memory) {
+        return oracles[oracleName];
+    }
+    
+    function getStake(address staker) external view returns (Stake memory) {
+        return stakes[staker];
+    }
+    
+    function getAllJobIds() external view returns (string[] memory) {
+        return allJobIds;
+    }
+    
+    function getAllOracleNames() external view returns (string[] memory) {
+        return allOracleNames;
+    }
+    
+    // ... 100+ more setters and getters for complete data management
+    // See full contract for all functionality
+}`
 };

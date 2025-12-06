@@ -1,10 +1,16 @@
-import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams, Link } from "react-router-dom";
+import { useWalletConnection } from "../../functions/useWalletConnection";
+import { fetchUserPortfolios } from "../../services/portfolioService";
 import "./ViewWorkProfile.css";
 
 export default function ViewWorkProfile() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const { walletAddress } = useWalletConnection();
   const [selectedImage, setSelectedImage] = useState(0);
+  const [workData, setWorkData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const handleCopyToClipboard = (address) => {
     navigator.clipboard
@@ -24,27 +30,57 @@ export default function ViewWorkProfile() {
     return `${start}....${end}`;
   }
 
-  // Sample work data - replace with real data
-  const workData = {
-    title: "Webflow Development for QIGO",
-    userName: "molliehall2504",
-    packageType: "Webflow Package",
-    skills: ["UX Design", "+2 More"],
-    images: [
-      "/assets/portfolio-image.png",
-      "/assets/portfolio-image.png",
-      "/assets/portfolio-image.png",
-      "/assets/portfolio-image.png",
-      "/assets/portfolio-image.png",
-    ],
-    description: `Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-    Section 1.10.32 of "de Finibus Bonorum et Malorum", written by Cicero in 45 BC
-    "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, ea...`,
-  };
+  // Fetch portfolio item from blockchain
+  useEffect(() => {
+    const loadPortfolioItem = async () => {
+      if (!walletAddress || !id) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const portfolios = await fetchUserPortfolios(walletAddress);
+        const portfolio = portfolios.find(p => p.id === parseInt(id));
+        
+        if (portfolio) {
+          setWorkData({
+            title: portfolio.title,
+            userName: "molliehall2504", // TODO: Get from user profile
+            packageType: portfolio.packageType || "",
+            skills: portfolio.skills || [],
+            images: portfolio.images || [],
+            description: portfolio.description || ""
+          });
+        }
+      } catch (error) {
+        console.error('Error loading portfolio item:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPortfolioItem();
+  }, [walletAddress, id]);
 
   const handleBack = () => {
     navigate(-1);
   };
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '100px', color: '#868686' }}>
+        Loading portfolio item...
+      </div>
+    );
+  }
+
+  if (!workData) {
+    return (
+      <div style={{ textAlign: 'center', padding: '100px', color: '#868686' }}>
+        Portfolio item not found
+      </div>
+    );
+  }
 
   return (
     <>
@@ -83,7 +119,7 @@ export default function ViewWorkProfile() {
           {/* Main Image Display */}
           <div className="viewwork-main-image">
             <img
-              src={workData.images[selectedImage]}
+              src={`https://gateway.pinata.cloud/ipfs/${workData.images[selectedImage]}`}
               alt="Work preview"
               className="main-image"
             />
@@ -97,7 +133,7 @@ export default function ViewWorkProfile() {
                 className={`gallery-thumbnail ${selectedImage === index ? "active" : ""}`}
                 onClick={() => setSelectedImage(index)}
               >
-                <img src={image} alt={`Thumbnail ${index + 1}`} />
+                <img src={`https://gateway.pinata.cloud/ipfs/${image}`} alt={`Thumbnail ${index + 1}`} />
               </div>
             ))}
           </div>

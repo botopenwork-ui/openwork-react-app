@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenWork Contract Documentation Viewer</title>
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Satoshi', -apple-system, sans-serif;
+            background: #f9fafb;
+            color: #111827;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+        .header p { font-size: 16px; opacity: 0.9; }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        
+        .nav {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-btn {
+            padding: 10px 20px;
+            background: #f3f4f6;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s;
+            font-family: 'Satoshi', sans-serif;
+        }
+        
+        .nav-btn:hover {
+            background: #e5e7eb;
+            border-color: #667eea;
+        }
+        
+        .nav-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: none;
+        }
+        
+        .section.active { display: block; }
+        
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .subsection {
+            margin-bottom: 30px;
+        }
+        
+        .subsection-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .info-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        
+        .info-card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+        
+        .info-card-content {
+            font-size: 13px;
+            color: #4b5563;
+        }
+        
+        .function-card {
+            background: #fef3c7;
+            border: 2px solid #fbbf24;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .function-signature {
+            font-family: 'Courier New', monospace;
+            background: #1f2937;
+            color: #10b981;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            overflow-x: auto;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .badge-purple { background: #e9d5ff; color: #7c3aed; }
+        .badge-green { background: #d1fae5; color: #059669; }
+        .badge-blue { background: #dbeafe; color: #2563eb; }
+        .badge-red { background: #fee2e2; color: #dc2626; }
+        .badge-yellow { background: #fef3c7; color: #d97706; }
+        
+        .logic-steps {
+            background: white;
+            border-left: 4px solid #667eea;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        
+        .logic-steps ol {
+            padding-left: 20px;
+        }
+        
+        .logic-steps li {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .example-box {
+            background: #f0fdf4;
+            border: 2px solid #10b981;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        
+        .example-title {
+            font-weight: 600;
+            color: #059669;
+            margin-bottom: 8px;
+        }
+        
+        .warning-box {
+            background: #fef2f2;
+            border: 2px solid #ef4444;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        
+        .warning-box::before {
+            content: "⚠️ ";
+            font-size: 18px;
+        }
+        
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Satoshi', sans-serif;
+            margin-bottom: 20px;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📚 Contract Documentation Viewer</h1>
+        <p>Exploring: NOWJC (Native OpenWork Job Contract)</p>
+    </div>
+    
+    <div class="container">
+        <div class="nav">
+            <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search for functions, variables, or concepts...">
+            <div class="nav-buttons">
+                <button class="nav-btn active" onclick="showSection('overview')">📋 Overview</button>
+                <button class="nav-btn" onclick="showSection('variables')">💾 State Variables</button>
+                <button class="nav-btn" onclick="showSection('functions')">⚙️ Functions</button>
+                <button class="nav-btn" onclick="showSection('commission')">💰 Commission</button>
+                <button class="nav-btn" onclick="showSection('integration')">🔗 Integration</button>
+                <button class="nav-btn" onclick="showSection('security')">🔒 Security</button>
+            </div>
+        </div>
+        
+        <div id="content"></div>
+    </div>
+    
+    <script>
+        let contractData = null;
+        
+        // Load the JSON data
+        fetch('contracts-documentation/nowjc-complete.json')
+            .then(response => response.json())
+            .then(data => {
+                contractData = data;
+                renderOverview();
+            })
+            .catch(error => {
+                document.getElementById('content').innerHTML = `
+                    <div class="section active">
+                        <div class="warning-box">
+                            Could not load documentation. Make sure the JSON file exists at: contracts-documentation/nowjc-complete.json
+                            <br><br>Error: ${error}
+                        </div>
+                    </div>
+                `;
+            });
+        
+        function showSection(section) {
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            switch(section) {
+                case 'overview': renderOverview(); break;
+                case 'variables': renderVariables(); break;
+                case 'functions': renderFunctions(); break;
+                case 'commission': renderCommission(); break;
+                case 'integration': renderIntegration(); break;
+                case 'security': renderSecurity(); break;
+            }
+        }
+        
+        function renderOverview() {
+            if (!contractData) return;
+            
+            const html = `
+                <div class="section active">
+                    <div class="section-title">Contract Overview</div>
+                    
+                    <div class="subsection">
+                        <div class="info-card" style="margin-bottom: 20px;">
+                            <div class="info-card-title">Contract Name</div>
+                            <div class="info-card-content" style="font-size: 16px; font-weight: 600;">${contractData.contractName}</div>
+                        </div>
+                        
+                        <div class="info-grid">
+                            <div class="info-card">
+                                <div class="info-card-title">Version</div>
+                                <div class="info-card-content">${contractData.version}</div>
+                            </div>
+                            <div class="info-card">
+                                <div class="info-card-title">Deployment Chain</div>
+                                <div class="info-card-content">${contractData.deploymentChain}</div>
+                            </div>
+                            <div class="info-card">
+                                <div class="info-card-title">Role</div>
+                                <div class="info-card-content">${contractData.identity.role}</div>
+                            </div>
+                            <div class="info-card">
+                                <div class="info-card-title">Upgrade Pattern</div>
+                                <div class="info-card-content">${contractData.identity.upgradePattern}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="subsection">
+                        <div class="subsection-title">Purpose</div>
+                        <p style="font-size: 15px; line-height: 1.8;">${contractData.identity.purpose}</p>
+                    </div>
+                    
+                    <div class="subsection">
+                        <div class="subsection-title">Dependencies (${Object.keys(contractData.identity.dependencies).length})</div>
+                        <div class="info-grid">
+                            ${Object.entries(contractData.identity.dependencies).map(([key, value]) => `
+                                <div class="info-card">
+                                    <div class="info-card-title">${key}</div>
+                                    <div class="info-card-content">${value}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('content').innerHTML = html;
+        }
+        
+        function renderVariables() {
+            if (!contractData) return;
+            
+            const variables = Object.entries(contractData.stateVariables);
+            const html = `
+                <div class="section active">
+                    <div class="section-title">State Variables (${variables.length})</div>
+                    
+                    ${variables.map(([name, data]) => `
+                        <div class="info-card" style="margin-bottom: 20px;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                                <span style="font-size: 18px; font-weight: 600; color: #667eea;">${name}</span>
+                                <span class="badge badge-blue">${data.type}</span>
+                                <span class="badge badge-green">${data.visibility}</span>
+                            </div>
+                            
+                            <div style="margin-bottom: 8px;">
+                                <strong>Purpose:</strong> ${data.purpose}
+                            </div>
+                            
+                            <div style="margin-bottom: 8px;">
+                                <strong>When it changes:</strong> ${data.whenItChanges}
+                            </div>
+                            
+                            ${data.example ? `
+                                <div style="margin-bottom: 8px;">
+                                    <strong>Example:</strong> <code>${data.example}</code>
+                                </div>
+                            ` : ''}
+                            
+                            <div class="warning-box" style="margin-top: 12px;">
+                                <strong>Critical:</strong> ${data.criticalBecause}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            document.getElementById('content').innerHTML = html;
+        }
+        
+        function renderFunctions() {
+            if (!contractData) return;
+            
+            const functions = Object.entries(contractData.keyFunctions);
+            const html = `
+                <div class="section active">
+                    <div class="section-title">Key Functions (${functions.length})</div>
+                    
+                    ${functions.map(([name, data]) => `
+                        <div class="function-card">
+                            <div style="font-size: 20px; font-weight: 700; color: #7c3aed; margin-bottom: 12px;">
+                                ${name}()
+                            </div>
+                            
+                            ${data.signature ? `
+                                <div class="function-signature">${data.signature}</div>
+                            ` : ''}
+                            
+                            <div style="margin-bottom: 12px;">
+                                <span class="badge badge-purple">${data.visibility}</span>
+                                <span class="badge badge-yellow">~${data.gasEstimate} gas</span>
+                            </div>
+                            
+                            <div style="margin-bottom: 16px; font-size: 15px; line-height: 1.6;">
+                                <strong>Purpose:</strong> ${data.purpose}
+                            </div>
+                            
+                            ${data.logic ? `
+                                <div class="logic-steps">
+                                    <strong>Logic Flow:</strong>
+                                    <ol>
+                                        ${data.logic.map(step => `<li>${step}</li>`).join('')}
+                                    </ol>
+                                </div>
+                            ` : ''}
+                            
+                            ${data.example ? `
+                                <div class="example-box">
+                                    <div class="example-title">📝 Example Usage</div>
+                                    <pre style="font-size: 12px; overflow-x: auto;">${JSON.stringify(data.example, null, 2)}</pre>
+                                </div>
+                            ` : ''}
+                            
+                            ${data.keyInsight ? `
+                                <div style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 12px; margin-top: 12px;">
+                                    <strong>💡 Key Insight:</strong> ${data.keyInsight}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            document.getElementById('content').innerHTML = html;
+        }
+        
+        function renderCommission() {
+            if (!contractData) return;
+            
+            const commission = contractData.commissionSystem;
+            const html = `
+                <div class="section active">
+                    <div class="section-title">Commission System</div>
+                    
+                    <div class="subsection">
+                        <div class="subsection-title">Overview</div>
+                        <p style="font-size: 15px;">${commission.overview}</p>
+                    </div>
+                    
+                    <div class="subsection">
+                        <div class="subsection-title">Calculation</div>
+                        <div class="info-card">
+                            <div><strong>Formula:</strong> <code>${commission.calculation.formula}</code></div>
+                            <div style="margin-top: 8px;"><strong>Basis Points:</strong> ${commission.calculation.basisPoints}</div>
+                            <div style="margin-top: 8px;"><strong>Minimum:</strong> ${commission.calculation.minimumCommission}</div>
+                        </div>
+                        
+                        <div style="margin-top: 20px;">
+                            <strong>Examples:</strong>
+                            ${commission.calculation.examples.map(ex => `
+                                <div class="example-box" style="margin-top: 10px;">
+                                    <div>Payment: <strong>${ex.payment}</strong></div>
+                                    <div>% Commission: ${ex.percentCommission}</div>
+                                    <div>Minimum: ${ex.minimumCommission}</div>
+                                    <div><strong>Actual Commission: ${ex.actualCommission}</strong></div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('content').innerHTML = html;
+        }
+        
+        function renderIntegration() {
+            if (!contractData) return;
+            
+            const patterns = contractData.integrationPatterns;
+            const html = `
+                <div class="section active">
+                    <div class="section-title">Integration Patterns</div>
+                    
+                    ${Object.entries(patterns).map(([name, data]) => `
+                        <div class="subsection">
+                            <div class="subsection-title">${name}</div>
+                            <p style="margin-bottom: 16px;">${data.description}</p>
+                            <div class="logic-steps">
+                                <strong>Flow:</strong>
+                                <ol>
+                                    ${data.flow.map(step => `<li>${step}</li>`).join('')}
+                                </ol>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            document.getElementById('content').innerHTML = html;
+        }
+        
+        function renderSecurity() {
+            if (!contractData) return;
+            
+            const security = contractData.criticalInformation;
+            const html = `
+                <div class="section active">
+                    <div class="section-title">Security & Critical Information</div>
+                    
+                    <div class="subsection">
+                        <div class="subsection-title">Security Considerations</div>
+                        <ul style="padding-left: 20px;">
+                            ${security.securityConsiderations.map(item => `
+                                <li style="margin-bottom: 8px;">${item}</li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="subsection">
+                        <div class="subsection-title">Gas Optimizations</div>
+                        <ul style="padding-left: 20px;">
+                            ${security.gasOptimizations.map(item => `
+                                <li style="margin-bottom: 8px;">${item}</li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="subsection">
+                        <div class="subsection-title">Known Limitations</div>
+                        ${security.knownLimitations.map(item => `
+                            <div class="warning-box" style="margin-bottom: 12px;">${item}</div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('content').innerHTML = html;
+        }
+        
+        // Search functionality
+        document.getElementById('searchBox').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            // TODO: Implement search across all sections
+            console.log('Searching for:', searchTerm);
+        });
+    </script>
+</body>
+</html>

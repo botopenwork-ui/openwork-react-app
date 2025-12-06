@@ -1,0 +1,636 @@
+{
+  "contractName": "NativeOpenWorkJobContract (NOWJC)",
+  "version": "2.0 - LayerZero + CCTP Integration",
+  "deploymentChain": "Arbitrum Sepolia (Native Chain)",
+  
+  "identity": {
+    "role": "Central Job Management Hub",
+    "purpose": "Manages the complete job lifecycle, payment distribution, and rewards calculation for the entire OpenWork platform",
+    "upgradePattern": "UUPS (Universal Upgradeable Proxy Standard)",
+    "authorization": "Only bridge can upgrade via upgradeFromDAO()",
+    "dependencies": {
+      "genesis": "OpenworkGenesis - Stores all job, application, and user data",
+      "rewardsContract": "NativeRewards - Calculates and tracks OW token rewards",
+      "bridge": "NativeBridge - Routes cross-chain messages",
+      "usdtToken": "USDC Token - Payment currency (6 decimals)",
+      "cctpReceiver": "CCTP Receiver - Receives cross-chain USDC",
+      "cctpTransceiver": "CCTP Transceiver - Sends cross-chain USDC",
+      "nativeAthena": "Native Athena - Dispute resolution authorization",
+      "profileGenesis": "ProfileGenesis - Profile and referrer data"
+    }
+  },
+  
+  "stateVariables": {
+    "genesis": {
+      "type": "IOpenworkGenesis",
+      "visibility": "public",
+      "purpose": "Reference to storage contract containing all job, application, profile, and rating data",
+      "whenItChanges": "Only during initialization or admin update via setGenesis()",
+      "example": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+      "criticalBecause": "All persistent data reads/writes go through this contract"
+    },
+    
+    "rewardsContract": {
+      "type": "IOpenWorkRewards",
+      "visibility": "public",
+      "purpose": "Handles OW token reward calculations based on 20-band system",
+      "whenItChanges": "Admin update via setRewardsContract()",
+      "example": "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063",
+      "criticalBecause": "Determines token distribution for all platform payments"
+    },
+    
+    "bridge": {
+      "type": "address",
+      "visibility": "public",
+      "purpose": "Native Bridge contract for routing cross-chain messages via LayerZero",
+      "whenItChanges": "Admin update via setBridge()",
+      "example": "0x1234...abcd",
+      "criticalBecause": "All cross-chain communication flows through this"
+    },
+    
+    "usdtToken": {
+      "type": "IERC20",
+      "visibility": "public",
+      "purpose": "USDC token contract (called USDT for historical reasons)",
+      "decimals": 6,
+      "whenItChanges": "Admin update via setUSDTToken()",
+      "example": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+      "criticalBecause": "All job payments are made in USDC"
+    },
+    
+    "cctpReceiver": {
+      "type": "address",
+      "visibility": "public",
+      "purpose": "Contract that receives USDC from other chains via Circle's CCTP",
+      "whenItChanges": "Admin update via setCCTPReceiver()",
+      "example": "0x5678...efgh",
+      "criticalBecause": "Enables cross-chain USDC deposits for job funding"
+    },
+    
+    "cctpTransceiver": {
+      "type": "address",
+      "visibility": "public",
+      "purpose": "Contract that sends USDC to other chains via Circle's CCTP",
+      "whenItChanges": "Admin update via setCCTPTransceiver()",
+      "example": "0x9abc...ijkl",
+      "criticalBecause": "Enables cross-chain USDC payments to job takers"
+    },
+    
+    "nativeAthena": {
+      "type": "address",
+      "visibility": "public",
+      "purpose": "Native Athena contract authorized to resolve disputes and release funds",
+      "whenItChanges": "Admin update via setNativeAthena()",
+      "example": "0xdef0...mnop",
+      "criticalBecause": "Only this address can call releaseDisputedFunds()"
+    },
+    
+    "jobApplicantChainDomain": {
+      "type": "mapping(string => mapping(address => uint32))",
+      "visibility": "public",
+      "purpose": "Stores each applicant's preferred CCTP domain for receiving payments",
+      "structure": "jobId => applicant => chainDomain",
+      "whenItChanges": "Set during applyToJob() or handleStartDirectContract()",
+      "example": "jobApplicantChainDomain['40232-57'][0xBob] = 2 (Optimism)",
+      "criticalBecause": "Used to route dispute resolutions and payments to correct chain"
+    },
+    
+    "treasury": {
+      "type": "address",
+      "visibility": "public",
+      "purpose": "Treasury wallet that receives platform commission",
+      "whenItChanges": "Admin update via setTreasury()",
+      "example": "0xTreasury...1234",
+      "criticalBecause": "Destination for accumulated platform fees"
+    },
+    
+    "accumulatedCommission": {
+      "type": "uint256",
+      "visibility": "public",
+      "purpose": "Tracks total USDC commission accumulated and available for withdrawal",
+      "whenItChanges": "Incremented on every payment, decremented on withdrawal",
+      "example": "50000000 (50 USDC with 6 decimals)",
+      "criticalBecause": "Represents platform revenue"
+    },
+    
+    "commissionPercentage": {
+      "type": "uint256",
+      "visibility": "public",
+      "purpose": "Commission rate in basis points (100 = 1%)",
+      "default": "100 (1%)",
+      "whenItChanges": "Admin update via setCommissionPercentage()",
+      "example": "100",
+      "criticalBecause": "Determines platform's cut of every payment"
+    },
+    
+    "minCommission": {
+      "type": "uint256",
+      "visibility": "public",
+      "purpose": "Minimum commission amount in USDC (6 decimals)",
+      "default": "1000000 (1 USDC)",
+      "whenItChanges": "Admin update via setMinCommission()",
+      "example": "1000000",
+      "criticalBecause": "Ensures platform gets minimum fee even on small payments"
+    },
+    
+    "authorizedContracts": {
+      "type": "mapping(address => bool)",
+      "visibility": "public",
+      "purpose": "Whitelist of contracts allowed to call specific functions",
+      "whenItChanges": "Admin adds/removes via addAuthorizedContract()",
+      "example": "authorizedContracts[nativeAthena] = true",
+      "criticalBecause": "Security mechanism for privileged operations"
+    }
+  },
+  
+  "keyFunctions": {
+    "postJob": {
+      "signature": "postJob(string jobId, address jobGiver, string jobDetailHash, string[] descriptions, uint256[] amounts)",
+      "visibility": "external",
+      "modifiers": [],
+      "gasEstimate": "~150,000",
+      
+      "purpose": "Creates a new job posting on the native chain (called by bridge from local chains)",
+      
+      "parameters": {
+        "jobId": "Unique identifier format: chainEid-counter (e.g., '40232-57')",
+        "jobGiver": "Address of the person posting the job",
+        "jobDetailHash": "IPFS hash containing full job description",
+        "descriptions": "Array of milestone description hashes",
+        "amounts": "Array of USDC amounts for each milestone (6 decimals)"
+      },
+      
+      "logic": [
+        "1. Validates job doesn't already exist",
+        "2. Validates arrays have matching lengths",
+        "3. Stores job in Genesis with status 'Open'",
+        "4. Adds job ID to global list and poster's list",
+        "5. Initializes job with zero progress (no applicant selected)"
+      ],
+      
+      "stateChanges": [
+        "genesis.jobs[jobId] = new Job struct",
+        "genesis.allJobIds.push(jobId)",
+        "genesis.jobsByPoster[jobGiver].push(jobId)",
+        "genesis.jobCounter++"
+      ],
+      
+      "eventsEmitted": [
+        "JobPosted(jobId, jobGiver, jobDetailHash)",
+        "JobStatusChanged(jobId, JobStatus.Open)"
+      ],
+      
+      "externalCalls": [
+        "genesis.jobExists(jobId)",
+        "genesis.setJob(...)"
+      ],
+      
+      "prerequisites": [
+        "Caller must be bridge",
+        "Job ID must be unique",
+        "Arrays must not be empty",
+        "Array lengths must match"
+      ],
+      
+      "failureConditions": [
+        "Job already exists",
+        "Array length mismatch",
+        "Empty milestone arrays"
+      ],
+      
+      "example": {
+        "jobId": "40232-57",
+        "jobGiver": "0xAlice",
+        "jobDetailHash": "QmXyz...abc",
+        "descriptions": ["QmMilestone1", "QmMilestone2"],
+        "amounts": ["50000000", "50000000"],
+        "result": "Job created with 2 milestones, 100 USDC total"
+      },
+      
+      "relatedFunctions": [
+        "handleStartDirectContract()",
+        "applyToJob()",
+        "startJob()"
+      ]
+    },
+    
+    "applyToJob": {
+      "signature": "applyToJob(address applicant, string jobId, string applicationHash, string[] descriptions, uint256[] amounts, uint32 preferredChainDomain)",
+      "visibility": "external",
+      "modifiers": [],
+      "gasEstimate": "~120,000",
+      
+      "purpose": "Creates a job application with proposed milestones and payment preferences",
+      
+      "parameters": {
+        "applicant": "Address of the worker applying",
+        "jobId": "ID of the job being applied to",
+        "applicationHash": "IPFS hash with application details",
+        "descriptions": "Worker's proposed milestone descriptions",
+        "amounts": "Worker's proposed milestone amounts",
+        "preferredChainDomain": "CCTP domain where applicant wants payments (2=OP, 3=Arb)"
+      },
+      
+      "logic": [
+        "1. Validates arrays match length",
+        "2. Gets job from Genesis to check applicant hasn't already applied",
+        "3. Adds applicant to job's applicant list",
+        "4. Increments application counter for this job",
+        "5. Stores application with proposed milestones",
+        "6. CRITICAL: Stores applicant's preferred chain domain for future payments"
+      ],
+      
+      "stateChanges": [
+        "genesis.jobs[jobId].applicants.push(applicant)",
+        "genesis.jobApplicationCounter[jobId]++",
+        "genesis.jobApplications[jobId][appId] = new Application",
+        "jobApplicantChainDomain[jobId][applicant] = preferredChainDomain"
+      ],
+      
+      "eventsEmitted": [
+        "JobApplication(jobId, applicationId, applicant, applicationHash)"
+      ],
+      
+      "externalCalls": [
+        "genesis.getJob(jobId)",
+        "genesis.addJobApplicant(jobId, applicant)",
+        "genesis.setJobApplication(...)"
+      ],
+      
+      "prerequisites": [
+        "Job must exist",
+        "Applicant hasn't already applied",
+        "Arrays must not be empty"
+      ],
+      
+      "failureConditions": [
+        "Job doesn't exist",
+        "Already applied",
+        "Array length mismatch"
+      ],
+      
+      "example": {
+        "applicant": "0xBob",
+        "jobId": "40232-57",
+        "applicationHash": "QmApp...123",
+        "descriptions": ["QmMyMilestone1", "QmMyMilestone2"],
+        "amounts": ["45000000", "55000000"],
+        "preferredChainDomain": 2,
+        "result": "Application #1 created, Bob wants payments on Optimism"
+      },
+      
+      "keyInsight": "The preferredChainDomain is crucial - it determines where this applicant receives payments if selected"
+    },
+    
+    "handleStartDirectContract": {
+      "signature": "handleStartDirectContract(address jobGiver, address jobTaker, string jobId, string jobDetailHash, string[] descriptions, uint256[] amounts, uint32 jobTakerChainDomain)",
+      "visibility": "external",
+      "modifiers": [],
+      "gasEstimate": "~200,000",
+      
+      "purpose": "Creates and immediately starts a job without application process (direct hire)",
+      
+      "parameters": {
+        "jobGiver": "Address hiring the worker",
+        "jobTaker": "Address being hired",
+        "jobId": "Unique job identifier",
+        "jobDetailHash": "IPFS hash with job details",
+        "descriptions": "Milestone descriptions",
+        "amounts": "Milestone amounts",
+        "jobTakerChainDomain": "Where job taker receives payments"
+      },
+      
+      "logic": [
+        "1. Validates job doesn't exist",
+        "2. Creates job in Genesis with status 'Open' initially",
+        "3. Creates auto-application for the job taker",
+        "4. Immediately selects the applicant (no review needed)",
+        "5. Changes job status to 'InProgress'",
+        "6. Sets current milestone to 1",
+        "7. Copies milestones to finalMilestones",
+        "8. Stores job taker's chain preference for payments"
+      ],
+      
+      "stateChanges": [
+        "genesis.jobs[jobId] = new Job (Open)",
+        "genesis.jobApplications[jobId][1] = auto-application",
+        "genesis.jobs[jobId].selectedApplicant = jobTaker",
+        "genesis.jobs[jobId].status = InProgress",
+        "genesis.jobs[jobId].currentMilestone = 1",
+        "jobApplicantChainDomain[jobId][jobTaker] = jobTakerChainDomain"
+      ],
+      
+      "eventsEmitted": [
+        "JobPosted(jobId, jobGiver, jobDetailHash)",
+        "JobApplication(jobId, 1, jobTaker, 'direct-contract-auto-application')",
+        "JobStarted(jobId, 1, jobTaker, false)",
+        "JobStatusChanged(jobId, JobStatus.InProgress)"
+      ],
+      
+      "externalCalls": [
+        "genesis.setJob(...)",
+        "genesis.addJobApplicant(...)",
+        "genesis.setJobApplication(...)",
+        "genesis.setJobSelectedApplicant(...)",
+        "genesis.updateJobStatus(...)",
+        "genesis.setJobCurrentMilestone(...)",
+        "genesis.addJobFinalMilestone(...) for each milestone"
+      ],
+      
+      "prerequisites": [
+        "Caller must be bridge",
+        "Job ID must be unique",
+        "Arrays must have matching lengths"
+      ],
+      
+      "keyInsight": "This is the 'express lane' - creates job, application, and starts work in one transaction. Used when job giver and taker agree beforehand."
+    },
+    
+    "releasePaymentCrossChain": {
+      "signature": "releasePaymentCrossChain(address jobGiver, string jobId, uint256 amount, uint32 targetChainDomain, address targetRecipient)",
+      "visibility": "public",
+      "modifiers": [],
+      "gasEstimate": "~300,000",
+      
+      "purpose": "THE CORE PAYMENT FUNCTION - Releases milestone payment via CCTP to any chain",
+      
+      "parameters": {
+        "jobGiver": "Address releasing the payment (for tracking)",
+        "jobId": "Job being paid",
+        "amount": "USDC amount to release (6 decimals)",
+        "targetChainDomain": "CCTP domain: 0=ETH, 2=OP, 3=Arb, etc.",
+        "targetRecipient": "Address receiving USDC on target chain"
+      },
+      
+      "logic": [
+        "1. Validates job is in progress",
+        "2. Validates amount matches current milestone amount (critical security check)",
+        "3. Calculates commission: max(1% of amount, 1 USDC minimum)",
+        "4. Calculates net amount: amount - commission",
+        "5. CRITICAL: Approves CCTP transceiver to spend net amount",
+        "6. Calls cctpTransceiver.sendFast() to send USDC cross-chain",
+        "7. Processes rewards: calls rewardsContract.processJobPayment() with net amount",
+        "8. Updates Genesis: totalPaid += netAmount",
+        "9. Increments milestone counter",
+        "10. If last milestone, marks job as Completed"
+      ],
+      
+      "stateChanges": [
+        "accumulatedCommission += commission",
+        "job.totalPaid += netAmount",
+        "genesis.totalPlatformPayments += netAmount",
+        "job.currentMilestone++",
+        "job.status = Completed (if last milestone)"
+      ],
+      
+      "eventsEmitted": [
+        "CommissionDeducted(jobId, amount, commission, netAmount)",
+        "PaymentReleased(jobId, jobGiver, targetRecipient, netAmount, milestone)",
+        "JobStatusChanged(jobId, Completed) if last milestone"
+      ],
+      
+      "externalCalls": [
+        "genesis.getJob(jobId) - read job state",
+        "usdtToken.approve(cctpTransceiver, netAmount) - CRITICAL for CCTP",
+        "cctpTransceiver.sendFast(netAmount, targetChainDomain, mintRecipient, 1000)",
+        "rewardsContract.processJobPayment(jobGiver, jobTaker, netAmount, newPlatformTotal)",
+        "genesis.updateJobTotalPaid(jobId, netAmount)",
+        "genesis.setJobCurrentMilestone(jobId, newMilestone)",
+        "genesis.updateJobStatus(jobId, Completed) if done"
+      ],
+      
+      "securityChecks": [
+        "Job must be InProgress",
+        "Amount must exactly match milestone",
+        "CCTP transceiver must be set",
+        "Target recipient must be valid address"
+      ],
+      
+      "failureConditions": [
+        "Job not in progress",
+        "Amount mismatch with milestone",
+        "Invalid milestone index",
+        "CCTP transceiver not set",
+        "Insufficient USDC balance in contract"
+      ],
+      
+      "example": {
+        "jobGiver": "0xAlice",
+        "jobId": "40232-57",
+        "amount": "100000000",
+        "targetChainDomain": 2,
+        "targetRecipient": "0xBob",
+        "calculation": {
+          "grossAmount": "100 USDC",
+          "commission": "1 USDC (1% of 100)",
+          "netAmount": "99 USDC",
+          "destination": "Optimism Sepolia",
+          "recipient": "0xBob"
+        },
+        "result": "99 USDC sent to Bob on Optimism, 1 USDC commission accumulated, milestone 1 completed"
+      },
+      
+      "criticalIssues": [
+        "⚠️ MUST use approve() before sendFast() - not safeTransfer()",
+        "⚠️ Amount validation prevents overpayment or underpayment",
+        "⚠️ Milestone guard ensures payments follow job structure"
+      ],
+      
+      "rewardCalculation": {
+        "what": "OW tokens awarded based on current reward band",
+        "who": "Job giver, job giver's referrer, job taker's referrer",
+        "how": "RewardsContract.processJobPayment() calculates based on platform total",
+        "stored": "In Genesis and Native Rewards contract"
+      }
+    },
+    
+    "releaseDisputedFunds": {
+      "signature": "releaseDisputedFunds(address recipient, uint256 amount, uint32 targetChainDomain)",
+      "visibility": "external",
+      "modifiers": [],
+      "gasEstimate": "~250,000",
+      
+      "purpose": "Releases escrowed funds to dispute winner (job giver or job taker)",
+      
+      "authorization": "ONLY Native Athena can call this - enforced by require check",
+      
+      "parameters": {
+        "recipient": "Winner of the dispute (receives the funds)",
+        "amount": "USDC amount to release",
+        "targetChainDomain": "CCTP domain where recipient wants funds"
+      },
+      
+      "logic": [
+        "1. Validates caller is nativeAthena",
+        "2. Calculates commission on disputed amount",
+        "3. If target is native chain (domain 3): direct transfer",
+        "4. If target is another chain: CCTP cross-chain transfer",
+        "5. Accumulates commission"
+      ],
+      
+      "stateChanges": [
+        "accumulatedCommission += commission"
+      ],
+      
+      "eventsEmitted": [
+        "CommissionDeducted('dispute', amount, commission, netAmount)",
+        "DisputedFundsReleased('dispute', recipient, targetChainDomain, netAmount)"
+      ],
+      
+      "externalCalls": [
+        "usdtToken.safeTransfer(recipient, netAmount) if native chain",
+        "usdtToken.approve(cctpTransceiver, netAmount) + sendFast() if cross-chain"
+      ],
+      
+      "security": "Critical function - only dispute resolution contract can call",
+      
+      "example": {
+        "scenario": "Job taker wins dispute for milestone 2",
+        "recipient": "0xBob",
+        "amount": "50000000",
+        "targetChainDomain": 2,
+        "result": "49.5 USDC sent to Bob on Optimism, 0.5 USDC commission"
+      }
+    },
+    
+    "incrementGovernanceAction": {
+      "signature": "incrementGovernanceAction(address user)",
+      "visibility": "external",
+      "modifiers": [],
+      "gasEstimate": "~50,000",
+      
+      "purpose": "Records user's governance participation (voting, proposing) to unlock reward tokens",
+      
+      "authorization": "Bridge or authorized contracts",
+      
+      "logic": [
+        "1. Updates Genesis counter (legacy)",
+        "2. Calls RewardsContract to record action in current band",
+        "3. Each governance action unlocks more tokens for claiming"
+      ],
+      
+      "stateChanges": [
+        "genesis.userGovernanceActions[user]++",
+        "rewardsContract records action in current band"
+      ],
+      
+      "eventsEmitted": [
+        "GovernanceActionIncremented(user, newTotal, currentBand)"
+      ],
+      
+      "keyMechanic": "Governance actions unlock earned tokens. Each action in a band lets user claim more tokens from that band's rewards."
+    },
+    
+    "syncRewardsData": {
+      "signature": "syncRewardsData(bytes _options)",
+      "visibility": "external payable",
+      "modifiers": [],
+      "gasEstimate": "~100,000 + LayerZero fee",
+      
+      "purpose": "Syncs user's claimable token balance to Main Chain for claiming",
+      
+      "flow": [
+        "1. User calls this on Native Chain (Arbitrum)",
+        "2. Calculates claimable tokens from RewardsContract",
+        "3. Sends message to Main Bridge",
+        "4. Main Bridge routes to Main Rewards",
+        "5. Main Rewards updates user's claimable balance",
+        "6. User can now claim on Main Chain"
+      ],
+      
+      "parameters": {
+        "_options": "LayerZero options (gas limit, etc.)",
+        "msgValue": "ETH for LayerZero gas fee"
+      },
+      
+      "keyInsight": "This is how tokens earned on Native Chain become claimable on Main Chain"
+    }
+  },
+  
+  "commissionSystem": {
+    "overview": "Platform takes commission on every payment to fund operations",
+    
+    "calculation": {
+      "formula": "max(amount * 1%, 1 USDC)",
+      "basisPoints": 100,
+      "minimumCommission": "1 USDC (1000000 with 6 decimals)",
+      "examples": [
+        {
+          "payment": "10 USDC",
+          "percentCommission": "0.1 USDC",
+          "minimumCommission": "1 USDC",
+          "actualCommission": "1 USDC (minimum applied)"
+        },
+        {
+          "payment": "200 USDC",
+          "percentCommission": "2 USDC",
+          "minimumCommission": "1 USDC",
+          "actualCommission": "2 USDC (percent used)"
+        }
+      ]
+    },
+    
+    "accumulation": "All commissions stored in accumulatedCommission state variable",
+    
+    "withdrawal": {
+      "who": "Only treasury address",
+      "functions": ["withdrawCommission(amount)", "withdrawAllCommission()"],
+      "destination": "Treasury wallet"
+    },
+    
+    "appliedOn": [
+      "Job milestone payments",
+      "Direct contract payments",
+      "Dispute resolutions",
+      "Any USDC release"
+    ]
+  },
+  
+  "integrationPatterns": {
+    "localChainInteraction": {
+      "description": "How LOWJC/Athena on local chains interact with NOWJC",
+      "flow": [
+        "1. User interacts with LOWJC on OP/ETH/etc",
+        "2. LOWJC encodes message with function name + parameters",
+        "3. LOWJC sends to Local Bridge",
+        "4. Local Bridge routes via LayerZero to Native Bridge",
+        "5. Native Bridge decodes and routes to NOWJC",
+        "6. NOWJC executes and stores in Genesis"
+      ]
+    },
+    
+    "cctpPaymentFlow": {
+      "description": "How cross-chain USDC payments work",
+      "flow": [
+        "1. NOWJC approves CCTP Transceiver for amount",
+        "2. Transceiver.sendFast() called with domain + recipient",
+        "3. USDC burned on source chain",
+        "4. Attestation retrieved from Circle API",
+        "5. USDC minted on destination chain to recipient",
+        "6. Typically takes 10-20 minutes"
+      ]
+    }
+  },
+  
+  "criticalInformation": {
+    "securityConsiderations": [
+      "Only bridge can call most functions (prevents unauthorized access)",
+      "Milestone amount validation prevents over/underpayment",
+      "CCTP approval pattern must be used (not safeTransfer)",
+      "Commission calculated before CCTP transfer (no fee on cross-chain)",
+      "Dispute resolution only callable by Native Athena"
+    ],
+    
+    "gasOptimizations": [
+      "State variables are public (auto-generated getters)",
+      "Genesis stores data (NOWJC just orchestrates)",
+      "Commented out unused functions to reduce deployment size"
+    ],
+    
+    "knownLimitations": [
+      "Contract size near 24KB limit (many functions commented out)",
+      "Some validation checks commented for cross-chain flexibility",
+      "CCTP transfers take 10-20 minutes (not instant)"
+    ]
+  }
+}

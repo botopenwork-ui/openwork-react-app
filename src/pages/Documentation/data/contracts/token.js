@@ -873,7 +873,6 @@ contract VotingToken is ERC20, ERC20Permit, ERC20Votes, Ownable {
       { 
         name: 'initialOwner',
         type: 'address',
-        default: 'WALLET',
         description: 'Address that will own the token contract and can mint tokens',
         placeholder: '0x...'
       }
@@ -896,12 +895,33 @@ contract VotingToken is ERC20, ERC20Permit, ERC20Votes, Ownable {
     },
     estimatedGas: '2.1M',
     postDeploy: {
-      message: 'Token deployed successfully! Initial supply of 1B OWORK minted to your address.',
+      message: 'Standard deployment complete! Initial supply of 1B OWORK minted to owner.',
       nextSteps: [
-        'Transfer tokens to Main Rewards contract for user claims',
-        'Transfer tokens to Main DAO treasury',
-        'Verify contract on Basescan',
-        'Add token to MetaMask'
+        '1. Deploy VotingToken (OpenWork Token) with constructor parameter:',
+        '   - Initial Owner: your admin wallet address',
+        '2. ⚠️ CRITICAL: Distribute initial 1B token supply:',
+        '   - Transfer 100,000+ OWORK → Main Rewards (for user claims)',
+        '   - Transfer X OWORK → Main DAO treasury (for governance)',
+        '   - Transfer Y OWORK → Team/Advisors wallets (vested)',
+        '   - Transfer Z OWORK → DEX liquidity pools',
+        '   - Keep remainder for future needs',
+        '3. Verify token contract on Basescan/Etherscan',
+        '4. Add token to block explorer as verified ERC20',
+        '5. Configure Main DAO with token address:',
+        '   - MainDAO.setOpenworkToken(tokenAddress) [during init]',
+        '6. Configure Main Rewards with token address:',
+        '   - MainRewards.setOpenworkToken(tokenAddress) [during init]',
+        '7. Test token operations:',
+        '   - Transfer to test address',
+        '   - Approve and transferFrom',
+        '   - Self-delegate and check voting power',
+        '8. Optional: Create DEX liquidity pair (OWORK/ETH)',
+        '9. Add token to MetaMask for users:',
+        '   - Symbol: OWORK',
+        '   - Decimals: 18',
+        '   - Address: deployed contract address',
+        '10. IMPORTANT: Main Rewards MUST be funded before users can claim',
+        '11. Consider transferring ownership to Main DAO after distribution'
       ]
     }
   }

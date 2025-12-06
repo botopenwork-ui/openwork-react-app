@@ -584,6 +584,87 @@ await localBridge.sendToNativeChain(
     ]
   },
   
+  deployConfig: {
+    type: 'standard',
+    constructor: [
+      {
+        name: '_endpoint',
+        type: 'address',
+        description: 'LayerZero V2 Endpoint address on Ethereum Sepolia',
+        placeholder: '0x6EDCE65403992e310A62460808c4b910D972f10f'
+      },
+      {
+        name: '_owner',
+        type: 'address',
+        description: 'Contract owner address (admin who manages chain configurations)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_nativeChainEid',
+        type: 'uint32',
+        description: 'LayerZero EID for Native Chain (Arbitrum Sepolia: 421614)',
+        placeholder: '421614'
+      },
+      {
+        name: '_mainChainEid',
+        type: 'uint32',
+        description: 'LayerZero EID for Main Chain (Base Sepolia: 40245)',
+        placeholder: '40245'
+      },
+      {
+        name: '_thisLocalChainEid',
+        type: 'uint32',
+        description: 'LayerZero EID for THIS chain (Ethereum Sepolia: 40161)',
+        placeholder: '40161'
+      }
+    ],
+    networks: {
+      testnet: {
+        name: 'Ethereum Sepolia',
+        chainId: 11155111,
+        rpcUrl: 'https://sepolia.infura.io/v3/YOUR-PROJECT-ID',
+        explorer: 'https://sepolia.etherscan.io',
+        currency: 'ETH'
+      },
+      mainnet: {
+        name: 'Ethereum Mainnet',
+        chainId: 1,
+        rpcUrl: 'https://eth.llamarpc.com',
+        explorer: 'https://etherscan.io',
+        currency: 'ETH'
+      }
+    },
+    estimatedGas: '3.2M',
+    postDeploy: {
+      message: 'Standard deployment complete! Configure bridge for Local Chain operations.',
+      nextSteps: [
+        '1. Deploy LocalBridge (LayerZeroBridge) with constructor parameters:',
+        '   - LayerZero Endpoint: 0x6EDCE65403992e310A62460808c4b910D972f10f',
+        '   - Owner: your admin wallet',
+        '   - Native Chain EID: 421614 (Arbitrum Sepolia)',
+        '   - Main Chain EID: 40245 (Base Sepolia)',
+        '   - This Local Chain EID: 40161 (Ethereum Sepolia)',
+        '2. Set Local Chain contract addresses:',
+        '   - setAthenaClientContract(athenaClientETHAddress)',
+        '   - setLowjcContract(lowjcETHAddress)',
+        '3. Authorize Local contracts to use bridge:',
+        '   - authorizeContract(athenaClientETHAddress, true)',
+        '   - authorizeContract(lowjcETHAddress, true)',
+        '4. Configure LayerZero peers on this contract:',
+        '   - setPeer(nativeChainEid, nativeBridgeAddress)',
+        '   - setPeer(mainChainEid, mainBridgeAddress)',
+        '5. Configure LOWJC and Athena Client with bridge:',
+        '   - LOWJC.setBridge(localBridgeAddress)',
+        '   - AthenaClient.setBridge(localBridgeAddress)',
+        '6. Test job posting flow to Native Chain',
+        '7. Test dispute raising flow',
+        '8. Test receiving dispute finalization from Native',
+        '9. Verify contract on Ethereum Sepolia Etherscan',
+        '10. IMPORTANT: Same contract deploys on all Local Chains with different EIDs'
+      ]
+    }
+  },
+  
   securityConsiderations: [
     'Non-upgradeable: LayerZero OApp, cannot upgrade bridge itself',
     'Authorization required: Only LOWJC and Athena Client can send messages',
@@ -597,5 +678,24 @@ await localBridge.sendToNativeChain(
     'Refund mechanism: Returns excess fees to prevent lock-up',
     'Direct Main communication: Rarely used, most operations via Native',
     'Upgrade flow: Main DAO → Main Bridge → Local Bridge → Local Contract'
-  ]
+  ],
+  
+  code: `// Same implementation as localBridgeOP - see: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/local-bridge.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+contract LayerZeroBridge is OAppSender, OAppReceiver {
+    mapping(address => bool) public authorizedContracts;
+    address public athenaClientContract;
+    address public lowjcContract;
+    uint32 public nativeChainEid;
+    uint32 public mainChainEid;
+    uint32 public thisLocalChainEid;
+
+    function sendToNativeChain(string memory _functionName, bytes memory _payload, bytes calldata _options) external payable onlyAuthorized {
+        _lzSend(nativeChainEid, _payload, _options, MessagingFee(msg.value, 0), payable(msg.sender));
+        emit CrossChainMessageSent(_functionName, nativeChainEid, _payload);
+    }
+    // ... Additional functions - see full implementation
+}`
 };

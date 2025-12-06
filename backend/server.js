@@ -7,6 +7,8 @@ const { processReleasePayment } = require('./flows/release-payment');
 const { compileContract } = require('./utils/compiler');
 const deploymentRoutes = require('./routes/deployments');
 const proposalRoutes = require('./routes/proposals');
+const registryRoutes = require('./routes/registry');
+const adminRoutes = require('./routes/admin');
 
 // Initialize Express
 const app = express();
@@ -18,6 +20,12 @@ app.use('/api/deployments', deploymentRoutes);
 
 // Mount proposal routes
 app.use('/api/proposals', proposalRoutes);
+
+// Mount registry routes
+app.use('/api/registry', registryRoutes);
+
+// Mount admin routes
+app.use('/api/admin', adminRoutes);
 
 // Track processing jobs to avoid duplicates
 const processingJobs = new Set();

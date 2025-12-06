@@ -7,6 +7,7 @@ import { GovernorUpgradeable } from "@openzeppelin/contracts-upgradeable/governa
 import { GovernorSettingsUpgradeable } from "@openzeppelin/contracts-upgradeable/governance/extensions/GovernorSettingsUpgradeable.sol";
 import { GovernorCountingSimpleUpgradeable } from "@openzeppelin/contracts-upgradeable/governance/extensions/GovernorCountingSimpleUpgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/governance/IGovernor.sol";
 
 interface IERC20 {
@@ -45,6 +46,7 @@ contract MainDAO is
     GovernorSettingsUpgradeable,
     GovernorCountingSimpleUpgradeable,
     OwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
     IERC20 public openworkToken;
@@ -108,6 +110,7 @@ contract MainDAO is
         );
         __GovernorCountingSimple_init();
         __Ownable_init(_owner);
+        __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
         
         openworkToken = IERC20(_openworkToken);
@@ -223,7 +226,7 @@ contract MainDAO is
         uint256 amount, 
         uint256 durationMinutes,
         bytes calldata _options
-    ) external payable {
+    ) external payable nonReentrant {
         require(amount >= MIN_STAKE, "Minimum stake is 100 tokens");
         require(durationMinutes >= 1 && durationMinutes <= 3, "Duration must be 1-3 minutes");
         require(stakes[msg.sender].amount == 0, "Already staking");
@@ -247,7 +250,7 @@ contract MainDAO is
         _sendStakeDataCrossChain(msg.sender, true, _options);
     }
     
-    function unstake(bytes calldata _options) external payable {
+    function unstake(bytes calldata _options) external payable nonReentrant {
         Stake memory userStake = stakes[msg.sender];
         require(userStake.amount > 0, "No stake found");
         require(block.timestamp >= userStake.unlockTime, "Stake still locked");
@@ -280,7 +283,7 @@ contract MainDAO is
         address staker, 
         uint256 removeAmount,
         bytes calldata _options
-    ) external payable onlyGovernance {
+    ) external payable onlyGovernance nonReentrant {
         require(stakes[staker].amount > 0, "No stake found");
         require(removeAmount <= stakes[staker].amount, "Remove amount exceeds stake");
         

@@ -36,7 +36,7 @@ const Header = () => {
 
   const goToMyProfile = () => {
     if (walletAddress) {
-      location.pathname = `/profile/${walletAddress}`
+      location.pathname = `/profile`
     }
   }
 

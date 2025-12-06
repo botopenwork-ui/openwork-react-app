@@ -729,6 +729,64 @@ if (referrer !== ethers.ZeroAddress) {
     ]
   },
   
+  deployConfig: {
+    type: 'uups',
+    constructor: [
+      {
+        name: '_owner',
+        type: 'address',
+        description: 'Contract owner address (admin who can upgrade and configure)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_openworkToken',
+        type: 'address',
+        description: 'OpenWork Token (OW) ERC-20 contract address',
+        placeholder: '0x...'
+      },
+      {
+        name: '_bridge',
+        type: 'address',
+        description: 'Main Bridge contract address (for cross-chain messaging)',
+        placeholder: '0x...'
+      }
+    ],
+    networks: {
+      testnet: {
+        name: 'Base Sepolia',
+        chainId: 84532,
+        rpcUrl: 'https://sepolia.base.org',
+        explorer: 'https://sepolia.basescan.org',
+        currency: 'ETH'
+      }
+    },
+    estimatedGas: '3.2M',
+    postDeploy: {
+      message: 'UUPS deployment complete! Next: Initialize, configure, and FUND with OW tokens.',
+      nextSteps: [
+        '1. Deploy MainRewards (CrossChainRewardsContract) implementation (no constructor params)',
+        '2. Deploy UUPSProxy with implementation address',
+        '3. Call initialize() on proxy via block scanner with:',
+        '   - Owner address (your admin wallet)',
+        '   - OpenWork Token address (OW ERC-20)',
+        '   - Main Bridge address',
+        '4. Set Main DAO address: setMainDAO(mainDAOAddress)',
+        '5. Configure authorized chains:',
+        '   - updateAuthorizedChain(40161, true, "Ethereum Sepolia")',
+        '   - updateAuthorizedChain(40232, true, "OP Sepolia")',
+        '   - updateAuthorizedChain(40231, true, "Arbitrum Sepolia")',
+        '6. ⚠️ CRITICAL: Fund contract with OW tokens!',
+        '   - Transfer OW tokens to contract address',
+        '   - Without funding, ALL claims will FAIL',
+        '   - Recommended: 100,000+ OW for testing',
+        '7. Test claimable balance sync from Native Chain',
+        '8. Test user claim flow',
+        '9. Verify both implementation and proxy on Basescan',
+        '10. Monitor contract OW balance and refund as needed'
+      ]
+    }
+  },
+  
   securityConsiderations: [
     'UUPS upgradeable: Owner, Main DAO, or bridge can authorize upgrades',
     'Bridge-only handlers: Only Main Bridge can call message handlers',
@@ -745,5 +803,113 @@ if (referrer !== ethers.ZeroAddress) {
     'Referrer immutability: Once set, referrer cannot be changed',
     'Claim resets balance: Prevents double claiming',
     'Owner powers: Can set bridge, DAO, token addresses'
-  ]
+  ],
+  
+  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/main-rewards.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+
+contract CrossChainRewardsContract is 
+    Initializable,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    UUPSUpgradeable
+{
+    // ==================== STATE VARIABLES ====================
+    IERC20 public openworkToken;
+    IMainDAO public mainDAO;
+    IThirdChainBridge public bridge;
+    
+    mapping(address => address) public userReferrers;
+    mapping(address => uint256) public userClaimableBalance;
+    mapping(address => uint256) public userTotalClaimed;
+    mapping(uint32 => bool) public authorizedChains;
+    mapping(uint32 => string) public chainNames;
+
+    // ==================== INITIALIZATION ====================
+    constructor() {
+        _disableInitializers();
+    }
+    
+    function initialize(
+        address _owner, 
+        address _openworkToken, 
+        address _bridge
+    ) public initializer {
+        __Ownable_init(_owner);
+        __ReentrancyGuard_init();
+        __UUPSUpgradeable_init();
+        
+        openworkToken = IERC20(_openworkToken);
+        bridge = IThirdChainBridge(_bridge);
+        _initializeAuthorizedChains();
+    }
+    
+    function _authorizeUpgrade(address) internal view override {
+        require(owner() == _msgSender() || address(bridge) == _msgSender() || address(mainDAO) == _msgSender(), "Unauthorized");
+    }
+
+    // ==================== MESSAGE HANDLERS ====================
+    function handleCreateProfile(address user, address referrer, uint32 sourceChain) external {
+        require(msg.sender == address(bridge), "Only bridge");
+        _createProfile(user, referrer, sourceChain);
+    }
+    
+    function handleStakeDataUpdate(
+        address staker, 
+        uint256 amount, 
+        uint256 unlockTime, 
+        uint256 durationMinutes, 
+        bool isActive, 
+        uint32
+    ) external {
+        require(msg.sender == address(bridge), "Only bridge");
+        
+        if (address(mainDAO) != address(0)) {
+            mainDAO.handleUpdateStakeDataFromRewards(staker, amount, unlockTime, durationMinutes, isActive);
+        }
+    }
+
+    function handleSyncClaimableRewards(
+        address user,
+        uint256 claimableAmount,
+        uint32 sourceChain
+    ) external {
+        require(msg.sender == address(bridge), "Only bridge");
+        userClaimableBalance[user] = claimableAmount;
+        emit ClaimableBalanceUpdated(user, claimableAmount, sourceChain);
+    }
+
+    // ==================== CLAIMING ====================
+    function claimRewards(bytes calldata _options) external payable nonReentrant {
+        uint256 claimableAmount = userClaimableBalance[msg.sender];
+        require(claimableAmount > 0, "No rewards");
+        require(openworkToken.balanceOf(address(this)) >= claimableAmount, "Insufficient balance");
+        
+        userClaimableBalance[msg.sender] = 0;
+        userTotalClaimed[msg.sender] += claimableAmount;
+        
+        require(openworkToken.transfer(msg.sender, claimableAmount), "Transfer failed");
+
+        if (address(bridge) != address(0)) {
+            bytes memory payload = abi.encode("updateUserClaimData", msg.sender, claimableAmount);
+            bridge.sendToNativeChain{value: msg.value}("updateUserClaimData", payload, _options);
+        }
+        
+        emit RewardsClaimed(msg.sender, claimableAmount);
+    }
+
+    function getClaimableRewards(address user) public view returns (uint256) {
+        return userClaimableBalance[user];
+    }
+
+    // ... Additional admin and view functions
+    // See full implementation in repository
+}`
 };

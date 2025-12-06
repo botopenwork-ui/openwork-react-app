@@ -767,6 +767,88 @@ await mainBridge.sendToThreeChains(
     ]
   },
   
+  deployConfig: {
+    type: 'standard',
+    constructor: [
+      {
+        name: '_endpoint',
+        type: 'address',
+        description: 'LayerZero V2 Endpoint address on Base/Ethereum (core messaging protocol)',
+        placeholder: '0x6EDCE65403992e310A62460808c4b910D972f10f'
+      },
+      {
+        name: '_owner',
+        type: 'address',
+        description: 'Contract owner address (admin who manages chains and configurations)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_nativeChainEid',
+        type: 'uint32',
+        description: 'LayerZero Endpoint ID for Native Chain (Arbitrum Sepolia: 421614)',
+        placeholder: '421614'
+      },
+      {
+        name: '_athenaClientChainEid',
+        type: 'uint32',
+        description: 'LayerZero EID for Athena Client chain (OP Sepolia: 40232)',
+        placeholder: '40232'
+      },
+      {
+        name: '_lowjcChainEid',
+        type: 'uint32',
+        description: 'LayerZero EID for LOWJC chain (Ethereum Sepolia: 40161)',
+        placeholder: '40161'
+      }
+    ],
+    networks: {
+      testnet: {
+        name: 'Base Sepolia',
+        chainId: 84532,
+        rpcUrl: 'https://sepolia.base.org',
+        explorer: 'https://sepolia.basescan.org',
+        currency: 'ETH'
+      },
+      mainnet: {
+        name: 'Ethereum Mainnet',
+        chainId: 1,
+        rpcUrl: 'https://eth.llamarpc.com',
+        explorer: 'https://etherscan.io',
+        currency: 'ETH'
+      }
+    },
+    estimatedGas: '3.8M',
+    postDeploy: {
+      message: 'Standard deployment complete! Configure bridge before governance operations.',
+      nextSteps: [
+        '1. Deploy MainBridge with constructor parameters:',
+        '   - LayerZero Endpoint: 0x6EDCE65403992e310A62460808c4b910D972f10f',
+        '   - Owner: your admin wallet',
+        '   - Native Chain EID: 421614 (Arbitrum Sepolia)',
+        '   - Athena Client Chain EID: 40232 (OP Sepolia)',
+        '   - LOWJC Chain EID: 40161 (Ethereum Sepolia)',
+        '2. Set Main Chain contract addresses:',
+        '   - setMainDaoContract(mainDAOAddress)',
+        '   - setRewardsContract(mainRewardsAddress)',
+        '3. Authorize contracts to use bridge:',
+        '   - authorizeContract(mainDAOAddress, true)',
+        '   - authorizeContract(mainRewardsAddress, true)',
+        '4. Configure LayerZero peers on this contract:',
+        '   - setPeer(nativeChainEid, nativeBridgeAddress)',
+        '   - setPeer(opSepoliaEid, opBridgeAddress)',
+        '   - setPeer(ethSepoliaEid, ethBridgeAddress)',
+        '5. Configure Main DAO and Main Rewards with bridge:',
+        '   - MainDAO.setBridge(mainBridgeAddress)',
+        '   - MainRewards.setBridge(mainBridgeAddress)',
+        '6. Test rewards sync from Native Chain',
+        '7. Test voting power sync from Native Chain',
+        '8. Test upgrade command to Native Chain',
+        '9. Verify contract on Basescan/Etherscan',
+        '10. CRITICAL: Main Bridge has upgrade authority - secure Main DAO access'
+      ]
+    }
+  },
+  
   securityConsiderations: [
     'Non-upgradeable: LayerZero OApp, cannot upgrade bridge itself',
     'onlyMainDAO security: Only Main DAO can send upgrade commands',
@@ -780,5 +862,104 @@ await mainBridge.sendToThreeChains(
     'Upgrade flow: Main DAO → Main Bridge → Native/Local Bridge → Target',
     'Batch atomicity: Multi-chain sends are atomic (all or none)',
     'Refund mechanism: Returns excess fees to prevent lock-up'
-  ]
+  ],
+  
+  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/main-chain-bridge.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+import { OAppSender, MessagingFee } from "@layerzerolabs/oapp-evm/contracts/oapp/OAppSender.sol";
+import { OAppReceiver } from "@layerzerolabs/oapp-evm/contracts/oapp/OAppReceiver.sol";
+
+contract ThirdChainBridge is OAppSender, OAppReceiver {
+    
+    // ==================== STATE VARIABLES ====================
+    mapping(address => bool) public authorizedContracts;
+    address public mainDaoContract;
+    address public rewardsContract;
+    uint32 public nativeChainEid;
+    uint32 public athenaClientChainEid;
+    uint32 public lowjcChainEid;
+
+    // ==================== INITIALIZATION ====================
+    constructor(
+        address _endpoint,
+        address _owner,
+        uint32 _nativeChainEid,
+        uint32 _athenaClientChainEid,
+        uint32 _lowjcChainEid
+    ) OAppCore(_endpoint, _owner) Ownable(_owner) {
+        nativeChainEid = _nativeChainEid;
+        athenaClientChainEid = _athenaClientChainEid;
+        lowjcChainEid = _lowjcChainEid;
+    }
+
+    // ==================== MESSAGE ROUTING ====================
+    function _lzReceive(
+        Origin calldata _origin,
+        bytes32,
+        bytes calldata _message,
+        address,
+        bytes calldata
+    ) internal override {
+        (string memory functionName) = abi.decode(_message, (string));
+        
+        if (keccak256(bytes(functionName)) == keccak256(bytes("syncClaimableRewards"))) {
+            (, address user, uint256 claimableAmount) = abi.decode(_message, (string, address, uint256));
+            IRewardsContract(rewardsContract).handleSyncClaimableRewards(user, claimableAmount, _origin.srcEid);
+        }
+        else if (keccak256(bytes(functionName)) == keccak256(bytes("syncVotingPower"))) {
+            (, address user, uint256 totalRewards) = abi.decode(_message, (string, address, uint256));
+            IMainDAO(mainDaoContract).handleSyncVotingPower(user, totalRewards, _origin.srcEid);
+        }
+            
+        emit CrossChainMessageReceived(functionName, _origin.srcEid, _message);
+    }
+
+    // ==================== UPGRADE COMMANDS ====================
+    function sendUpgradeCommand(
+        uint32 _dstChainId,
+        address targetProxy,
+        address newImplementation,
+        bytes calldata _options
+    ) external payable onlyMainDAO {
+        bytes memory payload = abi.encode("upgradeFromDAO", targetProxy, newImplementation);
+        _lzSend(uint16(_dstChainId), payload, _options, MessagingFee(msg.value, 0), payable(msg.sender));
+        emit UpgradeCommandSent(_dstChainId, targetProxy, newImplementation);
+    }
+
+    // ==================== SENDING FUNCTIONS ====================
+    function sendToNativeChain(
+        string memory _functionName,
+        bytes memory _payload,
+        bytes calldata _options
+    ) external payable onlyAuthorized {
+        _lzSend(nativeChainEid, _payload, _options, MessagingFee(msg.value, 0), payable(msg.sender));
+        emit CrossChainMessageSent(_functionName, nativeChainEid, _payload);
+    }
+
+    function sendToTwoChains(
+        string memory _functionName,
+        uint32 _dstEid1,
+        uint32 _dstEid2,
+        bytes memory _payload1,
+        bytes memory _payload2,
+        bytes calldata _options1,
+        bytes calldata _options2
+    ) external payable onlyAuthorized {
+        MessagingFee memory fee1 = _quote(_dstEid1, _payload1, _options1, false);
+        MessagingFee memory fee2 = _quote(_dstEid2, _payload2, _options2, false);
+        require(msg.value >= fee1.nativeFee + fee2.nativeFee, "Insufficient fee");
+        
+        _lzSend(_dstEid1, _payload1, _options1, fee1, payable(msg.sender));
+        _lzSend(_dstEid2, _payload2, _options2, fee2, payable(msg.sender));
+        
+        emit CrossChainMessageSent(_functionName, _dstEid1, _payload1);
+        emit CrossChainMessageSent(_functionName, _dstEid2, _payload2);
+    }
+
+    // ... Additional sending, quoting, and admin functions
+    // See full implementation in repository
+}`
 };

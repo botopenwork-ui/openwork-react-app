@@ -12,7 +12,8 @@ export const lowjcETH = {
   mainnetDeployed: 'Not deployed',
   testnetDeployed: 'Deployed',
   mainnetAddress: null,
-  testnetAddress: '0x3b4cE6441aB77437e306F396c83779A2BC8E5134',
+  testnetAddress: '0x2D44A202855c863Df8FD2E0f24C3B1e4c00C43aB',
+  isUUPS: true,
   tvl: 'N/A',
   docs: 'Local OpenWork Job Contract (LOWJC) on Ethereum Sepolia - User-facing job management interface. Enables job posting, applications, work submission, and payments. Syncs all data to Native Chain (Arbitrum) via LayerZero + CCTP for unified state and USDC escrow.',
   
@@ -1043,6 +1044,89 @@ await lowjc.releasePaymentCrossChain(
     ]
   },
   
+  deployConfig: {
+    type: 'uups',
+    constructor: [
+      {
+        name: '_owner',
+        type: 'address',
+        description: 'Contract owner address (admin who can upgrade and configure)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_bridge',
+        type: 'address',
+        description: 'Local Bridge contract address (for LayerZero messaging)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_usdtToken',
+        type: 'address',
+        description: 'USDC token address on Ethereum Sepolia (Circle USDC)',
+        placeholder: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238'
+      },
+      {
+        name: '_chainId',
+        type: 'uint32',
+        description: 'Chain ID for job ID generation (Ethereum Sepolia: 40161)',
+        placeholder: '40161'
+      },
+      {
+        name: '_cctpSender',
+        type: 'address',
+        description: 'CCTP Transceiver address on Ethereum (for USDC burns)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_cctpMintRecipient',
+        type: 'address',
+        description: 'NOWJC proxy address on Arbitrum (receives USDC mints)',
+        placeholder: '0x...'
+      }
+    ],
+    networks: {
+      testnet: {
+        name: 'Ethereum Sepolia',
+        chainId: 11155111,
+        rpcUrl: 'https://sepolia.infura.io/v3/YOUR-PROJECT-ID',
+        explorer: 'https://sepolia.etherscan.io',
+        currency: 'ETH'
+      },
+      mainnet: {
+        name: 'Ethereum Mainnet',
+        chainId: 1,
+        rpcUrl: 'https://eth.llamarpc.com',
+        explorer: 'https://etherscan.io',
+        currency: 'ETH'
+      }
+    },
+    estimatedGas: '4.5M',
+    postDeploy: {
+      message: 'UUPS deployment complete! Next: Initialize and configure LOWJC.',
+      nextSteps: [
+        '1. Deploy LOWJC implementation contract (no constructor params)',
+        '2. Deploy UUPSProxy with implementation address',
+        '3. Call initialize() on proxy via block scanner with:',
+        '   - Owner address (your admin wallet)',
+        '   - Local Bridge address on Ethereum',
+        '   - USDC token address (Circle USDC on Ethereum)',
+        '   - Chain ID: 40161 (for job ID generation)',
+        '   - CCTP Transceiver address on Ethereum',
+        '   - NOWJC proxy address on Arbitrum (CCTP mint recipient)',
+        '4. Set Athena Client address: setAthenaClientContract(athenaClientETHAddress)',
+        '5. Test profile creation flow',
+        '6. Test job posting flow:',
+        '   - Create test job with milestones',
+        '   - Verify LayerZero message sent to Native',
+        '   - Check USDC sent via CCTP',
+        '7. Test application flow',
+        '8. Test job start and payment release',
+        '9. Verify both implementation and proxy on Ethereum Sepolia Etherscan',
+        '10. IMPORTANT: Same contract deploys on all Local Chains with different params'
+      ]
+    }
+  },
+  
   securityConsiderations: [
     'UUPS upgradeable: Owner or bridge can upgrade implementation',
     'Dual authorization: Owner or bridge can authorize upgrades',
@@ -1061,5 +1145,50 @@ await lowjc.releasePaymentCrossChain(
     'No direct fund holding: LOWJC never holds USDC (immediately sent via CCTP)',
     'Bridge trust: Relies on Local Bridge for message routing',
     'Event logging: Complete audit trail of all job activities'
-  ]
+  ],
+  
+  code: `// Same implementation as lowjcOP - see: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/lowjc.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+contract CrossChainLocalOpenWorkJobContract is Initializable, ReentrancyGuardUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
+    using SafeERC20 for IERC20;
+    
+    IERC20 public usdtToken;
+    ILayerZeroBridge public bridge;
+    uint32 public chainId;
+    address public cctpSender;
+    address public cctpMintRecipient;
+    
+    mapping(address => Profile) public profiles;
+    mapping(string => Job) public jobs;
+    uint256 public jobCounter;
+
+    function postJob(
+        string memory _jobDetailHash, 
+        string[] memory _descriptions, 
+        uint256[] memory _amounts,
+        bytes calldata _nativeOptions
+    ) external payable nonReentrant {
+        string memory jobId = string(abi.encodePacked(Strings.toString(chainId), "-", Strings.toString(++jobCounter)));
+        
+        // Create job locally
+        Job storage newJob = jobs[jobId];
+        newJob.id = jobId;
+        newJob.jobGiver = msg.sender;
+        newJob.status = JobStatus.Open;
+        
+        // Send USDC via CCTP and job data via LayerZero
+        uint256 total = 0;
+        for (uint i = 0; i < _amounts.length; i++) total += _amounts[i];
+        sendFunds(jobId, total);
+        
+        bytes memory payload = abi.encode("postJob", jobId, msg.sender, _jobDetailHash, _descriptions, _amounts);
+        bridge.sendToNativeChain{value: msg.value}("postJob", payload, _nativeOptions);
+        
+        emit JobPosted(jobId, msg.sender, _jobDetailHash);
+    }
+    
+    // ... Additional functions - see full implementation
+}`
 };

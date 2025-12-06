@@ -31,6 +31,11 @@ export const nativeAthena = {
     'Weighted voting: Vote weight calculated from stake duration and earned tokens',
     'Proportional fee distribution: Winners receive fees based on their voting power contribution',
     'Oracle management: Create, update, and manage skill oracles with member verification',
+    'Oracle activity tracking: NEW - Track member participation, auto-detect inactive oracles',
+    'Activity-based validation: NEW - Only active oracles can accept disputes/verifications',
+    'Member activity monitoring: NEW - Tracks last vote timestamp for each member (90-day threshold)',
+    'Configurable activity threshold: NEW - Owner can adjust activity requirements (30-180 days)',
+    'Automatic oracle status: NEW - Oracles marked inactive if too few active members',
     'Configurable voting periods: Owner can set voting duration (default 60 minutes)',
     'Cross-chain fund release: Integrates with NOWJC for dispute fund distribution via CCTP',
     'Multi-dispute support: Jobs can have multiple disputes with counter tracking'
@@ -140,6 +145,166 @@ User on ANY Local Chain
   },
   
   functions: [
+    {
+      category: 'Oracle Activity Tracking',
+      description: 'NEW: Functions for tracking oracle member activity and determining oracle active status',
+      items: [
+        {
+          name: 'updateOracleActiveStatus',
+          signature: 'updateOracleActiveStatus(string _oracleName)',
+          whatItDoes: 'Updates the active status of an oracle by counting how many members have voted within the activity threshold (default: 90 days).',
+          whyUse: 'Ensures oracles remain active only when members are engaged. Anyone can call this to update oracle status.',
+          howItWorks: [
+            'Gets all oracle members from Genesis',
+            'Iterates through each member',
+            'Checks memberLastActivity for each',
+            'Counts members active within threshold (90 days)',
+            'Sets oracle as active if activeCount >= minOracleMembers',
+            'Stores status in Genesis',
+            'Emits OracleStatusUpdated event'
+          ],
+          parameters: [
+            { name: '_oracleName', type: 'string', description: 'Name of oracle to update status for' }
+          ],
+          accessControl: 'Public - anyone can call (they pay gas)',
+          events: ['OracleStatusUpdated(oracleName, isActive, activeMemberCount)'],
+          gasEstimate: '~150K gas (expensive - iterates all members)',
+          example: `// Update oracle status after members vote or become inactive
+await nativeAthena.updateOracleActiveStatus("Solidity Development");
+
+// Result:
+// - Counts active members (voted within 90 days)
+// - If >= minOracleMembers: oracle marked active
+// - If < minOracleMembers: oracle marked inactive
+// - Inactive oracles cannot accept new disputes/verifications
+
+// Use case: Call periodically (weekly) to maintain oracle health`,
+          relatedFunctions: ['isOracleActive', 'getOracleActiveMemberCount']
+        },
+        {
+          name: 'isOracleActive',
+          signature: 'isOracleActive(string _oracleName) view returns (bool)',
+          whatItDoes: 'Quick check if oracle is currently active (reads from cached status in Genesis).',
+          whyUse: 'Fast validation before accepting disputes or skill verifications. Used by handleRaiseDispute() and handleSubmitSkillVerification().',
+          howItWorks: [
+            'Reads oracleActiveStatus from Genesis (cached value)',
+            'Returns boolean',
+            'Cheap read - doesn\'t iterate members',
+            'Status updated by updateOracleActiveStatus()'
+          ],
+          parameters: [
+            { name: '_oracleName', type: 'string', description: 'Oracle name to check' }
+          ],
+          accessControl: 'Public view',
+          events: ['None (view)'],
+          gasEstimate: 'N/A (view)',
+          example: `// Check if oracle can accept new work
+const isActive = await nativeAthena.isOracleActive("Frontend Development");
+
+if (isActive) {
+  console.log("Oracle is active - can raise disputes");
+  // Allow dispute creation
+} else {
+  console.log("Oracle inactive - members haven't been voting");
+  // Suggest different oracle or ask members to become active
+}
+
+// Frontend use case:
+// Filter oracle list to show only active oracles for disputes`,
+          relatedFunctions: ['updateOracleActiveStatus', 'handleRaiseDispute']
+        },
+        {
+          name: 'isOracleMember',
+          signature: 'isOracleMember(address _account, string _oracleName) view returns (bool)',
+          whatItDoes: 'Checks if an address is a member of a specific oracle.',
+          whyUse: 'Validate member status, especially for skill verification votes where only oracle members can vote on active oracles.',
+          howItWorks: [
+            'Gets oracle members array from Genesis',
+            'Iterates through members',
+            'Returns true if account found',
+            'Returns false if not found'
+          ],
+          parameters: [
+            { name: '_account', type: 'address', description: 'Address to check' },
+            { name: '_oracleName', type: 'string', description: 'Oracle name' }
+          ],
+          accessControl: 'Public view',
+          events: ['None (view)'],
+          gasEstimate: 'N/A (view)',
+          example: `// Check if user is oracle member
+const isMember = await nativeAthena.isOracleMember(
+  userAddress,
+  "Solidity Development"
+);
+
+if (isMember) {
+  console.log("You are a member of this oracle");
+  // Can vote on oracle's skill verifications
+} else {
+  console.log("Not a member");
+}`,
+          relatedFunctions: ['getOracleActiveMemberCount', 'vote']
+        },
+        {
+          name: 'getOracleActiveMemberCount',
+          signature: 'getOracleActiveMemberCount(string _oracleName) view returns (uint256)',
+          whatItDoes: 'Counts how many oracle members have been active (voted) within the activity threshold period.',
+          whyUse: 'Monitor oracle health, display active member count in UI.',
+          howItWorks: [
+            'Gets all oracle members from Genesis',
+            'Iterates each member',
+            'Checks memberLastActivity timestamp',
+            'Counts if activity within threshold (90 days)',
+            'Returns active count',
+            'Expensive - iterates all members'
+          ],
+          parameters: [
+            { name: '_oracleName', type: 'string', description: 'Oracle name' }
+          ],
+          accessControl: 'Public view',
+          events: ['None (view)'],
+          gasEstimate: 'N/A (view, but expensive)',
+          example: `const totalMembers = (await genesis.getOracle("Frontend Development")).members.length;
+const activeMembers = await nativeAthena.getOracleActiveMemberCount("Frontend Development");
+
+console.log(\`Active members: \${activeMembers} / \${totalMembers}\`);
+
+if (activeMembers < 3) {
+  console.log("Warning: Oracle below minimum active members");
+  console.log("May become inactive soon");
+}
+
+// Display in oracle health dashboard`,
+          relatedFunctions: ['updateOracleActiveStatus', 'isOracleActive']
+        },
+        {
+          name: 'updateMemberActivityThreshold',
+          signature: 'updateMemberActivityThreshold(uint256 _newThresholdDays)',
+          whatItDoes: 'Owner updates the activity threshold (default: 90 days) for determining active members.',
+          whyUse: 'Adjust activity requirements based on platform maturity and voting frequency.',
+          howItWorks: [
+            'Validates caller is owner',
+            'Sets memberActivityThresholdDays = new value',
+            'Emits MemberActivityThresholdUpdated event',
+            'Affects future updateOracleActiveStatus() calls'
+          ],
+          parameters: [
+            { name: '_newThresholdDays', type: 'uint256', description: 'New threshold in days (e.g., 30, 60, 90, 180)' }
+          ],
+          accessControl: 'Owner only',
+          events: ['MemberActivityThresholdUpdated(newThresholdDays)'],
+          gasEstimate: '~30K gas',
+          example: `// Make activity threshold stricter (30 days)
+await nativeAthena.updateMemberActivityThreshold(30);
+
+// Or more lenient (180 days)
+await nativeAthena.updateMemberActivityThreshold(180);
+
+// After update, next updateOracleActiveStatus() uses new threshold`,
+          relatedFunctions: ['updateOracleActiveStatus', 'getOracleActiveMemberCount']
+        }
+      ]
+    },
     {
       category: 'Dispute Management',
       description: 'Functions for creating and settling job disputes with community voting',
@@ -684,6 +849,73 @@ if (Date.now() / 1000 >= startTime + (votingPeriod * 60)) {
     ]
   },
   
+  deployConfig: {
+    type: 'uups',
+    constructor: [
+      {
+        name: '_owner',
+        type: 'address',
+        description: 'Contract owner address (admin who can upgrade and configure)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_daoContract',
+        type: 'address',
+        description: 'Native DAO contract address (for stake-based voting eligibility)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_genesis',
+        type: 'address',
+        description: 'OpenworkGenesis contract address (persistent data storage)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_nowjContract',
+        type: 'address',
+        description: 'NOWJC contract address (for earned tokens and fund releases)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_usdcToken',
+        type: 'address',
+        description: 'USDC token contract address (for fee payments and distributions)',
+        placeholder: '0x...'
+      }
+    ],
+    networks: {
+      testnet: {
+        name: 'Arbitrum Sepolia',
+        chainId: 421614,
+        rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc',
+        explorer: 'https://sepolia.arbiscan.io',
+        currency: 'ETH'
+      }
+    },
+    estimatedGas: '3.8M',
+    postDeploy: {
+      message: 'UUPS deployment complete! Next: Initialize the proxy contract on block scanner.',
+      nextSteps: [
+        '1. Deploy NativeAthena implementation contract (no constructor params)',
+        '2. Deploy UUPSProxy with implementation address',
+        '3. Call initialize() on proxy via block scanner with:',
+        '   - Owner address (your admin wallet)',
+        '   - Native DAO contract address',
+        '   - OpenworkGenesis contract address',
+        '   - NOWJC contract address',
+        '   - USDC token address (Arbitrum Sepolia)',
+        '4. Set bridge address: setBridge(nativeBridgeAddress)',
+        '5. Configure parameters if needed:',
+        '   - setMinOracleMembers(3) [default]',
+        '   - setVotingPeriodMinutes(60) [default]',
+        '   - setMinStakeRequired(100) [default]',
+        '   - updateMemberActivityThreshold(90) [default]',
+        '6. Verify both implementation and proxy on Arbiscan',
+        '7. Test dispute creation and voting flow'
+      ]
+    }
+  },
+  
   securityConsiderations: [
     'UUPS upgradeable - owner and bridge can upgrade implementation',
     'Voting eligibility verified through Native DAO integration',
@@ -695,5 +927,174 @@ if (Date.now() / 1000 >= startTime + (votingPeriod * 60)) {
     'All data stored in Genesis for upgrade persistence',
     'Fund release only after settlement and validation',
     'Fee refund mechanism if no community participation'
-  ]
+  ],
+  
+  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/native-athena.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
+contract NativeAthena is 
+    Initializable,
+    OwnableUpgradeable,
+    UUPSUpgradeable
+{
+    using SafeERC20 for IERC20;
+    
+    // ==================== STATE VARIABLES ====================
+    address public daoContract;
+    IERC20 public usdcToken;
+    uint256 public accumulatedFees;
+    IOpenworkGenesis public genesis;
+    IOracleManager public oracleManager;
+    INativeOpenWorkJobContract public nowjContract;
+    address public bridge;
+    
+    enum VotingType { Dispute, SkillVerification, AskAthena }
+    
+    uint256 public minOracleMembers;
+    uint256 public votingPeriodMinutes;
+    uint256 public minStakeRequired;
+    uint256 public memberActivityThresholdDays = 90;
+    
+    mapping(string => uint256) public jobDisputeCounters;
+    mapping(string => uint256) public disputeStartTimes;
+
+    // ==================== INITIALIZATION ====================
+    constructor() {
+        _disableInitializers();
+    }
+    
+    function initialize(
+        address _owner, 
+        address _daoContract, 
+        address _genesis,
+        address _nowjContract,
+        address _usdcToken
+    ) public initializer {
+        __Ownable_init(_owner);
+        __UUPSUpgradeable_init();
+        
+        daoContract = _daoContract;
+        genesis = IOpenworkGenesis(_genesis);
+        nowjContract = INativeOpenWorkJobContract(_nowjContract);
+        if (_usdcToken != address(0)) {
+            usdcToken = IERC20(_usdcToken);
+        }
+        
+        minOracleMembers = 3;
+        votingPeriodMinutes = 60;
+        minStakeRequired = 100;
+    }
+    
+    function _authorizeUpgrade(address) internal view override {
+        require(owner() == _msgSender() || address(bridge) == _msgSender(), "Unauthorized");
+    }
+
+    // ==================== VOTING ELIGIBILITY ====================
+    function canVote(address account) public view returns (bool) {
+        if (daoContract != address(0)) {
+            (uint256 stakeAmount, , , bool isActive) = INativeDAO(daoContract).getStakerInfo(account);
+            if (isActive && stakeAmount >= minStakeRequired) {
+                return true;
+            }
+        }
+        
+        if (address(nowjContract) != address(0)) {
+            uint256 earnedTokens = nowjContract.getUserEarnedTokens(account);
+            return earnedTokens >= minStakeRequired;
+        }
+        
+        return false;
+    }
+    
+    function getUserVotingPower(address account) public view returns (uint256) {
+        uint256 totalVotingPower = 0;
+        
+        if (daoContract != address(0)) {
+            (uint256 stakeAmount, , uint256 durationMinutes, bool isActive) = INativeDAO(daoContract).getStakerInfo(account);
+            if (isActive && stakeAmount > 0) {
+                totalVotingPower += stakeAmount * durationMinutes;
+            }
+        }
+        
+        if (address(nowjContract) != address(0)) {
+            uint256 earnedTokens = nowjContract.getUserEarnedTokens(account);
+            totalVotingPower += earnedTokens;
+        }
+        
+        return totalVotingPower;
+    }
+
+    // ==================== DISPUTE MANAGEMENT ====================
+    function handleRaiseDispute(
+        string memory jobId, 
+        string memory disputeHash, 
+        string memory oracleName, 
+        uint256 fee, 
+        uint256 disputedAmount, 
+        address disputeRaiser
+    ) external {
+        IOpenworkGenesis.Oracle memory oracle = genesis.getOracle(oracleName);
+        require(oracle.members.length >= minOracleMembers, "Oracle not active");
+        
+        jobDisputeCounters[jobId]++;
+        string memory disputeId = string(abi.encodePacked(jobId, "-", uint2str(jobDisputeCounters[jobId])));
+        disputeStartTimes[disputeId] = block.timestamp;
+        
+        genesis.setDispute(disputeId, disputedAmount, disputeHash, disputeRaiser, fee);
+        emit DisputeRaised(disputeId, disputeRaiser, fee);
+    }
+    
+    function vote(
+        VotingType _votingType, 
+        string memory _disputeId, 
+        bool _voteFor, 
+        address _claimAddress
+    ) external {
+        require(canVote(msg.sender), "Insufficient tokens");
+        require(_claimAddress != address(0), "Invalid claim address");
+        
+        uint256 voteWeight = getUserVotingPower(msg.sender);
+        require(voteWeight > 0, "No voting power");
+        
+        if (_votingType == VotingType.Dispute) {
+            genesis.addDisputeVoter(_disputeId, msg.sender, _claimAddress, voteWeight, _voteFor);
+            _voteOnDispute(_disputeId, _voteFor, _claimAddress, voteWeight);
+        }
+        // ... similar for SkillVerification and AskAthena
+    }
+    
+    function settleDispute(string memory _disputeId) external {
+        require(block.timestamp >= disputeStartTimes[_disputeId] + (votingPeriodMinutes * 60), "Voting not ended");
+        
+        IOpenworkGenesis.Dispute memory dispute = genesis.getDispute(_disputeId);
+        bool disputeRaiserWins = dispute.votesFor > dispute.votesAgainst;
+        genesis.finalizeDispute(_disputeId, disputeRaiserWins);
+        
+        // Release funds to winner via NOWJC
+        if (address(nowjContract) != address(0)) {
+            string memory originalJobId = _extractJobIdFromDisputeId(_disputeId);
+            IOpenworkGenesis.Job memory job = genesis.getJob(originalJobId);
+            
+            // Determine recipient and chain based on who raised dispute and who won
+            // ... fund release logic
+        }
+        
+        // Distribute fees to winning voters
+        IOpenworkGenesis.VoterData[] memory voters = genesis.getDisputeVoters(_disputeId);
+        if (voters.length > 0) {
+            _distributeFeeToWinningVoters(VotingType.Dispute, _disputeId, disputeRaiserWins, dispute.fees);
+        }
+        
+        emit DisputeFinalized(_disputeId, disputeRaiserWins, dispute.votesFor, dispute.votesAgainst);
+    }
+    
+    // ... Additional functions for skill verification, Ask Athena, oracle management
+    // See full implementation in repository
+}`
 };

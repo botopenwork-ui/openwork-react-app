@@ -419,6 +419,72 @@ const CCTP_DOMAINS = {
     ]
   },
   
+  deployConfig: {
+    type: 'standard',
+    constructor: [
+      {
+        name: '_tokenMessenger',
+        type: 'address',
+        description: 'Circle TokenMessenger contract address on OP Sepolia',
+        placeholder: '0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5'
+      },
+      {
+        name: '_messageTransmitter',
+        type: 'address',
+        description: 'Circle MessageTransmitter contract address on OP Sepolia',
+        placeholder: '0x7865fAfC2db2093669d92c0F33AeEF291086BEFD'
+      },
+      {
+        name: '_usdc',
+        type: 'address',
+        description: 'Circle USDC token address on OP Sepolia',
+        placeholder: '0x5fd84259d66Cd46123540766Be93DFE6D43130D7'
+      }
+    ],
+    networks: {
+      testnet: {
+        name: 'OP Sepolia',
+        chainId: 11155420,
+        rpcUrl: 'https://sepolia.optimism.io',
+        explorer: 'https://sepolia-optimism.etherscan.io',
+        currency: 'ETH'
+      },
+      mainnet: {
+        name: 'OP Mainnet',
+        chainId: 10,
+        rpcUrl: 'https://mainnet.optimism.io',
+        explorer: 'https://optimistic.etherscan.io',
+        currency: 'ETH'
+      }
+    },
+    estimatedGas: '1.2M',
+    postDeploy: {
+      message: 'Standard deployment complete! CCTP Transceiver ready for USDC transfers.',
+      nextSteps: [
+        '1. Deploy CCTPv2Transceiver with constructor parameters:',
+        '   - Circle TokenMessenger: 0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5',
+        '   - Circle MessageTransmitter: 0x7865fAfC2db2093669d92c0F33AeEF291086BEFD',
+        '   - Circle USDC: 0x5fd84259d66Cd46123540766Be93DFE6D43130D7',
+        '2. Configure LOWJC to use this transceiver:',
+        '   - LOWJC.setCCTPSender(cctpTransceiverAddress)',
+        '3. Configure Athena Client to use this transceiver:',
+        '   - AthenaClient.setCCTPSender(cctpTransceiverAddress)',
+        '4. Test USDC transfer to Arbitrum:',
+        '   - Approve USDC to transceiver',
+        '   - Call sendFast() with Arbitrum domain (3)',
+        '   - Monitor Circle API for attestation',
+        '   - Call receive() on Arbitrum transceiver',
+        '5. Test USDC receipt from Arbitrum:',
+        '   - Monitor Arbitrum sendFast events',
+        '   - Poll Circle API for attestation',
+        '   - Call receive() on OP transceiver',
+        '6. Verify contract on OP Sepolia Etherscan',
+        '7. Setup backend service to monitor and relay attestations',
+        '8. IMPORTANT: Same contract on all chains, only Circle addresses differ'
+      ]
+    }
+  },
+  
   securityConsiderations: [
     'Immutable contract: Cannot upgrade, must redeploy if issues found',
     'Circle attestation security: Relies on Circle\'s attestation service integrity',
@@ -432,5 +498,58 @@ const CCTP_DOMAINS = {
     'Single attestation: Each burn creates one mint permission',
     'Backend dependency: Requires off-chain service to fetch attestations',
     'Circle service availability: System dependent on Circle API uptime'
-  ]
+  ],
+  
+  code: `// Same implementation as Arbitrum transceiver
+// See: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/cctp-v2-ft-transceiver.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+contract CCTPv2Transceiver {
+    ITokenMessengerV2 public immutable tokenMessenger;
+    IMessageTransmitterV2 public immutable messageTransmitter;
+    IERC20 public immutable usdc;
+
+    constructor(
+        address _tokenMessenger,
+        address _messageTransmitter,
+        address _usdc
+    ) {
+        tokenMessenger = ITokenMessengerV2(_tokenMessenger);
+        messageTransmitter = IMessageTransmitterV2(_messageTransmitter);
+        usdc = IERC20(_usdc);
+    }
+
+    function sendFast(
+        uint256 amount,
+        uint32 destinationDomain,
+        bytes32 mintRecipient,
+        uint256 maxFee
+    ) external {
+        usdc.transferFrom(msg.sender, address(this), amount);
+        usdc.approve(address(tokenMessenger), amount);
+        
+        tokenMessenger.depositForBurn(
+            amount,
+            destinationDomain,
+            mintRecipient,
+            address(usdc),
+            bytes32(0),
+            maxFee,
+            1000
+        );
+        
+        emit FastTransferSent(amount, destinationDomain, mintRecipient, maxFee);
+    }
+
+    function receive(bytes calldata message, bytes calldata attestation) external {
+        messageTransmitter.receiveMessage(message, attestation);
+        emit FastTransferReceived(message, attestation);
+    }
+
+    function addressToBytes32(address addr) external pure returns (bytes32) {
+        return bytes32(uint256(uint160(addr)));
+    }
+}`
 };

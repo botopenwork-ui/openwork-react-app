@@ -22,6 +22,7 @@ import { lowjcETH } from './lowjcETH';
 import { athenaClientETH } from './athenaClientETH';
 import { localBridgeETH } from './localBridgeETH';
 import { cctpTransceiverETH } from './cctpTransceiverETH';
+import { genesisReaderHelper } from './genesisReaderHelper';
 
 // Export aggregated contracts data
 export const contractsData = {
@@ -47,5 +48,6 @@ export const contractsData = {
   lowjcETH,
   athenaClientETH,
   localBridgeETH,
-  cctpTransceiverETH
+  cctpTransceiverETH,
+  genesisReaderHelper
 };

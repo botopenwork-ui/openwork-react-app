@@ -9,6 +9,7 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
 interface INativeAthena {
     function canVote(address account) external view returns (bool);
     function minOracleMembers() external view returns (uint256);
+    function updateOracleActiveStatus(string memory oracleName) external;
 }
 
 // Interface for OpenworkGenesis storage contract
@@ -125,9 +126,10 @@ contract NativeAthenaOracleManager is
         address[] memory _skillVerifiedAddresses
     ) external onlyAuthorized {
         require(bytes(_name).length > 0, "Oracle name cannot be empty");
-        require(_members.length >= nativeAthena.minOracleMembers(), "Not enough members for oracle");
+        // MODIFIED: Allow empty member arrays OR require minimum members
+        require(_members.length == 0 || _members.length >= nativeAthena.minOracleMembers(), "Not enough members for oracle");
         
-        // Verify all members meet voting requirements
+        // Verify all members meet voting requirements (only if members are provided)
         for (uint256 i = 0; i < _members.length; i++) {
             require(nativeAthena.canVote(_members[i]), "Member does not meet minimum stake/earned tokens requirement");
         }
@@ -146,6 +148,9 @@ contract NativeAthenaOracleManager is
             genesis.addOracleMember(_oracleName, _members[i]);
             emit OracleMemberAdded(_oracleName, _members[i]);
         }
+        
+        // NEW: Auto-update oracle active status after adding members
+        nativeAthena.updateOracleActiveStatus(_oracleName);
     }
     
     function removeMemberFromOracle(string memory _oracleName, address _memberToRemove) external onlyAuthorized {
@@ -154,6 +159,9 @@ contract NativeAthenaOracleManager is
         
         genesis.removeOracleMember(_oracleName, _memberToRemove);
         emit OracleMemberRemoved(_oracleName, _memberToRemove);
+        
+        // NEW: Auto-update oracle active status after removing member
+        nativeAthena.updateOracleActiveStatus(_oracleName);
     }
 
     function removeOracle(string[] memory _oracleNames) external onlyAuthorized {

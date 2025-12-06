@@ -16,20 +16,119 @@ async function compileContract(contractName) {
     
     // Map contract names to their actual file names and paths
     const contractMapping = {
+      // Test/Example contracts
       'MainDAO': {
-        fileName: 'main-dao.sol',
+        fileName: 'MainDAO.sol',
         className: 'MainDAO',
-        subDir: 'openwork-full-contract-suite-layerzero+CCTP 2 Nov'
+        subDir: null
       },
       'UUPSProxy': {
-        fileName: 'proxy.sol',
+        fileName: 'UUPSProxy.sol',
         className: 'UUPSProxy',
-        subDir: 'openwork-full-contract-suite-layerzero+CCTP 2 Nov'
+        subDir: null
       },
       'VotingToken': {
         fileName: 'VotingToken.sol',
         className: 'VotingToken',
-        subDir: null // Regular Foundry structure
+        subDir: null
+      },
+      
+      // Native Chain Contracts (Arbitrum)
+      'NOWJC': {
+        fileName: 'NOWJC.sol',
+        className: 'NativeOpenWorkJobContract',
+        subDir: null
+      },
+      'NativeAthena': {
+        fileName: 'NativeAthena.sol',
+        className: 'NativeAthena',
+        subDir: null
+      },
+      'NativeRewards': {
+        fileName: 'NativeRewards.sol',
+        className: 'OpenWorkRewards',
+        subDir: null
+      },
+      'NativeBridge': {
+        fileName: 'NativeBridge.sol',
+        className: 'NativeBridge',
+        subDir: null
+      },
+      'NativeDAO': {
+        fileName: 'NativeDAO.sol',
+        className: 'NativeDAO',
+        subDir: null
+      },
+      'OpenworkGenesis': {
+        fileName: 'OpenworkGenesis.sol',
+        className: 'OpenworkGenesis',
+        subDir: null
+      },
+      'ProfileGenesis': {
+        fileName: 'ProfileGenesis.sol',
+        className: 'ProfileGenesis',
+        subDir: null
+      },
+      'ProfileManager': {
+        fileName: 'ProfileManager.sol',
+        className: 'ProfileManager',
+        subDir: null
+      },
+      'OracleManager': {
+        fileName: 'OracleManager.sol',
+        className: 'OracleManager',
+        subDir: null
+      },
+      
+      // Main Chain Contracts (Base/Ethereum)
+      'MainBridge': {
+        fileName: 'MainBridge.sol',
+        className: 'MainBridge',
+        subDir: null
+      },
+      'MainRewards': {
+        fileName: 'MainRewards.sol',
+        className: 'MainRewards',
+        subDir: null
+      },
+      'OpenworkToken': {
+        fileName: 'OpenworkToken.sol',
+        className: 'OpenWorkToken',
+        subDir: null
+      },
+      
+      // Local Chain Contracts (OP/ETH)
+      'LocalBridge': {
+        fileName: 'LocalBridge.sol',
+        className: 'LocalBridge',
+        subDir: null
+      },
+      'LOWJC': {
+        fileName: 'LOWJC.sol',
+        className: 'LocalOpenWorkJobContract',
+        subDir: null
+      },
+      'AthenaClient': {
+        fileName: 'AthenaClient.sol',
+        className: 'AthenaClient',
+        subDir: null
+      },
+      
+      // Infrastructure Contracts
+      'CCTPTransceiver': {
+        fileName: 'CCTPTransceiver.sol',
+        className: 'CCTPTransceiver',
+        subDir: null
+      },
+      'ContractRegistry': {
+        fileName: 'ContractRegistry.sol',
+        className: 'OpenWorkContractRegistry',
+        subDir: null
+      },
+      'GenesisReaderHelper': {
+        fileName: 'GenesisReaderHelper.sol',
+        className: 'GenesisReaderHelper',
+        subDir: null
       }
     };
     
@@ -46,25 +145,13 @@ async function compileContract(contractName) {
     
     console.log('✅ Compilation successful');
     
-    // Determine artifact path based on mapping
-    let artifactPath;
-    if (mapping.subDir) {
-      // For contracts in subdirectories like main-dao.sol
-      artifactPath = path.join(
-        contractsDir,
-        'out',
-        mapping.fileName,
-        `${mapping.className}.json`
-      );
-    } else {
-      // For regular Foundry structure
-      artifactPath = path.join(
-        contractsDir,
-        'out',
-        `${contractName}.sol`,
-        `${contractName}.json`
-      );
-    }
+    // Determine artifact path - always use className from mapping
+    const artifactPath = path.join(
+      contractsDir,
+      'out',
+      mapping.fileName,
+      `${mapping.className}.json`
+    );
     
     console.log(`📂 Looking for artifact at: ${artifactPath}`);
     

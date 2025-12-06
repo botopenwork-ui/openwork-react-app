@@ -718,6 +718,60 @@ console.log(\`Average rating: \${avgRating}/5 stars\`);`,
     ]
   },
   
+  deployConfig: {
+    type: 'uups',
+    constructor: [
+      {
+        name: '_owner',
+        type: 'address',
+        description: 'Contract owner address (admin who can upgrade and configure)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_bridge',
+        type: 'address',
+        description: 'Native Bridge contract address (for cross-chain profile operations)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_genesis',
+        type: 'address',
+        description: 'OpenworkGenesis or ProfileGenesis contract address (for profile data storage)',
+        placeholder: '0x...'
+      }
+    ],
+    networks: {
+      testnet: {
+        name: 'Arbitrum Sepolia',
+        chainId: 421614,
+        rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc',
+        explorer: 'https://sepolia.arbiscan.io',
+        currency: 'ETH'
+      }
+    },
+    estimatedGas: '2.5M',
+    postDeploy: {
+      message: 'UUPS deployment complete! Next: Initialize the proxy contract on block scanner.',
+      nextSteps: [
+        '1. Deploy ProfileManager implementation contract (no constructor params)',
+        '2. Deploy UUPSProxy with implementation address',
+        '3. Call initialize() on proxy via block scanner with:',
+        '   - Owner address (your admin wallet)',
+        '   - Native Bridge address',
+        '   - ProfileGenesis (or OpenworkGenesis) address',
+        '4. Ensure ProfileGenesis is authorized to receive writes:',
+        '   - ProfileGenesis.authorizeContract(profileManagerAddress, true)',
+        '5. Configure Native Bridge to route profile messages:',
+        '   - NativeBridge.setProfileManager(profileManagerAddress)',
+        '6. Test profile creation from Local chain',
+        '7. Test portfolio management (add/update/remove)',
+        '8. Test rating system after job completion',
+        '9. Verify both implementation and proxy on Arbiscan',
+        '10. Ensure Local chains have profile creation UI configured'
+      ]
+    }
+  },
+  
   securityConsiderations: [
     'UUPS upgradeable - owner and bridge can upgrade implementation',
     'Bridge-only write access prevents unauthorized profile manipulation',
@@ -728,5 +782,121 @@ console.log(\`Average rating: \${avgRating}/5 stars\`);`,
     'Portfolio array operations validate bounds to prevent errors',
     'Rating values constrained to 1-5 range',
     'Zero address checks prevent invalid profile creation'
-  ]
+  ],
+  
+  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/profile-manager.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
+contract ProfileManager is 
+    Initializable,
+    OwnableUpgradeable,
+    UUPSUpgradeable
+{
+    // ==================== STATE VARIABLES ====================
+    IOpenworkGenesis public genesis;
+    address public bridge;
+    address[] private allProfileUsers;
+    uint256 private profileCount;
+
+    // ==================== INITIALIZATION ====================
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
+        address _owner,
+        address _bridge,
+        address _genesis
+    ) public initializer {
+        __Ownable_init(_owner);
+        __UUPSUpgradeable_init();
+        bridge = _bridge;
+        genesis = IOpenworkGenesis(_genesis);
+    }
+
+    function _authorizeUpgrade(address) internal view override {
+        require(owner() == _msgSender() || address(bridge) == _msgSender(), "Unauthorized");
+    }
+
+    // ==================== PROFILE MANAGEMENT ====================
+    function createProfile(
+        address _user, 
+        string memory _ipfsHash, 
+        address _referrerAddress
+    ) external {
+        require(msg.sender == bridge, "Only bridge");
+        require(_user != address(0), "Invalid address");
+        require(!genesis.hasProfile(_user), "Profile exists");
+        
+        allProfileUsers.push(_user);
+        profileCount++;
+        genesis.setProfile(_user, _ipfsHash, _referrerAddress);
+        
+        emit ProfileCreated(_user, _ipfsHash, _referrerAddress);
+    }
+    
+    function addPortfolio(address _user, string memory _portfolioHash) external {
+        require(msg.sender == bridge, "Only bridge");
+        require(genesis.hasProfile(_user), "Profile does not exist");
+        
+        genesis.addPortfolio(_user, _portfolioHash);
+        emit PortfolioAdded(_user, _portfolioHash);
+    }
+    
+    function updateProfile(address _user, string memory _newIpfsHash) external {
+        require(msg.sender == bridge, "Only bridge");
+        require(genesis.hasProfile(_user), "Profile does not exist");
+        
+        genesis.updateProfileIpfsHash(_user, _newIpfsHash);
+        emit ProfileUpdated(_user, _newIpfsHash);
+    }
+
+    function rate(
+        address _rater,
+        string memory _jobId,
+        address _userToRate,
+        uint256 _rating
+    ) external {
+        require(msg.sender == bridge, "Only bridge");
+        require(_rating > 0 && _rating <= 5, "Rating 1-5");
+        
+        IOpenworkGenesis.Job memory job = genesis.getJob(_jobId);
+        bool isAuthorized = (_rater == job.jobGiver && _userToRate == job.selectedApplicant) ||
+                           (_rater == job.selectedApplicant && _userToRate == job.jobGiver);
+        require(isAuthorized, "Not authorized");
+        
+        genesis.setJobRating(_jobId, _userToRate, _rating);
+        emit UserRated(_jobId, _rater, _userToRate, _rating);
+    }
+
+    // ==================== VIEW FUNCTIONS ====================
+    function getProfile(address _user) external view returns (
+        address userAddress,
+        string memory ipfsHash,
+        address referrerAddress,
+        string[] memory portfolioHashes
+    ) {
+        IOpenworkGenesis.Profile memory profile = genesis.getProfile(_user);
+        return (profile.userAddress, profile.ipfsHash, profile.referrerAddress, profile.portfolioHashes);
+    }
+    
+    function getUserRating(address _user) external view returns (uint256) {
+        uint256[] memory ratings = genesis.getUserRatings(_user);
+        if (ratings.length == 0) return 0;
+        uint256 total = 0;
+        for (uint i = 0; i < ratings.length; i++) {
+            total += ratings[i];
+        }
+        return total / ratings.length;
+    }
+    
+    // ... Additional view functions
+    // See full implementation in repository
+}`
 };

@@ -1,11 +1,19 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { FileText, Code, TestTube, Play, Database, History, ArrowRight, Edit2, Rocket, ChevronDown, ChevronRight, MessageSquare, Send, X, Copy, Check, Wallet, AlertCircle, ExternalLink } from 'lucide-react';
+import { FileText, Code, TestTube, Play, Database, History, ArrowRight, Edit2, Rocket, ChevronDown, ChevronRight, MessageSquare, Send, X, Copy, Check, Wallet, AlertCircle, ExternalLink, Workflow, Lock, Unlock } from 'lucide-react';
 import './OpenworkDocs.css';
 import { contractsData } from './data/contracts';
 import { ipfsData } from './data/ipfsData';
 import { columnPositions, statusColors } from './data/columnPositions';
 import { arrowConnections } from './data/arrowConnections';
+import { buildOppyContext, FALLBACK_RESPONSES } from './data/oppyKnowledge';
+import flowsData from './data/flowsData';
+import FlowVisualizer from '../../components/FlowVisualizer';
+import AdminLogin from '../../components/AdminLogin';
 import Web3 from 'web3';
+
+// Gemini API Configuration
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 const OpenworkDocs = () => {
   const [selectedContract, setSelectedContract] = useState(null);
@@ -15,9 +23,10 @@ const OpenworkDocs = () => {
   const [showNetworkDetails, setShowNetworkDetails] = useState(false);
   const [oppyMessage, setOppyMessage] = useState('');
   const [oppyChat, setOppyChat] = useState([
-    { role: 'oppy', text: 'Hi! I\'m Agent Oppy, your OpenWork assistant. Ask me anything about the protocol, contracts, or how to get started!' }
+    { role: 'oppy', text: `Hi! I'm Agent Oppy, your OpenWork assistant powered by Gemini AI. Ask me anything about the protocol, contracts, or how to get started!${GEMINI_API_KEY ? ' ✅ AI Ready' : ' ⚠️ API Key Missing'}` }
   ]);
   const [copiedCode, setCopiedCode] = useState(null);
+  const chatMessagesRef = React.useRef(null);
   
   // Deployment state
   const [web3, setWeb3] = useState(null);
@@ -34,6 +43,22 @@ const OpenworkDocs = () => {
   const [deploymentHistory, setDeploymentHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [backendError, setBackendError] = useState(null);
+
+  // Admin state
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminToken, setAdminToken] = useState(null);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminUsername, setAdminUsername] = useState(null);
+  
+  // Editing state
+  const [isEditingDocs, setIsEditingDocs] = useState(false);
+  const [isEditingCode, setIsEditingCode] = useState(false);
+  const [isEditingAdvanced, setIsEditingAdvanced] = useState(false);
+  const [editedDocs, setEditedDocs] = useState('');
+  const [editedCode, setEditedCode] = useState('');
+  const [editedProxyCode, setEditedProxyCode] = useState('');
+  const [editedFullData, setEditedFullData] = useState('');
+  const [customDocs, setCustomDocs] = useState({});
 
   const handleCopyCode = async (code, id) => {
     try {
@@ -53,10 +78,18 @@ const OpenworkDocs = () => {
       setLoadingHistory(true);
       setBackendError(null);
       
-      const response = await fetch(`http://localhost:3001/api/deployments/${contractId}`, {
+      // Use registry endpoint to get all fields including is_current
+      const response = await fetch(`http://localhost:3001/api/registry/${contractId}/history`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
+      
+      if (response.status === 404) {
+        // No history for this contract yet - not an error
+        setDeploymentHistory([]);
+        setBackendError(null);
+        return;
+      }
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -65,13 +98,16 @@ const OpenworkDocs = () => {
       const data = await response.json();
       
       if (data.success) {
-        setDeploymentHistory(data.deployments || []);
+        setDeploymentHistory(data.history || []);
       } else {
         setDeploymentHistory([]);
       }
     } catch (error) {
       console.error('Error loading deployment history:', error);
-      setBackendError('Backend server not available. Deploy history will not be shown.');
+      // Only show error for actual connection issues, not missing history
+      if (error.message.includes('Failed to fetch') || error.message.includes('Network')) {
+        setBackendError('Backend server not available. Deploy history will not be shown.');
+      }
       setDeploymentHistory([]);
     } finally {
       setLoadingHistory(false);
@@ -107,12 +143,66 @@ const OpenworkDocs = () => {
     }
   };
 
-  // Load history when switching to Deploy tab
+  // Check admin session on mount
   useEffect(() => {
-    if (selectedContract && selectedContract !== 'ipfs' && selectedContract !== 'oppy' && activeTab === 'deploy' && account) {
+    const token = localStorage.getItem('adminToken');
+    const username = localStorage.getItem('adminUsername');
+    if (token && username) {
+      // Verify token is still valid
+      fetch('http://localhost:3001/api/admin/verify', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          setIsAdmin(true);
+          setAdminToken(token);
+          setAdminUsername(username);
+        } else {
+          // Token expired
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminUsername');
+        }
+      })
+      .catch(() => {
+        // Backend not available
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUsername');
+      });
+    }
+  }, []);
+
+  // Load custom docs when contract changes
+  useEffect(() => {
+    if (selectedContract && selectedContract !== 'ipfs' && selectedContract !== 'oppy' && selectedContract !== 'flows') {
+      fetch(`http://localhost:3001/api/admin/contracts/${selectedContract}/docs`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.docs) {
+            setCustomDocs(prev => ({
+              ...prev,
+              [selectedContract]: data.docs
+            }));
+          }
+        })
+        .catch(err => console.error('Error loading custom docs:', err));
+    }
+  }, [selectedContract]);
+
+  // Load history when switching to Deploy tab (no wallet needed to view history)
+  useEffect(() => {
+    if (selectedContract && selectedContract !== 'ipfs' && selectedContract !== 'oppy' && selectedContract !== 'flows' && activeTab === 'deploy') {
       loadDeploymentHistory(selectedContract);
     }
-  }, [selectedContract, activeTab, account]);
+  }, [selectedContract, activeTab]);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (chatMessagesRef.current) {
+      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
+    }
+  }, [oppyChat]);
 
   // Auto-layout: Calculate x,y positions from column and order
   const contracts = useMemo(() => {
@@ -253,7 +343,7 @@ const OpenworkDocs = () => {
     };
   }, [contracts]);
 
-  const handleOppySubmit = (e) => {
+  const handleOppySubmit = async (e) => {
     e.preventDefault();
     if (!oppyMessage.trim()) return;
 
@@ -261,34 +351,100 @@ const OpenworkDocs = () => {
     setOppyChat(prev => [...prev, { role: 'user', text: userMsg }]);
     setOppyMessage('');
 
-    setTimeout(() => {
-      let response = '';
+    // Add a temporary "thinking" message
+    setOppyChat(prev => [...prev, { role: 'oppy', text: '🤔 Thinking...', isThinking: true }]);
+
+    try {
+      // Build intelligent context based on user query
+      const systemContext = buildOppyContext(userMsg);
+      
+      console.log('📚 Loaded context for query:', userMsg.substring(0, 50) + '...');
+      console.log('🔑 API Key present:', GEMINI_API_KEY ? 'Yes' : 'No');
+      console.log('🌐 API URL:', GEMINI_API_URL.substring(0, 80) + '...');
+
+      // Call Gemini API
+      const response = await fetch(GEMINI_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `${systemContext}\n\nUser Question: ${userMsg}\n\nProvide a helpful, accurate, and concise answer based on the OpenWork documentation above. Be technical when needed but also explain concepts clearly. If suggesting code, use proper formatting.`
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 2048,
+            topP: 0.95,
+            topK: 40
+          }
+        })
+      });
+
+      console.log('📡 Gemini API response status:', response.status);
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error('❌ Gemini API error response:', errorBody);
+        throw new Error(`Gemini API error: ${response.status} - ${errorBody.substring(0, 100)}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Gemini API response received');
+      
+      const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
+
+      // Remove thinking message and add actual response
+      setOppyChat(prev => {
+        const withoutThinking = prev.filter(msg => !msg.isThinking);
+        return [...withoutThinking, { role: 'oppy', text: aiResponse }];
+      });
+
+    } catch (error) {
+      console.error('❌ Gemini API error:', error);
+      console.error('❌ Error details:', error.message);
+      
+      // Intelligent fallback based on keywords
+      let fallbackResponse = FALLBACK_RESPONSES.default;
       const lowerMsg = userMsg.toLowerCase();
       
-      if (lowerMsg.includes('athena') || lowerMsg.includes('dispute')) {
-        response = 'Athena is our AI-powered dispute resolution contract. It uses oracle member votes to resolve disputes fairly. Disputes require a minimum $50 fee and are voted on by verified skill oracle members.';
-      } else if (lowerMsg.includes('job') || lowerMsg.includes('escrow')) {
-        response = 'The Job Registry manages all jobs on OpenWork. When a job is posted, payment is locked in escrow. Once both parties agree the work is complete, payment is automatically released.';
-      } else if (lowerMsg.includes('bridge') || lowerMsg.includes('cctp')) {
-        response = 'We use Circle\'s CCTP (Cross-Chain Transfer Protocol) to bridge USDC between Base L2 and other chains like Arbitrum and Polygon. The LayerZero bridge handles governance messages between Ethereum and Base.';
-      } else if (lowerMsg.includes('ipfs')) {
-        response = 'IPFS stores all job descriptions, submission proofs, and dispute evidence in a decentralized way. This ensures transparency and immutability of all work records.';
-      } else if (lowerMsg.includes('deploy') || lowerMsg.includes('start')) {
-        response = 'To deploy a contract, select it from the sidebar, go to the Deploy tab, choose your network (mainnet or testnet), and click Deploy. Make sure your wallet is connected!';
-      } else if (lowerMsg.includes('token') || lowerMsg.includes('work')) {
-        response = 'The WORK token is our ERC-20 governance token on Ethereum. Token holders can create proposals, vote on changes, and earn rewards for contributing to the protocol.';
-      } else {
-        response = 'I can help you understand OpenWork contracts, bridges, IPFS integration, or how to deploy. What would you like to know more about?';
+      // Find best matching fallback
+      for (const [keyword, response] of Object.entries(FALLBACK_RESPONSES)) {
+        if (lowerMsg.includes(keyword)) {
+          fallbackResponse = response;
+          break;
+        }
       }
       
-      setOppyChat(prev => [...prev, { role: 'oppy', text: response }]);
-    }, 500);
+      // Remove thinking message and add fallback response
+      setOppyChat(prev => {
+        const withoutThinking = prev.filter(msg => !msg.isThinking);
+        return [...withoutThinking, { role: 'oppy', text: fallbackResponse }];
+      });
+    }
   };
 
   return (
     <div className="docs-container">
       <div className="docs-sidebar">
         <div className="docs-sidebar-content">
+          <div>
+            <div 
+              onClick={() => {
+                setSelectedContract('flows');
+                setActiveTab('docs');
+              }}
+              className={`docs-sidebar-item docs-sidebar-item-flows ${selectedContract === 'flows' ? 'docs-sidebar-item-flows-active' : ''}`}
+            >
+              <div className="docs-sidebar-item-content">
+                <Workflow className="docs-sidebar-item-icon" />
+                <span className="docs-sidebar-item-text">Function Flows</span>
+              </div>
+            </div>
+          </div>
+
           <div>
             <div 
               onClick={() => {
@@ -560,19 +716,19 @@ const OpenworkDocs = () => {
               setActiveTab('docs');
             }}
             className={`docs-contract-card ${selectedContract === c.id ? 'docs-contract-card-active' : ''}`}
-            style={{ left: c.x, top: c.y, width: 130 }}
+            style={{ left: c.x, top: c.y, width: 130, height: 80 }}
           >
             <div className="docs-contract-card-header">
               <span className="docs-contract-card-name">{c.name}</span>
-              <div className={`docs-contract-status ${statusColors[c.status]}`}></div>
+              {c.isUUPS && (
+                <span className="docs-contract-uups-badge">UUPS</span>
+              )}
             </div>
-            <div className="docs-contract-card-version">{c.version}</div>
-            <div className="docs-contract-card-gas">Gas: {c.gas}</div>
           </div>
         ))}
       </div>
 
-      {(selected || selectedContract === 'ipfs' || selectedContract === 'oppy') && (
+      {(selected || selectedContract === 'ipfs' || selectedContract === 'oppy' || selectedContract === 'flows') && (
         <div className="docs-details-panel">
           <button
             onClick={() => {
@@ -584,6 +740,16 @@ const OpenworkDocs = () => {
             <X size={20} />
           </button>
           <div className="docs-details-header">
+            {selectedContract === 'flows' && (
+              <>
+                <div className="docs-details-header-flows">
+                  <Workflow className="docs-details-header-icon" />
+                  <h2 className="docs-details-title">Function Flows</h2>
+                </div>
+                <p className="docs-details-subtitle">Interactive visualization of key contract functions</p>
+              </>
+            )}
+
             {selectedContract === 'oppy' && (
               <>
                 <div className="docs-details-header-oppy">
@@ -598,13 +764,40 @@ const OpenworkDocs = () => {
               <>
                 <div className="docs-details-title-row">
                   <h2 className="docs-details-title">{selected.name}</h2>
-                  <button
-                    onClick={() => setShowNetworkDetails(!showNetworkDetails)}
-                    className="docs-network-toggle-button"
-                  >
-                    {showNetworkDetails ? 'Hide Details' : 'Show Network Details'}
-                    {showNetworkDetails ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {!isAdmin ? (
+                      <button
+                        onClick={() => setShowAdminLogin(true)}
+                        className="docs-network-toggle-button"
+                        style={{ background: '#f59e0b', color: 'white' }}
+                      >
+                        <Lock size={16} />
+                        Admin
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          localStorage.removeItem('adminToken');
+                          localStorage.removeItem('adminUsername');
+                          setIsAdmin(false);
+                          setAdminToken(null);
+                          setAdminUsername(null);
+                        }}
+                        className="docs-network-toggle-button"
+                        style={{ background: '#10b981', color: 'white' }}
+                      >
+                        <Unlock size={16} />
+                        {adminUsername}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowNetworkDetails(!showNetworkDetails)}
+                      className="docs-network-toggle-button"
+                    >
+                      {showNetworkDetails ? 'Hide Details' : 'Show Network Details'}
+                      {showNetworkDetails ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    </button>
+                  </div>
                 </div>
                 <p className="docs-details-description">{selected.docs}</p>
                 
@@ -671,9 +864,13 @@ const OpenworkDocs = () => {
             )}
           </div>
 
-          {selectedContract === 'oppy' ? (
+          {selectedContract === 'flows' ? (
+            <div className="docs-flows-container">
+              <FlowVisualizer flowData={flowsData['post-job']} />
+            </div>
+          ) : selectedContract === 'oppy' ? (
             <div className="docs-chat-container">
-              <div className="docs-chat-messages">
+              <div className="docs-chat-messages" ref={chatMessagesRef}>
                 {oppyChat.map((msg, idx) => (
                   <div key={idx} className={`docs-chat-message ${msg.role === 'user' ? 'docs-chat-message-user' : 'docs-chat-message-oppy'}`}>
                     <div className={`docs-chat-bubble ${msg.role === 'user' ? 'docs-chat-bubble-user' : 'docs-chat-bubble-oppy'}`}>
@@ -696,10 +893,12 @@ const OpenworkDocs = () => {
                     onChange={(e) => setOppyMessage(e.target.value)}
                     placeholder="Ask me anything about OpenWork..."
                     className="docs-chat-input"
+                    autoComplete="off"
                   />
                   <button
                     type="submit"
                     className="docs-chat-submit"
+                    disabled={!oppyMessage.trim()}
                   >
                     <Send className="docs-chat-submit-icon" />
                   </button>
@@ -737,9 +936,104 @@ const OpenworkDocs = () => {
                     <div className="docs-prose">
                       <p>{ipfsData.docs}</p>
                     </div>
+
+                    {/* IPFS Hash Structures Section */}
+                    <div className="docs-section">
+                      <h3 className="docs-section-title">📦 IPFS Hash Structures</h3>
+                      <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>
+                        Exact data structures stored in IPFS (extracted from production code)
+                      </p>
+                      
+                      {ipfsData.hashStructures.map((hashStruct, idx) => (
+                        <div key={idx} className="docs-function-item" style={{ marginBottom: '16px' }}>
+                          <button
+                            onClick={() => toggleSection(`hash-${idx}`)}
+                            className="docs-function-toggle"
+                          >
+                            <span className="docs-function-name">{hashStruct.name}</span>
+                            {expandedSections[`hash-${idx}`] ? 
+                              <ChevronDown className="docs-function-icon" /> : 
+                              <ChevronRight className="docs-function-icon" />
+                            }
+                          </button>
+                          
+                          {expandedSections[`hash-${idx}`] && (
+                            <div className="docs-function-content">
+                              <p className="docs-function-text" style={{ marginBottom: '12px' }}>
+                                {hashStruct.description}
+                              </p>
+                              
+                              <div className="docs-function-section">
+                                <h5 className="docs-function-section-title">Used in:</h5>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                  {hashStruct.usedIn.map((func, funcIdx) => (
+                                    <span key={funcIdx} className="docs-related-tag">
+                                      {func}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div className="docs-function-section">
+                                <h5 className="docs-function-section-title">Structure:</h5>
+                                <div className="docs-params-list">
+                                  {Object.entries(hashStruct.structure).map(([key, value], paramIdx) => (
+                                    <div key={paramIdx} className="docs-param-item">
+                                      <div className="docs-param-header">
+                                        <code className="docs-param-name">{key}</code>
+                                      </div>
+                                      <p className="docs-param-description">{value}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div className="docs-function-section">
+                                <h5 className="docs-function-section-title">Example JSON:</h5>
+                                <pre className="docs-code-block" style={{ margin: 0 }}>
+                                  <code>{hashStruct.example}</code>
+                                </pre>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Best Practices Section */}
+                    <div className="docs-section">
+                      <h3 className="docs-section-title">💡 Best Practices</h3>
+                      <ul className="docs-feature-list">
+                        {ipfsData.bestPractices.map((practice, idx) => (
+                          <li key={idx} className="docs-feature-item">{practice}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* IPFS Gateways Section */}
+                    <div className="docs-section">
+                      <h3 className="docs-section-title">🌐 IPFS Gateways</h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        {ipfsData.gateways.map((gateway, idx) => (
+                          <div key={idx} className="docs-dependency-card">
+                            <div className="docs-dependency-header">
+                              <span className="docs-dependency-name">{gateway.name}</span>
+                              <span className="docs-dependency-badge">{gateway.reliability}</span>
+                            </div>
+                            <p className="docs-dependency-reason" style={{ fontSize: '11px', fontFamily: 'monospace', marginBottom: '4px' }}>
+                              {gateway.url}
+                            </p>
+                            <p className="docs-dependency-reason" style={{ fontSize: '11px' }}>
+                              Speed: {gateway.speed}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                     
-                    <div className="docs-examples-section">
-                      <h3 className="docs-examples-title">Usage Examples</h3>
+                    {/* Code Examples Section */}
+                    <div className="docs-section">
+                      <h3 className="docs-section-title">💻 Code Examples</h3>
                       {ipfsData.examples.map((example, idx) => (
                         <div key={idx} className="docs-example-item">
                           <button
@@ -765,10 +1059,202 @@ const OpenworkDocs = () => {
 
                 {activeTab === 'docs' && selected && (
                   <div className="docs-comprehensive">
-                    {/* Brief Description */}
-                    <div className="docs-section">
-                      <p className="docs-brief-description">{selected.docs}</p>
-                    </div>
+                    {/* Admin Edit Buttons for Documentation */}
+                    {isAdmin && !isEditingDocs && !isEditingAdvanced && (
+                      <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                        <button
+                          onClick={() => {
+                            setIsEditingDocs(true);
+                            setEditedDocs(customDocs[selectedContract]?.documentation || selected.docs);
+                          }}
+                          className="docs-deployment-set-current-btn"
+                        >
+                          <Edit2 size={14} style={{ marginRight: '6px' }} />
+                          Quick Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsEditingAdvanced(true);
+                            const fullContract = customDocs[selectedContract]?.full_data 
+                              ? JSON.parse(customDocs[selectedContract].full_data)
+                              : selected;
+                            setEditedFullData(JSON.stringify(fullContract, null, 2));
+                          }}
+                          className="docs-network-toggle-button"
+                          style={{ background: '#7c3aed', color: 'white' }}
+                        >
+                          <Code size={14} style={{ marginRight: '6px' }} />
+                          Advanced Edit (JSON)
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Advanced JSON Editor */}
+                    {isEditingAdvanced && (
+                      <div className="docs-section">
+                        <div style={{ marginBottom: '12px', background: '#fef3c7', padding: '12px', borderRadius: '8px', border: '1px solid #fde047' }}>
+                          <p style={{ margin: 0, fontSize: '13px', color: '#92400e' }}>
+                            ⚡ <strong>Advanced Mode:</strong> Edit the complete contract data as JSON. This allows editing all sections including features, functions, dependencies, etc.
+                          </p>
+                        </div>
+                        <textarea
+                          value={editedFullData}
+                          onChange={(e) => setEditedFullData(e.target.value)}
+                          style={{
+                            width: '100%',
+                            minHeight: '500px',
+                            padding: '12px',
+                            border: '2px solid #7c3aed',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            fontFamily: 'Courier New, monospace',
+                            lineHeight: '1.6',
+                            marginBottom: '12px',
+                            background: '#0f172a',
+                            color: '#94a3b8'
+                          }}
+                        />
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            onClick={async () => {
+                              try {
+                                // Validate JSON
+                                const parsedData = JSON.parse(editedFullData);
+                                
+                                const response = await fetch(`http://localhost:3001/api/admin/contracts/${selectedContract}/docs`, {
+                                  method: 'PUT',
+                                  headers: {
+                                    'Authorization': `Bearer ${adminToken}`,
+                                    'Content-Type': 'application/json'
+                                  },
+                                  body: JSON.stringify({
+                                    contractId: selectedContract,
+                                    contractName: selected.name,
+                                    fullData: parsedData
+                                  })
+                                });
+
+                                const data = await response.json();
+                                if (data.success) {
+                                  setCustomDocs(prev => ({
+                                    ...prev,
+                                    [selectedContract]: { 
+                                      ...prev[selectedContract], 
+                                      full_data: JSON.stringify(parsedData)
+                                    }
+                                  }));
+                                  setIsEditingAdvanced(false);
+                                  alert('✅ Full contract data saved! Please reload the page to see changes.');
+                                  window.location.reload();
+                                } else {
+                                  alert('Failed to save: ' + data.error);
+                                }
+                              } catch (error) {
+                                if (error instanceof SyntaxError) {
+                                  alert('❌ Invalid JSON: ' + error.message);
+                                } else {
+                                  alert('Error: ' + error.message);
+                                }
+                              }
+                            }}
+                            className="docs-deployment-set-current-btn"
+                          >
+                            <Check size={14} style={{ marginRight: '6px' }} />
+                            Save & Reload
+                          </button>
+                          <button
+                            onClick={() => {
+                              setIsEditingAdvanced(false);
+                              setEditedFullData('');
+                            }}
+                            className="docs-network-toggle-button"
+                          >
+                            <X size={14} style={{ marginRight: '6px' }} />
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Editing Mode for Documentation */}
+                    {isEditingDocs ? (
+                      <div className="docs-section">
+                        <div style={{ marginBottom: '12px', background: '#fef3c7', padding: '12px', borderRadius: '8px', border: '1px solid #fde047' }}>
+                          <p style={{ margin: 0, fontSize: '13px', color: '#92400e' }}>
+                            ✏️ <strong>Editing Mode:</strong> Edit the documentation text below. Changes will be saved to the database.
+                          </p>
+                        </div>
+                        <textarea
+                          value={editedDocs}
+                          onChange={(e) => setEditedDocs(e.target.value)}
+                          style={{
+                            width: '100%',
+                            minHeight: '200px',
+                            padding: '12px',
+                            border: '2px solid #3b82f6',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontFamily: 'Satoshi, sans-serif',
+                            lineHeight: '1.7',
+                            marginBottom: '12px'
+                          }}
+                        />
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(`http://localhost:3001/api/admin/contracts/${selectedContract}/docs`, {
+                                  method: 'PUT',
+                                  headers: {
+                                    'Authorization': `Bearer ${adminToken}`,
+                                    'Content-Type': 'application/json'
+                                  },
+                                  body: JSON.stringify({
+                                    contractId: selectedContract,
+                                    contractName: selected.name,
+                                    documentation: editedDocs
+                                  })
+                                });
+
+                                const data = await response.json();
+                                if (data.success) {
+                                  setCustomDocs(prev => ({
+                                    ...prev,
+                                    [selectedContract]: { ...prev[selectedContract], documentation: editedDocs }
+                                  }));
+                                  setIsEditingDocs(false);
+                                  alert('✅ Documentation saved successfully!');
+                                } else {
+                                  alert('Failed to save: ' + data.error);
+                                }
+                              } catch (error) {
+                                alert('Error: ' + error.message);
+                              }
+                            }}
+                            className="docs-deployment-set-current-btn"
+                          >
+                            <Check size={14} style={{ marginRight: '6px' }} />
+                            Save Changes
+                          </button>
+                          <button
+                            onClick={() => {
+                              setIsEditingDocs(false);
+                              setEditedDocs('');
+                            }}
+                            className="docs-network-toggle-button"
+                          >
+                            <X size={14} style={{ marginRight: '6px' }} />
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="docs-section">
+                        <p className="docs-brief-description">
+                          {customDocs[selectedContract]?.documentation || selected.docs}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Overview Section */}
                     {selected.overview && (
@@ -938,14 +1424,135 @@ const OpenworkDocs = () => {
 
                 {activeTab === 'code' && (
                   <div className="docs-code-tab">
-                    {selected && selected.code ? (
+                    {isAdmin && selected && !isEditingCode && (
+                      <div className="docs-code-header">
+                        <div></div>
+                        <button
+                          onClick={() => {
+                            setIsEditingCode(true);
+                            setEditedCode(customDocs[selectedContract]?.contract_code || selected.code);
+                            setEditedProxyCode(customDocs[selectedContract]?.proxy_code || selected.proxyCode || '');
+                          }}
+                          className="docs-deployment-set-current-btn"
+                        >
+                          <Edit2 size={14} style={{ marginRight: '6px' }} />
+                          Edit Code
+                        </button>
+                      </div>
+                    )}
+
+                    {isEditingCode ? (
+                      <div style={{ padding: '24px' }}>
+                        <div style={{ marginBottom: '16px', background: '#fef3c7', padding: '12px', borderRadius: '8px', border: '1px solid #fde047' }}>
+                          <p style={{ margin: 0, fontSize: '13px', color: '#92400e' }}>
+                            ✏️ <strong>Editing Mode:</strong> Edit the contract code below. Changes will be saved to the database.
+                          </p>
+                        </div>
+                        <h4 style={{ marginBottom: '8px', fontSize: '14px', fontWeight: 600 }}>
+                          {selected.isUUPS ? 'Implementation Contract' : 'Contract Code'}
+                        </h4>
+                        <textarea
+                          value={editedCode}
+                          onChange={(e) => setEditedCode(e.target.value)}
+                          style={{
+                            width: '100%',
+                            minHeight: '300px',
+                            padding: '12px',
+                            border: '2px solid #3b82f6',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            fontFamily: 'Courier New, monospace',
+                            lineHeight: '1.6',
+                            marginBottom: '16px',
+                            background: '#0f172a',
+                            color: '#94a3b8'
+                          }}
+                        />
+                        {selected.isUUPS && (
+                          <>
+                            <h4 style={{ marginBottom: '8px', fontSize: '14px', fontWeight: 600 }}>Proxy Contract</h4>
+                            <textarea
+                              value={editedProxyCode}
+                              onChange={(e) => setEditedProxyCode(e.target.value)}
+                              style={{
+                                width: '100%',
+                                minHeight: '200px',
+                                padding: '12px',
+                                border: '2px solid #3b82f6',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                                fontFamily: 'Courier New, monospace',
+                                lineHeight: '1.6',
+                                marginBottom: '16px',
+                                background: '#0f172a',
+                                color: '#94a3b8'
+                              }}
+                            />
+                          </>
+                        )}
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(`http://localhost:3001/api/admin/contracts/${selectedContract}/docs`, {
+                                  method: 'PUT',
+                                  headers: {
+                                    'Authorization': `Bearer ${adminToken}`,
+                                    'Content-Type': 'application/json'
+                                  },
+                                  body: JSON.stringify({
+                                    contractId: selectedContract,
+                                    contractName: selected.name,
+                                    contractCode: editedCode,
+                                    proxyCode: editedProxyCode
+                                  })
+                                });
+
+                                const data = await response.json();
+                                if (data.success) {
+                                  setCustomDocs(prev => ({
+                                    ...prev,
+                                    [selectedContract]: { 
+                                      ...prev[selectedContract], 
+                                      contract_code: editedCode,
+                                      proxy_code: editedProxyCode
+                                    }
+                                  }));
+                                  setIsEditingCode(false);
+                                  alert('✅ Code saved successfully!');
+                                } else {
+                                  alert('Failed to save: ' + data.error);
+                                }
+                              } catch (error) {
+                                alert('Error: ' + error.message);
+                              }
+                            }}
+                            className="docs-deployment-set-current-btn"
+                          >
+                            <Check size={14} style={{ marginRight: '6px' }} />
+                            Save Changes
+                          </button>
+                          <button
+                            onClick={() => {
+                              setIsEditingCode(false);
+                              setEditedCode('');
+                              setEditedProxyCode('');
+                            }}
+                            className="docs-network-toggle-button"
+                          >
+                            <X size={14} style={{ marginRight: '6px' }} />
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : selected && selected.code ? (
                       <div>
                         <div className="docs-code-header">
                           <h3 className="docs-code-section-title">
                             {selected.isUUPS ? 'Implementation Contract' : 'Contract Code'}
                           </h3>
                           <button
-                            onClick={() => handleCopyCode(selected.code, 'main')}
+                            onClick={() => handleCopyCode(customDocs[selectedContract]?.contract_code || selected.code, 'main')}
                             className="docs-copy-button"
                           >
                             {copiedCode === 'main' ? (
@@ -962,17 +1569,17 @@ const OpenworkDocs = () => {
                           </button>
                         </div>
                         <pre className="docs-code-block">
-                          <code>{selected.code}</code>
+                          <code>{customDocs[selectedContract]?.contract_code || selected.code}</code>
                         </pre>
                         
-                        {selected.isUUPS && selected.proxyCode && (
+                        {selected.isUUPS && (customDocs[selectedContract]?.proxy_code || selected.proxyCode) && (
                           <>
                             <div className="docs-code-header" style={{ marginTop: '2rem' }}>
                               <h3 className="docs-code-section-title">
                                 Proxy Contract
                               </h3>
                               <button
-                                onClick={() => handleCopyCode(selected.proxyCode, 'proxy')}
+                                onClick={() => handleCopyCode(customDocs[selectedContract]?.proxy_code || selected.proxyCode, 'proxy')}
                                 className="docs-copy-button"
                               >
                                 {copiedCode === 'proxy' ? (
@@ -989,13 +1596,48 @@ const OpenworkDocs = () => {
                               </button>
                             </div>
                             <pre className="docs-code-block">
-                              <code>{selected.proxyCode}</code>
+                              <code>{customDocs[selectedContract]?.proxy_code || selected.proxyCode}</code>
                             </pre>
                           </>
                         )}
                       </div>
                     ) : selectedContract === 'ipfs' ? (
-                      <p>IPFS integration code examples coming soon...</p>
+                      <div>
+                        {ipfsData.examples.map((example, idx) => (
+                          <div key={idx}>
+                            <div className="docs-code-header">
+                              <h3 className="docs-code-section-title">{example.title}</h3>
+                              <button
+                                onClick={() => handleCopyCode(example.code, `ipfs-${idx}`)}
+                                className="docs-copy-button"
+                              >
+                                {copiedCode === `ipfs-${idx}` ? (
+                                  <>
+                                    <Check size={16} />
+                                    <span>Copied!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy size={16} />
+                                    <span>Copy Code</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                            <p style={{ 
+                              padding: '0 24px', 
+                              marginBottom: '16px', 
+                              fontSize: '13px', 
+                              color: '#6b7280' 
+                            }}>
+                              {example.description}
+                            </p>
+                            <pre className="docs-code-block">
+                              <code>{example.code}</code>
+                            </pre>
+                          </div>
+                        ))}
+                      </div>
                     ) : (
                       <p>Contract code will be added soon...</p>
                     )}
@@ -1004,6 +1646,68 @@ const OpenworkDocs = () => {
 
                 {activeTab === 'deploy' && selected && selected.deployConfig && (
                   <div className="docs-deploy-tab">
+                    {/* Current Production Address */}
+                    {selected.testnetAddress && (
+                      <div style={{ 
+                        background: '#f0fdf4', 
+                        border: '2px solid #86efac', 
+                        borderRadius: '12px', 
+                        padding: '20px',
+                        marginBottom: '24px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                          <Check size={20} style={{ color: '#16a34a' }} />
+                          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#166534' }}>
+                            Current Production Deployment
+                          </h3>
+                        </div>
+                        <div style={{ marginBottom: '8px' }}>
+                          <div style={{ fontSize: '11px', color: '#15803d', fontWeight: 600, marginBottom: '4px' }}>
+                            {selected.isUUPS ? 'PROXY ADDRESS:' : 'CONTRACT ADDRESS:'}
+                          </div>
+                          <div style={{ 
+                            fontFamily: 'monospace', 
+                            fontSize: '13px', 
+                            color: '#14532d',
+                            background: 'white',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            border: '1px solid #bbf7d0',
+                            wordBreak: 'break-all'
+                          }}>
+                            {selected.testnetAddress}
+                          </div>
+                        </div>
+                        {selected.isUUPS && selected.implementationAddress && (
+                          <div>
+                            <div style={{ fontSize: '11px', color: '#15803d', fontWeight: 600, marginBottom: '4px' }}>
+                              IMPLEMENTATION:
+                            </div>
+                            <div style={{ 
+                              fontFamily: 'monospace', 
+                              fontSize: '13px', 
+                              color: '#14532d',
+                              background: 'white',
+                              padding: '8px 12px',
+                              borderRadius: '6px',
+                              border: '1px solid #bbf7d0',
+                              wordBreak: 'break-all'
+                            }}>
+                              {selected.implementationAddress}
+                            </div>
+                          </div>
+                        )}
+                        <div style={{ 
+                          fontSize: '12px', 
+                          color: '#15803d', 
+                          marginTop: '12px',
+                          fontStyle: 'italic'
+                        }}>
+                          Network: {selected.testnetNetwork}
+                        </div>
+                      </div>
+                    )}
+                    
                     {!account ? (
                       <div className="docs-deploy-connect">
                         <Wallet size={48} style={{ color: '#2563eb', marginBottom: '16px' }} />
@@ -1159,28 +1863,38 @@ const OpenworkDocs = () => {
                           </div>
                         )}
 
-                        <div className="docs-deploy-params-section">
-                          <h4>Constructor Parameters:</h4>
-                          {selected.deployConfig.constructor.map((param, idx) => (
-                            <div key={idx} className="docs-deploy-param">
-                              <label>
-                                {param.name}
-                                <span className="docs-deploy-param-type">({param.type})</span>
-                              </label>
-                              <p className="docs-deploy-param-desc">{param.description}</p>
-                              <input
-                                type="text"
-                                value={deployParams[param.name] || ''}
-                                onChange={(e) => setDeployParams(prev => ({
-                                  ...prev,
-                                  [param.name]: e.target.value
-                                }))}
-                                placeholder={param.placeholder || param.name}
-                                disabled={deployStatus === 'deploying'}
-                              />
+                        {!selected.deployConfig.type || selected.deployConfig.type !== 'uups' ? (
+                          <div className="docs-deploy-params-section">
+                            <h4>Constructor Parameters:</h4>
+                            {selected.deployConfig.constructor.map((param, idx) => (
+                              <div key={idx} className="docs-deploy-param">
+                                <label>
+                                  {param.name}
+                                  <span className="docs-deploy-param-type">({param.type})</span>
+                                </label>
+                                <p className="docs-deploy-param-desc">{param.description}</p>
+                                <input
+                                  type="text"
+                                  value={deployParams[param.name] || ''}
+                                  onChange={(e) => setDeployParams(prev => ({
+                                    ...prev,
+                                    [param.name]: e.target.value
+                                  }))}
+                                  placeholder={param.placeholder || param.name}
+                                  disabled={deployStatus === 'deploying'}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="docs-deploy-info" style={{ background: '#fef3c7', border: '1px solid #fde047', color: '#78350f' }}>
+                            <AlertCircle size={16} />
+                            <div>
+                              <strong>UUPS Deployment:</strong> Implementation and Proxy deploy without parameters. 
+                              After deployment, initialize the proxy manually on the block scanner.
                             </div>
-                          ))}
-                        </div>
+                          </div>
+                        )}
 
                         <div className="docs-deploy-info">
                           <AlertCircle size={16} />
@@ -1200,14 +1914,32 @@ const OpenworkDocs = () => {
                               setDeployStatus('deploying');
                               setErrorMessage('');
 
-                              // Validate constructor args
-                              const invalidParams = selected.deployConfig.constructor.filter(p => !deployParams[p.name]);
-                              if (invalidParams.length > 0) {
-                                throw new Error(`Missing required parameters: ${invalidParams.map(p => p.name).join(', ')}`);
+                              // Map contract ID to compiler contract name
+                              const contractNameMapping = {
+                                'mainDAO': 'MainDAO',
+                                'token': 'VotingToken',
+                                'nowjc': 'NOWJC',
+                                'nativeAthena': 'NativeAthena',
+                                'nativeRewards': 'NativeRewards',
+                                'nativeBridge': 'NativeBridge',
+                                'mainRewards': 'MainRewards'
+                              };
+
+                              const compilerContractName = contractNameMapping[selected.id];
+                              if (!compilerContractName) {
+                                throw new Error(`No compiler mapping found for contract: ${selected.id}`);
                               }
 
                               // Check if this is a UUPS contract
                               const isUUPS = selected.deployConfig.type === 'uups';
+
+                              // Validate constructor args (skip for UUPS - no params needed)
+                              if (!isUUPS) {
+                                const invalidParams = selected.deployConfig.constructor.filter(p => !deployParams[p.name]);
+                                if (invalidParams.length > 0) {
+                                  throw new Error(`Missing required parameters: ${invalidParams.map(p => p.name).join(', ')}`);
+                                }
+                              }
 
                               if (isUUPS) {
                                 // ====== UUPS 2-STEP DEPLOYMENT ======
@@ -1218,7 +1950,7 @@ const OpenworkDocs = () => {
                                 const implCompileResponse = await fetch('http://localhost:3001/api/compile', {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ contractName: 'MainDAO' })
+                                  body: JSON.stringify({ contractName: compilerContractName })
                                 });
                                 
                                 if (!implCompileResponse.ok) {
@@ -1237,8 +1969,19 @@ const OpenworkDocs = () => {
                                   // NO arguments - UUPS implementation has no constructor params!
                                 });
 
-                                const implGas = await implDeployTx.estimateGas({ from: account });
+                                // Use fixed gas limit for large contracts to avoid estimation issues
+                                let implGas;
+                                try {
+                                  implGas = await implDeployTx.estimateGas({ from: account });
+                                  console.log('✅ Gas estimated:', implGas.toString());
+                                } catch (gasError) {
+                                  console.log('⚠️ Gas estimation failed, using fixed limit');
+                                  // Use a high fixed gas limit for complex contracts like MainDAO
+                                  implGas = BigInt(5000000); // 5M gas
+                                }
+                                
                                 const implGasWithBuffer = implGas + (implGas * 20n / 100n);
+                                console.log('🔧 Using gas limit:', implGasWithBuffer.toString());
                                 
                                 const deployedImpl = await implDeployTx.send({
                                   from: account,
@@ -1315,7 +2058,7 @@ const OpenworkDocs = () => {
                                 const compileResponse = await fetch('http://localhost:3001/api/compile', {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ contractName: 'VotingToken' })
+                                  body: JSON.stringify({ contractName: compilerContractName })
                                 });
                                 
                                 if (!compileResponse.ok) {
@@ -1375,7 +2118,7 @@ const OpenworkDocs = () => {
                               setDeployStatus('idle');
                             }
                           }}
-                          disabled={deployStatus === 'deploying' || !deployParams.initialOwner}
+                          disabled={deployStatus === 'deploying' || (!selected.deployConfig.type && !deployParams.initialOwner)}
                           className="docs-deploy-button"
                         >
                           {deployStatus === 'deploying' ? (
@@ -1409,7 +2152,7 @@ const OpenworkDocs = () => {
                             ) : (
                               <div className="docs-deployment-history-list">
                                 {deploymentHistory.map((deployment, idx) => {
-                                  const isCurrent = idx === 0;
+                                  const isCurrent = deployment.is_current === 1;
                                   const deployedDate = new Date(deployment.deployed_at);
                                   const timeAgo = (() => {
                                     const seconds = Math.floor((new Date() - deployedDate) / 1000);
@@ -1472,6 +2215,42 @@ const OpenworkDocs = () => {
                                         >
                                           <ExternalLink size={14} />
                                         </a>
+                                        {isAdmin && !isCurrent && (
+                                          <button
+                                            onClick={async () => {
+                                              try {
+                                                const response = await fetch(
+                                                  `http://localhost:3001/api/admin/deployments/${deployment.id}/set-current`,
+                                                  {
+                                                    method: 'PUT',
+                                                    headers: {
+                                                      'Authorization': `Bearer ${adminToken}`,
+                                                      'Content-Type': 'application/json'
+                                                    }
+                                                  }
+                                                );
+                                                
+                                                const data = await response.json();
+                                                
+                                                if (data.success) {
+                                                  console.log('✅ Deployment set as current');
+                                                  // Reload deployment history
+                                                  await loadDeploymentHistory(selectedContract);
+                                                } else {
+                                                  console.error('Failed to set as current:', data.error);
+                                                  alert('Failed to set as current: ' + data.error);
+                                                }
+                                              } catch (error) {
+                                                console.error('Error setting as current:', error);
+                                                alert('Error: ' + error.message);
+                                              }
+                                            }}
+                                            className="docs-deployment-set-current-btn"
+                                            title="Set as current deployment"
+                                          >
+                                            Set as Current
+                                          </button>
+                                        )}
                                       </div>
                                     </div>
                                   );
@@ -1489,6 +2268,17 @@ const OpenworkDocs = () => {
           )}
         </div>
       )}
+
+      {/* Admin Login Modal */}
+      <AdminLogin 
+        isOpen={showAdminLogin}
+        onClose={() => setShowAdminLogin(false)}
+        onLoginSuccess={(token, username) => {
+          setAdminToken(token);
+          setIsAdmin(true);
+          setAdminUsername(username);
+        }}
+      />
     </div>
   );
 };

@@ -644,6 +644,63 @@ if (isUnlocked) {
     ]
   },
   
+  deployConfig: {
+    type: 'uups',
+    constructor: [
+      {
+        name: '_owner',
+        type: 'address',
+        description: 'Contract owner address (admin who can upgrade and configure)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_bridge',
+        type: 'address',
+        description: 'Native Bridge contract address (for cross-chain governance sync)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_genesis',
+        type: 'address',
+        description: 'OpenworkGenesis contract address (for persistent stake storage)',
+        placeholder: '0x...'
+      }
+    ],
+    networks: {
+      testnet: {
+        name: 'Arbitrum Sepolia',
+        chainId: 421614,
+        rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc',
+        explorer: 'https://sepolia.arbiscan.io',
+        currency: 'ETH'
+      }
+    },
+    estimatedGas: '3.0M',
+    postDeploy: {
+      message: 'UUPS deployment complete! Next: Initialize the proxy contract on block scanner.',
+      nextSteps: [
+        '1. Deploy NativeDAO implementation contract (no constructor params)',
+        '2. Deploy UUPSProxy with implementation address',
+        '3. Call initialize() on proxy via block scanner with:',
+        '   - Owner address (your admin wallet)',
+        '   - Native Bridge address',
+        '   - OpenworkGenesis contract address',
+        '4. Set NOWJC contract: setNOWJContract(nowjcAddress)',
+        '5. Configure governance thresholds (optional - defaults are reasonable):',
+        '   - setProposalStakeThreshold(100 OW) [default]',
+        '   - setVotingStakeThreshold(50 OW) [default]',
+        '   - setProposalRewardThreshold(100 OW) [default]',
+        '   - setVotingRewardThreshold(100 OW) [default]',
+        '6. Note: This contract receives stake data from Main DAO',
+        '   - Users stake on Main DAO (Ethereum)',
+        '   - Data synced automatically via LayerZero bridge',
+        '7. Verify both implementation and proxy on Arbiscan',
+        '8. Test voting power calculation',
+        '9. Test cross-chain governance sync to Main DAO'
+      ]
+    }
+  },
+  
   securityConsiderations: [
     'UUPS upgradeable - owner and DAO can upgrade implementation',
     'Time-lock enforcement prevents early unstaking',
@@ -655,5 +712,182 @@ if (isUnlocked) {
     'Voting power synced to Main DAO for actual governance execution',
     'Only active stakes count toward voting power',
     'Delegation is non-custodial - delegator retains token ownership'
-  ]
+  ],
+  
+  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/native-dao.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { GovernorUpgradeable } from "@openzeppelin/contracts-upgradeable/governance/GovernorUpgradeable.sol";
+import { GovernorSettingsUpgradeable } from "@openzeppelin/contracts-upgradeable/governance/extensions/GovernorSettingsUpgradeable.sol";
+import { GovernorCountingSimpleUpgradeable } from "@openzeppelin/contracts-upgradeable/governance/extensions/GovernorCountingSimpleUpgradeable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
+contract NativeDAO is 
+    Initializable,
+    GovernorUpgradeable,
+    GovernorSettingsUpgradeable,
+    GovernorCountingSimpleUpgradeable,
+    OwnableUpgradeable,
+    UUPSUpgradeable
+{
+    // ==================== STATE VARIABLES ====================
+    INativeOpenWorkJobContract public nowjContract;
+    INativeChainBridge public bridge;
+    IOpenworkGenesis public genesis;
+    
+    uint256 public proposalStakeThreshold;
+    uint256 public votingStakeThreshold;
+    uint256 public proposalRewardThreshold;
+    uint256 public votingRewardThreshold;
+
+    // ==================== INITIALIZATION ====================
+    constructor() {
+        _disableInitializers();
+    }
+    
+    function initialize(
+        address _owner, 
+        address _bridge, 
+        address _genesis
+    ) public initializer {
+        __Governor_init("CrossChainNativeDAO");
+        __GovernorSettings_init(1 minutes, 5 minutes, 100 * 10**18);
+        __GovernorCountingSimple_init();
+        __Ownable_init(_owner);
+        __UUPSUpgradeable_init();
+        
+        bridge = INativeChainBridge(_bridge);
+        genesis = IOpenworkGenesis(_genesis);
+        
+        proposalStakeThreshold = 100 * 10**18;
+        votingStakeThreshold = 50 * 10**18;
+        proposalRewardThreshold = 100 * 10**18;
+        votingRewardThreshold = 100 * 10**18;
+    }
+    
+    function _authorizeUpgrade(address) internal view override {
+        require(owner() == _msgSender() || address(bridge) == _msgSender(), "Unauthorized");
+    }
+
+    // ==================== GOVERNANCE ELIGIBILITY ====================
+    function _hasGovernanceEligibility(
+        address account, 
+        uint256 stakeThreshold, 
+        uint256 rewardThreshold
+    ) internal view returns (bool) {
+        IOpenworkGenesis.Stake memory stake = genesis.getStake(account);
+        if (stake.isActive && stake.amount >= stakeThreshold) {
+            return true;
+        }
+        
+        if (address(nowjContract) != address(0)) {
+            uint256 earnedTokens = nowjContract.getUserEarnedTokens(account);
+            if (earnedTokens >= rewardThreshold) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    function canPropose(address account) public view returns (bool) {
+        return _hasGovernanceEligibility(account, proposalStakeThreshold, proposalRewardThreshold);
+    }
+    
+    function canVote(address account) public view returns (bool) {
+        return _hasGovernanceEligibility(account, votingStakeThreshold, votingRewardThreshold);
+    }
+
+    // ==================== DELEGATION ====================
+    function delegate(address delegatee) external {
+        address currentDelegate = genesis.getDelegate(msg.sender);
+        require(delegatee != currentDelegate, "Already delegated");
+        
+        IOpenworkGenesis.Stake memory userStake = genesis.getStake(msg.sender);
+        require(userStake.isActive && userStake.amount > 0, "No active stake");
+        
+        uint256 delegatorPower = userStake.amount * userStake.durationMinutes;
+        
+        if (currentDelegate != address(0)) {
+            genesis.updateDelegatedVotingPower(currentDelegate, delegatorPower, false);
+        }
+        
+        if (delegatee != address(0)) {
+            genesis.updateDelegatedVotingPower(delegatee, delegatorPower, true);
+        }
+        
+        genesis.setDelegate(msg.sender, delegatee);
+        emit DelegateChanged(msg.sender, currentDelegate, delegatee);
+    }
+
+    // ==================== VOTING POWER CALCULATION ====================
+    function _getVotes(address account, uint256, bytes memory) internal view override returns (uint256) {
+        IOpenworkGenesis.Stake memory userStake = genesis.getStake(account);
+        uint256 ownPower = 0;
+        if (userStake.isActive && userStake.amount > 0) {
+            ownPower = userStake.amount * userStake.durationMinutes;
+        }
+        
+        uint256 rewardPower = 0;
+        if (address(nowjContract) != address(0)) {
+            uint256 earnedTokens = nowjContract.getUserEarnedTokens(account);
+            rewardPower = earnedTokens;
+        }
+        
+        uint256 totalPower = ownPower + genesis.getDelegatedVotingPower(account) + rewardPower;
+        return totalPower;
+    }
+
+    // ==================== GOVERNANCE ACTIONS ====================
+    function propose(
+        address[] memory targets, 
+        uint256[] memory values, 
+        bytes[] memory calldatas, 
+        string memory description
+    ) public override returns (uint256) {
+        require(canPropose(msg.sender), "Insufficient tokens to propose");
+        
+        genesis.updateMemberActivity(msg.sender);
+        nowjContract.incrementGovernanceAction(msg.sender);
+        
+        uint256 proposalId = super.propose(targets, values, calldatas, description);
+        genesis.addProposalId(proposalId);
+        return proposalId;
+    }
+    
+    function _castVote(
+        uint256 proposalId, 
+        address account, 
+        uint8 support, 
+        string memory reason, 
+        bytes memory params
+    ) internal override returns (uint256) {
+        require(canVote(account), "Insufficient tokens to vote");
+        
+        genesis.updateMemberActivity(account);
+        nowjContract.incrementGovernanceAction(account);
+        
+        return super._castVote(proposalId, account, support, reason, params);
+    }
+
+    // ==================== MESSAGE HANDLERS ====================
+    function updateStakeData(
+        address staker,
+        uint256 amount,
+        uint256 unlockTime,
+        uint256 durationMinutes,
+        bool isActive
+    ) external {
+        require(msg.sender == address(bridge), "Only bridge");
+        genesis.setStake(staker, amount, unlockTime, durationMinutes, isActive);
+        emit StakeDataReceived(staker, amount, isActive);
+    }
+    
+    // ... Additional view functions and admin functions
+    // See full implementation in repository
+}`
 };

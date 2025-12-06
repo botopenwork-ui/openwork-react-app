@@ -1,0 +1,331 @@
+/* Add/Edit Portfolio Page - Matching Design Philosophy */
+
+.addedit-portfolio-wrapper {
+  min-height: calc(100vh - 80px);
+  width: 100%;
+  background: transparent;
+  position: relative;
+  font-family: 'Satoshi', sans-serif;
+}
+
+/* Editable Title */
+.titleText-editable {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'Satoshi', sans-serif;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 24px;
+  letter-spacing: 0.02em;
+  color: #4D4D4D;
+}
+
+.titleText-editable .edit-icon {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.titleText-editable .edit-icon:hover {
+  opacity: 1;
+}
+
+.project-name-input {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 24px;
+  font-weight: 500;
+  color: #4D4D4D;
+  border: 2px solid #1246ff;
+  border-radius: 8px;
+  padding: 8px 12px;
+  outline: none;
+  min-width: 300px;
+  letter-spacing: 0.02em;
+}
+
+/* Content Container */
+.addedit-portfolio-content {
+  max-width: 876px;
+  margin: 32px auto 0;
+  padding: 0 20px 80px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Action Bar with Badges - Top Section */
+.addedit-action-bar {
+  background: white;
+  border: 2px solid #f7f7f7;
+  border-radius: 24px 24px 0 0;
+  padding: 28px 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 111px;
+  box-sizing: border-box;
+}
+
+.addedit-badges {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.addedit-badge {
+  background: white;
+  border: 1px solid #ebebeb;
+  border-radius: 9999px;
+  padding: 6px 12px;
+  font-family: 'Satoshi', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #344054;
+  white-space: nowrap;
+  line-height: 18px;
+  text-align: center;
+}
+
+.addedit-action-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Upload Area */
+.addedit-upload-area {
+  background: white;
+  border-left: 2px solid #f7f7f7;
+  border-right: 2px solid #f7f7f7;
+  padding: 80px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 491px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.addedit-upload-area:hover {
+  background-color: #fafafa;
+}
+
+.upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+}
+
+.upload-label img {
+  width: 48px;
+  height: 48px;
+  opacity: 0.4;
+}
+
+.upload-label span {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: #868686;
+}
+
+/* Main Image Display */
+.addedit-main-image {
+  position: relative;
+  background: white;
+  border-left: 2px solid #f7f7f7;
+  border-right: 2px solid #f7f7f7;
+  padding: 24px 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.addedit-main-image .main-image {
+  width: 100%;
+  max-width: 796px;
+  height: 491px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.image-overlay-actions {
+  position: absolute;
+  top: 40px;
+  right: 56px;
+  display: flex;
+  gap: 12px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 10;
+}
+
+.addedit-main-image:hover .image-overlay-actions {
+  opacity: 1;
+}
+
+/* Image Gallery */
+.addedit-image-gallery {
+  background: white;
+  border-left: 2px solid #f7f7f7;
+  border-right: 2px solid #f7f7f7;
+  padding: 0 40px 24px 40px;
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.addedit-image-gallery::-webkit-scrollbar {
+  display: none;
+}
+
+.gallery-thumbnail {
+  flex-shrink: 0;
+  width: 160px;
+  height: 100px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.gallery-thumbnail:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.gallery-thumbnail.active {
+  border-color: #1246ff;
+  box-shadow: 0 0 0 1px #1246ff;
+}
+
+.gallery-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gallery-add-more {
+  flex-shrink: 0;
+  width: 160px;
+  height: 100px;
+  border: 2px dashed #e0e0e0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: white;
+}
+
+.gallery-add-more:hover {
+  border-color: #1246ff;
+  background-color: #f7f9ff;
+}
+
+.add-more-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.add-more-label img {
+  width: 24px;
+  height: 24px;
+  opacity: 0.4;
+}
+
+/* Description Section */
+.addedit-description {
+  background: white;
+  border: 2px solid #f7f7f7;
+  border-radius: 0 0 24px 24px;
+  padding: 32px 40px 40px 40px;
+}
+
+.description-textarea {
+  width: 100%;
+  padding: 0;
+  border: none;
+  font-family: 'Satoshi', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 24px;
+  color: #050505;
+  resize: vertical;
+  min-height: 150px;
+  outline: none;
+}
+
+.description-textarea::placeholder {
+  color: #868686;
+}
+
+/* Submit Section */
+.addedit-submit-section {
+  margin-top: 32px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .addedit-portfolio-content {
+    max-width: 720px;
+  }
+}
+
+@media (max-width: 768px) {
+  .addedit-portfolio-content {
+    max-width: 100%;
+    padding: 0 20px 60px;
+  }
+
+  .addedit-action-bar {
+    padding: 24px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    min-height: auto;
+  }
+
+  .addedit-main-image .main-image {
+    height: auto;
+    max-height: 400px;
+  }
+
+  .addedit-image-gallery {
+    padding: 0 20px 24px 20px;
+    gap: 12px;
+  }
+
+  .gallery-thumbnail {
+    width: 120px;
+    height: 75px;
+  }
+
+  .gallery-add-more {
+    width: 120px;
+    height: 75px;
+  }
+
+  .addedit-description {
+    padding: 24px;
+  }
+
+  .image-overlay-actions {
+    top: 32px;
+    right: 32px;
+  }
+}

@@ -457,6 +457,47 @@ console.log("Total registered contracts:", count);`,
     ]
   },
   
+  deployConfig: {
+    type: 'standard',
+    constructor: [],
+    networks: {
+      testnet: {
+        name: 'Arbitrum Sepolia',
+        chainId: 421614,
+        rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc',
+        explorer: 'https://sepolia.arbiscan.io',
+        currency: 'ETH'
+      },
+      mainnet: {
+        name: 'Arbitrum One',
+        chainId: 42161,
+        rpcUrl: 'https://arb1.arbitrum.io/rpc',
+        explorer: 'https://arbiscan.io',
+        currency: 'ETH'
+      }
+    },
+    estimatedGas: '800K',
+    postDeploy: {
+      message: 'Standard deployment complete! Contract registry ready for use.',
+      nextSteps: [
+        '1. Deploy OpenworkContractRegistry (no constructor params)',
+        '2. Owner is automatically set to deployer address',
+        '3. Register all deployed contracts via addContract():',
+        '   - addContract("NOWJC", address, "Arbitrum Sepolia", deployer)',
+        '   - addContract("Native Athena", address, "Arbitrum Sepolia", deployer)',
+        '   - addContract("Main DAO", address, "Base Sepolia", deployer)',
+        '   - etc. for all contracts',
+        '4. Verify contract on Arbiscan',
+        '5. Share registry address with frontend team',
+        '6. Configure frontend to query registry for addresses',
+        '7. Update deployment scripts to auto-register new contracts',
+        '8. Consider transferring ownership to multisig for security',
+        '9. Test getAllContracts() to view complete directory',
+        '10. IMPORTANT: Registry is NOT upgradeable - deploy once, use forever'
+      ]
+    }
+  },
+  
   securityConsiderations: [
     'Owner-only writes: Single owner controls entire registry',
     'Not upgradeable: Simple contract, intentional design choice',
@@ -470,5 +511,100 @@ console.log("Total registered contracts:", count);`,
     'Zero address checks: Prevents invalid addresses',
     'No business logic: Simple CRUD reduces attack surface',
     'Trust model: Frontend trusts registry for correct addresses'
-  ]
+  ],
+  
+  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/openwork-contract-registry.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract OpenworkContractRegistry {
+    struct ContractInfo {
+        string name;
+        address contractAddress;
+        string chain;
+        address deployer;
+    }
+
+    address public owner;
+    mapping(string => ContractInfo) private contracts;
+    string[] private contractNames;
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not the owner");
+        _;
+    }
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    function addContract(
+        string memory name,
+        address contractAddress,
+        string memory chain,
+        address deployer
+    ) external onlyOwner {
+        require(bytes(name).length > 0, "Name cannot be empty");
+        require(contractAddress != address(0), "Invalid address");
+        
+        contracts[name] = ContractInfo({
+            name: name,
+            contractAddress: contractAddress,
+            chain: chain,
+            deployer: deployer
+        });
+        
+        contractNames.push(name);
+        emit ContractAdded(name, contractAddress, chain, deployer);
+    }
+
+    function updateContract(
+        string memory name,
+        address newContractAddress,
+        string memory newChain,
+        address newDeployer
+    ) external onlyOwner {
+        require(newContractAddress != address(0), "Invalid address");
+        
+        contracts[name].contractAddress = newContractAddress;
+        contracts[name].chain = newChain;
+        contracts[name].deployer = newDeployer;
+        
+        emit ContractUpdated(name, newContractAddress, newChain, newDeployer);
+    }
+
+    function removeContract(string memory name) external onlyOwner {
+        delete contracts[name];
+        
+        for (uint256 i = 0; i < contractNames.length; i++) {
+            if (keccak256(bytes(contractNames[i])) == keccak256(bytes(name))) {
+                contractNames[i] = contractNames[contractNames.length - 1];
+                contractNames.pop();
+                break;
+            }
+        }
+        
+        emit ContractRemoved(name);
+    }
+
+    function getContract(string memory name) external view returns (ContractInfo memory) {
+        return contracts[name];
+    }
+
+    function getAllContracts() external view returns (ContractInfo[] memory) {
+        ContractInfo[] memory allContracts = new ContractInfo[](contractNames.length);
+        for (uint256 i = 0; i < contractNames.length; i++) {
+            allContracts[i] = contracts[contractNames[i]];
+        }
+        return allContracts;
+    }
+
+    function getContractCount() external view returns (uint256) {
+        return contractNames.length;
+    }
+
+    // ... Additional owner and view functions
+    // See full implementation in repository
+}`
 };

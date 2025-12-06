@@ -799,6 +799,70 @@ console.log("Authorized chains:", chains);`,
     ]
   },
   
+  deployConfig: {
+    type: 'standard',
+    constructor: [
+      {
+        name: '_endpoint',
+        type: 'address',
+        description: 'LayerZero V2 Endpoint address on Arbitrum (core messaging protocol)',
+        placeholder: '0x6EDCE65403992e310A62460808c4b910D972f10f'
+      },
+      {
+        name: '_owner',
+        type: 'address',
+        description: 'Contract owner address (admin who manages chains and configurations)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_mainChainEid',
+        type: 'uint32',
+        description: 'LayerZero Endpoint ID for Main Chain (Base Sepolia: 40245, Ethereum: 30101)',
+        placeholder: '40245'
+      }
+    ],
+    networks: {
+      testnet: {
+        name: 'Arbitrum Sepolia',
+        chainId: 421614,
+        rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc',
+        explorer: 'https://sepolia.arbiscan.io',
+        currency: 'ETH'
+      }
+    },
+    estimatedGas: '3.5M',
+    postDeploy: {
+      message: 'Standard deployment complete! Configure bridge before use.',
+      nextSteps: [
+        '1. Deploy NativeBridge with constructor parameters:',
+        '   - LayerZero Endpoint: 0x6EDCE65403992e310A62460808c4b910D972f10f',
+        '   - Owner: your admin wallet',
+        '   - Main Chain EID: 40245 (Base Sepolia)',
+        '2. Add Local Chains via addLocalChain():',
+        '   - OP Sepolia: 40232',
+        '   - Ethereum Sepolia: 40161',
+        '   - Polygon Amoy: 40267',
+        '   - Base Sepolia: 40245',
+        '3. Set Native contract addresses:',
+        '   - setNativeOpenWorkJobContract(nowjcAddress)',
+        '   - setNativeAthenaContract(nativeAthenaAddress)',
+        '   - setNativeDaoContract(nativeDaoAddress)',
+        '   - setProfileManager(profileManagerAddress)',
+        '   - setOracleManager(oracleManagerAddress)',
+        '4. Authorize contracts to use bridge:',
+        '   - authorizeContract(nowjcAddress, true)',
+        '   - authorizeContract(nativeAthenaAddress, true)',
+        '5. Configure LayerZero peers on this contract:',
+        '   - setPeer(mainChainEid, mainBridgeAddress)',
+        '   - setPeer(opSepoliaEid, opBridgeAddress)',
+        '   - setPeer(ethSepoliaEid, ethBridgeAddress)',
+        '6. Verify contract on Arbiscan',
+        '7. Test message routing from Local Chain',
+        '8. Test rewards sync to Main Chain'
+      ]
+    }
+  },
+  
   securityConsiderations: [
     'Non-upgradeable: LayerZero OApp pattern, cannot upgrade bridge itself',
     'Owner controls: Chain management, contract addresses, authorizations',
@@ -812,5 +876,135 @@ console.log("Authorized chains:", chains);`,
     'No token holding: Bridge never holds user funds (only passes messages)',
     'Event logging: Complete audit trail of all messages',
     'Revert on unknown: Rejects messages with unrecognized function names'
-  ]
+  ],
+  
+  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/native-bridge.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+import { OAppSender, MessagingFee } from "@layerzerolabs/oapp-evm/contracts/oapp/OAppSender.sol";
+import { OAppReceiver } from "@layerzerolabs/oapp-evm/contracts/oapp/OAppReceiver.sol";
+import { OAppCore } from "@layerzerolabs/oapp-evm/contracts/oapp/OAppCore.sol";
+import { Origin } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
+
+contract NativeChainBridge is OAppSender, OAppReceiver {
+    
+    // ==================== STATE VARIABLES ====================
+    mapping(address => bool) public authorizedContracts;
+    address public nativeDaoContract;
+    address public nativeAthenaContract;
+    address public nativeOpenWorkJobContract;
+    address public profileManager;
+    
+    mapping(uint32 => bool) public authorizedLocalChains;
+    uint32[] public localChainEids;
+    uint32 public mainChainEid;
+
+    // ==================== INITIALIZATION ====================
+    constructor(
+        address _endpoint,
+        address _owner,
+        uint32 _mainChainEid
+    ) OAppCore(_endpoint, _owner) Ownable(_owner) {
+        mainChainEid = _mainChainEid;
+    }
+
+    // ==================== MESSAGE ROUTING ====================
+    function _lzReceive(
+        Origin calldata _origin,
+        bytes32,
+        bytes calldata _message,
+        address,
+        bytes calldata
+    ) internal override {
+        string memory functionName;
+        (functionName) = abi.decode(_message, (string));
+
+        // Route messages to appropriate contracts based on function name
+        if (keccak256(bytes(functionName)) == keccak256(bytes("postJob"))) {
+            (, string memory jobId, address jobGiver, string memory jobDetailHash, string[] memory descriptions, uint256[] memory amounts) = abi.decode(_message, (string, string, address, string, string[], uint256[]));
+            INativeOpenWorkJobContract(nativeOpenWorkJobContract).postJob(jobId, jobGiver, jobDetailHash, descriptions, amounts);
+        }
+        else if (keccak256(bytes(functionName)) == keccak256(bytes("raiseDispute"))) {
+            (, string memory jobId, string memory disputeHash, string memory oracleName, uint256 fee, uint256 disputedAmount, address disputeRaiser) = abi.decode(_message, (string, string, string, string, uint256, uint256, address));
+            INativeAthena(nativeAthenaContract).handleRaiseDispute(jobId, disputeHash, oracleName, fee, disputedAmount, disputeRaiser);
+        }
+        else if (keccak256(bytes(functionName)) == keccak256(bytes("updateStakeData"))) {
+            (, address staker, uint256 amount, uint256 unlockTime, uint256 durationMinutes, bool isActive) = abi.decode(_message, (string, address, uint256, uint256, uint256, bool));
+            INativeDAO(nativeDaoContract).updateStakeData(staker, amount, unlockTime, durationMinutes, isActive);
+        }
+        else if (keccak256(bytes(functionName)) == keccak256(bytes("incrementGovernanceAction"))) {
+            (, address user) = abi.decode(_message, (string, address));
+            INativeOpenWorkJobContract(nativeOpenWorkJobContract).incrementGovernanceAction(user);
+        }
+        else if (keccak256(bytes(functionName)) == keccak256(bytes("upgradeFromDAO"))) {
+            (, address targetProxy, address newImplementation) = abi.decode(_message, (string, address, address));
+            IUpgradeable(targetProxy).upgradeFromDAO(newImplementation);
+        }
+        else {
+            revert("Unknown function");
+        }
+
+        emit CrossChainMessageReceived(functionName, _origin.srcEid, _message);
+    }
+
+    // ==================== SENDING FUNCTIONS ====================
+    function sendToMainChain(
+        string memory _functionName,
+        bytes memory _payload,
+        bytes calldata _options
+    ) external payable onlyAuthorized {
+        _lzSend(
+            mainChainEid,
+            _payload,
+            _options,
+            MessagingFee(msg.value, 0),
+            payable(msg.sender)
+        );
+        
+        emit CrossChainMessageSent(_functionName, mainChainEid, _payload);
+    }
+
+    function sendSyncRewardsData(
+        address user,
+        uint256 claimableAmount,
+        bytes calldata _options
+    ) external payable onlyAuthorized {
+        bytes memory payload = abi.encode(
+            "syncClaimableRewards",
+            user,
+            claimableAmount
+        );
+        
+        _lzSend(mainChainEid, payload, _options, MessagingFee(msg.value, 0), payable(msg.sender));
+        emit CrossChainMessageSent("syncClaimableRewards", mainChainEid, payload);
+    }
+
+    function sendSyncVotingPower(
+        address user,
+        uint256 totalRewards,
+        bytes calldata _options
+    ) external payable onlyAuthorized {
+        bytes memory payload = abi.encode(
+            "syncVotingPower",
+            user,
+            totalRewards
+        );
+        
+        _lzSend(mainChainEid, payload, _options, MessagingFee(msg.value, 0), payable(msg.sender));
+        emit CrossChainMessageSent("syncVotingPower", mainChainEid, payload);
+    }
+
+    // ==================== LOCAL CHAIN MANAGEMENT ====================
+    function addLocalChain(uint32 _localChainEid) external onlyOwner {
+        require(!authorizedLocalChains[_localChainEid], "Already authorized");
+        authorizedLocalChains[_localChainEid] = true;
+        localChainEids.push(_localChainEid);
+        emit LocalChainAdded(_localChainEid);
+    }
+
+    // ... Quote functions and admin functions
+    // See full implementation in repository
+}`
 };

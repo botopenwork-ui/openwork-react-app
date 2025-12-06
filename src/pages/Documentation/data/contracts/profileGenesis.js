@@ -571,6 +571,49 @@ const batch = await profileGenesis.getProfileAddressesBatch(0, 100);`,
     ]
   },
   
+  deployConfig: {
+    type: 'uups',
+    constructor: [
+      {
+        name: '_owner',
+        type: 'address',
+        description: 'Contract owner address (admin who can upgrade and authorize contracts)',
+        placeholder: '0x...'
+      }
+    ],
+    networks: {
+      testnet: {
+        name: 'Arbitrum Sepolia',
+        chainId: 421614,
+        rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc',
+        explorer: 'https://sepolia.arbiscan.io',
+        currency: 'ETH'
+      }
+    },
+    estimatedGas: '2.8M',
+    postDeploy: {
+      message: 'UUPS deployment complete! Next: Initialize and authorize Profile Manager.',
+      nextSteps: [
+        '1. Deploy ProfileGenesis implementation contract (no constructor params)',
+        '2. Deploy UUPSProxy with implementation address',
+        '3. Call initialize() on proxy via block scanner with:',
+        '   - Owner address (your admin wallet)',
+        '4. ⚠️ CRITICAL: Authorize Profile Manager to write data:',
+        '   - authorizeContract(profileManagerAddress, true)',
+        '5. Configure Profile Manager with ProfileGenesis address:',
+        '   - ProfileManager.setProfileGenesis(profileGenesisAddress)',
+        '6. Optional: Also authorize Native Rewards for referrer queries',
+        '   - authorizeContract(nativeRewardsAddress, true)',
+        '7. Test profile creation flow',
+        '8. Test portfolio management (add/update/remove)',
+        '9. Test referral system',
+        '10. Verify both implementation and proxy on Arbiscan',
+        '11. IMPORTANT: Deploy ProfileGenesis before Profile Manager',
+        '12. Monitor profile count growth as users join platform'
+      ]
+    }
+  },
+  
   securityConsiderations: [
     'UUPS upgradeable - owner only can upgrade',
     'Authorization required: Only Profile Manager can write data',
@@ -584,5 +627,126 @@ const batch = await profileGenesis.getProfileAddressesBatch(0, 100);`,
     'Batch operations: Use getProfileAddressesBatch to avoid gas limits',
     'Privacy consideration: All profile data is public on-chain',
     'IPFS hashes: User responsible for maintaining IPFS content availability'
-  ]
+  ],
+  
+  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/profile-genesis.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
+contract ProfileGenesis is Initializable, UUPSUpgradeable {
+    
+    // ==================== STRUCTS ====================
+    struct Profile {
+        address userAddress;
+        string ipfsHash;
+        address referrerAddress;
+        string[] portfolioHashes;
+    }
+
+    // ==================== STATE VARIABLES ====================
+    mapping(address => bool) public authorizedContracts;
+    address public owner;
+    mapping(address => Profile) public profiles;
+    mapping(address => bool) public hasProfile;
+    mapping(address => address) public userReferrers;
+    mapping(string => mapping(address => uint256)) public jobRatings;
+    mapping(address => uint256[]) public userRatings;
+    address[] private allProfileAddresses;
+    uint256 private profileCount;
+
+    // ==================== INITIALIZATION ====================
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _owner) public initializer {
+        __UUPSUpgradeable_init();
+        owner = _owner;
+    }
+
+    function _authorizeUpgrade(address) internal view override {
+        require(msg.sender == owner, "Not owner");
+    }
+
+    // ==================== ACCESS CONTROL ====================
+    function authorizeContract(address _contract, bool _authorized) external onlyOwner {
+        authorizedContracts[_contract] = _authorized;
+        emit ContractAuthorized(_contract, _authorized);
+    }
+
+    // ==================== PROFILE SETTERS ====================
+    function setProfile(
+        address user,
+        string memory ipfsHash,
+        address referrer
+    ) external onlyAuthorized {
+        if (!hasProfile[user]) {
+            allProfileAddresses.push(user);
+            profileCount++;
+        }
+        
+        profiles[user] = Profile({
+            userAddress: user,
+            ipfsHash: ipfsHash,
+            referrerAddress: referrer,
+            portfolioHashes: new string[](0)
+        });
+        hasProfile[user] = true;
+        if (referrer != address(0)) {
+            userReferrers[user] = referrer;
+        }
+    }
+    
+    function addPortfolio(address user, string memory portfolioHash) external onlyAuthorized {
+        require(hasProfile[user], "Profile does not exist");
+        profiles[user].portfolioHashes.push(portfolioHash);
+    }
+    
+    function updateProfileIpfsHash(address user, string memory newIpfsHash) external onlyAuthorized {
+        require(hasProfile[user], "Profile does not exist");
+        profiles[user].ipfsHash = newIpfsHash;
+        emit ProfileUpdated(user, newIpfsHash);
+    }
+
+    function setJobRating(string memory jobId, address user, uint256 rating) external onlyAuthorized {
+        jobRatings[jobId][user] = rating;
+        userRatings[user].push(rating);
+    }
+
+    // ==================== GETTERS ====================
+    function getProfile(address user) external view returns (Profile memory) {
+        return profiles[user];
+    }
+    
+    function getUserReferrer(address user) external view returns (address) {
+        return userReferrers[user];
+    }
+    
+    function getUserRatings(address user) external view returns (uint256[] memory) {
+        return userRatings[user];
+    }
+    
+    function getProfileCount() external view returns (uint256) {
+        return profileCount;
+    }
+    
+    function getProfileAddressesBatch(uint256 startIndex, uint256 count) external view returns (address[] memory) {
+        require(startIndex < profileCount, "Out of bounds");
+        uint256 remaining = profileCount - startIndex;
+        uint256 actualCount = count > remaining ? remaining : count;
+        
+        address[] memory addresses = new address[](actualCount);
+        for (uint256 i = 0; i < actualCount; i++) {
+            addresses[i] = allProfileAddresses[startIndex + i];
+        }
+        return addresses;
+    }
+    
+    // ... Additional update and remove functions
+    // See full implementation in repository
+}`
 };

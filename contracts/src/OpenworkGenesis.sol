@@ -181,6 +181,18 @@ contract OpenworkGenesis is Initializable, UUPSUpgradeable {
     // Final rewards data
     mapping(address => uint256) public userTotalOWTokens;
     mapping(address => uint256) public userGovernanceActions;
+    
+    // NEW: Activity tracking for oracle members
+    mapping(address => uint256) public memberLastActivity;
+    mapping(string => bool) public oracleActiveStatus;
+
+    // NEW: Dispute/Application ID tracking for batch retrieval
+    string[] private allDisputeIds;
+    mapping(string => uint256) private disputeIdIndex;
+    uint256 private disputeCount;
+    
+    uint256[] private allSkillApplicationIds;
+    uint256[] private allAskAthenaApplicationIds;
 
     // ==================== EVENTS ====================
     
@@ -389,6 +401,13 @@ contract OpenworkGenesis is Initializable, UUPSUpgradeable {
         address disputeRaiser,
         uint256 fees
     ) external onlyAuthorized {
+        // Track new disputes for batch retrieval
+        if (bytes(disputes[jobId].jobId).length == 0) {
+            allDisputeIds.push(jobId);
+            disputeIdIndex[jobId] = disputeCount;
+            disputeCount++;
+        }
+        
         disputes[jobId] = Dispute({
             jobId: jobId,
             disputedAmount: disputedAmount,
@@ -429,6 +448,12 @@ contract OpenworkGenesis is Initializable, UUPSUpgradeable {
         if (applicationId >= applicationCounter) {
             applicationCounter = applicationId + 1;
         }
+        
+        // Track new applications for batch retrieval
+        if (skillApplications[applicationId].id == 0) {
+            allSkillApplicationIds.push(applicationId);
+        }
+        
         skillApplications[applicationId] = SkillVerificationApplication({
             id: applicationId,
             applicant: applicant,
@@ -464,6 +489,12 @@ contract OpenworkGenesis is Initializable, UUPSUpgradeable {
         if (athenaId >= askAthenaCounter) {
             askAthenaCounter = athenaId + 1;
         }
+        
+        // Track new applications for batch retrieval
+        if (askAthenaApplications[athenaId].id == 0) {
+            allAskAthenaApplicationIds.push(athenaId);
+        }
+        
         askAthenaApplications[athenaId] = AskAthenaApplication({
             id: athenaId,
             applicant: applicant,
@@ -660,6 +691,16 @@ contract OpenworkGenesis is Initializable, UUPSUpgradeable {
 
     function updateUserClaimData(address user, uint256 claimedAmount) external onlyAuthorized {
         userTotalClaimedTokens[user] += claimedAmount;
+    }
+    
+    // ==================== ACTIVITY TRACKING SETTERS ====================
+    
+    function updateMemberActivity(address member) external onlyAuthorized {
+        memberLastActivity[member] = block.timestamp;
+    }
+    
+    function setOracleActiveStatus(string memory oracleName, bool isActive) external onlyAuthorized {
+        oracleActiveStatus[oracleName] = isActive;
     }
 
     // ==================== GETTERS ====================
@@ -878,5 +919,182 @@ contract OpenworkGenesis is Initializable, UUPSUpgradeable {
 
     function getUserGovernanceActions(address user) external view returns (uint256) {
         return userGovernanceActions[user];
+    }
+
+    // ==================== DISPUTE BATCH GETTERS ====================
+
+    /**
+     * @dev Get all dispute IDs in the system
+     * @return Array of all dispute IDs
+     */
+    function getAllDisputeIds() external view returns (string[] memory) {
+        return allDisputeIds;
+    }
+
+    /**
+     * @dev Get total number of disputes
+     * @return Total dispute count
+     */
+    function getDisputeCount() external view returns (uint256) {
+        return disputeCount;
+    }
+
+    /**
+     * @dev Get dispute IDs in batches for pagination
+     * @param startIndex Starting index in the array
+     * @param count Number of IDs to return
+     * @return disputeIds Array of dispute IDs for the requested range
+     */
+    function getDisputesBatch(uint256 startIndex, uint256 count) 
+        external view returns (string[] memory disputeIds) {
+        require(startIndex < disputeCount, "Start index out of bounds");
+        
+        uint256 remaining = disputeCount - startIndex;
+        uint256 actualCount = count > remaining ? remaining : count;
+        
+        disputeIds = new string[](actualCount);
+        for (uint256 i = 0; i < actualCount; i++) {
+            disputeIds[i] = allDisputeIds[startIndex + i];
+        }
+        
+        return disputeIds;
+    }
+
+    // ==================== SKILL APPLICATION BATCH GETTERS ====================
+
+    /**
+     * @dev Get total number of skill verification applications
+     * @return Total application count
+     */
+    function getSkillApplicationCount() external view returns (uint256) {
+        return applicationCounter;
+    }
+
+    /**
+     * @dev Get all skill application IDs
+     * @return Array of all skill application IDs
+     */
+    function getAllSkillApplicationIds() external view returns (uint256[] memory) {
+        return allSkillApplicationIds;
+    }
+
+    /**
+     * @dev Get skill application IDs in batches for pagination
+     * @param startIndex Starting index in the array
+     * @param count Number of IDs to return
+     * @return applicationIds Array of application IDs for the requested range
+     */
+    function getSkillApplicationsBatch(uint256 startIndex, uint256 count) 
+        external view returns (uint256[] memory applicationIds) {
+        require(startIndex < allSkillApplicationIds.length, "Start index out of bounds");
+        
+        uint256 remaining = allSkillApplicationIds.length - startIndex;
+        uint256 actualCount = count > remaining ? remaining : count;
+        
+        applicationIds = new uint256[](actualCount);
+        for (uint256 i = 0; i < actualCount; i++) {
+            applicationIds[i] = allSkillApplicationIds[startIndex + i];
+        }
+        
+        return applicationIds;
+    }
+
+    /**
+     * @dev Get all active skill verification applications
+     * @return Array of active skill verification applications
+     */
+    function getActiveSkillApplications() 
+        external view returns (SkillVerificationApplication[] memory) {
+        uint256 activeCount = 0;
+        
+        // Count active applications
+        for (uint256 i = 0; i < allSkillApplicationIds.length; i++) {
+            if (skillApplications[allSkillApplicationIds[i]].isVotingActive) {
+                activeCount++;
+            }
+        }
+        
+        // Build array of active applications
+        SkillVerificationApplication[] memory activeApps = new SkillVerificationApplication[](activeCount);
+        uint256 currentIndex = 0;
+        
+        for (uint256 i = 0; i < allSkillApplicationIds.length; i++) {
+            uint256 appId = allSkillApplicationIds[i];
+            if (skillApplications[appId].isVotingActive) {
+                activeApps[currentIndex] = skillApplications[appId];
+                currentIndex++;
+            }
+        }
+        
+        return activeApps;
+    }
+
+    // ==================== ASK ATHENA BATCH GETTERS ====================
+
+    /**
+     * @dev Get total number of Ask Athena applications
+     * @return Total application count
+     */
+    function getAskAthenaCount() external view returns (uint256) {
+        return askAthenaCounter;
+    }
+
+    /**
+     * @dev Get all Ask Athena application IDs
+     * @return Array of all Ask Athena application IDs
+     */
+    function getAllAskAthenaIds() external view returns (uint256[] memory) {
+        return allAskAthenaApplicationIds;
+    }
+
+    /**
+     * @dev Get Ask Athena application IDs in batches for pagination
+     * @param startIndex Starting index in the array
+     * @param count Number of IDs to return
+     * @return applicationIds Array of application IDs for the requested range
+     */
+    function getAskAthenaApplicationsBatch(uint256 startIndex, uint256 count) 
+        external view returns (uint256[] memory applicationIds) {
+        require(startIndex < allAskAthenaApplicationIds.length, "Start index out of bounds");
+        
+        uint256 remaining = allAskAthenaApplicationIds.length - startIndex;
+        uint256 actualCount = count > remaining ? remaining : count;
+        
+        applicationIds = new uint256[](actualCount);
+        for (uint256 i = 0; i < actualCount; i++) {
+            applicationIds[i] = allAskAthenaApplicationIds[startIndex + i];
+        }
+        
+        return applicationIds;
+    }
+
+    /**
+     * @dev Get all active Ask Athena applications
+     * @return Array of active Ask Athena applications
+     */
+    function getActiveAskAthenaApplications() 
+        external view returns (AskAthenaApplication[] memory) {
+        uint256 activeCount = 0;
+        
+        // Count active applications
+        for (uint256 i = 0; i < allAskAthenaApplicationIds.length; i++) {
+            if (askAthenaApplications[allAskAthenaApplicationIds[i]].isVotingActive) {
+                activeCount++;
+            }
+        }
+        
+        // Build array of active applications
+        AskAthenaApplication[] memory activeApps = new AskAthenaApplication[](activeCount);
+        uint256 currentIndex = 0;
+        
+        for (uint256 i = 0; i < allAskAthenaApplicationIds.length; i++) {
+            uint256 appId = allAskAthenaApplicationIds[i];
+            if (askAthenaApplications[appId].isVotingActive) {
+                activeApps[currentIndex] = askAthenaApplications[appId];
+                currentIndex++;
+            }
+        }
+        
+        return activeApps;
     }
 }

@@ -13,6 +13,7 @@ export const athenaClientOP = {
   testnetDeployed: 'Deployed',
   mainnetAddress: null,
   testnetAddress: '0x45E51B424c87Eb430E705CcE3EcD8e22baD267f7',
+  isUUPS: true,
   tvl: 'N/A',
   docs: 'Local dispute interface on OP Sepolia - Enables cross-chain dispute initiation, skill verification, and oracle queries. Routes all USDC fees to Native Athena on Arbitrum via CCTP while sending dispute data via LayerZero for unified dispute resolution.',
   
@@ -675,6 +676,95 @@ console.log("Is Finalized:", disputeInfo.isFinalized);`,
     ]
   },
   
+  deployConfig: {
+    type: 'uups',
+    constructor: [
+      {
+        name: '_owner',
+        type: 'address',
+        description: 'Contract owner address (admin who can upgrade and configure)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_bridge',
+        type: 'address',
+        description: 'Local Bridge contract address (for LayerZero messaging)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_usdtToken',
+        type: 'address',
+        description: 'USDC token address on OP Sepolia (Circle USDC)',
+        placeholder: '0x5fd84259d66Cd46123540766Be93DFE6D43130D7'
+      },
+      {
+        name: '_chainId',
+        type: 'uint32',
+        description: 'Chain ID for tracking (OP Sepolia: 10232)',
+        placeholder: '10232'
+      },
+      {
+        name: '_cctpSender',
+        type: 'address',
+        description: 'CCTP Transceiver address on OP (for USDC fee routing)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_nativeAthenaRecipient',
+        type: 'address',
+        description: 'Native Athena proxy address on Arbitrum (receives fee mints)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_nativeChainDomain',
+        type: 'uint32',
+        description: 'CCTP domain for Native Chain (Arbitrum: 3)',
+        placeholder: '3'
+      }
+    ],
+    networks: {
+      testnet: {
+        name: 'OP Sepolia',
+        chainId: 11155420,
+        rpcUrl: 'https://sepolia.optimism.io',
+        explorer: 'https://sepolia-optimism.etherscan.io',
+        currency: 'ETH'
+      },
+      mainnet: {
+        name: 'OP Mainnet',
+        chainId: 10,
+        rpcUrl: 'https://mainnet.optimism.io',
+        explorer: 'https://optimistic.etherscan.io',
+        currency: 'ETH'
+      }
+    },
+    estimatedGas: '3.5M',
+    postDeploy: {
+      message: 'UUPS deployment complete! Next: Initialize and configure Athena Client.',
+      nextSteps: [
+        '1. Deploy AthenaClient implementation contract (no constructor params)',
+        '2. Deploy UUPSProxy with implementation address',
+        '3. Call initialize() on proxy via block scanner with:',
+        '   - Owner address (your admin wallet)',
+        '   - Local Bridge address on OP',
+        '   - USDC token address (Circle USDC on OP)',
+        '   - Chain ID: 10232',
+        '   - CCTP Transceiver address on OP',
+        '   - Native Athena proxy address on Arbitrum',
+        '   - Native Chain Domain: 3 (Arbitrum)',
+        '4. Set LOWJC address: setJobContract(lowjcOPAddress)',
+        '5. Set minimum dispute fee: setMinDisputeFee(50 USDC) [default]',
+        '6. Configure LOWJC with Athena Client:',
+        '   - LOWJC.setAthenaClientContract(athenaClientAddress)',
+        '7. Test dispute raising flow',
+        '8. Test skill verification submission',
+        '9. Test dispute finalization from Native',
+        '10. Verify both implementation and proxy on OP Sepolia Etherscan',
+        '11. IMPORTANT: Same contract deploys on all Local Chains with different params'
+      ]
+    }
+  },
+  
   securityConsiderations: [
     'UUPS upgradeable: Owner or bridge can upgrade implementation',
     'Dual authorization: Owner or bridge for upgrades',
@@ -693,5 +783,71 @@ console.log("Is Finalized:", disputeInfo.isFinalized);`,
     'No local fee distribution: All distribution handled on Native Chain',
     'Vote recording: Local tracking for transparency',
     'Event logging: Complete audit trail of disputes and oracle activity'
-  ]
+  ],
+  
+  code: `// Same implementation as athenaClientETH - see: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/athena-client.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+contract LocalAthena is Initializable, ReentrancyGuardUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
+    using SafeERC20 for IERC20;
+    
+    IERC20 public usdtToken;
+    ILocalOpenWorkJobContract public jobContract;
+    ILayerZeroBridge public bridge;
+    uint32 public chainId;
+    address public cctpSender;
+    address public nativeAthenaRecipient;
+    uint32 public nativeChainDomain;
+    
+    mapping(string => DisputeFees) public disputeFees;
+    uint256 public minDisputeFee;
+
+    function raiseDispute(
+        string memory _jobId,
+        string memory _disputeHash,
+        string memory _oracleName,
+        uint256 _feeAmount,
+        uint256 _disputedAmount,
+        bytes calldata _nativeOptions
+    ) external payable nonReentrant {
+        // Transfer fee from user
+        usdtToken.transferFrom(msg.sender, address(this), _feeAmount);
+        
+        // Route fee to Native Athena via CCTP
+        routeFeeToNative(_feeAmount);
+        
+        // Send dispute data to Native Athena via LayerZero
+        bytes memory payload = abi.encode("raiseDispute", _jobId, _disputeHash, _oracleName, _feeAmount, _disputedAmount, msg.sender);
+        bridge.sendToNativeChain{value: msg.value}("raiseDispute", payload, _nativeOptions);
+        
+        emit DisputeRaised(msg.sender, _jobId, _feeAmount);
+    }
+
+    function handleFinalizeDisputeWithVotes(
+        string memory disputeId, 
+        bool winningSide, 
+        uint256 votesFor, 
+        uint256 votesAgainst,
+        address[] memory voters,
+        address[] memory claimAddresses,
+        uint256[] memory votingPowers,
+        bool[] memory voteDirections
+    ) external {
+        require(msg.sender == address(bridge), "Only bridge");
+        
+        DisputeFees storage dispute = disputeFees[disputeId];
+        dispute.winningSide = winningSide;
+        dispute.isFinalized = true;
+        
+        // Auto-resolve in LOWJC
+        if (address(jobContract) != address(0)) {
+            jobContract.resolveDispute(disputeId, winningSide);
+        }
+        
+        emit DisputeFeesFinalized(disputeId, winningSide, dispute.totalFees);
+    }
+    
+    // ... Additional functions - see full implementation
+}`
 };

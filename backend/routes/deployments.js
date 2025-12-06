@@ -32,12 +32,13 @@ router.post('/', (req, res) => {
       });
     }
 
-    // Insert deployment
+    // Insert deployment (NOT marked as current by default - admin must set it)
     const insert = db.prepare(`
       INSERT INTO deployments (
         contract_id, contract_name, address, network_name, 
-        chain_id, deployer_address, transaction_hash, constructor_params
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        chain_id, deployer_address, transaction_hash, constructor_params,
+        deployment_type, is_current
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'standalone', 0)
     `);
 
     const result = insert.run(

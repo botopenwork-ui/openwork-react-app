@@ -813,5 +813,235 @@ console.log('Rewards synced to Main chain for claiming');`,
     'Milestone guard prevents payment release for wrong milestone',
     'Job status checks ensure payments only in InProgress jobs',
     'Accumulated commission tracking prevents double-withdrawal'
-  ]
+  ],
+  
+  code: `// Full implementation available in: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/nowjc.sol
+// This is a truncated version showing key structure - see repository for complete code
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+contract NativeOpenWorkJobContract is 
+    Initializable,
+    OwnableUpgradeable,
+    UUPSUpgradeable
+{
+    using SafeERC20 for IERC20;
+    
+    // ==================== STATE VARIABLES ====================
+    IOpenworkGenesis public genesis;
+    IOpenWorkRewards public rewardsContract;
+    address public bridge;
+    IERC20 public usdtToken;
+    address public cctpReceiver;
+    address public cctpTransceiver;
+    address public nativeAthena;
+    address public treasury;
+    uint256 public accumulatedCommission;
+    uint256 public commissionPercentage = 100; // 1% in basis points
+    uint256 public minCommission = 1e6; // 1 USDC
+    
+    // ==================== CORE FUNCTIONS ====================
+    
+    function initialize(
+        address _owner, 
+        address _bridge, 
+        address _genesis,
+        address _rewardsContract,
+        address _usdtToken,
+        address _cctpReceiver
+    ) public initializer {
+        __Ownable_init(_owner);
+        __UUPSUpgradeable_init();
+        bridge = _bridge;
+        genesis = IOpenworkGenesis(_genesis);
+        rewardsContract = IOpenWorkRewards(_rewardsContract);
+        usdtToken = IERC20(_usdtToken);
+        cctpReceiver = _cctpReceiver;
+    }
+    
+    function postJob(
+        string memory _jobId, 
+        address _jobGiver, 
+        string memory _jobDetailHash, 
+        string[] memory _descriptions, 
+        uint256[] memory _amounts
+    ) external {
+        require(!genesis.jobExists(_jobId), "Job exists");
+        require(_descriptions.length == _amounts.length, "Length mismatch");
+        
+        genesis.setJob(_jobId, _jobGiver, _jobDetailHash, _descriptions, _amounts);
+        emit JobPosted(_jobId, _jobGiver, _jobDetailHash);
+    }
+    
+    function applyToJob(
+        address _applicant, 
+        string memory _jobId, 
+        string memory _applicationHash, 
+        string[] memory _descriptions, 
+        uint256[] memory _amounts, 
+        uint32 _preferredChainDomain
+    ) external {
+        genesis.addJobApplicant(_jobId, _applicant);
+        uint256 applicationId = genesis.getJobApplicationCount(_jobId) + 1;
+        genesis.setJobApplication(
+            _jobId, 
+            applicationId, 
+            _applicant, 
+            _applicationHash, 
+            _descriptions, 
+            _amounts, 
+            _preferredChainDomain, 
+            _applicant
+        );
+        jobApplicantChainDomain[_jobId][_applicant] = _preferredChainDomain;
+        emit JobApplication(_jobId, applicationId, _applicant, _applicationHash);
+    }
+    
+    function releasePaymentCrossChain(
+        address _jobGiver, 
+        string memory _jobId, 
+        uint256 _amount,
+        uint32 _targetChainDomain,
+        address _targetRecipient
+    ) public {
+        IOpenworkGenesis.Job memory job = genesis.getJob(_jobId);
+        require(job.selectedApplicant != address(0), "No applicant");
+        
+        // Calculate and deduct commission
+        uint256 commission = calculateCommission(_amount);
+        uint256 netAmount = _amount - commission;
+        accumulatedCommission += commission;
+        
+        // Approve and send via CCTP
+        bytes32 mintRecipient = bytes32(uint256(uint160(_targetRecipient)));
+        usdtToken.approve(cctpTransceiver, netAmount);
+        ICCTPTransceiver(cctpTransceiver).sendFast(
+            netAmount,
+            _targetChainDomain,
+            mintRecipient,
+            1000
+        );
+        
+        // Process rewards and update state
+        _processRewardsForPayment(_jobGiver, _jobId, netAmount);
+        genesis.updateJobTotalPaid(_jobId, netAmount);
+        genesis.setJobCurrentMilestone(_jobId, job.currentMilestone + 1);
+        
+        emit CommissionDeducted(_jobId, _amount, commission, netAmount);
+        emit PaymentReleased(_jobId, _jobGiver, _targetRecipient, netAmount, job.currentMilestone);
+    }
+    
+    function calculateCommission(uint256 amount) public view returns (uint256) {
+        uint256 percentCommission = (amount * commissionPercentage) / 10000;
+        return percentCommission > minCommission ? percentCommission : minCommission;
+    }
+    
+    function releaseDisputedFunds(
+        address _recipient,
+        uint256 _amount,
+        uint32 _targetChainDomain
+    ) external {
+        require(_recipient != address(0), "Invalid recipient");
+        uint256 commission = calculateCommission(_amount);
+        uint256 netAmount = _amount - commission;
+        accumulatedCommission += commission;
+        
+        if (_targetChainDomain == 3) {
+            usdtToken.safeTransfer(_recipient, netAmount);
+        } else {
+            usdtToken.approve(cctpTransceiver, netAmount);
+            ICCTPTransceiver(cctpTransceiver).sendFast(
+                netAmount,
+                _targetChainDomain,
+                bytes32(uint256(uint160(_recipient))),
+                1000
+            );
+        }
+        
+        emit DisputedFundsReleased("dispute", _recipient, _targetChainDomain, netAmount);
+    }
+    
+    // ... Additional functions for job management, rewards, commission, etc.
+    // See full implementation in repository
+}`,
+
+  deployConfig: {
+    type: 'uups',
+    constructor: [
+      { 
+        name: 'initialOwner',
+        type: 'address',
+        default: 'WALLET',
+        description: 'Address that will own the NOWJC contract',
+        placeholder: '0x...'
+      },
+      {
+        name: 'bridge',
+        type: 'address',
+        description: 'Native Bridge address for cross-chain messages',
+        placeholder: '0x3b2AC1d1281cA4a1188d9F09A5Af9a9E6a114D6c'
+      },
+      {
+        name: 'genesis',
+        type: 'address',
+        description: 'OpenworkGenesis contract address',
+        placeholder: '0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C'
+      },
+      {
+        name: 'rewardsContract',
+        type: 'address',
+        description: 'Native Rewards contract address',
+        placeholder: '0x947cAd64a26Eae5F82aF68b7Dbf8b457a8f492De'
+      },
+      {
+        name: 'usdtToken',
+        type: 'address',
+        description: 'USDC token address on Arbitrum Sepolia',
+        placeholder: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d'
+      },
+      {
+        name: 'cctpReceiver',
+        type: 'address',
+        description: 'CCTP Transceiver address for cross-chain USDC',
+        placeholder: '0xB64f20A20F55D77bbe708Db107AA5E53a9e39063'
+      }
+    ],
+    networks: {
+      testnet: {
+        name: 'Arbitrum Sepolia',
+        chainId: 421614,
+        rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc',
+        explorer: 'https://sepolia.arbiscan.io',
+        currency: 'ETH'
+      },
+      mainnet: {
+        name: 'Arbitrum One',
+        chainId: 42161,
+        rpcUrl: 'https://arb1.arbitrum.io/rpc',
+        explorer: 'https://arbiscan.io',
+        currency: 'ETH'
+      }
+    },
+    estimatedGas: '4.5M',
+    postDeploy: {
+      message: 'NOWJC Implementation deployed! Deploy proxy and initialize on block scanner.',
+      nextSteps: [
+        'Deploy implementation (no params)',
+        'Deploy proxy with implementation address',
+        'Call initialize() on proxy with: owner, bridge, genesis, rewards, usdc, cctpReceiver',
+        'Set CCTP Transceiver address',
+        'Set Native Athena address',
+        'Set Treasury address',
+        'Authorize in OpenworkGenesis',
+        'Verify both contracts on Arbiscan'
+      ]
+    }
+  }
 };

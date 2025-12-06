@@ -1101,26 +1101,25 @@ contract UUPSProxy is ERC1967Proxy {
       { 
         name: 'initialOwner',
         type: 'address',
-        default: 'WALLET',
-        description: 'Address that will own the Main DAO contract',
+        description: 'Address that will own the Main DAO contract (admin wallet)',
         placeholder: '0x...'
       },
       { 
         name: 'openworkToken',
         type: 'address',
-        description: 'OpenWork Token (OWORK) contract address',
+        description: 'OpenWork Token (OW) ERC-20 contract address for staking',
         placeholder: '0x5f24747d5e59F9CCe5a9815BC12E2fB5Ae713679'
       },
       { 
         name: 'chainId',
         type: 'uint32',
-        description: 'Chain ID (84532 for Base Sepolia)',
+        description: 'Chain ID - Base Sepolia: 84532, Ethereum Mainnet: 1',
         placeholder: '84532'
       },
       { 
         name: 'bridge',
         type: 'address',
-        description: 'Main Bridge contract address',
+        description: 'Main Bridge contract address (for cross-chain governance sync)',
         placeholder: '0x...'
       }
     ],
@@ -1140,15 +1139,36 @@ contract UUPSProxy is ERC1967Proxy {
         currency: 'ETH'
       }
     },
-    estimatedGas: '890K',
+    estimatedGas: '4.8M',
     postDeploy: {
-      message: 'Main DAO deployed successfully! Governance system is now active.',
+      message: 'UUPS deployment complete! Next: Initialize the proxy and configure governance.',
       nextSteps: [
-        'Verify both proxy and implementation on explorer',
-        'Set the Main Rewards contract address',
-        'Configure the Main Bridge contract address',
-        'Transfer initial OW tokens to test staking',
-        'Create first governance proposal to test system'
+        '1. Deploy MainDAO implementation contract (no constructor params)',
+        '2. Deploy UUPSProxy with implementation address',
+        '3. Call initialize() on proxy via block scanner with:',
+        '   - Owner address (your admin wallet)',
+        '   - OpenWork Token (OW) address',
+        '   - Chain ID (84532 for Base Sepolia, 1 for Ethereum)',
+        '   - Main Bridge address',
+        '4. Set Main Rewards contract: setMainRewards(mainRewardsAddress)',
+        '5. Verify governance parameters initialized correctly:',
+        '   - proposalThresholdAmount: 100 OW [default]',
+        '   - votingThresholdAmount: 50 OW [default]',
+        '   - unstakeDelay: 24 hours [default]',
+        '   - Quorum: 50 OW [default]',
+        '6. Configure Main Bridge to route governance messages:',
+        '   - MainBridge.setMainDAO(mainDAOAddress)',
+        '7. Test staking flow:',
+        '   - Approve OW tokens',
+        '   - Call stake(100 OW, 1-3 min, lzOptions)',
+        '   - Verify cross-chain sync to Native',
+        '8. Test governance:',
+        '   - Create test proposal',
+        '   - Vote on proposal',
+        '   - Check quorum and execution',
+        '9. Verify both implementation and proxy on Basescan/Etherscan',
+        '10. Fund contract with ETH for LayerZero fees (optional)',
+        '11. IMPORTANT: Main DAO has supreme upgrade authority over all contracts'
       ]
     }
   }

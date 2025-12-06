@@ -1,11 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useWalletConnection } from "../../functions/useWalletConnection";
+import { fetchUserPortfolios } from "../../services/portfolioService";
 import "./ProfilePortfolio.css";
 
 export default function ProfilePortfolio() {
   const navigate = useNavigate();
+  const { walletAddress } = useWalletConnection();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState("All Skills");
+  const [portfolioItems, setPortfolioItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const skillOptions = [
     "All Skills",
@@ -32,37 +37,26 @@ export default function ProfilePortfolio() {
     return `${start}....${end}`;
   }
 
-  // Sample portfolio items - replace with real data
-  const portfolioItems = [
-    {
-      id: 1,
-      title: "Branding work for Cordial",
-      image: "/assets/portfolio-image.png",
-      skills: ["UX Design", "+2 More"],
-      hasPackage: true,
-    },
-    {
-      id: 2,
-      title: "Branding work for Cordial",
-      image: "/assets/portfolio-image.png",
-      skills: ["UX Design", "+2 More"],
-      hasPackage: true,
-    },
-    {
-      id: 3,
-      title: "Branding work for Cordial",
-      image: null, // Empty card with document icon
-      skills: ["UX Design", "+2 More"],
-      hasPackage: true,
-    },
-    {
-      id: 4,
-      title: "Branding work for Cordial",
-      image: "/assets/portfolio-image.png",
-      skills: ["UX Design", "+2 More"],
-      hasPackage: true,
-    },
-  ];
+  // Fetch portfolio items from blockchain
+  useEffect(() => {
+    const loadPortfolios = async () => {
+      if (!walletAddress) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const portfolios = await fetchUserPortfolios(walletAddress);
+        setPortfolioItems(portfolios);
+      } catch (error) {
+        console.error('Error loading portfolios:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPortfolios();
+  }, [walletAddress]);
 
   const handleBack = () => {
     navigate(-1);
@@ -124,13 +118,28 @@ export default function ProfilePortfolio() {
           </div>
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#868686' }}>
+            Loading portfolios...
+          </div>
+        )}
+
         {/* Portfolio Grid */}
-        <div className="portfolio-grid">
-          {portfolioItems.map((item) => (
+        {!loading && (
+          <div className="portfolio-grid">
+            {portfolioItems.map((item) => (
             <div key={item.id} className="portfolio-card">
-              <div className="portfolio-card-image">
-                {item.image ? (
-                  <img src={item.image} alt={item.title} />
+              <div 
+                className="portfolio-card-image"
+                onClick={() => navigate(`/view-work-profile/${item.id}`)}
+                style={{ cursor: 'pointer' }}
+              >
+                {item.images && item.images.length > 0 ? (
+                  <img 
+                    src={`https://gateway.pinata.cloud/ipfs/${item.images[0]}`} 
+                    alt={item.title || 'Portfolio item'} 
+                  />
                 ) : (
                   <div className="portfolio-card-image-placeholder">
                     <img src="/assets/document-icon.svg" alt="No image" />
@@ -159,8 +168,9 @@ export default function ProfilePortfolio() {
                 )}
               </div>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Pagination */}
         <div className="portfolio-pagination">

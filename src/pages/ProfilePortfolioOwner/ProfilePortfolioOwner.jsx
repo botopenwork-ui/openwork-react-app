@@ -1,14 +1,20 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useWalletConnection } from "../../functions/useWalletConnection";
+import { fetchUserPortfolios, deletePortfolioFromBlockchain } from "../../services/portfolioService";
 import BlueButton from "../../components/BlueButton/BlueButton";
 import Button from "../../components/Button/Button";
 import "./ProfilePortfolioOwner.css";
 
 export default function ProfilePortfolioOwner() {
   const navigate = useNavigate();
+  const { walletAddress } = useWalletConnection();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState("All Skills");
   const [openCardDropdown, setOpenCardDropdown] = useState(null);
+  const [portfolioItems, setPortfolioItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const skillOptions = [
     "All Skills",
@@ -35,10 +41,14 @@ export default function ProfilePortfolioOwner() {
     return `${start}....${end}`;
   }
 
-  const handleEdit = (itemId) => {
-    console.log("Edit item:", itemId);
+  const handleEdit = (item) => {
+    console.log("Edit item:", item.id);
     setOpenCardDropdown(null);
-    // Add edit logic here
+    navigate(`/edit-portfolio/${item.id}`, {
+      state: {
+        portfolioData: item
+      }
+    });
   };
 
   const handleDelete = (itemId) => {
@@ -48,31 +58,54 @@ export default function ProfilePortfolioOwner() {
   };
 
   const handleAddProject = () => {
-    console.log("Add new project");
-    // Add navigation or modal logic here
+    navigate("/add-portfolio");
   };
 
-  // Sample portfolio items - replace with real data
-  const portfolioItems = [
-    {
-      id: 1,
-      title: "Branding work for Cordial",
-      image: "/assets/portfolio-image.png",
-      skills: ["UX Design", "+5"],
-    },
-    {
-      id: 2,
-      title: "Branding work for Cordial",
-      image: "/assets/portfolio-image.png",
-      skills: ["UX Design", "+5"],
-    },
-    {
-      id: 3,
-      title: "Branding work for Cordial",
-      image: "/assets/portfolio-image.png",
-      skills: ["UX Design", "+5"],
-    },
-  ];
+  // Fetch portfolio items from blockchain
+  useEffect(() => {
+    const loadPortfolios = async () => {
+      if (!walletAddress) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const portfolios = await fetchUserPortfolios(walletAddress);
+        setPortfolioItems(portfolios);
+      } catch (err) {
+        console.error('Error loading portfolios:', err);
+        setError('Failed to load portfolios');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPortfolios();
+  }, [walletAddress]);
+
+  const handleDeleteConfirm = async (itemId) => {
+    if (!window.confirm('Are you sure you want to delete this portfolio item?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await deletePortfolioFromBlockchain(walletAddress, itemId);
+      
+      // Refresh portfolio list
+      const portfolios = await fetchUserPortfolios(walletAddress);
+      setPortfolioItems(portfolios);
+      
+      alert('Portfolio item deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting portfolio:', error);
+      alert('Failed to delete portfolio item. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleBack = () => {
     navigate(-1);
@@ -134,23 +167,45 @@ export default function ProfilePortfolioOwner() {
           </div>
         </div>
 
-        {/* Portfolio Grid */}
-        <div className="portfolio-grid portfolio-grid-owner">
-          {/* Add Project Card */}
-          <div className="portfolio-card portfolio-card-add">
-            <BlueButton 
-              label="Add Project" 
-              onClick={handleAddProject}
-              icon="/assets/plus-icon.svg"
-            />
+        {/* Loading State */}
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#868686' }}>
+            Loading portfolios...
           </div>
+        )}
 
-          {/* Portfolio Items */}
-          {portfolioItems.map((item) => (
+        {/* Error State */}
+        {error && !loading && (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#dc3545' }}>
+            {error}
+          </div>
+        )}
+
+        {/* Portfolio Grid */}
+        {!loading && !error && (
+          <div className="portfolio-grid portfolio-grid-owner">
+            {/* Add Project Card */}
+            <div className="portfolio-card portfolio-card-add">
+              <BlueButton 
+                label="Add Project" 
+                onClick={handleAddProject}
+                icon="/assets/plus-icon.svg"
+              />
+            </div>
+
+            {/* Portfolio Items */}
+            {portfolioItems.map((item) => (
             <div key={item.id} className="portfolio-card">
-              <div className="portfolio-card-image">
-                {item.image ? (
-                  <img src={item.image} alt={item.title} />
+              <div 
+                className="portfolio-card-image"
+                onClick={() => navigate(`/view-work-profile/${item.id}`)}
+                style={{ cursor: 'pointer' }}
+              >
+                {item.images && item.images.length > 0 ? (
+                  <img 
+                    src={`https://gateway.pinata.cloud/ipfs/${item.images[0]}`} 
+                    alt={item.title || 'Portfolio item'} 
+                  />
                 ) : (
                   <div className="portfolio-card-image-placeholder">
                     <img src="/assets/document-icon.svg" alt="No image" />
@@ -176,19 +231,20 @@ export default function ProfilePortfolioOwner() {
                   <Button 
                     label="Edit"
                     icon="/assets/edit-icon.svg"
-                    onClick={() => handleEdit(item.id)}
+                    onClick={() => handleEdit(item)}
                     buttonCss="portfolio-action-edit"
                   />
                   <Button 
                     icon="/assets/delete-icon.svg"
-                    onClick={() => handleDelete(item.id)}
+                    onClick={() => handleDeleteConfirm(item.id)}
                     buttonCss="portfolio-action-delete"
                   />
                 </div>
               </div>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Pagination */}
         <div className="portfolio-pagination">

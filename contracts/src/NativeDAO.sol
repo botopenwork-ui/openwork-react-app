@@ -53,6 +53,9 @@ interface IOpenworkGenesis {
     function updateDelegatedVotingPower(address delegatee, uint256 powerChange, bool increase) external;
     function addProposalId(uint256 proposalId) external;
     function removeStaker(address staker) external;
+    
+    // NEW: Activity tracking for oracle members
+    function updateMemberActivity(address member) external;
 
     // DAO data getters
     function getStake(address staker) external view returns (Stake memory);
@@ -391,6 +394,9 @@ contract NativeDAO is
             }
         }
         
+        // NEW: Record member activity for oracle tracking
+        genesis.updateMemberActivity(account);
+        
         // IMPORTANT: Call local NOWJC to increment governance action
         require(address(nowjContract) != address(0), "NOWJ contract not set");
         nowjContract.incrementGovernanceAction(account);
@@ -414,6 +420,9 @@ contract NativeDAO is
                 }
             }
         }
+        
+        // NEW: Record member activity for oracle tracking
+        genesis.updateMemberActivity(msg.sender);
         
         // IMPORTANT: Call local NOWJC to increment governance action
         require(address(nowjContract) != address(0), "NOWJ contract not set");

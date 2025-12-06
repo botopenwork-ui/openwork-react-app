@@ -560,6 +560,61 @@ await nativeAthena.removeOracleMember(
     ]
   },
   
+  deployConfig: {
+    type: 'uups',
+    constructor: [
+      {
+        name: '_owner',
+        type: 'address',
+        description: 'Contract owner address (admin who can upgrade and configure)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_genesis',
+        type: 'address',
+        description: 'OpenworkGenesis contract address (for oracle data storage)',
+        placeholder: '0x...'
+      },
+      {
+        name: '_nativeAthena',
+        type: 'address',
+        description: 'Native Athena contract address (for member validation via canVote)',
+        placeholder: '0x...'
+      }
+    ],
+    networks: {
+      testnet: {
+        name: 'Arbitrum Sepolia',
+        chainId: 421614,
+        rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc',
+        explorer: 'https://sepolia.arbiscan.io',
+        currency: 'ETH'
+      }
+    },
+    estimatedGas: '2.2M',
+    postDeploy: {
+      message: 'UUPS deployment complete! Next: Initialize and configure authorization.',
+      nextSteps: [
+        '1. Deploy OracleManager implementation contract (no constructor params)',
+        '2. Deploy UUPSProxy with implementation address',
+        '3. Call initialize() on proxy via block scanner with:',
+        '   - Owner address (your admin wallet)',
+        '   - OpenworkGenesis contract address',
+        '   - Native Athena contract address',
+        '4. ⚠️ CRITICAL: Authorize Native Athena to call Oracle Manager:',
+        '   - setAuthorizedCaller(nativeAthenaAddress, true)',
+        '5. Authorize Oracle Manager in OpenworkGenesis:',
+        '   - OpenworkGenesis.authorizeContract(oracleManagerAddress, true)',
+        '6. Configure Native Athena with Oracle Manager address:',
+        '   - NativeAthena.setOracleManager(oracleManagerAddress)',
+        '7. Test oracle creation via Native Athena',
+        '8. Test member addition/removal',
+        '9. Verify both implementation and proxy on Arbiscan',
+        '10. IMPORTANT: This is an internal helper - users interact via Native Athena only'
+      ]
+    }
+  },
+  
   securityConsiderations: [
     'UUPS upgradeable - owner only can upgrade',
     'onlyAuthorized modifier: ONLY Native Athena (+ owner) can manage oracles',
@@ -573,5 +628,130 @@ await nativeAthena.removeOracleMember(
     'No direct token handling: Pure management contract',
     'Event emission: All operations emit events for transparency',
     'Oracle deletion: Sets to empty state, doesn\'t truly delete from storage'
-  ]
+  ],
+  
+  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/native-athena-oracle-manager.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
+contract NativeAthenaOracleManager is 
+    Initializable,
+    OwnableUpgradeable,
+    UUPSUpgradeable
+{
+    // ==================== STATE VARIABLES ====================
+    IOpenworkGenesis public genesis;
+    INativeAthena public nativeAthena;
+    mapping(address => bool) public authorizedCallers;
+
+    // ==================== INITIALIZATION ====================
+    constructor() {
+        _disableInitializers();
+    }
+    
+    function initialize(
+        address _owner,
+        address _genesis,
+        address _nativeAthena
+    ) public initializer {
+        __Ownable_init(_owner);
+        __UUPSUpgradeable_init();
+        
+        genesis = IOpenworkGenesis(_genesis);
+        nativeAthena = INativeAthena(_nativeAthena);
+    }
+    
+    function _authorizeUpgrade(address) internal view override {
+        require(owner() == _msgSender(), "Unauthorized");
+    }
+
+    // ==================== ORACLE MANAGEMENT ====================
+    function addOrUpdateOracle(
+        string[] memory _names,
+        address[][] memory _members,
+        string[] memory _shortDescriptions,
+        string[] memory _hashOfDetails,
+        address[][] memory _skillVerifiedAddresses
+    ) external onlyAuthorized {
+        require(_names.length == _members.length, "Length mismatch");
+        
+        for (uint256 i = 0; i < _names.length; i++) {
+            genesis.setOracle(
+                _names[i], 
+                _members[i], 
+                _shortDescriptions[i], 
+                _hashOfDetails[i], 
+                _skillVerifiedAddresses[i]
+            );
+            emit OracleCreated(_names[i], _members[i].length);
+        }
+    }
+    
+    function addSingleOracle(
+        string memory _name,
+        address[] memory _members,
+        string memory _shortDescription,
+        string memory _hashOfDetails,
+        address[] memory _skillVerifiedAddresses
+    ) external onlyAuthorized {
+        require(bytes(_name).length > 0, "Empty name");
+        require(_members.length >= nativeAthena.minOracleMembers(), "Not enough members");
+        
+        // Verify members meet voting requirements
+        for (uint256 i = 0; i < _members.length; i++) {
+            require(nativeAthena.canVote(_members[i]), "Member doesn't meet requirements");
+        }
+        
+        genesis.setOracle(_name, _members, _shortDescription, _hashOfDetails, _skillVerifiedAddresses);
+        emit OracleCreated(_name, _members.length);
+    }
+
+    function addMembers(address[] memory _members, string memory _oracleName) external onlyAuthorized {
+        IOpenworkGenesis.Oracle memory oracle = genesis.getOracle(_oracleName);
+        require(bytes(oracle.name).length > 0, "Oracle not found");
+        
+        for (uint256 i = 0; i < _members.length; i++) {
+            require(nativeAthena.canVote(_members[i]), "Member doesn't meet requirements");
+            genesis.addOracleMember(_oracleName, _members[i]);
+            emit OracleMemberAdded(_oracleName, _members[i]);
+        }
+        
+        nativeAthena.updateOracleActiveStatus(_oracleName);
+    }
+    
+    function removeMemberFromOracle(string memory _oracleName, address _memberToRemove) external onlyAuthorized {
+        genesis.removeOracleMember(_oracleName, _memberToRemove);
+        emit OracleMemberRemoved(_oracleName, _memberToRemove);
+        nativeAthena.updateOracleActiveStatus(_oracleName);
+    }
+
+    function removeOracle(string[] memory _oracleNames) external onlyAuthorized {
+        for (uint256 i = 0; i < _oracleNames.length; i++) {
+            address[] memory emptyMembers = new address[](0);
+            address[] memory emptySkillVerified = new address[](0);
+            genesis.setOracle(_oracleNames[i], emptyMembers, "", "", emptySkillVerified);
+            emit OracleRemoved(_oracleNames[i]);
+        }
+    }
+    
+    // ==================== VIEW FUNCTIONS ====================
+    function getOracle(string memory _oracleName) external view returns (
+        string memory name,
+        address[] memory members,
+        string memory shortDescription,
+        string memory hashOfDetails,
+        address[] memory skillVerifiedAddresses
+    ) {
+        IOpenworkGenesis.Oracle memory oracle = genesis.getOracle(_oracleName);
+        return (oracle.name, oracle.members, oracle.shortDescription, oracle.hashOfDetails, oracle.skillVerifiedAddresses);
+    }
+    
+    // ... Additional admin and view functions
+    // See full implementation in repository
+}`
 };

@@ -124,17 +124,45 @@ export default function ViewJobApplications() {
                 // Fetch all applications for this job
                 const applicationPromises = [];
                 
-                // Use the selected application ID if available, otherwise try multiple IDs
-                const selectedAppId = jobData.selectedApplicationId ? Number(jobData.selectedApplicationId) : null;
-                const applicationsToTry = selectedAppId ? [selectedAppId] : [1, 2, 3, 4, 5]; // Try first 5 if no specific ID
+                // Use the applicants array from job data
+                const applicantAddresses = jobData.applicants || [];
+                console.log("📋 Known applicants from job data:", applicantAddresses.length);
                 
-                for (const appId of applicationsToTry) {
+                // If no applicants in the job data, show empty state
+                if (applicantAddresses.length === 0) {
+                    console.log("No applicants found for this job");
+                    setApplications([]);
+                    setLoading(false);
+                    return;
+                }
+                
+                // Try sequential application IDs (1 to 100) and match against known applicants
+                // We'll stop early once we've found applications for all known applicants
+                const maxApplicationId = 100;
+                const foundApplicants = new Set();
+                
+                for (let appId = 1; appId <= maxApplicationId && foundApplicants.size < applicantAddresses.length; appId++) {
                     applicationPromises.push(
                         contract.methods.getApplication(jobId, appId).call()
                             .then(async (appData) => {
+                                // Check if this applicant is in our known applicants list
+                                const applicantLower = appData.applicant?.toLowerCase();
+                                const isKnownApplicant = applicantAddresses.some(
+                                    addr => addr.toLowerCase() === applicantLower
+                                );
+                                
+                                if (!isKnownApplicant) {
+                                    console.log(`📋 Application ${appId} - Applicant not in known list, skipping`);
+                                    return null;
+                                }
+                                
                                 console.log(`📋 Application ${appId} data from NOWJC:`, appData);
                                 console.log(`🔍 Available fields:`, Object.keys(appData));
                                 console.log(`📊 Status field:`, appData.status, typeof appData.status);
+                                
+                                // Track that we found this applicant
+                                foundApplicants.add(applicantLower);
+                                
                                 let applicationDetails = null;
 
                                 // Fetch application details from IPFS
@@ -167,7 +195,10 @@ export default function ViewJobApplications() {
                                 };
                             })
                             .catch(error => {
-                                console.error(`Error fetching application ${appId}:`, error);
+                                // Silently ignore errors for non-existent application IDs
+                                if (!error.message.includes("Application does not exist")) {
+                                    console.error(`Error fetching application ${appId}:`, error.message);
+                                }
                                 return null;
                             })
                     );
@@ -175,6 +206,8 @@ export default function ViewJobApplications() {
 
                 const resolvedApplications = await Promise.all(applicationPromises);
                 const validApplications = resolvedApplications.filter(app => app !== null);
+                
+                console.log(`✅ Found ${validApplications.length} valid applications out of ${applicantAddresses.length} known applicants`);
 
                 setApplications(validApplications);
             } catch (error) {

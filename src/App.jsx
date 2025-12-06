@@ -37,7 +37,9 @@ import ProfileJobs from "./pages/ProfileJobs/ProfileJobs";
 import ApplicationJobs from "./pages/ApplicationJobs/ApplicationJobs";
 import ProfilePortfolio from "./pages/ProfilePortfolio/ProfilePortfolio";
 import ProfilePortfolioOwner from "./pages/ProfilePortfolioOwner/ProfilePortfolioOwner";
+import ProfilePortfolioWrapper from "./pages/ProfilePortfolioWrapper/ProfilePortfolioWrapper";
 import ViewWorkProfile from "./pages/ViewWorkProfile/ViewWorkProfile";
+import AddEditPortfolio from "./pages/AddEditPortfolio/AddEditPortfolio";
 import ProfilePackages from "./pages/ProfilePackages/ProfilePackages";
 import ViewPackage from "./pages/ViewPackage/ViewPackage";
 import CreatePackage from "./pages/CreatePackage/CreatePackage";
@@ -102,6 +104,7 @@ import UserReferralSignIn from "./pages/UserReferralSignIn/UserReferralSignIn";
 import SkillVerification from "./pages/SkillVerification/SkillVerification";
 import LandingPage from "./pages/LandingPage/LandingPage";
 import Timeline from "./dev-tools/Timeline/Timeline";
+import OpenworkDocs from "./pages/Documentation/OpenworkDocs";
 
 function MainPage() {
   // Using the useWalletConnection hook to handle wallet-related state and logic
@@ -287,9 +290,11 @@ export default function App() {
               <Route path="/profile-jobs" element={<ProfileJobs/>}/>
               <Route path="/profile/:address/jobs" element={<ProfileJobs/>}/>
               <Route path="/application-jobs" element={<ApplicationJobs/>}/>
-              <Route path="/profile-portfolio" element={<ProfilePortfolio/>}/>
+              <Route path="/profile-portfolio" element={<ProfilePortfolioWrapper/>}/>
               <Route path="/profile-portfolio-owner" element={<ProfilePortfolioOwner/>}/>
               <Route path="/view-work-profile/:id" element={<ViewWorkProfile/>}/>
+              <Route path="/add-portfolio" element={<AddEditPortfolio/>}/>
+              <Route path="/edit-portfolio/:id" element={<AddEditPortfolio/>}/>
               <Route path="/profile-packages" element={<ProfilePackages/>}/>
               <Route path="/view-package/:packageId" element={<ViewPackage/>}/>
               <Route path="/create-package" element={<CreatePackage/>}/>
@@ -355,6 +360,7 @@ export default function App() {
               <Route path="/user-referral-signin" element={<UserReferralSignIn/>} />
               <Route path="/skill-verification-page" element={<SkillVerification/>} />
               <Route path="/dev/timeline" element={<Timeline/>} />
+              <Route path="/docs" element={<OpenworkDocs/>} />
             </Routes>
           </Layout>
         } />

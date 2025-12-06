@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
 /**
  * @title OpenworkGenesis
  * @dev Simple storage contract for all platform data - no complex logic, just store and retrieve
  */
-contract OpenworkGenesis {
+contract OpenworkGenesis is Initializable, UUPSUpgradeable {
     
     // ==================== ENUMS ====================
     
@@ -17,13 +20,6 @@ contract OpenworkGenesis {
     }
 
     // ==================== STRUCTS ====================
-    
-    struct Profile {
-        address userAddress;
-        string ipfsHash;
-        address referrerAddress;
-        string[] portfolioHashes;
-    }
     
     struct MilestonePayment {
         string descriptionHash;
@@ -135,18 +131,13 @@ contract OpenworkGenesis {
     mapping(address => bool) public authorizedContracts;
     address public owner;
     
-    // Profile data
-    mapping(address => Profile) public profiles;
-    mapping(address => bool) public hasProfile;
-    mapping(address => address) public userReferrers;
+    // User claim data
     mapping(address => uint256) public userTotalClaimedTokens;
     
     // Job data
     mapping(string => Job) public jobs;
     mapping(string => mapping(uint256 => Application)) public jobApplications;
     mapping(string => uint256) public jobApplicationCounter;
-    mapping(string => mapping(address => uint256)) public jobRatings;
-    mapping(address => uint256[]) public userRatings;
     uint256 public totalPlatformPayments;
     uint256 public jobCounter;
     string[] public allJobIds;
@@ -156,6 +147,11 @@ contract OpenworkGenesis {
     mapping(string => Oracle) public oracles;
     mapping(string => mapping(address => uint256)) public memberStakeAmount;
     mapping(string => mapping(address => uint256)) public skillVerificationDates;
+    
+    // Oracle tracking
+    string[] private allOracleNames;
+    mapping(string => uint256) private oracleIndex;
+    uint256 private oracleCount;
     
     // Dispute/Voting data
     mapping(uint256 => SkillVerificationApplication) public skillApplications;
@@ -185,6 +181,18 @@ contract OpenworkGenesis {
     // Final rewards data
     mapping(address => uint256) public userTotalOWTokens;
     mapping(address => uint256) public userGovernanceActions;
+    
+    // NEW: Activity tracking for oracle members
+    mapping(address => uint256) public memberLastActivity;
+    mapping(string => bool) public oracleActiveStatus;
+
+    // NEW: Dispute/Application ID tracking for batch retrieval
+    string[] private allDisputeIds;
+    mapping(string => uint256) private disputeIdIndex;
+    uint256 private disputeCount;
+    
+    uint256[] private allSkillApplicationIds;
+    uint256[] private allAskAthenaApplicationIds;
 
     // ==================== EVENTS ====================
     
@@ -205,8 +213,22 @@ contract OpenworkGenesis {
 
     // ==================== CONSTRUCTOR ====================
     
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
-        owner = msg.sender;
+        _disableInitializers();
+    }
+
+    // ==================== INITIALIZER ====================
+    
+    function initialize(address _owner) public initializer {
+        __UUPSUpgradeable_init();
+        owner = _owner;
+    }
+
+    // ==================== UPGRADE AUTHORIZATION ====================
+    
+    function _authorizeUpgrade(address /* newImplementation */) internal view override {
+        require(msg.sender == owner, "Not owner");
     }
 
     // ==================== ACCESS CONTROL ====================
@@ -221,29 +243,6 @@ contract OpenworkGenesis {
     function authorizeContract(address _contract, bool _authorized) external onlyOwner {
         authorizedContracts[_contract] = _authorized;
         emit ContractAuthorized(_contract, _authorized);
-    }
-
-    // ==================== PROFILE SETTERS ====================
-    
-    function setProfile(
-        address user,
-        string memory ipfsHash,
-        address referrer
-    ) external onlyAuthorized {
-        profiles[user] = Profile({
-            userAddress: user,
-            ipfsHash: ipfsHash,
-            referrerAddress: referrer,
-            portfolioHashes: new string[](0)
-        });
-        hasProfile[user] = true;
-        if (referrer != address(0)) {
-            userReferrers[user] = referrer;
-        }
-    }
-    
-    function addPortfolio(address user, string memory portfolioHash) external onlyAuthorized {
-        profiles[user].portfolioHashes.push(portfolioHash);
     }
 
     // ==================== JOB SETTERS ====================
@@ -343,11 +342,6 @@ contract OpenworkGenesis {
         jobs[jobId].totalPaid += amount;
         totalPlatformPayments += amount;
     }
-    
-    function setJobRating(string memory jobId, address user, uint256 rating) external onlyAuthorized {
-        jobRatings[jobId][user] = rating;
-        userRatings[user].push(rating);
-    }
 
     // ==================== ORACLE SETTERS ====================
     
@@ -358,6 +352,13 @@ contract OpenworkGenesis {
         string memory hashOfDetails,
         address[] memory skillVerifiedAddresses
     ) external onlyAuthorized {
+        // Track new oracle
+        if (bytes(oracles[name].name).length == 0) {
+            allOracleNames.push(name);
+            oracleIndex[name] = oracleCount;
+            oracleCount++;
+        }
+        
         oracles[name] = Oracle({
             name: name,
             members: members,
@@ -400,6 +401,13 @@ contract OpenworkGenesis {
         address disputeRaiser,
         uint256 fees
     ) external onlyAuthorized {
+        // Track new disputes for batch retrieval
+        if (bytes(disputes[jobId].jobId).length == 0) {
+            allDisputeIds.push(jobId);
+            disputeIdIndex[jobId] = disputeCount;
+            disputeCount++;
+        }
+        
         disputes[jobId] = Dispute({
             jobId: jobId,
             disputedAmount: disputedAmount,
@@ -440,6 +448,12 @@ contract OpenworkGenesis {
         if (applicationId >= applicationCounter) {
             applicationCounter = applicationId + 1;
         }
+        
+        // Track new applications for batch retrieval
+        if (skillApplications[applicationId].id == 0) {
+            allSkillApplicationIds.push(applicationId);
+        }
+        
         skillApplications[applicationId] = SkillVerificationApplication({
             id: applicationId,
             applicant: applicant,
@@ -475,6 +489,12 @@ contract OpenworkGenesis {
         if (athenaId >= askAthenaCounter) {
             askAthenaCounter = athenaId + 1;
         }
+        
+        // Track new applications for batch retrieval
+        if (askAthenaApplications[athenaId].id == 0) {
+            allAskAthenaApplicationIds.push(athenaId);
+        }
+        
         askAthenaApplications[athenaId] = AskAthenaApplication({
             id: athenaId,
             applicant: applicant,
@@ -672,17 +692,18 @@ contract OpenworkGenesis {
     function updateUserClaimData(address user, uint256 claimedAmount) external onlyAuthorized {
         userTotalClaimedTokens[user] += claimedAmount;
     }
+    
+    // ==================== ACTIVITY TRACKING SETTERS ====================
+    
+    function updateMemberActivity(address member) external onlyAuthorized {
+        memberLastActivity[member] = block.timestamp;
+    }
+    
+    function setOracleActiveStatus(string memory oracleName, bool isActive) external onlyAuthorized {
+        oracleActiveStatus[oracleName] = isActive;
+    }
 
     // ==================== GETTERS ====================
-    
-    // Profile getters
-    function getProfile(address user) external view returns (Profile memory) {
-        return profiles[user];
-    }
-    
-    function getUserReferrer(address user) external view returns (address) {
-        return userReferrers[user];
-    }
     
     // Job getters
     function getJob(string memory jobId) external view returns (Job memory) {
@@ -709,10 +730,6 @@ contract OpenworkGenesis {
         return jobApplicationCounter[jobId];
     }
     
-    function getUserRatings(address user) external view returns (uint256[] memory) {
-        return userRatings[user];
-    }
-    
     function jobExists(string memory jobId) external view returns (bool) {
         return bytes(jobs[jobId].id).length != 0;
     }
@@ -728,6 +745,42 @@ contract OpenworkGenesis {
     
     function getSkillVerificationDate(string memory oracleName, address user) external view returns (uint256) {
         return skillVerificationDates[oracleName][user];
+    }
+    
+    /**
+     * @dev Get total number of oracles
+     */
+    function getOracleCount() external view returns (uint256) {
+        return oracleCount;
+    }
+    
+    /**
+     * @dev Get all oracle names
+     * @notice May fail with too many oracles due to gas limits. Use getOracleNamesBatch for large datasets.
+     */
+    function getAllOracleNames() external view returns (string[] memory) {
+        return allOracleNames;
+    }
+    
+    /**
+     * @dev Get oracle names in batches for pagination
+     * @param startIndex Starting index in the array
+     * @param count Number of names to return
+     * @return names Array of oracle names for the requested range
+     */
+    function getOracleNamesBatch(uint256 startIndex, uint256 count) external view returns (string[] memory names) {
+        require(startIndex < oracleCount, "Start index out of bounds");
+        
+        // Calculate actual count to return (handle edge case where count exceeds remaining items)
+        uint256 remaining = oracleCount - startIndex;
+        uint256 actualCount = count > remaining ? remaining : count;
+        
+        names = new string[](actualCount);
+        for (uint256 i = 0; i < actualCount; i++) {
+            names[i] = allOracleNames[startIndex + i];
+        }
+        
+        return names;
     }
     
     // Dispute/Voting getters
@@ -866,5 +919,182 @@ contract OpenworkGenesis {
 
     function getUserGovernanceActions(address user) external view returns (uint256) {
         return userGovernanceActions[user];
+    }
+
+    // ==================== DISPUTE BATCH GETTERS ====================
+
+    /**
+     * @dev Get all dispute IDs in the system
+     * @return Array of all dispute IDs
+     */
+    function getAllDisputeIds() external view returns (string[] memory) {
+        return allDisputeIds;
+    }
+
+    /**
+     * @dev Get total number of disputes
+     * @return Total dispute count
+     */
+    function getDisputeCount() external view returns (uint256) {
+        return disputeCount;
+    }
+
+    /**
+     * @dev Get dispute IDs in batches for pagination
+     * @param startIndex Starting index in the array
+     * @param count Number of IDs to return
+     * @return disputeIds Array of dispute IDs for the requested range
+     */
+    function getDisputesBatch(uint256 startIndex, uint256 count) 
+        external view returns (string[] memory disputeIds) {
+        require(startIndex < disputeCount, "Start index out of bounds");
+        
+        uint256 remaining = disputeCount - startIndex;
+        uint256 actualCount = count > remaining ? remaining : count;
+        
+        disputeIds = new string[](actualCount);
+        for (uint256 i = 0; i < actualCount; i++) {
+            disputeIds[i] = allDisputeIds[startIndex + i];
+        }
+        
+        return disputeIds;
+    }
+
+    // ==================== SKILL APPLICATION BATCH GETTERS ====================
+
+    /**
+     * @dev Get total number of skill verification applications
+     * @return Total application count
+     */
+    function getSkillApplicationCount() external view returns (uint256) {
+        return applicationCounter;
+    }
+
+    /**
+     * @dev Get all skill application IDs
+     * @return Array of all skill application IDs
+     */
+    function getAllSkillApplicationIds() external view returns (uint256[] memory) {
+        return allSkillApplicationIds;
+    }
+
+    /**
+     * @dev Get skill application IDs in batches for pagination
+     * @param startIndex Starting index in the array
+     * @param count Number of IDs to return
+     * @return applicationIds Array of application IDs for the requested range
+     */
+    function getSkillApplicationsBatch(uint256 startIndex, uint256 count) 
+        external view returns (uint256[] memory applicationIds) {
+        require(startIndex < allSkillApplicationIds.length, "Start index out of bounds");
+        
+        uint256 remaining = allSkillApplicationIds.length - startIndex;
+        uint256 actualCount = count > remaining ? remaining : count;
+        
+        applicationIds = new uint256[](actualCount);
+        for (uint256 i = 0; i < actualCount; i++) {
+            applicationIds[i] = allSkillApplicationIds[startIndex + i];
+        }
+        
+        return applicationIds;
+    }
+
+    /**
+     * @dev Get all active skill verification applications
+     * @return Array of active skill verification applications
+     */
+    function getActiveSkillApplications() 
+        external view returns (SkillVerificationApplication[] memory) {
+        uint256 activeCount = 0;
+        
+        // Count active applications
+        for (uint256 i = 0; i < allSkillApplicationIds.length; i++) {
+            if (skillApplications[allSkillApplicationIds[i]].isVotingActive) {
+                activeCount++;
+            }
+        }
+        
+        // Build array of active applications
+        SkillVerificationApplication[] memory activeApps = new SkillVerificationApplication[](activeCount);
+        uint256 currentIndex = 0;
+        
+        for (uint256 i = 0; i < allSkillApplicationIds.length; i++) {
+            uint256 appId = allSkillApplicationIds[i];
+            if (skillApplications[appId].isVotingActive) {
+                activeApps[currentIndex] = skillApplications[appId];
+                currentIndex++;
+            }
+        }
+        
+        return activeApps;
+    }
+
+    // ==================== ASK ATHENA BATCH GETTERS ====================
+
+    /**
+     * @dev Get total number of Ask Athena applications
+     * @return Total application count
+     */
+    function getAskAthenaCount() external view returns (uint256) {
+        return askAthenaCounter;
+    }
+
+    /**
+     * @dev Get all Ask Athena application IDs
+     * @return Array of all Ask Athena application IDs
+     */
+    function getAllAskAthenaIds() external view returns (uint256[] memory) {
+        return allAskAthenaApplicationIds;
+    }
+
+    /**
+     * @dev Get Ask Athena application IDs in batches for pagination
+     * @param startIndex Starting index in the array
+     * @param count Number of IDs to return
+     * @return applicationIds Array of application IDs for the requested range
+     */
+    function getAskAthenaApplicationsBatch(uint256 startIndex, uint256 count) 
+        external view returns (uint256[] memory applicationIds) {
+        require(startIndex < allAskAthenaApplicationIds.length, "Start index out of bounds");
+        
+        uint256 remaining = allAskAthenaApplicationIds.length - startIndex;
+        uint256 actualCount = count > remaining ? remaining : count;
+        
+        applicationIds = new uint256[](actualCount);
+        for (uint256 i = 0; i < actualCount; i++) {
+            applicationIds[i] = allAskAthenaApplicationIds[startIndex + i];
+        }
+        
+        return applicationIds;
+    }
+
+    /**
+     * @dev Get all active Ask Athena applications
+     * @return Array of active Ask Athena applications
+     */
+    function getActiveAskAthenaApplications() 
+        external view returns (AskAthenaApplication[] memory) {
+        uint256 activeCount = 0;
+        
+        // Count active applications
+        for (uint256 i = 0; i < allAskAthenaApplicationIds.length; i++) {
+            if (askAthenaApplications[allAskAthenaApplicationIds[i]].isVotingActive) {
+                activeCount++;
+            }
+        }
+        
+        // Build array of active applications
+        AskAthenaApplication[] memory activeApps = new AskAthenaApplication[](activeCount);
+        uint256 currentIndex = 0;
+        
+        for (uint256 i = 0; i < allAskAthenaApplicationIds.length; i++) {
+            uint256 appId = allAskAthenaApplicationIds[i];
+            if (askAthenaApplications[appId].isVotingActive) {
+                activeApps[currentIndex] = askAthenaApplications[appId];
+                currentIndex++;
+            }
+        }
+        
+        return activeApps;
     }
 }

@@ -194,6 +194,12 @@ interface IOpenworkGenesis {
     function getSkillVerificationVoters(uint256 applicationId) external view returns (VoterData[] memory);
     function getAskAthenaVoters(uint256 athenaId) external view returns (VoterData[] memory);
     function getDisputeVoterClaimAddress(string memory disputeId, address voter) external view returns (address);
+    
+    // NEW: Activity tracking for oracle members
+    function memberLastActivity(address member) external view returns (uint256);
+    function oracleActiveStatus(string memory oracleName) external view returns (bool);
+    function updateMemberActivity(address member) external;
+    function setOracleActiveStatus(string memory oracleName, bool isActive) external;
 }
 
 contract NativeAthena is 
@@ -228,70 +234,14 @@ contract NativeAthena is
         SkillVerification,
         AskAthena
     }
-    
-    // Local structs for return values
-    struct Oracle {
-        string name;
-        address[] members;
-        string shortDescription;
-        string hashOfDetails;
-        address[] skillVerifiedAddresses;
-    }
-    
-    struct SkillVerificationApplication {
-        uint256 id;
-        address applicant;
-        string applicationHash;
-        uint256 feeAmount;
-        string targetOracleName;
-        uint256 votesFor;
-        uint256 votesAgainst;
-        bool isVotingActive;
-        uint256 timeStamp;
-        bool result;
-        bool isFinalized;
-    }
-    
-    struct AskAthenaApplication {
-        uint256 id;
-        address applicant;
-        string description;
-        string hash;
-        string targetOracle;
-        string fees;
-        uint256 votesFor;
-        uint256 votesAgainst;
-        bool isVotingActive;
-        uint256 timeStamp;
-        bool result;
-        bool isFinalized;
-    }
-    
-    struct Dispute {
-        string jobId;
-        uint256 disputedAmount;
-        string hash;
-        address disputeRaiserAddress;
-        uint256 votesFor;
-        uint256 votesAgainst;
-        bool result;
-        bool isVotingActive;
-        bool isFinalized;
-        uint256 timeStamp;
-        uint256 fees;
-    }
-
-    struct VoterData {
-        address voter;
-        address claimAddress;
-        uint256 votingPower;
-        bool voteFor;
-    }
 
     // Configuration parameters
     uint256 public minOracleMembers;
     uint256 public votingPeriodMinutes;
     uint256 public minStakeRequired;
+    
+    // NEW: Activity tracking parameters
+    uint256 public memberActivityThresholdDays = 90; // Members must vote within 90 days to be considered active
     
     // Multi-dispute support
     mapping(string => uint256) public jobDisputeCounters;
@@ -314,6 +264,10 @@ contract NativeAthena is
     event DisputeFeeRefunded(string indexed disputeId, address indexed disputeRaiser, uint256 amount, uint32 targetChain);
     event AskAthenaSettled(uint256 indexed athenaId, bool result, uint256 totalVotesFor, uint256 totalVotesAgainst);
     event SkillVerificationSettled(uint256 indexed applicationId, bool result, uint256 totalVotesFor, uint256 totalVotesAgainst);
+    
+    // NEW: Oracle activity events
+    event OracleStatusUpdated(string indexed oracleName, bool isActive, uint256 activeMemberCount);
+    event MemberActivityThresholdUpdated(uint256 newThresholdDays);
     
     modifier onlyDAO() {
         require(msg.sender == daoContract, "Only DAO can call this function");
@@ -407,11 +361,87 @@ contract NativeAthena is
         minStakeRequired = _newMinStake;
     }
     
+    function updateMemberActivityThreshold(uint256 _newThresholdDays) external onlyOwner {
+        memberActivityThresholdDays = _newThresholdDays;
+        emit MemberActivityThresholdUpdated(_newThresholdDays);
+    }
+    
+    // ==================== ORACLE ACTIVE STATUS FUNCTIONS ====================
+    
+    /**
+     * @notice Update the active status of an oracle by counting active members
+     * @dev Anyone can call this function (they pay gas). Expensive operation - only call periodically.
+     * @param _oracleName Name of the oracle to update
+     */
+    function updateOracleActiveStatus(string memory _oracleName) public {
+        address[] memory members = genesis.getOracleMembers(_oracleName);
+        uint256 activeCount = 0;
+        uint256 threshold = memberActivityThresholdDays * 1 days;
+        
+        for (uint256 i = 0; i < members.length; i++) {
+            uint256 lastActivity = genesis.memberLastActivity(members[i]);
+            if (lastActivity > 0 && (block.timestamp - lastActivity) <= threshold) {
+                activeCount++;
+            }
+        }
+        
+        bool isActive = activeCount >= minOracleMembers;
+        genesis.setOracleActiveStatus(_oracleName, isActive);
+        
+        emit OracleStatusUpdated(_oracleName, isActive, activeCount);
+    }
+    
+    /**
+     * @notice Check if an oracle is active (cheap read from cache)
+     * @param _oracleName Name of the oracle to check
+     * @return bool True if oracle is active
+     */
+    function isOracleActive(string memory _oracleName) public view returns (bool) {
+        return genesis.oracleActiveStatus(_oracleName);
+    }
+    
+    /**
+     * @notice Check if an address is a member of a specific oracle
+     * @param _account Address to check
+     * @param _oracleName Name of the oracle
+     * @return bool True if address is an oracle member
+     */
+    function isOracleMember(address _account, string memory _oracleName) public view returns (bool) {
+        address[] memory members = genesis.getOracleMembers(_oracleName);
+        for (uint256 i = 0; i < members.length; i++) {
+            if (members[i] == _account) return true;
+        }
+        return false;
+    }
+    
+    /**
+     * @notice Get the count of active members in an oracle (expensive - iterates all members)
+     * @param _oracleName Name of the oracle
+     * @return uint256 Number of active members
+     */
+    function getOracleActiveMemberCount(string memory _oracleName) public view returns (uint256) {
+        address[] memory members = genesis.getOracleMembers(_oracleName);
+        uint256 activeCount = 0;
+        uint256 threshold = memberActivityThresholdDays * 1 days;
+        
+        for (uint256 i = 0; i < members.length; i++) {
+            uint256 lastActivity = genesis.memberLastActivity(members[i]);
+            if (lastActivity > 0 && (block.timestamp - lastActivity) <= threshold) {
+                activeCount++;
+            }
+        }
+        return activeCount;
+    }
+    
     // ==================== MESSAGE HANDLERS ====================
     
     function handleRaiseDispute(string memory jobId, string memory disputeHash, string memory oracleName, uint256 fee, uint256 disputedAmount, address disputeRaiser) external {
        // require(msg.sender == address(bridge), "Only bridge can call this function");        
-        // Check if oracle is active (has minimum required members) - get from genesis
+        
+        // NEW: Check if oracle is active before accepting dispute
+        require(isOracleActive(oracleName), "Oracle not active - cannot register dispute");
+        
+        // Check if oracle has minimum required members
         IOpenworkGenesis.Oracle memory oracle = genesis.getOracle(oracleName);
         require(oracle.members.length >= minOracleMembers, "Oracle not active");
         
@@ -432,6 +462,9 @@ contract NativeAthena is
     
     function handleSubmitSkillVerification(address applicant, string memory applicationHash, uint256 feeAmount, string memory targetOracleName) external {
       //  require(msg.sender == address(bridge), "Only bridge can call this function");
+        
+        // NEW: Check oracle must be active before accepting skill verification
+        require(isOracleActive(targetOracleName), "Skill verification not available - oracle is not active (needs 20+ active members)");
         
         uint256 applicationId = genesis.applicationCounter();
         genesis.setSkillApplication(applicationId, applicant, applicationHash, feeAmount, targetOracleName);
@@ -488,28 +521,6 @@ contract NativeAthena is
         return totalVotingPower;
     }
 
-    function getUserVotingInfo(address account) external view returns (
-        bool hasActiveStake,
-        uint256 stakeAmount,
-        uint256 earnedTokens,
-        uint256 totalVotingPower,
-        bool meetsVotingThreshold
-    ) {
-        if (daoContract != address(0)) {
-            (uint256 stake, , , bool isActive) = INativeDAO(daoContract).getStakerInfo(account);
-            hasActiveStake = isActive;
-            stakeAmount = hasActiveStake ? stake : 0;
-        }
-        
-        earnedTokens = 0;
-        if (address(nowjContract) != address(0)) {
-            earnedTokens = nowjContract.getUserEarnedTokens(account);
-        }
-        
-        totalVotingPower = getUserVotingPower(account);
-        meetsVotingThreshold = canVote(account);
-    }
-    
     // ==================== ORACLE MANAGEMENT (from production) ====================
     
     function addOrUpdateOracle(
@@ -627,6 +638,9 @@ contract NativeAthena is
         
         genesis.setDisputeVote(_disputeId, msg.sender);
         
+        // NEW: Record member activity
+        genesis.updateMemberActivity(msg.sender);
+        
         if (_voteFor) {
             genesis.updateDisputeVotes(_disputeId, dispute.votesFor + voteWeight, dispute.votesAgainst);
         } else {
@@ -653,8 +667,20 @@ contract NativeAthena is
       //  require(application.isVotingActive, "Voting is not active for this application");
       //  require(block.timestamp <= application.timeStamp + (votingPeriodMinutes * 60), "Voting period has expired");
         
+        // NEW: Check if oracle is active and voter is a member
+        if (isOracleActive(application.targetOracleName)) {
+            require(
+                isOracleMember(msg.sender, application.targetOracleName),
+                "Only oracle members can vote on active oracle applications"
+            );
+        }
+        // If oracle is inactive, existing canVote() check allows all DAO members
+        
         // Record vote in genesis
         genesis.setSkillApplicationVote(applicationId, msg.sender);
+        
+        // NEW: Record member activity
+        genesis.updateMemberActivity(msg.sender);
         
         // Update vote counts in genesis
         if (_voteFor) {
@@ -685,6 +711,9 @@ contract NativeAthena is
         
         // Record vote in genesis
         genesis.setAskAthenaVote(athenaId, msg.sender);
+        
+        // NEW: Record member activity
+        genesis.updateMemberActivity(msg.sender);
         
         // Update vote counts in genesis
         if (_voteFor) {
@@ -955,189 +984,6 @@ contract NativeAthena is
         return _parseJobIdForChainDomain(originalJobId);
     }
     
-    // ==================== VIEW FUNCTIONS (from production) ====================
-    
-    function getStakerInfoFromDAO(address staker) external view returns (uint256 amount, uint256 unlockTime, uint256 durationMinutes, bool isActive) {
-        if (daoContract != address(0)) {
-            return INativeDAO(daoContract).getStakerInfo(staker);
-        }
-        return (0, 0, 0, false);
-    }
-    
-    function getEarnedTokensFromJob(address user) external view returns (uint256) {
-        if (address(nowjContract) == address(0)) {
-            return 0;
-        }
-        return nowjContract.getUserEarnedTokens(user);
-    }
-    
-    function getJobDetails(string memory _jobId) external view returns (
-        bool exists,
-        address jobGiver,
-        address selectedApplicant,
-        uint8 status,
-        string memory jobDetailHash
-    ) {
-        if (address(nowjContract) == address(0)) {
-            return (false, address(0), address(0), 0, "");
-        }
-        
-        exists = nowjContract.jobExists(_jobId);
-        
-        if (!exists) {
-            return (false, address(0), address(0), 0, "");
-        }
-        
-        (
-            ,
-            jobGiver,
-            ,
-            jobDetailHash,
-            status,
-            ,
-            ,
-            ,
-            selectedApplicant,
-        ) = nowjContract.getJob(_jobId);
-    }
-    
-    function getDispute(string memory _disputeId) external view returns (Dispute memory) {
-        IOpenworkGenesis.Dispute memory genesisDispute = genesis.getDispute(_disputeId);
-        return Dispute({
-            jobId: genesisDispute.jobId,
-            disputedAmount: genesisDispute.disputedAmount,
-            hash: genesisDispute.hash,
-            disputeRaiserAddress: genesisDispute.disputeRaiserAddress,
-            votesFor: genesisDispute.votesFor,
-            votesAgainst: genesisDispute.votesAgainst,
-            result: genesisDispute.result,
-            isVotingActive: genesisDispute.isVotingActive,
-            isFinalized: genesisDispute.isFinalized,
-            timeStamp: genesisDispute.timeStamp,
-            fees: genesisDispute.fees
-        });
-    }
-    
- /*   function getSkillApplication(uint256 _applicationId) external view returns (SkillVerificationApplication memory) {
-        IOpenworkGenesis.SkillVerificationApplication memory genesisApp = genesis.getSkillApplication(_applicationId);
-        return SkillVerificationApplication({
-            id: genesisApp.id,
-            applicant: genesisApp.applicant,
-            applicationHash: genesisApp.applicationHash,
-            feeAmount: genesisApp.feeAmount,
-            targetOracleName: genesisApp.targetOracleName,
-            votesFor: genesisApp.votesFor,
-            votesAgainst: genesisApp.votesAgainst,
-            isVotingActive: genesisApp.isVotingActive,
-            timeStamp: genesisApp.timeStamp,
-            result: genesisApp.result,
-            isFinalized: genesisApp.isFinalized
-        });
-    }*/
-    
- /*   function getAskAthenaApplication(uint256 _applicationId) external view returns (AskAthenaApplication memory) {
-        IOpenworkGenesis.AskAthenaApplication memory genesisApp = genesis.getAskAthenaApplication(_applicationId);
-        return AskAthenaApplication({
-            id: genesisApp.id,
-            applicant: genesisApp.applicant,
-            description: genesisApp.description,
-            hash: genesisApp.hash,
-            targetOracle: genesisApp.targetOracle,
-            fees: genesisApp.fees,
-            votesFor: genesisApp.votesFor,
-            votesAgainst: genesisApp.votesAgainst,
-            isVotingActive: genesisApp.isVotingActive,
-            timeStamp: genesisApp.timeStamp,
-            result: genesisApp.result,
-            isFinalized: genesisApp.isFinalized
-        });
-    }*/
-    
-    function getOracle(string memory _oracleName) external view returns (Oracle memory) {
-        IOpenworkGenesis.Oracle memory genesisOracle = genesis.getOracle(_oracleName);
-        return Oracle({
-            name: genesisOracle.name,
-            members: genesisOracle.members,
-            shortDescription: genesisOracle.shortDescription,
-            hashOfDetails: genesisOracle.hashOfDetails,
-            skillVerifiedAddresses: genesisOracle.skillVerifiedAddresses
-        });
-    }
-    
-    function getApplicationCounter() external view returns (uint256) {
-        return genesis.applicationCounter();
-    }
-    
-    function getAskAthenaCounter() external view returns (uint256) {
-        return genesis.askAthenaCounter();
-    }
-    
-    function hasVotedOnDispute(string memory _disputeId, address _user) external view returns (bool) {
-        return genesis.hasUserVotedOnDispute(_disputeId, _user);
-    }
-    
-    function hasVotedOnSkillApplication(uint256 _applicationId, address _user) external view returns (bool) {
-        return genesis.hasUserVotedOnSkillApplication(_applicationId, _user);
-    }
-    
-    function hasVotedOnAskAthena(uint256 _athenaId, address _user) external view returns (bool) {
-        return genesis.hasUserVotedOnAskAthena(_athenaId, _user);
-    }
-    
-    // ==================== VOTER DATA VIEW FUNCTIONS ====================
-    
-   /* function getDisputeVoters(string memory _disputeId) external view returns (VoterData[] memory) {
-        IOpenworkGenesis.VoterData[] memory genesisVoters = genesis.getDisputeVoters(_disputeId);
-        VoterData[] memory voters = new VoterData[](genesisVoters.length);
-        
-        for (uint256 i = 0; i < genesisVoters.length; i++) {
-            voters[i] = VoterData({
-                voter: genesisVoters[i].voter,
-                claimAddress: genesisVoters[i].claimAddress,
-                votingPower: genesisVoters[i].votingPower,
-                voteFor: genesisVoters[i].voteFor
-            });
-        }
-        
-        return voters;
-    }
-    
-    function getSkillVerificationVoters(uint256 _applicationId) external view returns (VoterData[] memory) {
-        IOpenworkGenesis.VoterData[] memory genesisVoters = genesis.getSkillVerificationVoters(_applicationId);
-        VoterData[] memory voters = new VoterData[](genesisVoters.length);
-        
-        for (uint256 i = 0; i < genesisVoters.length; i++) {
-            voters[i] = VoterData({
-                voter: genesisVoters[i].voter,
-                claimAddress: genesisVoters[i].claimAddress,
-                votingPower: genesisVoters[i].votingPower,
-                voteFor: genesisVoters[i].voteFor
-            });
-        }
-        
-        return voters;
-    }
-    
-    function getAskAthenaVoters(uint256 _athenaId) external view returns (VoterData[] memory) {
-        IOpenworkGenesis.VoterData[] memory genesisVoters = genesis.getAskAthenaVoters(_athenaId);
-        VoterData[] memory voters = new VoterData[](genesisVoters.length);
-        
-        for (uint256 i = 0; i < genesisVoters.length; i++) {
-            voters[i] = VoterData({
-                voter: genesisVoters[i].voter,
-                claimAddress: genesisVoters[i].claimAddress,
-                votingPower: genesisVoters[i].votingPower,
-                voteFor: genesisVoters[i].voteFor
-            });
-        }
-        
-        return voters;
-    }*/
-    
- /*   function getDisputeVoterClaimAddress(string memory _disputeId, address _voter) external view returns (address) {
-        return genesis.getDisputeVoterClaimAddress(_disputeId, _voter);
-    }
-    */
     // ==================== EMERGENCY FUNCTIONS ====================
     
     function withdraw() external onlyOwner {
