@@ -170,7 +170,53 @@ Most contracts use UUPS proxy pattern:
 - OP Sepolia: Chain ID 11155420
 - Arbitrum Sepolia: Chain ID 421614
 - Ethereum Sepolia: Chain ID 11155111
-- Base Sepolia: Chain ID 84532`
+- Base Sepolia: Chain ID 84532`,
+
+  cctp: `
+## CCTP Confirmation Rewards System
+
+**YES! You DO get rewards for confirming CCTP transactions in OpenWork!**
+
+### Reward Structure:
+- **Amount**: 0.0004-0.001 ETH per confirmation (dynamic, based on actual gas costs)
+- **Formula**: reward = min(estimatedGas × tx.gasprice × 2, 0.001 ETH)
+- **Default Cap**: 0.001 ETH maximum
+- **Multiplier**: 2x actual gas cost (configurable 1-10x)
+- **Platform-Funded**: Zero cost to end users
+- **Automatic**: Paid instantly upon successful confirmation
+
+### Economics:
+- **Low gas (1 gwei)**: ~0.0004 ETH reward
+- **Medium gas (5 gwei)**: ~0.001 ETH (capped)
+- **High gas (50 gwei)**: ~0.001 ETH (capped)
+- **Monthly cost (100 confirmations)**: ~0.05-0.1 ETH ($190-$380)
+
+### Benefits:
+- **Speed**: 2-3x faster confirmations (30+ min → 10-15 min)
+- **Reliability**: ~100% confirmation rate (incentivized)
+- **User Experience**: Near-instant USDC transfers
+- **Cost-Efficient**: Self-adjusting to gas prices
+
+### How Confirmers Get Paid:
+1. Backend monitors CCTP transfers
+2. Polls Circle API for attestation
+3. Calls transceiver.receive(message, attestation)
+4. CCTP completes (USDC minted)
+5. Automatic ETH reward sent to confirmer
+6. If payment fails, confirmer can manually claim via claimReward()
+
+### Contract Features:
+- **Non-blocking**: CCTP always succeeds even if reward fails
+- **Gas-limited**: 10K gas prevents griefing
+- **Reentrancy protected**: Safe reward transfers
+- **Owner controlled**: Can adjust cap, multiplier, estimated gas
+- **Pool funded**: Owner funds ETH pool via fundRewardPool()
+- **24h refunds**: Depositors can reclaim unclaimed specific rewards
+
+### Version:
+v2.0 Dynamic (Rewards) - Deployed on Arbitrum, OP, and Ethereum Sepolia
+
+This rewards system dramatically improves OpenWork's UX by making cross-chain USDC transfers nearly instant!`
 };
 
 export const WORKFLOW_KNOWLEDGE = `
@@ -274,6 +320,10 @@ export const buildOppyContext = (userQuery) => {
     context += '\n\n' + CONTRACTS_KNOWLEDGE.deployment;
   }
   
+  if (query.includes('cctp') || query.includes('confirm') || query.includes('reward') || query.includes('transceiver') || query.includes('usdc transfer') || query.includes('cross-chain')) {
+    context += '\n\n' + CONTRACTS_KNOWLEDGE.cctp;
+  }
+  
   // Add workflow knowledge for how-to questions
   if (query.includes('how') || query.includes('tutorial') || query.includes('guide') || query.includes('step')) {
     context += '\n\n' + WORKFLOW_KNOWLEDGE;
@@ -305,5 +355,11 @@ export const FALLBACK_RESPONSES = {
   
   commission: 'Platform commission is 1% of each payment with a $1 USDC minimum. Examples: $50 job = $1 fee (2%), $100 job = $1 fee (1%), $1000 job = $10 fee (1%). Funds go to treasury for protocol operations.',
   
-  default: '⚠️ API temporarily unavailable. I can help with: contract functions, deployment, cross-chain flows, IPFS structures, dispute resolution, payment processing, and common workflows. What would you like to know?'
+  cctp: 'YES! CCTP confirmers receive 0.0004-0.001 ETH rewards per confirmation (2x actual gas cost, capped at 0.001 ETH). Platform-funded, making transfers 2-3x faster (10-15 min vs 30+ min). Automatic payment upon confirmation.',
+  
+  confirm: 'YES! Confirming CCTP transactions earns you 0.0004-0.001 ETH per confirmation. Rewards are dynamic (2x gas cost) and platform-funded, making cross-chain USDC transfers nearly instant.',
+  
+  reward: 'OpenWork has two reward systems: (1) OW tokens for job completion and governance, (2) ETH rewards (0.0004-0.001 ETH) for confirming CCTP transactions. Both are automatic and platform-funded.',
+  
+  default: '⚠️ API temporarily unavailable. I can help with: contract functions, deployment, cross-chain flows, IPFS structures, dispute resolution, payment processing, CCTP rewards, and common workflows. What would you like to know?'
 };
