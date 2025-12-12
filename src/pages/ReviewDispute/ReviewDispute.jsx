@@ -2,10 +2,14 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Web3 from "web3";
 import GenesisABI from "../../ABIs/genesis_ABI.json";
+import NativeAthenaABI from "../../ABIs/native-athena_ABI.json";
 import "./ReviewDispute.css";
 import Button from "../../components/Button/Button";
 import VoteBar from "../../components/VoteBar/VoteBar";
 import { formatAddress } from "../../utils/oracleHelpers";
+
+// Native Athena contract address on Arbitrum Sepolia
+const NATIVE_ATHENA_ADDRESS = "0x098E52Aff44AEAd944AFf86F4A5b90dbAF5B86bd";
 
 function JobdetailItem ({title, icon , amount, token}) {
   return (
@@ -193,7 +197,145 @@ export default function ReviewDispute() {
     }
   };
 
- 
+  // Handle vote on dispute
+  const handleVote = async (voteFor) => {
+    // Pre-checks
+    if (!walletAddress) {
+      alert("❌ Please connect your wallet first");
+      return;
+    }
+
+    if (!jobData.isVotingActive) {
+      alert("❌ Voting period has ended. You can no longer vote on this dispute.");
+      return;
+    }
+
+    if (jobData.isFinalized) {
+      alert("❌ Dispute has already been finalized");
+      return;
+    }
+
+    if (jobData.daysLeft <= 0) {
+      alert("❌ Voting time has expired. Dispute can now be settled.");
+      return;
+    }
+
+    try {
+      setLoadingT("Submitting your vote...");
+
+      const web3 = new Web3(window.ethereum);
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+      const accounts = await web3.eth.getAccounts();
+      const fromAddress = accounts[0];
+
+      // Create Native Athena contract instance
+      const nativeAthena = new web3.eth.Contract(NativeAthenaABI, NATIVE_ATHENA_ADDRESS);
+
+      // Call vote function: vote(VotingType, disputeId, voteFor, claimAddress)
+      // VotingType.Dispute = 0
+      await nativeAthena.methods
+        .vote(0, disputeId, voteFor, fromAddress)
+        .send({
+          from: fromAddress,
+          gasPrice: await web3.eth.getGasPrice(),
+        });
+
+      setLoadingT("");
+      alert(`✅ Vote submitted successfully! You voted ${voteFor ? 'FOR' : 'AGAINST'} the dispute.`);
+      
+      // Refresh dispute data
+      window.location.reload();
+
+    } catch (error) {
+      console.error("Error voting on dispute:", error);
+      setLoadingT("");
+      
+      // Parse specific error messages
+      const errorMsg = error.message || "";
+      
+      if (errorMsg.includes("Voting period has expired")) {
+        alert("❌ Voting period has ended. Please refresh the page.");
+      } else if (errorMsg.includes("Already voted")) {
+        alert("❌ You have already voted on this dispute");
+      } else if (errorMsg.includes("Insufficient stake")) {
+        alert("❌ You need at least 100 OW tokens (staked or earned) to vote");
+      } else if (errorMsg.includes("Voting is not active")) {
+        alert("❌ Voting is not active for this dispute");
+      } else if (errorMsg.includes("Dispute does not exist")) {
+        alert("❌ Dispute not found. It may have been deleted or doesn't exist.");
+      } else if (errorMsg.includes("user rejected")) {
+        alert("❌ Transaction was rejected in MetaMask");
+      } else {
+        alert("❌ Vote failed: " + errorMsg.substring(0, 100));
+      }
+    }
+  };
+
+  // Handle settle dispute
+  const handleSettleDispute = async () => {
+    // Pre-checks
+    if (!walletAddress) {
+      alert("❌ Please connect your wallet first");
+      return;
+    }
+
+    if (jobData.isFinalized) {
+      alert("❌ Dispute has already been settled");
+      return;
+    }
+
+    if (jobData.isVotingActive && jobData.daysLeft > 0) {
+      alert("❌ Voting period is still active. Wait for it to end before settling.");
+      return;
+    }
+
+    try {
+      setLoadingT("Settling dispute...");
+
+      const web3 = new Web3(window.ethereum);
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+      const accounts = await web3.eth.getAccounts();
+      const fromAddress = accounts[0];
+
+      // Create Native Athena contract instance
+      const nativeAthena = new web3.eth.Contract(NativeAthenaABI, NATIVE_ATHENA_ADDRESS);
+
+      // Call settleDispute function
+      await nativeAthena.methods
+        .settleDispute(disputeId)
+        .send({
+          from: fromAddress,
+          gasPrice: await web3.eth.getGasPrice(),
+        });
+
+      setLoadingT("");
+      alert("✅ Dispute settled successfully! Funds have been distributed according to the vote outcome.");
+      
+      // Refresh dispute data
+      window.location.reload();
+
+    } catch (error) {
+      console.error("Error settling dispute:", error);
+      setLoadingT("");
+      
+      // Parse specific error messages
+      const errorMsg = error.message || "";
+      
+      if (errorMsg.includes("Voting period not ended")) {
+        alert("❌ Voting period is still active. Please wait for it to end.");
+      } else if (errorMsg.includes("does not exist")) {
+        alert("❌ Dispute not found. It may have been deleted or doesn't exist.");
+      } else if (errorMsg.includes("already finalized")) {
+        alert("❌ Dispute was already settled by someone else. Refreshing...");
+        window.location.reload();
+      } else if (errorMsg.includes("user rejected")) {
+        alert("❌ Transaction was rejected in MetaMask");
+      } else {
+        alert("❌ Settlement failed: " + errorMsg.substring(0, 100));
+      }
+    }
+  };
+
   const handleReviewDispute = async () => {
       location.pathname = '/project-complete'
     // if (window.ethereum) {
@@ -248,8 +390,8 @@ export default function ReviewDispute() {
       <div className="loading-containerT">
         <div className="loading-icon"><img src="/OWIcon.svg" alt="Loading..."/></div>
         <div className="loading-message">
-          <h1 id="txText">Transaction in Progress</h1>
-          <p id="txSubtext">If the transaction goes through, we'll redirect you to your contract</p>
+          <h1 id="txText">{loadingT}</h1>
+          <p id="txSubtext">Please confirm the transaction in MetaMask and wait for blockchain confirmation</p>
         </div>
       </div>
     );
@@ -363,8 +505,57 @@ export default function ReviewDispute() {
             {jobData.isVotingActive && !jobData.isFinalized && (
               <div className="form-groupDC">
                  <div className="vote-button-section">
-                      <Button label={'Downvote'} icon='/against.svg' buttonCss={'downvote-button'}/>
-                      <Button label={'Upvote'} icon='/favour.svg' buttonCss={'downvote-button upvote-button'}/>
+                      <Button 
+                        label={'Downvote'} 
+                        icon='/against.svg' 
+                        buttonCss={'downvote-button'}
+                        onClick={() => handleVote(false)}
+                      />
+                      <Button 
+                        label={'Upvote'} 
+                        icon='/favour.svg' 
+                        buttonCss={'downvote-button upvote-button'}
+                        onClick={() => handleVote(true)}
+                      />
+                 </div>
+              </div>
+            )}
+            
+            {!jobData.isVotingActive && !jobData.isFinalized && (
+              <div className="form-groupDC">
+                 <div style={{ 
+                   background: '#fef3c7', 
+                   border: '1px solid #fde047', 
+                   padding: '16px', 
+                   borderRadius: '8px',
+                   marginBottom: '16px',
+                   textAlign: 'center'
+                 }}>
+                   <p style={{ margin: '0 0 12px', fontSize: '14px', color: '#92400e', fontWeight: 600 }}>
+                     ⏰ Voting period has ended. Anyone can now settle this dispute.
+                   </p>
+                   <Button 
+                     label={'Settle Dispute'} 
+                     icon='/release.svg' 
+                     buttonCss={'downvote-button upvote-button'}
+                     onClick={handleSettleDispute}
+                   />
+                 </div>
+              </div>
+            )}
+
+            {jobData.isFinalized && (
+              <div className="form-groupDC">
+                 <div style={{ 
+                   background: '#f0fdf4', 
+                   border: '1px solid #86efac', 
+                   padding: '16px', 
+                   borderRadius: '8px',
+                   textAlign: 'center'
+                 }}>
+                   <p style={{ margin: 0, fontSize: '14px', color: '#166534', fontWeight: 600 }}>
+                     ✅ Dispute has been settled. Winner: {jobData.votesForPercent > 0.5 ? 'FOR' : 'AGAINST'}
+                   </p>
                  </div>
               </div>
             )}
