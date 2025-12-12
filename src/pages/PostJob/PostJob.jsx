@@ -22,6 +22,9 @@ const LAYERZERO_OPTIONS_VALUE = import.meta.env.VITE_LAYERZERO_OPTIONS_VALUE;
 const BROWSE_JOBS_CONTRACT = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS;
 const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
 
+// Backend URL for secure API calls
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+
 function FileUpload({ onFilesUploaded, uploadedFiles }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -492,12 +495,11 @@ export default function PostJob() {
       };
 
       const response = await fetch(
-        "https://api.pinata.cloud/pinning/pinJSONToIPFS",
+        `${BACKEND_URL}/api/ipfs/upload-json`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_PINATA_API_KEY}`,
           },
           body: JSON.stringify({
             pinataContent: milestoneData,
@@ -524,12 +526,11 @@ export default function PostJob() {
   const pinJobDetailsToIPFS = async (jobDetails) => {
     try {
       const response = await fetch(
-        "https://api.pinata.cloud/pinning/pinJSONToIPFS",
+        `${BACKEND_URL}/api/ipfs/upload-json`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_PINATA_API_KEY}`,
           },
           body: JSON.stringify({
             pinataContent: jobDetails,

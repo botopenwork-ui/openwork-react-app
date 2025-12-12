@@ -27,6 +27,9 @@ const NATIVE_ATHENA_ADDRESS = "0x098E52Aff44AEAd944AFf86F4A5b90dbAF5B86bd";
 // LayerZero options
 const LZ_OPTIONS = "0x0003010011010000000000000000000000000007a120";
 
+// Backend URL for secure API calls
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+
 const SKILLOPTIONS = [
   'UX/UI Skill Oracle','Full Stack development','UX/UI Skill Oracle',
 ]
@@ -242,12 +245,9 @@ export default function RaiseDispute() {
         formData.append('file', selectedFile);
 
         const fileResponse = await fetch(
-          'https://api.pinata.cloud/pinning/pinFileToIPFS',
+          `${BACKEND_URL}/api/ipfs/upload-file`,
           {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${import.meta.env.VITE_PINATA_API_KEY}`,
-            },
             body: formData,
           }
         );
@@ -260,12 +260,11 @@ export default function RaiseDispute() {
 
       // Upload dispute data
       const response = await fetch(
-        "https://api.pinata.cloud/pinning/pinJSONToIPFS",
+        `${BACKEND_URL}/api/ipfs/upload-json`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_PINATA_API_KEY}`,
           },
           body: JSON.stringify({
             pinataContent: disputeData,

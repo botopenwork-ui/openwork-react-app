@@ -11,6 +11,9 @@ import { useWalletConnection } from "../../functions/useWalletConnection";
 import ProfileGenesisABI from "../../ABIs/profile-genesis_ABI.json";
 import LOWJCABI from "../../ABIs/lowjc_ABI.json";
 
+// Backend URL for secure API calls
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+
 const COUNTRYITEMS = [
     {
         img: '/AU.svg',
@@ -89,12 +92,9 @@ export default function ProfileOwnerView() {
             formData.append("file", file);
 
             const response = await fetch(
-                "https://api.pinata.cloud/pinning/pinFileToIPFS",
+                `${BACKEND_URL}/api/ipfs/upload-file`,
                 {
                     method: "POST",
-                    headers: {
-                        'Authorization': `Bearer ${import.meta.env.VITE_PINATA_API_KEY}`
-                    },
                     body: formData,
                 }
             );
@@ -146,12 +146,11 @@ export default function ProfileOwnerView() {
     const pinProfileToIPFS = async (profileData) => {
         try {
             const response = await fetch(
-                "https://api.pinata.cloud/pinning/pinJSONToIPFS",
+                `${BACKEND_URL}/api/ipfs/upload-json`,
                 {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": `Bearer ${import.meta.env.VITE_PINATA_API_KEY}`
                     },
                     body: JSON.stringify({
                         pinataContent: profileData,

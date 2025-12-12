@@ -12,6 +12,9 @@ import contractABI from "../../ABIs/lowjc_ABI.json";
 const CONTRACT_ADDRESS = import.meta.env.VITE_LOWJC_CONTRACT_ADDRESS || "0x896a3Bc6ED01f549Fe20bD1F25067951913b793C";
 const OP_SEPOLIA_RPC = import.meta.env.VITE_OPTIMISM_SEPOLIA_RPC_URL;
 
+// Backend URL for secure API calls
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+
 function ImageUpload() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -100,12 +103,11 @@ export default function ApplyJob() {
       };
 
       const response = await fetch(
-        "https://api.pinata.cloud/pinning/pinJSONToIPFS",
+        `${BACKEND_URL}/api/ipfs/upload-json`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_PINATA_API_KEY}`,
           },
           body: JSON.stringify({
             pinataContent: milestoneData,
@@ -134,12 +136,11 @@ export default function ApplyJob() {
   const pinApplicationToIPFS = async (applicationDetails) => {
     try {
       const response = await fetch(
-        "https://api.pinata.cloud/pinning/pinJSONToIPFS",
+        `${BACKEND_URL}/api/ipfs/upload-json`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_PINATA_API_KEY}`,
           },
           body: JSON.stringify({
             pinataContent: applicationDetails,
