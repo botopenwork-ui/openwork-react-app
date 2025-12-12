@@ -344,9 +344,17 @@ export default function PostJob() {
       // Try to get the job data
       const jobData = await browseJobsContract.methods.getJob(jobId).call();
       console.log("📋 Job data received:", jobData);
+      console.log("🆔 jobData.id:", jobData.id);
+      console.log("🔍 Looking for jobId:", jobId);
       
-      // If job exists and has valid data, return true
-      const jobExists = jobData && jobData.id && jobData.id === jobId;
+      // Check if job exists - jobData.id should match our jobId
+      // Also check if jobGiver is not zero address (indicates real job)
+      const jobExists = jobData && 
+                        jobData.id && 
+                        (jobData.id === jobId || jobData.id.toString() === jobId) &&
+                        jobData.jobGiver && 
+                        jobData.jobGiver !== '0x0000000000000000000000000000000000000000';
+      
       console.log("✅ Job exists on Arbitrum:", jobExists);
       return jobExists;
     } catch (error) {
