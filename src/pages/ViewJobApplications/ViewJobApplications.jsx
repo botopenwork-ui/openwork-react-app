@@ -2,13 +2,15 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import Web3 from "web3";
 import contractABI from "../../ABIs/nowjc_ABI.json";
+import genesisABI from "../../ABIs/genesis_ABI.json";
 import JobsTable from "../../components/JobsTable/JobsTable";
 import "./ViewJobApplications.css";
 import StatusButton from "../../components/StatusButton/StatusButton";
 import DetailButton from "../../components/DetailButton/DetailButton";
 
-// NOWJC Contract on Arbitrum Sepolia
+// Contracts on Arbitrum Sepolia
 const CONTRACT_ADDRESS = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS || "0x9E39B37275854449782F1a2a4524405cE79d6C1e";
+const GENESIS_CONTRACT_ADDRESS = import.meta.env.VITE_GENESIS_CONTRACT_ADDRESS || "0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C";
 const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
 
 // Multi-gateway IPFS fetch function with timeout
@@ -96,11 +98,12 @@ export default function ViewJobApplications() {
             try {
                 setLoading(true);
                 const web3 = new Web3(ARBITRUM_SEPOLIA_RPC);
-                const contract = new web3.eth.Contract(contractABI, CONTRACT_ADDRESS);
+                const nowjcContract = new web3.eth.Contract(contractABI, CONTRACT_ADDRESS);
+                const genesisContract = new web3.eth.Contract(genesisABI, GENESIS_CONTRACT_ADDRESS);
 
-                // Fetch job data first
-                const jobData = await contract.methods.getJob(jobId).call();
-                console.log("🏢 Job data from NOWJC (Arbitrum):", jobData);
+                // Fetch job data from NOWJC to get job giver and selected application info
+                const jobData = await nowjcContract.methods.getJob(jobId).call();
+                console.log("🏢 Job data from NOWJC:", jobData);
                 setJob(jobData);
 
                 // Get job title from IPFS if available
@@ -114,54 +117,25 @@ export default function ViewJobApplications() {
                     }
                 }
 
-                // Debug: Log job data structure to understand how to fetch applications
-                console.log("🔍 NOWJC Job data structure:", jobData);
-                console.log("🔍 Selected applicant:", jobData.selectedApplicant);
-                console.log("🔍 Selected application ID:", jobData.selectedApplicationId);
-                console.log("🔍 Job applicants array:", jobData.applicants);
-                console.log("🔍 Number of applicants:", jobData.applicants?.length || 0);
+                // Get application count from Genesis contract
+                const appCount = await genesisContract.methods.getJobApplicationCount(jobId).call();
+                console.log(`📊 Total applications from Genesis: ${appCount}`);
 
-                // Fetch all applications for this job
-                const applicationPromises = [];
-                
-                // Use the applicants array from job data
-                const applicantAddresses = jobData.applicants || [];
-                console.log("📋 Known applicants from job data:", applicantAddresses.length);
-                
-                // If no applicants in the job data, show empty state
-                if (applicantAddresses.length === 0) {
-                    console.log("No applicants found for this job");
+                // If no applications, show empty state
+                if (appCount == 0) {
+                    console.log("No applications found for this job");
                     setApplications([]);
                     setLoading(false);
                     return;
                 }
-                
-                // Try sequential application IDs (1 to 100) and match against known applicants
-                // We'll stop early once we've found applications for all known applicants
-                const maxApplicationId = 100;
-                const foundApplicants = new Set();
-                
-                for (let appId = 1; appId <= maxApplicationId && foundApplicants.size < applicantAddresses.length; appId++) {
+
+                // Fetch all applications from Genesis (IDs are 1-indexed)
+                const applicationPromises = [];
+                for (let appId = 1; appId <= appCount; appId++) {
                     applicationPromises.push(
-                        contract.methods.getApplication(jobId, appId).call()
+                        genesisContract.methods.getJobApplication(jobId, appId).call()
                             .then(async (appData) => {
-                                // Check if this applicant is in our known applicants list
-                                const applicantLower = appData.applicant?.toLowerCase();
-                                const isKnownApplicant = applicantAddresses.some(
-                                    addr => addr.toLowerCase() === applicantLower
-                                );
-                                
-                                if (!isKnownApplicant) {
-                                    console.log(`📋 Application ${appId} - Applicant not in known list, skipping`);
-                                    return null;
-                                }
-                                
-                                console.log(`📋 Application ${appId} data from NOWJC:`, appData);
-                                console.log(`🔍 Available fields:`, Object.keys(appData));
-                                console.log(`📊 Status field:`, appData.status, typeof appData.status);
-                                
-                                // Track that we found this applicant
-                                foundApplicants.add(applicantLower);
+                                console.log(`📋 Application ${appId} from Genesis:`, appData);
                                 
                                 let applicationDetails = null;
 
@@ -182,23 +156,25 @@ export default function ViewJobApplications() {
                                     }, 0);
                                 }
 
+                                // Determine status: Selected if this is the selected application, otherwise In Review
+                                const isSelected = jobData.selectedApplicationId && 
+                                                 parseInt(jobData.selectedApplicationId) === parseInt(appId);
+                                const status = isSelected ? 1 : 0; // 1 = Selected, 0 = In Review
+
                                 return {
                                     id: appId,
                                     applicationId: appId,
                                     jobTitle: jobTitle,
                                     applicant: appData.applicant,
                                     sentTo: jobData.jobGiver,
-                                    status: appData.status,
+                                    status: status,
                                     amount: (totalAmount / 1000000).toFixed(2), // Convert from USDC units
                                     applicationDetails,
                                     rawData: appData
                                 };
                             })
                             .catch(error => {
-                                // Silently ignore errors for non-existent application IDs
-                                if (!error.message.includes("Application does not exist")) {
-                                    console.error(`Error fetching application ${appId}:`, error.message);
-                                }
+                                console.error(`Error fetching application ${appId} from Genesis:`, error);
                                 return null;
                             })
                     );
@@ -207,7 +183,7 @@ export default function ViewJobApplications() {
                 const resolvedApplications = await Promise.all(applicationPromises);
                 const validApplications = resolvedApplications.filter(app => app !== null);
                 
-                console.log(`✅ Found ${validApplications.length} valid applications out of ${applicantAddresses.length} known applicants`);
+                console.log(`✅ Found ${validApplications.length} applications from Genesis`);
 
                 setApplications(validApplications);
             } catch (error) {
