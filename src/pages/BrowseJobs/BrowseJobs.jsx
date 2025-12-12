@@ -408,7 +408,7 @@ export default function BrowseJobs() {
                 actions: (
                     <div className="view-detail">
                         <DetailButton
-                            to={`/view-job-details/${job.id}`}
+                            to={`/job-details/${job.id}`}
                             imgSrc="/view.svg"
                             alt="detail"
                         />
