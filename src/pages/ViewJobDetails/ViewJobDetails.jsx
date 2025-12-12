@@ -1,13 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Web3 from "web3";
-import L1ABI from "../../L1ABI.json"; // Import the L1 contract ABI
+import NOWJCABI from "../../ABIs/nowjc_ABI.json";
 import "./ViewJobDetails.css";
 import SkillBox from "../../components/SkillBox/SkillBox";
 import Milestone from "../../components/Milestone/Milestone";
 import Button from "../../components/Button/Button";
 import BlueButton from "../../components/BlueButton/BlueButton";
 import BackButton from "../../components/BackButton/BackButton";
+
+// NOWJC contract on Arbitrum Sepolia
+const NOWJC_ADDRESS = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS;
+const ARBITRUM_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
 
 function FileUpload() {
   const [selectedImage, setSelectedImage] = useState(null);
@@ -45,10 +49,78 @@ function ATTACHMENTS({title}) {
 export default function ViewJobDetails() {
   const navigate = useNavigate();
   const { jobId } = useParams();
+  const [job, setJob] = useState(null);
+  const [jobDetails, setJobDetails] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function fetchJobData() {
+      if (!jobId) {
+        setError("No job ID provided");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        console.log("📍 Fetching job:", jobId);
+        
+        const web3 = new Web3(ARBITRUM_RPC);
+        const nowjc = new web3.eth.Contract(NOWJCABI, NOWJC_ADDRESS);
+
+        // Fetch job from NOWJC contract
+        const jobData = await nowjc.methods.getJob(jobId).call();
+        console.log("📋 Job data from contract:", jobData);
+
+        setJob(jobData);
+
+        // Fetch IPFS data if hash exists
+        if (jobData.jobDetailHash) {
+          try {
+            const response = await fetch(`https://gateway.pinata.cloud/ipfs/${jobData.jobDetailHash}`);
+            const ipfsData = await response.json();
+            console.log("📦 IPFS data:", ipfsData);
+            setJobDetails(ipfsData);
+          } catch (ipfsError) {
+            console.error("Failed to fetch IPFS data:", ipfsError);
+            // Continue with just blockchain data
+          }
+        }
+
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching job:", err);
+        setError(err.message);
+        setLoading(false);
+      }
+    }
+
+    fetchJobData();
+  }, [jobId]);
 
   const handleBack = () => {
-    navigate(-1); // Go back to previous page
+    navigate(-1);
   };
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <img src="/OWIcon.svg" alt="Loading..." className="loading-icon" />
+      </div>
+    );
+  }
+
+  if (error || !job) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <h2>Error Loading Job</h2>
+        <p>{error || "Job not found"}</p>
+        <button onClick={handleBack}>Go Back</button>
+      </div>
+    );
+  }
+
+  const totalPaid = job.totalPaid ? (Number(job.totalPaid) / 1e6).toFixed(2) : "0.00";
 
   return (
     <>
@@ -58,7 +130,7 @@ export default function ViewJobDetails() {
             <div className="sectionTitle">
                 <div onClick={handleBack} style={{cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '20px'}}>
                   <img src="/back.svg" alt="Back" style={{width: '24px', height: '24px'}} />
-                  <span style={{fontSize: '18px', fontWeight: '600'}}>UI for OpenWork</span>
+                  <span style={{fontSize: '18px', fontWeight: '600'}}>{jobDetails?.title || job.id}</span>
                 </div>
             </div>
             <div className="sectionBody">
@@ -67,9 +139,9 @@ export default function ViewJobDetails() {
                 <div className="detail-profile">
                   <span className="detail-value-address">
                     <img src="/user.png" alt="JobGiver" className="Job" />
-                    <p>Mollie Hall</p>
+                    <p title={job.jobGiver}>{job.jobGiver.slice(0, 6)}...{job.jobGiver.slice(-4)}</p>
                   </span>
-                  <a href="/profile" className="view-profile">
+                  <a href={`/profile/${job.jobGiver}`} className="view-profile">
                     <span>View Profile</span>
                     <img src="/view_profile.svg" alt="" />
                   </a>
@@ -78,31 +150,33 @@ export default function ViewJobDetails() {
               <div className="detail-row">
                 <span className="detail-label">BUDGET</span>
                 <span className="detail-value" style={{ height: "47px" }}>
-                  {/* {job.escrowAmount}{" "} */}
-                  762.14
+                  {totalPaid}
                   <img src="/xdc.svg" alt="Info" className="infoIcon" />
                 </span>
               </div>
               <div className="detail-row">
                 <span className="detail-label">REQUIREMENT(S)</span>
                 <div className="detail-value description-value">
-                  <p>Here's a list of things I need:</p>
-                  <ul className="description-list requirements-list">
-                    <span> • Basic chat and emil support</span>
-                    <span> • Up to 10 individuals users</span>
-                    <span> • Basic reporting and analytics</span>
-                  </ul>
+                  <p>{jobDetails?.description || "No description available"}</p>
                 </div>
               </div>
-              <div className="category">
-                <span>SKILL</span>
-                <div className="category-box">
-                  <SkillBox title="UX Design" />
+              {jobDetails?.skills && jobDetails.skills.length > 0 && (
+                <div className="category">
+                  <span>SKILLS</span>
+                  <div className="category-box">
+                    {jobDetails.skills.map((skill, idx) => (
+                      <SkillBox key={idx} title={skill} />
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="form-groupDC" style={{display:'flex', alignItems:'center', gap:'16px', marginBottom:0, marginTop:8}}>
                 <Button label='Refer someone' buttonCss={'verified-button'}/>
-                <BlueButton label='Apply Now' style={{width: '-webkit-fill-available', justifyContent:'center', padding: '12px 16px'}}/>
+                <BlueButton 
+                  label='Apply Now' 
+                  style={{width: '-webkit-fill-available', justifyContent:'center', padding: '12px 16px'}}
+                  onClick={() => navigate(`/apply-job/${jobId}`)}
+                />
             </div>
             </div>
           </div>
