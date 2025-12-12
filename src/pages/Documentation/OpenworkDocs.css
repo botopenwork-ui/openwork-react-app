@@ -126,7 +126,6 @@
 
 /* Function Flows Sidebar Item */
 .docs-sidebar-item-flows {
-  display: none !important; /* Hidden for now - remove to restore */
   background-color: transparent;
   color: #374151;
 }
