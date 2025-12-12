@@ -74,16 +74,33 @@ export default function ViewJobDetails() {
 
         setJob(jobData);
 
-        // Fetch IPFS data if hash exists
+        // Fetch IPFS data if hash exists - multi-gateway fallback
         if (jobData.jobDetailHash) {
-          try {
-            const response = await fetch(`https://gateway.pinata.cloud/ipfs/${jobData.jobDetailHash}`);
-            const ipfsData = await response.json();
-            console.log("📦 IPFS data:", ipfsData);
+          const gateways = [
+            'https://ipfs.io/ipfs/',
+            'https://cloudflare-ipfs.com/ipfs/',
+            'https://dweb.link/ipfs/'
+          ];
+          
+          let ipfsData = null;
+          for (const gateway of gateways) {
+            try {
+              const response = await fetch(gateway + jobData.jobDetailHash, {
+                signal: AbortSignal.timeout(5000) // 5 second timeout
+              });
+              ipfsData = await response.json();
+              console.log("📦 IPFS data loaded from:", gateway);
+              break;
+            } catch (error) {
+              console.log(`Gateway ${gateway} failed, trying next...`);
+              continue;
+            }
+          }
+          
+          if (ipfsData) {
             setJobDetails(ipfsData);
-          } catch (ipfsError) {
-            console.error("Failed to fetch IPFS data:", ipfsError);
-            // Continue with just blockchain data
+          } else {
+            console.error("Failed to fetch IPFS data from all gateways");
           }
         }
 
