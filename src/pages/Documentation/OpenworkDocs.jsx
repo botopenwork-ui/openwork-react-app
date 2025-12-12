@@ -8,6 +8,7 @@ import { arrowConnections } from './data/arrowConnections';
 import { buildOppyContext, FALLBACK_RESPONSES } from './data/oppyKnowledge';
 import flowsData from './data/flowsData';
 import FlowVisualizer from '../../components/FlowVisualizer';
+import UserFlowsOverview from '../../components/UserFlowsOverview';
 import AdminLogin from '../../components/AdminLogin';
 import Web3 from 'web3';
 
@@ -866,7 +867,7 @@ const OpenworkDocs = () => {
 
           {selectedContract === 'flows' ? (
             <div className="docs-flows-container">
-              <FlowVisualizer flowData={flowsData['post-job']} />
+              <UserFlowsOverview onClose={() => setSelectedContract(null)} />
             </div>
           ) : selectedContract === 'oppy' ? (
             <div className="docs-chat-container">
