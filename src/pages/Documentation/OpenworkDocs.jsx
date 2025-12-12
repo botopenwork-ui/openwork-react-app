@@ -12,9 +12,8 @@ import UserFlowsOverview from '../../components/UserFlowsOverview';
 import AdminLogin from '../../components/AdminLogin';
 import Web3 from 'web3';
 
-// Gemini API Configuration
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+// Backend API Configuration
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
 const OpenworkDocs = () => {
   const [selectedContract, setSelectedContract] = useState(null);
@@ -24,7 +23,7 @@ const OpenworkDocs = () => {
   const [showNetworkDetails, setShowNetworkDetails] = useState(false);
   const [oppyMessage, setOppyMessage] = useState('');
   const [oppyChat, setOppyChat] = useState([
-    { role: 'oppy', text: `Hi! I'm Agent Oppy, your OpenWork assistant powered by Gemini AI. Ask me anything about the protocol, contracts, or how to get started!${GEMINI_API_KEY ? ' ✅ AI Ready' : ' ⚠️ API Key Missing'}` }
+    { role: 'oppy', text: `Hi! I'm Agent Oppy, your OpenWork assistant powered by Gemini AI. Ask me anything about the protocol, contracts, or how to get started! ✅ AI Ready` }
   ]);
   const [copiedCode, setCopiedCode] = useState(null);
   const chatMessagesRef = React.useRef(null);
@@ -358,60 +357,42 @@ const OpenworkDocs = () => {
     try {
       // Build intelligent context based on user query
       const systemContext = buildOppyContext(userMsg);
-      
-      console.log('📚 Loaded context for query:', userMsg.substring(0, 50) + '...');
-      console.log('🔑 API Key present:', GEMINI_API_KEY ? 'Yes' : 'No');
-      console.log('🌐 API URL:', GEMINI_API_URL.substring(0, 80) + '...');
 
-      // Call Gemini API
-      const response = await fetch(GEMINI_API_URL, {
+      // Call backend chat API (secure - API key on server)
+      const response = await fetch(`${BACKEND_URL}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `${systemContext}\n\nUser Question: ${userMsg}\n\nProvide a helpful, accurate, and concise answer based on the OpenWork documentation above. Be technical when needed but also explain concepts clearly. If suggesting code, use proper formatting.`
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 2048,
-            topP: 0.95,
-            topK: 40
-          }
+          message: userMsg,
+          context: systemContext
         })
       });
 
-      console.log('📡 Gemini API response status:', response.status);
-
       if (!response.ok) {
-        const errorBody = await response.text();
-        console.error('❌ Gemini API error response:', errorBody);
-        throw new Error(`Gemini API error: ${response.status} - ${errorBody.substring(0, 100)}`);
+        throw new Error(`Backend chat API error: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('✅ Gemini API response received');
       
-      const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
-
-      // Remove thinking message and add actual response
-      setOppyChat(prev => {
-        const withoutThinking = prev.filter(msg => !msg.isThinking);
-        return [...withoutThinking, { role: 'oppy', text: aiResponse }];
-      });
+      if (data.success) {
+        // Remove thinking message and add actual response
+        setOppyChat(prev => {
+          const withoutThinking = prev.filter(msg => !msg.isThinking);
+          return [...withoutThinking, { role: 'oppy', text: data.response }];
+        });
+      } else {
+        throw new Error(data.error || 'Chat API failed');
+      }
 
     } catch (error) {
-      console.error('❌ Gemini API error:', error);
-      console.error('❌ Error details:', error.message);
+      console.error('❌ Chat error:', error);
       
       // Intelligent fallback based on keywords
       let fallbackResponse = FALLBACK_RESPONSES.default;
       const lowerMsg = userMsg.toLowerCase();
       
-      // Find best matching fallback
       for (const [keyword, response] of Object.entries(FALLBACK_RESPONSES)) {
         if (lowerMsg.includes(keyword)) {
           fallbackResponse = response;

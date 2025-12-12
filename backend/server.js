@@ -9,6 +9,8 @@ const deploymentRoutes = require('./routes/deployments');
 const proposalRoutes = require('./routes/proposals');
 const registryRoutes = require('./routes/registry');
 const adminRoutes = require('./routes/admin');
+const ipfsRoutes = require('./routes/ipfs');
+const chatRoutes = require('./routes/chat');
 
 // Initialize Express
 const app = express();
@@ -26,6 +28,12 @@ app.use('/api/registry', registryRoutes);
 
 // Mount admin routes
 app.use('/api/admin', adminRoutes);
+
+// Mount IPFS proxy routes
+app.use('/api/ipfs', ipfsRoutes);
+
+// Mount chat routes
+app.use('/api/chat', chatRoutes);
 
 // Track processing jobs to avoid duplicates
 const processingJobs = new Set();
