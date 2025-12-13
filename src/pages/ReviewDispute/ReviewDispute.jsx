@@ -589,7 +589,7 @@ export default function ReviewDispute() {
                     </div>
                     <div className="vote-conditions-content">
                         <span>•</span>
-                        <span>Total Votes: {jobData.totalVotes}</span>
+                        <span>Total Voters: {voters.length}</span>
                     </div>
                     <div className="vote-conditions-content">
                         <span>•</span>
@@ -606,7 +606,7 @@ export default function ReviewDispute() {
                     <JobdetailItem title="RESOLUTION COMPENSATION" icon={true} amount={jobData.feeAmount}/>
                </div>
             </div>
-            {jobData.isVotingActive && !jobData.isFinalized && (
+            {jobData.remainingSeconds > 0 && !jobData.isFinalized && (
               <div className="form-groupDC">
                  <div className="vote-button-section">
                       <Button 
@@ -630,7 +630,7 @@ export default function ReviewDispute() {
               </div>
             )}
             
-            {!jobData.isVotingActive && !jobData.isFinalized && (
+            {jobData.remainingSeconds <= 0 && !jobData.isFinalized && (
               <div className="form-groupDC">
                  <div style={{ 
                    background: '#fef3c7', 
