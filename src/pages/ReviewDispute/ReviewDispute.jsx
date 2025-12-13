@@ -632,23 +632,14 @@ export default function ReviewDispute() {
             
             {jobData.remainingSeconds <= 0 && !jobData.isFinalized && (
               <div className="form-groupDC">
-                 <div style={{ 
-                   background: '#fef3c7', 
-                   border: '1px solid #fde047', 
-                   padding: '16px', 
-                   borderRadius: '8px',
-                   marginBottom: '16px',
-                   textAlign: 'center'
-                 }}>
-                   <p style={{ margin: '0 0 12px', fontSize: '14px', color: '#92400e', fontWeight: 600 }}>
-                     ⏰ Voting period has ended. Anyone can now settle this dispute.
-                   </p>
-                   <Button 
-                     label={'Settle Dispute'} 
-                     icon='/release.svg' 
-                     buttonCss={'downvote-button upvote-button'}
-                     onClick={handleSettleDispute}
-                   />
+                 <Button 
+                   label={'Settle Dispute'} 
+                   icon='/release.svg' 
+                   buttonCss={'downvote-button upvote-button'}
+                   onClick={handleSettleDispute}
+                 />
+                 <div className="warning-form" style={{ marginTop: '16px' }}>
+                   <Warning content="Voting period has ended. Anyone can now settle this dispute." />
                  </div>
               </div>
             )}
