@@ -6,6 +6,7 @@ import NativeAthenaABI from "../../ABIs/native-athena_ABI.json";
 import "./ReviewDispute.css";
 import Button from "../../components/Button/Button";
 import VoteBar from "../../components/VoteBar/VoteBar";
+import Warning from "../../components/Warning/Warning";
 import { formatAddress } from "../../utils/oracleHelpers";
 
 // Native Athena contract address on Arbitrum Sepolia
@@ -193,6 +194,15 @@ export default function ReviewDispute() {
 
         setDispute(disputeData);
         setVoters(votersData);
+        
+        // Debug logging for button visibility
+        console.log("🔍 Button visibility conditions:");
+        console.log("  isVotingActive:", disputeData.isVotingActive);
+        console.log("  isFinalized:", disputeData.isFinalized);
+        console.log("  remainingSeconds:", remainingSeconds);
+        console.log("  Should show vote buttons:", disputeData.isVotingActive && !disputeData.isFinalized);
+        console.log("  Should show settle button:", !disputeData.isVotingActive && !disputeData.isFinalized);
+        
         setJobData({
           disputeId,
           disputedAmount,
@@ -250,11 +260,6 @@ export default function ReviewDispute() {
 
     if (jobData.isFinalized) {
       setErrorMessage("Dispute has already been finalized");
-      return;
-    }
-
-    if (jobData.remainingSeconds <= 0) {
-      setErrorMessage("Voting time has expired. Dispute can now be settled.");
       return;
     }
 
@@ -531,21 +536,6 @@ export default function ReviewDispute() {
               </div>
             )}
 
-            {/* Already Voted Status */}
-            {hasVoted && walletAddress && (
-              <div style={{ 
-                background: '#eff6ff', 
-                border: '2px solid #93c5fd', 
-                padding: '16px', 
-                borderRadius: '12px',
-                marginBottom: '16px'
-              }}>
-                <p style={{ margin: 0, fontSize: '14px', color: '#1e40af', fontWeight: 600 }}>
-                  📊 You already voted {userVote ? 'FOR' : 'AGAINST'} this dispute
-                </p>
-              </div>
-            )}
-
             <div className="form-groupDC">
                 <div className="detail-row">
                     <span className="detail-label">RAISED BY</span>
@@ -632,6 +622,11 @@ export default function ReviewDispute() {
                         onClick={() => handleVote(true)}
                       />
                  </div>
+                 {hasVoted && walletAddress && (
+                   <div className="warning-form" style={{ marginTop: '16px' }}>
+                     <Warning content={`You already voted ${userVote ? 'FOR' : 'AGAINST'} this dispute`} />
+                   </div>
+                 )}
               </div>
             )}
             
