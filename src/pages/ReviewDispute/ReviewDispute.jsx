@@ -248,7 +248,6 @@ export default function ReviewDispute() {
         .vote(0, disputeId, voteFor, fromAddress)
         .send({
           from: fromAddress,
-          gasPrice: await web3.eth.getGasPrice(),
         });
 
       setLoadingT("");
@@ -327,7 +326,6 @@ export default function ReviewDispute() {
         .settleDispute(disputeId)
         .send({
           from: fromAddress,
-          gasPrice: await web3.eth.getGasPrice(),
         });
 
       setLoadingT("");
