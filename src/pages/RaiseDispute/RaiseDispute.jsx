@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import Web3 from "web3";
 import contractABI from "../../ABIs/nowjc_ABI.json";
 import athenaClientABI from "../../ABIs/athena-client_ABI.json";
+import genesisABI from "../../ABIs/genesis_ABI.json";
+import nativeAthenaABI from "../../ABIs/native-athena_ABI.json";
 import "./RaiseDispute.css";
 import { useWalletConnection } from "../../functions/useWalletConnection";
 import { formatWalletAddress } from "../../functions/formatWalletAddress";
@@ -14,15 +16,14 @@ import BlueButton from "../../components/BlueButton/BlueButton";
 import Warning from "../../components/Warning/Warning";
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS;
+const GENESIS_CONTRACT_ADDRESS = import.meta.env.VITE_GENESIS_CONTRACT_ADDRESS || "0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C";
+const NATIVE_ATHENA_ADDRESS = "0x098E52Aff44AEAd944AFf86F4A5b90dbAF5B86bd";
 const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
 
 // Athena Client on OP Sepolia
 const ATHENA_CLIENT_ADDRESS = "0x45E51B424c87Eb430E705CcE3EcD8e22baD267f7";
 const USDC_ADDRESS = "0x5fd84259d66cd46123540766be93dfe6d43130d7";
 const OP_SEPOLIA_RPC = import.meta.env.VITE_OPTIMISM_SEPOLIA_RPC_URL;
-
-// Native Athena on Arbitrum Sepolia for sync checking
-const NATIVE_ATHENA_ADDRESS = "0x098E52Aff44AEAd944AFf86F4A5b90dbAF5B86bd";
 
 // LayerZero options
 const LZ_OPTIONS = "0x0003010011010000000000000000000000000007a120";
@@ -111,6 +112,12 @@ export default function RaiseDispute() {
   const [loadingT, setLoadingT] = useState(false);
   const [loading, setLoading] = useState(true);
   const [transactionStatus, setTransactionStatus] = useState("Dispute submission requires blockchain transaction fees");
+  
+  // Oracle selection state
+  const [oracles, setOracles] = useState([]);
+  const [selectedOracle, setSelectedOracle] = useState("");
+  const [isOracleDropdownOpen, setIsOracleDropdownOpen] = useState(false);
+  const [oraclesLoading, setOraclesLoading] = useState(true);
 
   const navigate = useNavigate();
 
@@ -124,6 +131,52 @@ export default function RaiseDispute() {
         console.error("Failed to copy: ", err);
       });
   };
+
+  // Fetch available oracles from blockchain
+  useEffect(() => {
+    async function fetchOracles() {
+      try {
+        setOraclesLoading(true);
+        const web3 = new Web3(ARBITRUM_SEPOLIA_RPC);
+        const genesisContract = new web3.eth.Contract(genesisABI, GENESIS_CONTRACT_ADDRESS);
+        const nativeAthenaContract = new web3.eth.Contract(nativeAthenaABI, NATIVE_ATHENA_ADDRESS);
+
+        // Get all oracle names
+        const oracleNames = await genesisContract.methods.getAllOracleNames().call();
+        console.log("📋 All oracle names:", oracleNames);
+
+        // Check active status for each oracle
+        const oracleDataPromises = oracleNames.map(async (name) => {
+          const isActive = await nativeAthenaContract.methods.isOracleActive(name).call();
+          const activeMemberCount = await nativeAthenaContract.methods.getOracleActiveMemberCount(name).call();
+          return {
+            name,
+            isActive,
+            activeMemberCount: parseInt(activeMemberCount)
+          };
+        });
+
+        const oracleData = await Promise.all(oracleDataPromises);
+        console.log("🏛️ Oracle data with active status:", oracleData);
+
+        setOracles(oracleData);
+
+        // Auto-select first active oracle
+        const firstActive = oracleData.find(o => o.isActive);
+        if (firstActive) {
+          setSelectedOracle(firstActive.name);
+          console.log("✅ Auto-selected oracle:", firstActive.name);
+        }
+
+        setOraclesLoading(false);
+      } catch (error) {
+        console.error("Error fetching oracles:", error);
+        setOraclesLoading(false);
+      }
+    }
+
+    fetchOracles();
+  }, []);
 
   useEffect(() => {
     async function fetchJobDetails() {
@@ -416,11 +469,18 @@ export default function RaiseDispute() {
         const athenaContract = new web3.eth.Contract(athenaClientABI, ATHENA_CLIENT_ADDRESS);
         const disputedAmountUnits = Math.floor(parseFloat(disputeAmount) * 1000000);
 
+        // Validate oracle selection
+        if (!selectedOracle) {
+          alert("Please select an oracle for dispute resolution");
+          setLoadingT(false);
+          return;
+        }
+
         const receipt = await athenaContract.methods
           .raiseDispute(
             jobId,
             disputeHash,
-            "UX/UI Skill Oracle", // Oracle name
+            selectedOracle, // Use dynamically selected oracle
             compensationAmount,
             disputedAmountUnits,
             LZ_OPTIONS
@@ -568,10 +628,54 @@ export default function RaiseDispute() {
             </div>
             <div className="form-groupDC form-platformFee">
               <div className="platform-fee">
-                <span>DISPUTE WILL BE RESOLVED BY</span>
+                <span>SELECT ORACLE FOR DISPUTE RESOLUTION</span>
                 <img src="/fee.svg" alt="" />
               </div>
-              <span className="dispute-skill">UX/UI Skill Oracle</span>
+              <div className="oracle-dropdown-container">
+                <div 
+                  className="oracle-dropdown-button"
+                  onClick={() => setIsOracleDropdownOpen(!isOracleDropdownOpen)}
+                >
+                  <span>
+                    {oraclesLoading ? "Loading oracles..." : selectedOracle || "Select an oracle"}
+                  </span>
+                  <img 
+                    src="/chevron-down.svg" 
+                    alt="Dropdown" 
+                    className={`oracle-dropdown-icon ${isOracleDropdownOpen ? 'open' : ''}`}
+                  />
+                </div>
+                {isOracleDropdownOpen && oracles.length > 0 && (
+                  <div className="oracle-dropdown-menu">
+                    {oracles.map((oracle, index) => (
+                      <div
+                        key={index}
+                        className={`oracle-dropdown-item ${!oracle.isActive ? 'inactive' : ''}`}
+                        onClick={() => {
+                          if (oracle.isActive) {
+                            setSelectedOracle(oracle.name);
+                            setIsOracleDropdownOpen(false);
+                          }
+                        }}
+                        style={{
+                          opacity: oracle.isActive ? 1 : 0.4,
+                          cursor: oracle.isActive ? 'pointer' : 'not-allowed'
+                        }}
+                      >
+                        <span>{oracle.name}</span>
+                        {oracle.isActive && (
+                          <span style={{ fontSize: '12px', color: '#767676' }}>
+                            {oracle.activeMemberCount} active members
+                          </span>
+                        )}
+                        {!oracle.isActive && (
+                          <span style={{ fontSize: '12px', color: '#999' }}>(Inactive)</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="form-groupDC compensation">
               <span>COMPENSATION FOR RESOLUTION</span>
