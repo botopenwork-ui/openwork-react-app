@@ -173,12 +173,23 @@ export default function ReviewDispute() {
         const disputedAmount = (Number(disputeData.disputedAmount) / 1e6).toFixed(2);
         const feeAmount = (Number(disputeData.fees) / 1e6).toFixed(2);
 
+        // Fetch voting period from contract
+        const nativeAthenaContract = new web3.eth.Contract(NativeAthenaABI, NATIVE_ATHENA_ADDRESS);
+        const votingPeriodMinutes = Number(await nativeAthenaContract.methods.votingPeriodMinutes().call());
+        
         // Calculate time remaining
-        const votingPeriodSeconds = 60 * 60; // 60 minutes
+        const votingPeriodSeconds = votingPeriodMinutes * 60;
         const now = Math.floor(Date.now() / 1000);
         const elapsed = now - Number(disputeData.timeStamp);
-        const remaining = votingPeriodSeconds - elapsed;
-        const daysLeft = remaining > 0 ? Math.ceil(remaining / (24 * 60 * 60)) : 0;
+        const remainingSeconds = votingPeriodSeconds - elapsed;
+        
+        // Format time display
+        let timeLeftDisplay = "Expired";
+        if (remainingSeconds > 0) {
+          const minutes = Math.floor(remainingSeconds / 60);
+          const seconds = remainingSeconds % 60;
+          timeLeftDisplay = `${minutes}m ${seconds}s left`;
+        }
 
         setDispute(disputeData);
         setVoters(votersData);
@@ -194,7 +205,8 @@ export default function ReviewDispute() {
           raiser: disputeData.disputeRaiserAddress,
           isVotingActive: disputeData.isVotingActive,
           isFinalized: disputeData.isFinalized,
-          daysLeft,
+          timeLeft: timeLeftDisplay,
+          remainingSeconds,
           hash: disputeData.hash,
         });
 
@@ -241,7 +253,7 @@ export default function ReviewDispute() {
       return;
     }
 
-    if (jobData.daysLeft <= 0) {
+    if (jobData.remainingSeconds <= 0) {
       setErrorMessage("Voting time has expired. Dispute can now be settled.");
       return;
     }
@@ -312,17 +324,17 @@ export default function ReviewDispute() {
   const handleSettleDispute = async () => {
     // Pre-checks
     if (!walletAddress) {
-      alert("❌ Please connect your wallet first");
+      setErrorMessage("Please connect your wallet first");
       return;
     }
 
     if (jobData.isFinalized) {
-      alert("❌ Dispute has already been settled");
+      setErrorMessage("Dispute has already been settled");
       return;
     }
 
-    if (jobData.isVotingActive && jobData.daysLeft > 0) {
-      alert("❌ Voting period is still active. Wait for it to end before settling.");
+    if (jobData.isVotingActive && jobData.remainingSeconds > 0) {
+      setErrorMessage("Voting period is still active. Wait for it to end before settling.");
       return;
     }
 
@@ -476,7 +488,7 @@ export default function ReviewDispute() {
         <div className="form-container-release">
           <div className="sectionTitle reviewTitle">
             <span id="rel-title" style={{paddingTop:'0px'}}>Dispute Details</span>
-            <span className="left-days">{jobData.daysLeft} days left</span>
+            <span className="left-days">{jobData.timeLeft}</span>
           </div>
           <div className="release-payment-body">
             {/* Success Banner */}
