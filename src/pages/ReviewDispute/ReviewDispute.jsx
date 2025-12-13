@@ -225,6 +225,17 @@ export default function ReviewDispute() {
 
       const web3 = new Web3(window.ethereum);
       await window.ethereum.request({ method: "eth_requestAccounts" });
+      
+      // Check if user is on Arbitrum Sepolia
+      const chainId = await web3.eth.getChainId();
+      const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
+      
+      if (Number(chainId) !== ARBITRUM_SEPOLIA_CHAIN_ID) {
+        alert(`❌ Please switch to Arbitrum Sepolia network to vote.\n\nCurrent Chain ID: ${chainId}\nRequired: ${ARBITRUM_SEPOLIA_CHAIN_ID} (Arbitrum Sepolia)`);
+        setLoadingT("");
+        return;
+      }
+      
       const accounts = await web3.eth.getAccounts();
       const fromAddress = accounts[0];
 
@@ -294,6 +305,17 @@ export default function ReviewDispute() {
 
       const web3 = new Web3(window.ethereum);
       await window.ethereum.request({ method: "eth_requestAccounts" });
+      
+      // Check if user is on Arbitrum Sepolia
+      const chainId = await web3.eth.getChainId();
+      const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
+      
+      if (Number(chainId) !== ARBITRUM_SEPOLIA_CHAIN_ID) {
+        alert(`❌ Please switch to Arbitrum Sepolia network to settle dispute.\n\nCurrent Chain ID: ${chainId}\nRequired: ${ARBITRUM_SEPOLIA_CHAIN_ID} (Arbitrum Sepolia)`);
+        setLoadingT("");
+        return;
+      }
+      
       const accounts = await web3.eth.getAccounts();
       const fromAddress = accounts[0];
 
