@@ -633,11 +633,11 @@ export default function ReviewDispute() {
             {jobData.remainingSeconds <= 0 && !jobData.isFinalized && (
               <div className="form-groupDC">
                  <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '16px' }}>
-                   <div style={{ width: '300px' }}>
+                   <div style={{ width: '280px' }}>
                      <Button 
                        label={'Settle Dispute'} 
                        icon='/release.svg' 
-                       buttonCss={'downvote-button upvote-button'}
+                       buttonCss={'upvote-button'}
                        onClick={handleSettleDispute}
                      />
                    </div>
