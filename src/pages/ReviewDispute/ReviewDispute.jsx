@@ -48,6 +48,11 @@ export default function ReviewDispute() {
   const [walletAddress, setWalletAddress] = useState("");
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [hasVoted, setHasVoted] = useState(false);
+  const [userVote, setUserVote] = useState(null);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [txHash, setTxHash] = useState("");
 
   function formatWalletAddressH(address) {
     if (!address) return "";
@@ -119,6 +124,22 @@ export default function ReviewDispute() {
     setWalletAddress("");
     setDropdownVisible(false);
   };
+
+  // Check if current wallet has voted
+  useEffect(() => {
+    async function checkUserVoteStatus() {
+      if (!disputeId || !walletAddress || !voters.length) return;
+      
+      const userVoter = voters.find(v => v.voter.toLowerCase() === walletAddress.toLowerCase());
+      if (userVoter) {
+        setHasVoted(true);
+        setUserVote(userVoter.voteFor);
+        console.log(`✅ User already voted: ${userVoter.voteFor ? 'FOR' : 'AGAINST'}`);
+      }
+    }
+    
+    checkUserVoteStatus();
+  }, [disputeId, walletAddress, voters]);
 
   useEffect(() => {
     async function fetchDisputeDetails() {
@@ -199,24 +220,29 @@ export default function ReviewDispute() {
 
   // Handle vote on dispute
   const handleVote = async (voteFor) => {
+    // Clear previous messages
+    setSuccessMessage("");
+    setErrorMessage("");
+    setTxHash("");
+    
     // Pre-checks
     if (!walletAddress) {
-      alert("❌ Please connect your wallet first");
+      setErrorMessage("Please connect your wallet first");
       return;
     }
 
     if (!jobData.isVotingActive) {
-      alert("❌ Voting period has ended. You can no longer vote on this dispute.");
+      setErrorMessage("Voting period has ended. You can no longer vote on this dispute.");
       return;
     }
 
     if (jobData.isFinalized) {
-      alert("❌ Dispute has already been finalized");
+      setErrorMessage("Dispute has already been finalized");
       return;
     }
 
     if (jobData.daysLeft <= 0) {
-      alert("❌ Voting time has expired. Dispute can now be settled.");
+      setErrorMessage("Voting time has expired. Dispute can now be settled.");
       return;
     }
 
@@ -231,7 +257,7 @@ export default function ReviewDispute() {
       const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
       
       if (Number(chainId) !== ARBITRUM_SEPOLIA_CHAIN_ID) {
-        alert(`❌ Please switch to Arbitrum Sepolia network to vote.\n\nCurrent Chain ID: ${chainId}\nRequired: ${ARBITRUM_SEPOLIA_CHAIN_ID} (Arbitrum Sepolia)`);
+        setErrorMessage(`Please switch to Arbitrum Sepolia network. Current Chain ID: ${chainId}, Required: 421614`);
         setLoadingT("");
         return;
       }
@@ -244,17 +270,18 @@ export default function ReviewDispute() {
 
       // Call vote function: vote(VotingType, disputeId, voteFor, claimAddress)
       // VotingType.Dispute = 0
-      await nativeAthena.methods
+      const receipt = await nativeAthena.methods
         .vote(0, disputeId, voteFor, fromAddress)
         .send({
           from: fromAddress,
         });
 
       setLoadingT("");
-      alert(`✅ Vote submitted successfully! You voted ${voteFor ? 'FOR' : 'AGAINST'} the dispute.`);
+      setTxHash(receipt.transactionHash);
+      setSuccessMessage(`Vote submitted successfully! You voted ${voteFor ? 'FOR' : 'AGAINST'} the dispute.`);
       
-      // Refresh dispute data
-      window.location.reload();
+      // Refresh dispute data after 2 seconds
+      setTimeout(() => window.location.reload(), 2000);
 
     } catch (error) {
       console.error("Error voting on dispute:", error);
@@ -264,19 +291,19 @@ export default function ReviewDispute() {
       const errorMsg = error.message || "";
       
       if (errorMsg.includes("Voting period has expired")) {
-        alert("❌ Voting period has ended. Please refresh the page.");
+        setErrorMessage("Voting period has ended. Please refresh the page.");
       } else if (errorMsg.includes("Already voted")) {
-        alert("❌ You have already voted on this dispute");
+        setErrorMessage("You have already voted on this dispute");
       } else if (errorMsg.includes("Insufficient stake")) {
-        alert("❌ You need at least 100 OW tokens (staked or earned) to vote");
+        setErrorMessage("You need at least 100 OW tokens (staked or earned) to vote");
       } else if (errorMsg.includes("Voting is not active")) {
-        alert("❌ Voting is not active for this dispute");
+        setErrorMessage("Voting is not active for this dispute");
       } else if (errorMsg.includes("Dispute does not exist")) {
-        alert("❌ Dispute not found. It may have been deleted or doesn't exist.");
+        setErrorMessage("Dispute not found. It may have been deleted or doesn't exist.");
       } else if (errorMsg.includes("user rejected")) {
-        alert("❌ Transaction was rejected in MetaMask");
+        setErrorMessage("Transaction was rejected in MetaMask");
       } else {
-        alert("❌ Vote failed: " + errorMsg.substring(0, 100));
+        setErrorMessage("Vote failed: " + errorMsg.substring(0, 150));
       }
     }
   };
@@ -452,6 +479,61 @@ export default function ReviewDispute() {
             <span className="left-days">{jobData.daysLeft} days left</span>
           </div>
           <div className="release-payment-body">
+            {/* Success Banner */}
+            {successMessage && (
+              <div style={{ 
+                background: '#f0fdf4', 
+                border: '2px solid #86efac', 
+                padding: '16px', 
+                borderRadius: '12px',
+                marginBottom: '16px'
+              }}>
+                <p style={{ margin: '0 0 8px', fontSize: '14px', color: '#166534', fontWeight: 600 }}>
+                  ✅ {successMessage}
+                </p>
+                {txHash && (
+                  <a 
+                    href={`https://sepolia.arbiscan.io/tx/${txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: '12px', color: '#0047FF', textDecoration: 'underline' }}
+                  >
+                    View transaction on Arbiscan →
+                  </a>
+                )}
+              </div>
+            )}
+
+            {/* Error Banner */}
+            {errorMessage && (
+              <div style={{ 
+                background: '#fef2f2', 
+                border: '2px solid #fca5a5', 
+                padding: '16px', 
+                borderRadius: '12px',
+                marginBottom: '16px'
+              }}>
+                <p style={{ margin: 0, fontSize: '14px', color: '#991b1b', fontWeight: 600 }}>
+                  ❌ {errorMessage}
+                </p>
+              </div>
+            )}
+
+            {/* Already Voted Status */}
+            {hasVoted && walletAddress && (
+              <div style={{ 
+                background: '#eff6ff', 
+                border: '2px solid #93c5fd', 
+                padding: '16px', 
+                borderRadius: '12px',
+                marginBottom: '16px'
+              }}>
+                <p style={{ margin: 0, fontSize: '14px', color: '#1e40af', fontWeight: 600 }}>
+                  📊 You already voted {userVote ? 'FOR' : 'AGAINST'} this dispute
+                </p>
+              </div>
+            )}
+
             <div className="form-groupDC">
                 <div className="detail-row">
                     <span className="detail-label">RAISED BY</span>
