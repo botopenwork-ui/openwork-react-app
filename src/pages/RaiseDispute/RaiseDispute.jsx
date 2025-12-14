@@ -448,13 +448,8 @@ export default function RaiseDispute() {
         const accounts = await web3.eth.getAccounts();
         const fromAddress = accounts[0];
 
-        // Step 1: Upload dispute evidence to IPFS
-        setTransactionStatus("Uploading dispute evidence to IPFS...");
-        const disputeHash = await uploadDisputeToIPFS();
-        console.log("📦 Dispute IPFS hash:", disputeHash);
-
-        // Step 2: Approve USDC
-        setTransactionStatus("Approving USDC...");
+        // Step 1: Approve USDC first (shows MetaMask immediately)
+        setTransactionStatus("Approve USDC for dispute fee...");
         const usdcContract = new web3.eth.Contract(ERC20_ABI, USDC_ADDRESS);
         const compensationAmount = Math.floor(parseFloat(compensation) * 1000000); // Convert to 6 decimals
         
@@ -463,6 +458,11 @@ export default function RaiseDispute() {
           .send({ from: fromAddress });
         
         console.log("✅ USDC approved");
+
+        // Step 2: Upload dispute evidence to IPFS (during approval confirmation)
+        setTransactionStatus("Uploading dispute evidence to IPFS...");
+        const disputeHash = await uploadDisputeToIPFS();
+        console.log("📦 Dispute IPFS hash:", disputeHash);
 
         // Step 3: Raise dispute
         setTransactionStatus("Raising dispute on blockchain...");
