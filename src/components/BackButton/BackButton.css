@@ -34,4 +34,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    cursor: help;
+    position: relative;
+    transition: color 0.2s ease;
+}
+
+.formTitleDC:hover {
+    color: #2D2D2D;
 }

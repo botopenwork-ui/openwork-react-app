@@ -11,7 +11,7 @@ const BackButton = ({ to = "/", title = "Back", imgSrc = "/button.svg", style })
         className="backIconDC"
       />
     </Link>
-    <div className="formTitleDC">{title}</div>
+    <div className="formTitleDC" title={title}>{title}</div>
     <Link to={to} className="backButtonDC" style={{visibility: 'hidden'}}>
       <img
         src={imgSrc}
