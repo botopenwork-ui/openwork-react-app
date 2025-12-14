@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useWalletConnection } from "../../functions/useWalletConnection";
 import { 
@@ -19,6 +19,9 @@ export default function AddEditPortfolio() {
   
   const isEditMode = !!id;
   const existingData = location.state?.portfolioData;
+
+  const fileInputRef = useRef(null);
+  const addMoreInputRef = useRef(null);
 
   const [projectName, setProjectName] = useState(existingData?.title || "Project Name");
   const [description, setDescription] = useState(existingData?.description || "");
@@ -233,29 +236,41 @@ export default function AddEditPortfolio() {
                     <img src={`https://gateway.pinata.cloud/ipfs/${image}`} alt={`Thumbnail ${index + 1}`} />
                   </div>
                 ))}
-                <div className="gallery-add-more">
+                <div 
+                  className="gallery-add-more"
+                  onClick={() => {
+                    console.log('Add more clicked!');
+                    addMoreInputRef.current?.click();
+                  }}
+                >
                   <input
+                    ref={addMoreInputRef}
                     type="file"
                     accept="image/*"
                     multiple
                     onChange={handleImageUpload}
-                    id="add-more-images"
                     style={{ display: 'none' }}
                   />
-                  <label htmlFor="add-more-images" className="add-more-label">
+                  <div className="add-more-label">
                     <img src="/plus.svg" alt="Add" />
-                  </label>
+                  </div>
                 </div>
               </div>
             </>
           ) : (
-            <div className="addedit-upload-area" onClick={() => document.getElementById('image-upload').click()}>
+            <div 
+              className="addedit-upload-area" 
+              onClick={() => {
+                console.log('Upload area clicked!');
+                fileInputRef.current?.click();
+              }}
+            >
               <input
+                ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 multiple
                 onChange={handleImageUpload}
-                id="image-upload"
                 style={{ display: 'none' }}
               />
               <div className="upload-label">
