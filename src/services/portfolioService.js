@@ -192,14 +192,15 @@ export const addPortfolioToBlockchain = async (walletAddress, portfolioHash) => 
       lzOptions
     ).estimateGas({ from: walletAddress, value: web3.utils.toWei('0.01', 'ether') });
 
-    // Send transaction with estimated gas
+    // Send transaction with estimated gas (convert BigInt properly)
+    const gasWithBuffer = Math.floor(Number(gasEstimate) * 1.2);
     const tx = await lowjcContract.methods.addPortfolio(
       portfolioHash,
       lzOptions
     ).send({
       from: walletAddress,
       value: web3.utils.toWei('0.01', 'ether'), // LayerZero fee
-      gas: Math.floor(gasEstimate * 1.2) // 20% buffer
+      gas: gasWithBuffer
     });
 
     console.log('✅ Portfolio added to blockchain:', tx.transactionHash);
@@ -232,7 +233,8 @@ export const updatePortfolioOnBlockchain = async (walletAddress, index, newPortf
       lzOptions
     ).estimateGas({ from: walletAddress, value: web3.utils.toWei('0.01', 'ether') });
 
-    // Send transaction
+    // Send transaction (convert BigInt properly)
+    const gasWithBuffer = Math.floor(Number(gasEstimate) * 1.2);
     const tx = await lowjcContract.methods.updatePortfolioItem(
       index,
       newPortfolioHash,
@@ -240,7 +242,7 @@ export const updatePortfolioOnBlockchain = async (walletAddress, index, newPortf
     ).send({
       from: walletAddress,
       value: web3.utils.toWei('0.01', 'ether'), // LayerZero fee
-      gas: Math.floor(gasEstimate * 1.2) // 20% buffer
+      gas: gasWithBuffer
     });
 
     console.log('✅ Portfolio updated on blockchain:', tx.transactionHash);
@@ -272,14 +274,15 @@ export const deletePortfolioFromBlockchain = async (walletAddress, index) => {
       lzOptions
     ).estimateGas({ from: walletAddress, value: web3.utils.toWei('0.01', 'ether') });
 
-    // Send transaction
+    // Send transaction (convert BigInt properly)
+    const gasWithBuffer = Math.floor(Number(gasEstimate) * 1.2);
     const tx = await lowjcContract.methods.removePortfolioItem(
       index,
       lzOptions
     ).send({
       from: walletAddress,
       value: web3.utils.toWei('0.01', 'ether'), // LayerZero fee
-      gas: Math.floor(gasEstimate * 1.2) // 20% buffer
+      gas: gasWithBuffer
     });
 
     console.log('✅ Portfolio deleted from blockchain:', tx.transactionHash);
