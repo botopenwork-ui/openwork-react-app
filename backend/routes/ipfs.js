@@ -1,13 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const fetch = require('node-fetch');
+const multer = require('multer');
+const FormData = require('form-data');
+
+// Configure multer for memory storage
+const upload = multer({ storage: multer.memoryStorage() });
 
 /**
  * Upload file to IPFS via Pinata
  * POST /api/ipfs/upload-file
  * Body: FormData with 'file' field
  */
-router.post('/upload-file', async (req, res) => {
+router.post('/upload-file', upload.single('file'), async (req, res) => {
   try {
     const PINATA_API_KEY = process.env.PINATA_API_KEY;
     
@@ -18,13 +23,28 @@ router.post('/upload-file', async (req, res) => {
       });
     }
 
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No file provided'
+      });
+    }
+
+    // Create FormData for Pinata
+    const formData = new FormData();
+    formData.append('file', req.file.buffer, {
+      filename: req.file.originalname,
+      contentType: req.file.mimetype
+    });
+
     // Forward the file upload to Pinata
     const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${PINATA_API_KEY}`
+        'Authorization': `Bearer ${PINATA_API_KEY}`,
+        ...formData.getHeaders()
       },
-      body: req.body // Pass through the FormData
+      body: formData
     });
 
     const data = await response.json();
