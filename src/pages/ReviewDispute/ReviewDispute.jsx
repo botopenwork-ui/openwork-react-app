@@ -5,6 +5,7 @@ import GenesisABI from "../../ABIs/genesis_ABI.json";
 import NativeAthenaABI from "../../ABIs/native-athena_ABI.json";
 import "./ReviewDispute.css";
 import Button from "../../components/Button/Button";
+import BlueButton from "../../components/BlueButton/BlueButton";
 import VoteBar from "../../components/VoteBar/VoteBar";
 import Warning from "../../components/Warning/Warning";
 import { formatAddress } from "../../utils/oracleHelpers";
@@ -307,7 +308,9 @@ export default function ReviewDispute() {
       // Parse specific error messages
       const errorMsg = error.message || "";
       
-      if (errorMsg.includes("Voting period has expired")) {
+      if (errorMsg.includes("Failed to fetch") || errorMsg.includes("rate limited")) {
+        setErrorMessage("Network error: RPC endpoint unavailable or rate limited. Please try again in 30 seconds.");
+      } else if (errorMsg.includes("Voting period has expired")) {
         setErrorMessage("Voting period has ended. Please refresh the page.");
       } else if (errorMsg.includes("Already voted")) {
         setErrorMessage("You have already voted on this dispute");
@@ -633,10 +636,14 @@ export default function ReviewDispute() {
             {jobData.remainingSeconds <= 0 && !jobData.isFinalized && (
               <div className="form-groupDC">
                  <div className="settle-button-container">
-                   <Button 
+                   <BlueButton 
                      label={'Settle Dispute'} 
-                     icon='/release.svg' 
-                     buttonCss={'settle-button'}
+                     style={{
+                       width: '100%', 
+                       justifyContent:'center', 
+                       padding: '8px 16px', 
+                       borderRadius: '12px'
+                     }}
                      onClick={handleSettleDispute}
                    />
                  </div>
