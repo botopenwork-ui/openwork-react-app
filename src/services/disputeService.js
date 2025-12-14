@@ -59,11 +59,18 @@ export async function fetchAllDisputes(forceRefresh = false) {
     // Format disputes for UI
     const formattedDisputes = await Promise.all(
       activeDisputes.map(async (dispute) => {
-        // Determine role (job giver vs job taker)
+        // Determine role (job giver vs job taker) and get job name
         let role = "Unknown";
+        let jobName = `Dispute for Job ${extractJobId(dispute.jobId)}`;
+        
         try {
           const jobId = extractJobId(dispute.jobId);
           const job = await genesisContract.methods.getJob(jobId).call();
+          
+          // Extract job name from jobId (format: "EID-jobNumber")
+          if (job.jobId) {
+            jobName = job.jobId;
+          }
           
           if (dispute.disputeRaiserAddress.toLowerCase() === job.jobGiver.toLowerCase()) {
             role = "Job Giver";
@@ -71,7 +78,7 @@ export async function fetchAllDisputes(forceRefresh = false) {
             role = "Job Taker";
           }
         } catch (error) {
-          console.warn(`Could not determine role for dispute ${dispute.jobId}:`, error.message);
+          console.warn(`Could not determine role/name for dispute ${dispute.jobId}:`, error.message);
         }
 
         // Calculate vote completion percentage
@@ -85,7 +92,7 @@ export async function fetchAllDisputes(forceRefresh = false) {
 
         return {
           id: dispute.jobId,
-          title: `Dispute for Job ${extractJobId(dispute.jobId)}`,
+          title: jobName,
           proposedBy: dispute.disputeRaiserAddress,
           role: role,
           voteSubmissions: votePercent,
