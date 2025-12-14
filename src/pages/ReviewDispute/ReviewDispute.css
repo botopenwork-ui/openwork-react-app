@@ -40,14 +40,6 @@
     padding-top: 16px;
 }
 
-.settle-button {
-    width: 280px !important;
-    max-width: 280px;
-    color: #067647;
-    font-weight: 700;
-    font-family: Satoshi;
-}
-
 .settle-dispute-button {
     width: 300px !important;
     max-width: 100%;

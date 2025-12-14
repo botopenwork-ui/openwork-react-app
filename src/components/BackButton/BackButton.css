@@ -2,6 +2,9 @@
     display: flex;
     align-items: center;
     gap: 22px;
+    flex: 1;
+    min-width: 0;
+    max-width: 100%;
 }
   
   .backButtonDC {
@@ -16,7 +19,7 @@
     cursor: pointer;
   } */
   
-  .formTitleDC {
+.formTitleDC {
     font-family: 'Satoshi', sans-serif;
     font-style: normal;
     font-weight: 700;
@@ -26,5 +29,9 @@
     align-items: center;
     letter-spacing: 0.02em;
     color: #4D4D4D;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
-  }
+}
