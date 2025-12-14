@@ -1,29 +1,28 @@
-/* Add/Edit Portfolio Page - Figma Exact Specifications */
+/* Add/Edit Portfolio Page - Correct Layout Structure */
 
 .addedit-portfolio-wrapper {
   min-height: 100vh;
   width: 100%;
-  background: #FEFEFE;
-  position: relative;
+  background: #FAFAFA;
   font-family: 'Satoshi', sans-serif;
-  padding-top: 80px;
+  padding: 109px 0 80px 0;
 }
 
-/* Main Card Container - 876px centered */
-.addedit-portfolio-content {
-  position: relative;
-  width: 876px;
-  height: 1006px;
-  margin: 52px auto 80px;
-  background: #FFFFFF;
-  border-radius: 24px;
+.addedit-portfolio-container {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 282px;
 }
 
-/* Back Button - Absolute positioned */
+/* Header Section - Outside any card */
+.addedit-header-section {
+  margin-bottom: 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
 .addedit-back-button {
-  position: absolute;
-  left: 32px;
-  top: 28px;
   width: 40px;
   height: 40px;
   display: flex;
@@ -35,6 +34,7 @@
   border-radius: 12px;
   border: none;
   cursor: pointer;
+  flex-shrink: 0;
   transition: all 0.2s;
 }
 
@@ -42,11 +42,8 @@
   background: linear-gradient(180deg, #ECECEC 0%, #F4F4F4 100%);
 }
 
-/* Title Section - Absolute positioned */
 .addedit-title-section {
-  position: absolute;
-  left: 96px;
-  top: 28px;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -54,7 +51,6 @@
 
 .addedit-title {
   font-family: 'Satoshi';
-  font-style: normal;
   font-weight: 700;
   font-size: 20px;
   line-height: 27px;
@@ -91,27 +87,15 @@
   opacity: 1;
 }
 
-.addedit-user-info {
+.addedit-contract-row {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.addedit-avatar {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-}
-
-.addedit-contract-id {
   font-family: 'Satoshi';
-  font-style: normal;
-  font-weight: 500;
   font-size: 14px;
   line-height: 19px;
   letter-spacing: 0.02em;
   color: #767676;
-  margin: 0;
 }
 
 .addedit-copy-icon {
@@ -126,14 +110,12 @@
   opacity: 1;
 }
 
-/* Skills Badges - Absolute positioned top right */
-.addedit-skills-badges {
-  position: absolute;
-  right: 48px;
-  top: 28px;
+/* Skills Bar - Horizontal row outside card */
+.addedit-skills-bar {
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
 .addedit-skill-badge {
@@ -145,19 +127,12 @@
   border: 1px solid #EBEBEB;
   border-radius: 9999px;
   font-family: 'Satoshi';
-  font-style: normal;
   font-weight: 500;
   font-size: 12px;
   line-height: 18px;
   text-align: center;
   color: #4D4D4D;
   white-space: nowrap;
-}
-
-/* Action Buttons (Change/Delete) - Next to badges */
-.addedit-action-buttons {
-  display: flex;
-  gap: 8px;
 }
 
 .addedit-change-btn,
@@ -190,24 +165,27 @@
   background: #FFE0E0 !important;
 }
 
-/* Main Image/Upload Area - Absolute positioned */
-.addedit-main-image,
-.addedit-upload-area {
-  position: absolute;
-  left: 32px;
-  top: 143px;
-  width: 796px;
-  height: 491px;
-  box-sizing: border-box;
+/* Upload/Image Card - Independent white box */
+.addedit-image-card {
+  width: 100%;
+  background: #FFFFFF;
+  border: 2px solid #F7F7F7;
+  border-radius: 24px;
+  padding: 40px;
+  margin-bottom: 24px;
 }
 
 .addedit-main-image {
+  position: relative;
+  width: 100%;
+  height: 491px;
   border: 1px solid #EAEAEA;
   border-radius: 12px;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-bottom: 24px;
 }
 
 .addedit-main-image img {
@@ -217,6 +195,8 @@
 }
 
 .addedit-upload-area {
+  width: 100%;
+  height: 491px;
   border: 2px dashed #CFCFCF;
   border-radius: 12px;
   background: #FAFAFA;
@@ -226,6 +206,7 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
+  margin-bottom: 24px;
 }
 
 .addedit-upload-area:hover {
@@ -254,7 +235,6 @@
   color: #868686;
 }
 
-/* Image Overlay Actions */
 .image-overlay-actions {
   position: absolute;
   top: 16px;
@@ -270,15 +250,10 @@
   opacity: 1;
 }
 
-/* Gallery - Absolute positioned */
+/* Gallery */
 .addedit-image-gallery {
-  position: absolute;
-  left: 32px;
-  top: 658px;
   display: flex;
   gap: 20px;
-  align-items: flex-start;
-  max-width: 796px;
   overflow-x: auto;
   padding-bottom: 8px;
 }
@@ -301,9 +276,7 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   padding: 8px;
-  gap: 8px;
   width: 176px;
   height: 116px;
   border: 1px solid #CFCFCF;
@@ -366,21 +339,21 @@
   opacity: 0.4;
 }
 
-/* Description - Absolute positioned */
-.addedit-description {
-  position: absolute;
-  left: 32px;
-  top: 798px;
-  width: 796px;
+/* Description Card - Independent white box */
+.addedit-description-card {
+  width: 100%;
+  background: #FFFFFF;
+  border: 2px solid #F7F7F7;
+  border-radius: 24px;
+  padding: 40px;
+  margin-bottom: 24px;
 }
 
 .description-textarea {
   width: 100%;
-  padding: 16px;
-  border: 1px solid #EBEBEB;
-  border-radius: 12px;
+  padding: 0;
+  border: none;
   font-family: 'Satoshi';
-  font-style: normal;
   font-weight: 400;
   font-size: 14px;
   line-height: 28px;
@@ -389,154 +362,62 @@
   resize: vertical;
   min-height: 120px;
   outline: none;
-  box-sizing: border-box;
-  background: white;
-}
-
-.description-textarea:focus {
-  border-color: #1246FF;
-  box-shadow: 0 0 0 3px rgba(18, 70, 255, 0.1);
+  background: transparent;
 }
 
 .description-textarea::placeholder {
   color: #868686;
 }
 
-/* Submit Button - Positioned at bottom right */
+/* Submit Section */
 .addedit-submit-section {
-  position: absolute;
-  right: 32px;
-  bottom: 32px;
-}
-
-/* Dropdown Tooltip for Skills */
-.addedit-skills-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  width: 203px;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  box-shadow: 0px 12px 12px -4px rgba(14, 24, 41, 0.04), 
-              0px 4px 6px -2px rgba(14, 24, 41, 0.03);
-  z-index: 100;
-}
-
-.addedit-dropdown-arrow {
-  width: 12px;
-  height: 12px;
-  background: #FFFFFF;
-  border-width: 1px 1px 0px 0px;
-  border-style: solid;
-  border-color: #EAECF0;
-  border-radius: 0px 2px 0px 0px;
-  transform: rotate(-45deg);
-  position: relative;
-  top: 6px;
-  z-index: 101;
-}
-
-.addedit-dropdown-content {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  align-content: flex-start;
-  padding: 16px;
-  gap: 12px;
-  width: 203px;
-  background: #FFFFFF;
-  border: 1px solid #EAECF0;
-  border-radius: 12px;
-}
-
-.addedit-dropdown-badge {
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  padding: 6px 12px;
-  background: #FAFAFA;
-  border: 1px solid #EBEBEB;
-  border-radius: 9999px;
-  font-family: 'Satoshi';
-  font-weight: 500;
-  font-size: 12px;
-  line-height: 18px;
-  text-align: center;
-  color: #4D4D4D;
+  justify-content: flex-end;
 }
 
 /* Responsive */
-@media (max-width: 1200px) {
-  .addedit-portfolio-content {
-    width: 90%;
-    max-width: 876px;
-    height: auto;
-    min-height: 1006px;
+@media (max-width: 1440px) {
+  .addedit-portfolio-container {
+    padding: 0 140px;
   }
+}
 
-  .addedit-main-image,
-  .addedit-upload-area,
-  .addedit-image-gallery,
-  .addedit-description {
-    left: 5%;
-    width: 90%;
-  }
-
-  .addedit-skills-badges {
-    right: 5%;
+@media (max-width: 1024px) {
+  .addedit-portfolio-container {
+    padding: 0 60px;
   }
 }
 
 @media (max-width: 768px) {
-  .addedit-portfolio-content {
-    width: 95%;
-    margin: 32px auto 60px;
+  .addedit-portfolio-wrapper {
+    padding-top: 80px;
+  }
+
+  .addedit-portfolio-container {
+    padding: 0 20px;
+  }
+
+  .addedit-header-section {
+    gap: 12px;
   }
 
   .addedit-back-button {
-    left: 16px;
-    top: 20px;
+    width: 36px;
+    height: 36px;
   }
 
-  .addedit-title-section {
-    left: 72px;
-    top: 20px;
+  .addedit-skills-bar {
+    flex-wrap: wrap;
   }
 
-  .addedit-skills-badges {
-    position: static;
-    margin: 80px 16px 16px;
-    justify-content: flex-start;
+  .addedit-image-card,
+  .addedit-description-card {
+    padding: 24px;
   }
 
   .addedit-main-image,
   .addedit-upload-area {
-    position: static;
-    width: calc(100% - 32px);
-    height: 400px;
-    margin: 16px;
-  }
-
-  .addedit-image-gallery {
-    position: static;
-    margin: 16px;
-    width: calc(100% - 32px);
-  }
-
-  .addedit-description {
-    position: static;
-    margin: 16px;
-    width: calc(100% - 32px);
-  }
-
-  .addedit-submit-section {
-    position: static;
-    margin: 16px;
-    display: flex;
-    justify-content: flex-end;
+    height: 300px;
   }
 
   .gallery-thumbnail {

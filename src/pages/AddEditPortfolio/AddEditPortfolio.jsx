@@ -22,7 +22,7 @@ export default function AddEditPortfolio() {
 
   const [projectName, setProjectName] = useState(existingData?.title || "Project Name");
   const [description, setDescription] = useState(existingData?.description || "");
-  const [skills, setSkills] = useState(existingData?.skills || ["UX Design", "UI Design", "Web Development"]);
+  const [skills, setSkills] = useState(existingData?.skills || ["UX Design", "UI Design"]);
   const [images, setImages] = useState(existingData?.images || []);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -97,7 +97,7 @@ export default function AddEditPortfolio() {
       return;
     }
 
-    if (!projectName.trim()) {
+    if (!projectName.trim() || projectName === "Project Name") {
       alert("Please enter a project name");
       return;
     }
@@ -146,130 +146,128 @@ export default function AddEditPortfolio() {
 
   return (
     <div className="addedit-portfolio-wrapper">
-      {/* Main Card with Absolute Positioning */}
-      <div className="addedit-portfolio-content">
+      <div className="addedit-portfolio-container">
         
-        {/* Back Button */}
-        <button className="addedit-back-button" onClick={() => navigate(-1)}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M15.8332 10.0003H4.1665M4.1665 10.0003L9.99984 15.8337M4.1665 10.0003L9.99984 4.16699" 
-                  stroke="#767676" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
+        {/* Header Section - Outside any card */}
+        <div className="addedit-header-section">
+          <button className="addedit-back-button" onClick={() => navigate(-1)}>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M15.8332 10.0003H4.1665M4.1665 10.0003L9.99984 15.8337M4.1665 10.0003L9.99984 4.16699" 
+                    stroke="#767676" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
 
-        {/* Title Section */}
-        <div className="addedit-title-section">
-          {isEditingName ? (
-            <input
-              type="text"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              onBlur={() => setIsEditingName(false)}
-              className="addedit-title-input"
-              autoFocus
-            />
-          ) : (
-            <h1 className="addedit-title">
-              {projectName}
+          <div className="addedit-title-section">
+            {isEditingName ? (
+              <input
+                type="text"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                onBlur={() => setIsEditingName(false)}
+                className="addedit-title-input"
+                autoFocus
+              />
+            ) : (
+              <h1 className="addedit-title">
+                {projectName}
+                <img 
+                  src="/edit.svg" 
+                  alt="Edit" 
+                  className="addedit-edit-icon"
+                  onClick={() => setIsEditingName(true)}
+                />
+              </h1>
+            )}
+            <div className="addedit-contract-row">
+              <span>Contract ID: {formatWalletAddress(walletAddress)}</span>
               <img 
-                src="/edit.svg" 
-                alt="Edit" 
-                className="addedit-edit-icon"
-                onClick={() => setIsEditingName(true)}
-              />
-            </h1>
-          )}
-          <div className="addedit-user-info">
-            <span className="addedit-contract-id">
-              Contract ID: {formatWalletAddress(walletAddress)}
-            </span>
-            <img 
-              src="/copy.svg" 
-              className="addedit-copy-icon" 
-              onClick={handleCopyToClipboard}
-              alt="Copy"
-            />
-          </div>
-        </div>
-
-        {/* Skills Badges - Top Right */}
-        <div className="addedit-skills-badges">
-          {skills.slice(0, 2).map((skill, index) => (
-            <div key={index} className="addedit-skill-badge">{skill}</div>
-          ))}
-          <div className="addedit-action-buttons">
-            <Button label="Change" buttonCss="addedit-change-btn" />
-            <Button label="Delete" buttonCss="addedit-delete-btn" />
-          </div>
-        </div>
-
-        {/* Main Image or Upload Area */}
-        {images.length > 0 ? (
-          <div className="addedit-main-image">
-            <img
-              src={`https://gateway.pinata.cloud/ipfs/${images[selectedImage]}`}
-              alt="Work preview"
-            />
-            <div className="image-overlay-actions">
-              <Button 
-                label="Change"
-                buttonCss="addedit-change-btn"
-                onClick={() => handleChangeImage(selectedImage)}
-              />
-              <Button 
-                label="Delete"
-                buttonCss="addedit-delete-btn"
-                onClick={() => handleDeleteImage(selectedImage)}
+                src="/copy.svg" 
+                className="addedit-copy-icon" 
+                onClick={handleCopyToClipboard}
+                alt="Copy"
               />
             </div>
           </div>
-        ) : (
-          <div className="addedit-upload-area">
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImageUpload}
-              id="image-upload"
-              style={{ display: 'none' }}
-            />
-            <label htmlFor="image-upload" className="upload-label">
-              <img src="/upload-icon.svg" alt="Upload" />
-              <span>Click to upload images</span>
-            </label>
-          </div>
-        )}
+        </div>
 
-        {/* Gallery Thumbnails */}
-        {images.length > 0 && (
-          <div className="addedit-image-gallery">
-            {images.map((image, index) => (
-              <div
-                key={index}
-                className={`gallery-thumbnail ${selectedImage === index ? "active" : ""}`}
-                onClick={() => setSelectedImage(index)}
-              >
-                <img src={`https://gateway.pinata.cloud/ipfs/${image}`} alt={`Thumbnail ${index + 1}`} />
+        {/* Skills Bar - Horizontal row */}
+        <div className="addedit-skills-bar">
+          {skills.map((skill, index) => (
+            <div key={index} className="addedit-skill-badge">{skill}</div>
+          ))}
+          <Button label="Change" buttonCss="addedit-change-btn" />
+          <Button label="Delete" buttonCss="addedit-delete-btn" />
+        </div>
+
+        {/* Image Upload/Display Card - Separate white box */}
+        <div className="addedit-image-card">
+          {images.length > 0 ? (
+            <>
+              <div className="addedit-main-image">
+                <img
+                  src={`https://gateway.pinata.cloud/ipfs/${images[selectedImage]}`}
+                  alt="Work preview"
+                />
+                <div className="image-overlay-actions">
+                  <Button 
+                    label="Change"
+                    buttonCss="addedit-change-btn"
+                    onClick={() => handleChangeImage(selectedImage)}
+                  />
+                  <Button 
+                    label="Delete"
+                    buttonCss="addedit-delete-btn"
+                    onClick={() => handleDeleteImage(selectedImage)}
+                  />
+                </div>
               </div>
-            ))}
-            <div className="gallery-add-more">
+
+              {/* Gallery Thumbnails */}
+              <div className="addedit-image-gallery">
+                {images.map((image, index) => (
+                  <div
+                    key={index}
+                    className={`gallery-thumbnail ${selectedImage === index ? "active" : ""}`}
+                    onClick={() => setSelectedImage(index)}
+                  >
+                    <img src={`https://gateway.pinata.cloud/ipfs/${image}`} alt={`Thumbnail ${index + 1}`} />
+                  </div>
+                ))}
+                <div className="gallery-add-more">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    id="add-more-images"
+                    style={{ display: 'none' }}
+                  />
+                  <label htmlFor="add-more-images" className="add-more-label">
+                    <img src="/plus.svg" alt="Add" />
+                  </label>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="addedit-upload-area">
               <input
                 type="file"
                 accept="image/*"
                 multiple
                 onChange={handleImageUpload}
-                id="add-more-images"
+                id="image-upload"
                 style={{ display: 'none' }}
               />
-              <label htmlFor="add-more-images" className="add-more-label">
-                <img src="/plus.svg" alt="Add" />
+              <label htmlFor="image-upload" className="upload-label">
+                <img src="/upload-icon.svg" alt="Upload" />
+                <span>Click to upload images</span>
               </label>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Description */}
-        <div className="addedit-description">
+        {/* Description Card - Separate white box */}
+        <div className="addedit-description-card">
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
