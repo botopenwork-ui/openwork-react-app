@@ -13,41 +13,33 @@ import "./AddEditPortfolio.css";
 
 export default function AddEditPortfolio() {
   const navigate = useNavigate();
-  const { id } = useParams(); // For edit mode
+  const { id } = useParams();
   const location = useLocation();
   const { walletAddress } = useWalletConnection();
   
   const isEditMode = !!id;
   const existingData = location.state?.portfolioData;
 
-  // Form state
-  const [projectName, setProjectName] = useState(existingData?.title || "");
+  const [projectName, setProjectName] = useState(existingData?.title || "Project Name");
   const [description, setDescription] = useState(existingData?.description || "");
-  const [skills, setSkills] = useState(existingData?.skills || []);
-  const [images, setImages] = useState(existingData?.images || []); // IPFS hashes
-  const [imageFiles, setImageFiles] = useState([]); // Actual file objects
+  const [skills, setSkills] = useState(existingData?.skills || ["UX Design", "UI Design", "Web Development"]);
+  const [images, setImages] = useState(existingData?.images || []);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isEditingName, setIsEditingName] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
 
-  const handleCopyToClipboard = (address) => {
-    navigator.clipboard
-      .writeText(address)
-      .then(() => {
-        alert("Address copied to clipboard");
-      })
-      .catch((err) => {
-        console.error("Failed to copy: ", err);
-      });
-  };
-
   function formatWalletAddress(address) {
-    if (!address) return "";
+    if (!address) return "0xfd08...024a";
     const start = address.substring(0, 6);
     const end = address.substring(address.length - 4);
-    return `${start}....${end}`;
+    return `${start}...${end}`;
   }
+
+  const handleCopyToClipboard = () => {
+    const address = walletAddress || "0xfd08...024a";
+    navigator.clipboard.writeText(address);
+  };
 
   const handleImageUpload = async (event) => {
     const files = event.target.files;
@@ -55,11 +47,8 @@ export default function AddEditPortfolio() {
 
     setUploadingImages(true);
     try {
-      // Upload each file to IPFS
       const uploadPromises = Array.from(files).map(file => uploadFileToIPFS(file));
       const ipfsHashes = await Promise.all(uploadPromises);
-      
-      // Add IPFS hashes to images array
       setImages([...images, ...ipfsHashes]);
       console.log('✅ Images uploaded to IPFS:', ipfsHashes);
     } catch (error) {
@@ -79,15 +68,13 @@ export default function AddEditPortfolio() {
       if (file) {
         setUploadingImages(true);
         try {
-          // Upload to IPFS
           const ipfsHash = await uploadFileToIPFS(file);
           const updatedImages = [...images];
           updatedImages[index] = ipfsHash;
           setImages(updatedImages);
-          console.log('✅ Image replaced with IPFS hash:', ipfsHash);
         } catch (error) {
           console.error('Error uploading image:', error);
-          alert('Failed to upload image. Please try again.');
+          alert('Failed to upload image.');
         } finally {
           setUploadingImages(false);
         }
@@ -123,17 +110,15 @@ export default function AddEditPortfolio() {
     setLoading(true);
 
     try {
-      // Step 1: Create portfolio JSON object
       const portfolioData = {
         title: projectName,
         description: description,
         skills: skills,
-        images: images, // Already IPFS hashes
+        images: images,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
-      // Step 2: Upload portfolio JSON to IPFS
       console.log('📤 Uploading portfolio data to IPFS...');
       const portfolioHash = await uploadJSONToIPFS(
         portfolioData,
@@ -142,18 +127,14 @@ export default function AddEditPortfolio() {
 
       console.log('✅ Portfolio data uploaded to IPFS:', portfolioHash);
 
-      // Step 3: Add/Update portfolio on blockchain
       if (isEditMode) {
-        console.log('🔄 Updating portfolio on blockchain...');
         await updatePortfolioOnBlockchain(walletAddress, parseInt(id), portfolioHash);
         alert('Portfolio updated successfully!');
       } else {
-        console.log('➕ Adding portfolio to blockchain...');
         await addPortfolioToBlockchain(walletAddress, portfolioHash);
         alert('Portfolio created successfully!');
       }
 
-      // Navigate back to portfolio page
       navigate("/profile-portfolio");
     } catch (error) {
       console.error("Error saving portfolio:", error);
@@ -163,164 +144,150 @@ export default function AddEditPortfolio() {
     }
   };
 
-  const handleBack = () => {
-    navigate(-1);
-  };
-
   return (
-    <>
-      <div className="newTitle">
-        <div className="titleTop">
-          <button className="goBack" onClick={handleBack}>
-            <img className="goBackImage" src="/back.svg" alt="Back Button" />
-          </button>
-          <div className="titleText-editable">
-            {isEditingName ? (
-              <input
-                type="text"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                onBlur={() => setIsEditingName(false)}
-                autoFocus
-                className="project-name-input"
-                placeholder="Enter project name"
+    <div className="addedit-portfolio-wrapper">
+      {/* Main Card with Absolute Positioning */}
+      <div className="addedit-portfolio-content">
+        
+        {/* Back Button */}
+        <button className="addedit-back-button" onClick={() => navigate(-1)}>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M15.8332 10.0003H4.1665M4.1665 10.0003L9.99984 15.8337M4.1665 10.0003L9.99984 4.16699" 
+                  stroke="#767676" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+
+        {/* Title Section */}
+        <div className="addedit-title-section">
+          {isEditingName ? (
+            <input
+              type="text"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              onBlur={() => setIsEditingName(false)}
+              className="addedit-title-input"
+              autoFocus
+            />
+          ) : (
+            <h1 className="addedit-title">
+              {projectName}
+              <img 
+                src="/edit.svg" 
+                alt="Edit" 
+                className="addedit-edit-icon"
+                onClick={() => setIsEditingName(true)}
               />
-            ) : (
-              <>
-                <span>{projectName || "Project Name"}</span>
-                <img 
-                  src="/edit.svg" 
-                  alt="Edit" 
-                  className="edit-icon"
-                  onClick={() => setIsEditingName(true)}
-                />
-              </>
-            )}
+            </h1>
+          )}
+          <div className="addedit-user-info">
+            <span className="addedit-contract-id">
+              Contract ID: {formatWalletAddress(walletAddress)}
+            </span>
+            <img 
+              src="/copy.svg" 
+              className="addedit-copy-icon" 
+              onClick={handleCopyToClipboard}
+              alt="Copy"
+            />
           </div>
         </div>
-        <div className="titleBottom">
-          <p>Contract ID: {formatWalletAddress(walletAddress || "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d")}</p>
-          <img 
-            src="/copy.svg" 
-            className="copyImage" 
-            onClick={() => handleCopyToClipboard(walletAddress || "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d")}
-            alt="Copy"
-          />
-        </div>
-      </div>
 
-      <div className="addedit-portfolio-wrapper">
-        <div className="addedit-portfolio-content">
-          {/* Action Buttons Row */}
-          <div className="addedit-action-bar">
-            <div className="addedit-badges">
-              {skills.map((skill, index) => (
-                <span key={index} className="addedit-badge">
-                  {skill}
-                </span>
-              ))}
-            </div>
-            <div className="addedit-action-buttons">
+        {/* Skills Badges - Top Right */}
+        <div className="addedit-skills-badges">
+          {skills.slice(0, 2).map((skill, index) => (
+            <div key={index} className="addedit-skill-badge">{skill}</div>
+          ))}
+          <div className="addedit-action-buttons">
+            <Button label="Change" buttonCss="addedit-change-btn" />
+            <Button label="Delete" buttonCss="addedit-delete-btn" />
+          </div>
+        </div>
+
+        {/* Main Image or Upload Area */}
+        {images.length > 0 ? (
+          <div className="addedit-main-image">
+            <img
+              src={`https://gateway.pinata.cloud/ipfs/${images[selectedImage]}`}
+              alt="Work preview"
+            />
+            <div className="image-overlay-actions">
               <Button 
                 label="Change"
                 buttonCss="addedit-change-btn"
-                onClick={() => {/* TODO: Implement skill selection */}}
+                onClick={() => handleChangeImage(selectedImage)}
               />
               <Button 
                 label="Delete"
                 buttonCss="addedit-delete-btn"
-                onClick={() => {/* TODO: Implement skill deletion */}}
+                onClick={() => handleDeleteImage(selectedImage)}
               />
             </div>
           </div>
+        ) : (
+          <div className="addedit-upload-area">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageUpload}
+              id="image-upload"
+              style={{ display: 'none' }}
+            />
+            <label htmlFor="image-upload" className="upload-label">
+              <img src="/upload-icon.svg" alt="Upload" />
+              <span>Click to upload images</span>
+            </label>
+          </div>
+        )}
 
-          {/* Main Image Display */}
-          {images.length > 0 ? (
-            <div className="addedit-main-image">
-              <img
-                src={`https://gateway.pinata.cloud/ipfs/${images[selectedImage]}`}
-                alt="Work preview"
-                className="main-image"
-              />
-              <div className="image-overlay-actions">
-                <Button 
-                  label="Change"
-                  buttonCss="image-change-btn"
-                  onClick={() => handleChangeImage(selectedImage)}
-                />
-                <Button 
-                  label="Delete"
-                  buttonCss="image-delete-btn"
-                  onClick={() => handleDeleteImage(selectedImage)}
-                />
+        {/* Gallery Thumbnails */}
+        {images.length > 0 && (
+          <div className="addedit-image-gallery">
+            {images.map((image, index) => (
+              <div
+                key={index}
+                className={`gallery-thumbnail ${selectedImage === index ? "active" : ""}`}
+                onClick={() => setSelectedImage(index)}
+              >
+                <img src={`https://gateway.pinata.cloud/ipfs/${image}`} alt={`Thumbnail ${index + 1}`} />
               </div>
-            </div>
-          ) : (
-            <div className="addedit-upload-area">
+            ))}
+            <div className="gallery-add-more">
               <input
                 type="file"
                 accept="image/*"
                 multiple
                 onChange={handleImageUpload}
-                id="image-upload"
+                id="add-more-images"
                 style={{ display: 'none' }}
               />
-              <label htmlFor="image-upload" className="upload-label">
-                <img src="/upload-icon.svg" alt="Upload" />
-                <span>Click to upload images</span>
+              <label htmlFor="add-more-images" className="add-more-label">
+                <img src="/plus.svg" alt="Add" />
               </label>
             </div>
-          )}
-
-          {/* Image Gallery Thumbnails */}
-          {images.length > 0 && (
-            <div className="addedit-image-gallery">
-              {images.map((image, index) => (
-                <div
-                  key={index}
-                  className={`gallery-thumbnail ${selectedImage === index ? "active" : ""}`}
-                  onClick={() => setSelectedImage(index)}
-                >
-                  <img src={`https://gateway.pinata.cloud/ipfs/${image}`} alt={`Thumbnail ${index + 1}`} />
-                </div>
-              ))}
-              <div className="gallery-add-more">
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageUpload}
-                  id="add-more-images"
-                  style={{ display: 'none' }}
-                />
-                <label htmlFor="add-more-images" className="add-more-label">
-                  <img src="/plus.svg" alt="Add" />
-                </label>
-              </div>
-            </div>
-          )}
-
-          {/* Description */}
-          <div className="addedit-description">
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter project description..."
-              className="description-textarea"
-              rows={8}
-            />
           </div>
+        )}
 
-          {/* Save Button */}
-          <div className="addedit-submit-section">
-            <BlueButton
-              label={loading ? "Saving..." : "Send changes"}
-              onClick={handleSave}
-              disabled={loading}
-            />
-          </div>
+        {/* Description */}
+        <div className="addedit-description">
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Enter project description..."
+            className="description-textarea"
+          />
         </div>
+
+        {/* Submit Button */}
+        <div className="addedit-submit-section">
+          <BlueButton
+            label={loading ? "Saving..." : "Send changes"}
+            onClick={handleSave}
+            disabled={loading}
+          />
+        </div>
+
       </div>
-    </>
+    </div>
   );
 }
