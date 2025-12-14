@@ -328,6 +328,94 @@ export default function ReviewDispute() {
     }
   };
 
+  // Poll for CCTP attestation
+  const pollForAttestation = async (txHash) => {
+    const maxAttempts = 12; // 60 seconds total
+    const pollInterval = 5000; // 5 seconds
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        setLoadingT(`Waiting for CCTP attestation... (${attempt * 5}s)`);
+        
+        const response = await fetch(
+          `https://iris-api-sandbox.circle.com/v2/messages/3?transactionHash=${txHash}`
+        );
+        
+        if (!response.ok) {
+          console.log(`Attestation not ready (attempt ${attempt})`);
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          continue;
+        }
+
+        const data = await response.json();
+        
+        if (data.messages && data.messages[0] && data.messages[0].attestation) {
+          console.log("✅ Attestation ready!");
+          return data.messages[0];
+        }
+
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+      } catch (error) {
+        console.log(`Attestation check failed (attempt ${attempt}):`, error);
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+      }
+    }
+
+    throw new Error("Attestation timeout after 60 seconds");
+  };
+
+  // Complete CCTP transfer on OP Sepolia
+  const completeCCTPTransfer = async (message, attestation) => {
+    try {
+      setLoadingT("Please switch to OP Sepolia network...");
+      
+      const web3 = new Web3(window.ethereum);
+      
+      // Check if user is on OP Sepolia
+      const chainId = await web3.eth.getChainId();
+      const OP_SEPOLIA_CHAIN_ID = 11155420;
+      
+      if (Number(chainId) !== OP_SEPOLIA_CHAIN_ID) {
+        alert(`Please switch to OP Sepolia network to complete the transfer.\n\nCurrent Chain ID: ${chainId}\nRequired: ${OP_SEPOLIA_CHAIN_ID}`);
+        setLoadingT("");
+        return false;
+      }
+
+      setLoadingT("Completing CCTP transfer on OP Sepolia...");
+      
+      const accounts = await web3.eth.getAccounts();
+      const fromAddress = accounts[0];
+
+      // MessageTransmitter ABI for OP Sepolia
+      const messageTransmitterABI = [{
+        "inputs": [
+          {"internalType": "bytes", "name": "message", "type": "bytes"},
+          {"internalType": "bytes", "name": "attestation", "type": "bytes"}
+        ],
+        "name": "receiveMessage",
+        "outputs": [{"internalType": "bool", "name": "success", "type": "bool"}],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      }];
+
+      const messageTransmitter = new web3.eth.Contract(
+        messageTransmitterABI,
+        "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275" // OP Sepolia MessageTransmitter
+      );
+
+      const receipt = await messageTransmitter.methods
+        .receiveMessage(message, attestation)
+        .send({ from: fromAddress });
+
+      console.log("✅ CCTP transfer completed:", receipt.transactionHash);
+      return true;
+
+    } catch (error) {
+      console.error("Error completing CCTP transfer:", error);
+      throw error;
+    }
+  };
+
   // Handle settle dispute
   const handleSettleDispute = async () => {
     // Pre-checks
@@ -369,17 +457,28 @@ export default function ReviewDispute() {
       const nativeAthena = new web3.eth.Contract(NativeAthenaABI, NATIVE_ATHENA_ADDRESS);
 
       // Call settleDispute function
-      await nativeAthena.methods
+      const receipt = await nativeAthena.methods
         .settleDispute(disputeId)
         .send({
           from: fromAddress,
         });
 
-      setLoadingT("");
-      alert("✅ Dispute settled successfully! Funds have been distributed according to the vote outcome.");
+      console.log("✅ Dispute settled! TX:", receipt.transactionHash);
       
-      // Refresh dispute data
-      window.location.reload();
+      // Poll for CCTP attestation
+      const messageData = await pollForAttestation(receipt.transactionHash);
+      
+      // Complete CCTP transfer on OP Sepolia
+      const completed = await completeCCTPTransfer(
+        messageData.message,
+        messageData.attestation
+      );
+
+      if (completed) {
+        setLoadingT("");
+        alert("✅ Dispute settled and funds delivered to winner on OP Sepolia!");
+        window.location.reload();
+      }
 
     } catch (error) {
       console.error("Error settling dispute:", error);
@@ -388,7 +487,9 @@ export default function ReviewDispute() {
       // Parse specific error messages
       const errorMsg = error.message || "";
       
-      if (errorMsg.includes("Voting period not ended")) {
+      if (errorMsg.includes("Attestation timeout")) {
+        alert("✅ Dispute settled on Arbitrum! CCTP transfer will complete automatically within 2 minutes. You can close this page.");
+      } else if (errorMsg.includes("Voting period not ended")) {
         alert("❌ Voting period is still active. Please wait for it to end.");
       } else if (errorMsg.includes("does not exist")) {
         alert("❌ Dispute not found. It may have been deleted or doesn't exist.");
