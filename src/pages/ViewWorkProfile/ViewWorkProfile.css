@@ -2,7 +2,6 @@
   min-height: calc(100vh - 80px);
   width: 100%;
   background: transparent;
-  position: relative;
   font-family: 'Satoshi', sans-serif;
   padding: 0 0 80px 0;
 }
@@ -13,34 +12,20 @@
   padding: 0 20px;
 }
 
-/* Header Section */
+/* Header Section - Outside Card */
 .viewwork-header-section {
   margin-top: 109px;
   margin-bottom: 32px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 12px;
-}
-
-.viewwork-title-row {
-  width: 100%;
-  display: flex;
-  align-items: center;
-}
-
-.viewwork-user-row {
-  width: 100%;
-  display: flex;
-  justify-content: flex-start;
-  padding-left: 60px;
 }
 
 .viewwork-user-info {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: 'Satoshi', sans-serif;
+  padding-left: 60px;
   font-size: 14px;
 }
 
@@ -71,32 +56,25 @@
   color: #868686;
 }
 
-/* Content Container */
-.viewwork-content {
+/* Main Content Card */
+.viewwork-content-card {
   background: white;
   border: 2px solid #F7F7F7;
   border-radius: 24px;
   overflow: hidden;
+  position: relative;
+  padding: 28px 48px 0 48px;
 }
 
-/* Header Bar with Skills */
-.viewwork-header-bar {
-  background: white;
-  padding: 28px 48px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  min-height: 111px;
-  box-sizing: border-box;
-  border-bottom: 2px solid #F7F7F7;
-}
-
-.viewwork-skills-section {
+/* Floating Skills Section - Top Right */
+.viewwork-skills-floating {
+  position: absolute;
+  top: 28px;
+  right: 48px;
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  z-index: 10;
 }
 
 .viewwork-skill-badge {
@@ -116,6 +94,10 @@
 
 .viewwork-skill-badge:hover {
   background: #F9FAFB;
+}
+
+.viewwork-more-wrapper {
+  position: relative;
 }
 
 .viewwork-more-button {
@@ -142,10 +124,56 @@
   transform: scale(0.98);
 }
 
+/* Skills Dropdown */
+.viewwork-skills-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: white;
+  border: 1px solid #EBEBEB;
+  border-radius: 12px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.08);
+  min-width: 200px;
+  z-index: 20;
+  overflow: hidden;
+}
+
+.viewwork-dropdown-item {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  border-bottom: 1px solid #F7F7F7;
+}
+
+.viewwork-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.viewwork-dropdown-item:hover {
+  background: #F9FAFB;
+}
+
+.viewwork-dropdown-text {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: #050505;
+}
+
+.viewwork-dropdown-check {
+  font-size: 16px;
+  color: #1246FF;
+  font-weight: 700;
+}
+
 /* Main Image Display */
 .viewwork-main-image {
   background: white;
-  padding: 24px 40px;
+  padding: 24px 0;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -162,7 +190,7 @@
 /* Image Gallery */
 .viewwork-image-gallery {
   background: white;
-  padding: 0 40px 24px 40px;
+  padding: 0 0 24px 0;
   display: flex;
   gap: 20px;
   overflow-x: auto;
@@ -182,7 +210,6 @@
   cursor: pointer;
   border: 2px solid transparent;
   transition: all 0.3s ease;
-  position: relative;
 }
 
 .gallery-thumbnail img {
@@ -205,7 +232,7 @@
 .viewwork-description {
   background: white;
   border-top: 2px solid #F7F7F7;
-  padding: 32px 40px;
+  padding: 32px 0;
 }
 
 .viewwork-description p {
@@ -219,33 +246,27 @@
 }
 
 /* Responsive Design */
-@media (max-width: 1200px) {
-  .viewwork-container {
-    max-width: 720px;
-  }
-}
-
 @media (max-width: 768px) {
   .viewwork-header-section {
     margin-top: 80px;
   }
 
-  .viewwork-user-row {
+  .viewwork-user-info {
     padding-left: 40px;
   }
 
-  .viewwork-header-bar {
-    padding: 24px;
-    min-height: auto;
-    justify-content: flex-start;
+  .viewwork-content-card {
+    padding: 24px 20px 0 20px;
   }
 
-  .viewwork-skills-section {
+  .viewwork-skills-floating {
+    position: static;
+    margin-bottom: 20px;
     justify-content: flex-start;
   }
 
   .viewwork-main-image {
-    padding: 20px;
+    padding: 20px 0;
   }
 
   .main-image {
@@ -254,7 +275,6 @@
   }
 
   .viewwork-image-gallery {
-    padding: 0 20px 24px 20px;
     gap: 12px;
   }
 
@@ -264,6 +284,6 @@
   }
 
   .viewwork-description {
-    padding: 24px;
+    padding: 24px 0;
   }
 }
