@@ -119,39 +119,50 @@ const getProfileGenesisContract = (web3) => {
 export const fetchUserPortfolios = async (userAddress) => {
   try {
     if (!userAddress) {
-      console.warn('No user address provided');
+      console.warn('❌ No user address provided');
       return [];
     }
+
+    console.log('🔍 Fetching portfolios for:', userAddress);
+    console.log('📍 Using RPC:', import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL);
+    console.log('📍 ProfileGenesis:', import.meta.env.VITE_PROFILE_GENESIS_ADDRESS);
 
     const web3 = new Web3(import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL);
     const contract = getProfileGenesisContract(web3);
 
     // Check if profile exists
+    console.log('🔍 Checking if profile exists...');
     const hasProfile = await contract.methods.hasProfile(userAddress).call();
+    console.log('📊 Has profile:', hasProfile);
+    
     if (!hasProfile) {
-      console.log('User has no profile');
+      console.log('ℹ️  User has no profile on Arbitrum yet');
       return [];
     }
 
     // Get profile data
+    console.log('📥 Fetching profile data...');
     const profile = await contract.methods.getProfile(userAddress).call();
-    const portfolioHashes = profile.portfolioHashes || [];
-
-    console.log(`Found ${portfolioHashes.length} portfolio items`);
+    console.log('📊 Profile data:', profile);
+    
+    const portfolioHashes = profile.portfolioHashes || profile[3] || []; // Try both property name and index
+    console.log(`📋 Found ${portfolioHashes.length} portfolio hashes:`, portfolioHashes);
 
     // Fetch each portfolio's data from IPFS
     const portfolios = [];
     for (let i = 0; i < portfolioHashes.length; i++) {
       try {
         const hash = portfolioHashes[i];
+        console.log(`📥 Fetching portfolio ${i} from IPFS: ${hash}`);
         const portfolioData = await fetchFromIPFS(hash);
+        console.log(`✅ Portfolio ${i} loaded:`, portfolioData);
         portfolios.push({
           id: i,
           ipfsHash: hash,
           ...portfolioData
         });
       } catch (error) {
-        console.error(`Failed to fetch portfolio ${i}:`, error);
+        console.error(`❌ Failed to fetch portfolio ${i}:`, error);
         // Add placeholder for failed fetch
         portfolios.push({
           id: i,
@@ -164,9 +175,10 @@ export const fetchUserPortfolios = async (userAddress) => {
       }
     }
 
+    console.log(`✅ Successfully loaded ${portfolios.length} portfolios`);
     return portfolios;
   } catch (error) {
-    console.error('Error fetching user portfolios:', error);
+    console.error('❌ Error fetching user portfolios:', error);
     throw error;
   }
 };
