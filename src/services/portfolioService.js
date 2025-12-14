@@ -47,18 +47,16 @@ export const fetchFromIPFS = async (hash, timeout = 5000) => {
 };
 
 /**
- * Upload file to IPFS via Pinata
+ * Upload file to IPFS via backend (avoids CORS and exposes API keys)
  */
 export const uploadFileToIPFS = async (file) => {
   try {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+    const response = await fetch(`${BACKEND_URL}/api/ipfs/upload-file`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${import.meta.env.VITE_PINATA_API_KEY}`
-      },
       body: formData
     });
 
@@ -76,23 +74,20 @@ export const uploadFileToIPFS = async (file) => {
 };
 
 /**
- * Upload JSON to IPFS via Pinata
+ * Upload JSON to IPFS via backend (avoids CORS and exposes API keys)
  */
 export const uploadJSONToIPFS = async (jsonData, filename = 'data.json') => {
   try {
-    const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+    const response = await fetch(`${BACKEND_URL}/api/ipfs/upload-json`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_PINATA_API_KEY}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         pinataContent: jsonData,
         pinataMetadata: {
           name: filename
-        },
-        pinataOptions: {
-          cidVersion: 1
         }
       })
     });
