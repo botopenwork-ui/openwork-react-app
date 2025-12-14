@@ -4,6 +4,7 @@ const { Web3 } = require('web3');
 const config = require('./config');
 const { processStartJob } = require('./flows/start-job');
 const { processReleasePayment } = require('./flows/release-payment');
+const { processSettleDispute } = require('./flows/settle-dispute');
 const { compileContract } = require('./utils/compiler');
 const deploymentRoutes = require('./routes/deployments');
 const proposalRoutes = require('./routes/proposals');
@@ -276,6 +277,109 @@ app.get('/api/release-payment-status/:jobId', (req, res) => {
   });
 });
 
+// Settle dispute endpoint - accepts tx hash from frontend
+app.post('/api/settle-dispute', async (req, res) => {
+  const { disputeId, txHash } = req.body;
+  
+  if (!disputeId || !txHash) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Missing disputeId or txHash' 
+    });
+  }
+  
+  const key = `dispute-${disputeId}`;
+  
+  if (processingJobs.has(key)) {
+    return res.json({ 
+      success: true, 
+      disputeId, 
+      status: 'already_processing',
+      message: 'Dispute is already being processed'
+    });
+  }
+  
+  if (completedJobs.has(key)) {
+    return res.json({ 
+      success: true, 
+      disputeId, 
+      status: 'already_completed',
+      message: 'Dispute has already been completed'
+    });
+  }
+  
+  // Mark as processing
+  processingJobs.add(key);
+  jobStatuses.set(disputeId, {
+    status: 'received',
+    message: 'Backend received request, starting CCTP process...',
+    txHash
+  });
+  
+  console.log(`\n📥 API: Received settle-dispute request for Dispute ${disputeId}`);
+  console.log(`   Arbitrum TX: ${txHash}`);
+  
+  // Process in background
+  processSettleDisputeFlow(disputeId, txHash)
+    .then(() => {
+      jobStatuses.set(disputeId, {
+        status: 'completed',
+        message: 'CCTP transfer completed - winner received funds',
+        txHash
+      });
+    })
+    .catch((error) => {
+      jobStatuses.set(disputeId, {
+        status: 'failed',
+        message: 'CCTP transfer failed',
+        error: error.message,
+        txHash
+      });
+    })
+    .finally(() => {
+      processingJobs.delete(key);
+      completedJobs.set(key, Date.now());
+      
+      // Clean up old completed jobs (keep last 100)
+      if (completedJobs.size > 100) {
+        const firstKey = completedJobs.keys().next().value;
+        completedJobs.delete(firstKey);
+      }
+      
+      // Clean up old statuses after 1 hour
+      setTimeout(() => {
+        jobStatuses.delete(disputeId);
+      }, 60 * 60 * 1000);
+    });
+  
+  // Return immediately
+  res.json({ 
+    success: true, 
+    disputeId, 
+    status: 'processing',
+    message: 'Dispute settlement processing started'
+  });
+});
+
+// Get settle dispute status endpoint
+app.get('/api/settle-dispute-status/:disputeId', (req, res) => {
+  const { disputeId } = req.params;
+  const status = jobStatuses.get(disputeId);
+  
+  if (!status) {
+    return res.status(404).json({
+      success: false,
+      error: 'Dispute status not found'
+    });
+  }
+  
+  res.json({
+    success: true,
+    disputeId,
+    ...status
+  });
+});
+
 // Start event listener endpoint (for release payment flow)
 app.post('/api/start-listener', (req, res) => {
   if (eventListenerActive) {
@@ -497,6 +601,71 @@ async function processReleasePaymentFlow(jobId) {
     await processReleasePayment(jobId);
   } catch (error) {
     console.error(`Failed to process Release Payment for ${jobId}:`, error.message);
+  }
+}
+
+/**
+ * Process Settle Dispute directly from Arbitrum tx hash
+ */
+async function processSettleDisputeFlow(disputeId, arbitrumTxHash) {
+  try {
+    console.log('\n⚖️ ========== SETTLE DISPUTE DIRECT FLOW ==========');
+    console.log(`Dispute ID: ${disputeId}`);
+    console.log(`Arbitrum TX: ${arbitrumTxHash}`);
+    
+    // Update status
+    jobStatuses.set(disputeId, {
+      status: 'polling_attestation',
+      message: 'Polling Circle API for CCTP attestation...',
+      txHash: arbitrumTxHash
+    });
+    
+    // Import utilities
+    const { pollCCTPAttestation } = require('./utils/cctp-poller');
+    const { executeReceiveMessageOnOpSepolia } = require('./utils/tx-executor');
+    
+    // STEP 1: Poll Circle API for CCTP attestation
+    console.log('\n📍 STEP 1/2: Polling Circle API for CCTP attestation...');
+    const attestation = await pollCCTPAttestation(
+      arbitrumTxHash, 
+      config.DOMAINS.ARBITRUM_SEPOLIA // Domain 3
+    );
+    console.log('✅ Attestation received');
+    
+    // Update status
+    jobStatuses.set(disputeId, {
+      status: 'executing_receive',
+      message: 'Executing receiveMessage() on OP Sepolia MessageTransmitter...',
+      txHash: arbitrumTxHash
+    });
+    
+    // STEP 2: Execute receiveMessage() on OP Sepolia
+    console.log('\n📍 STEP 2/2: Executing receiveMessage() on OP Sepolia...');
+    const result = await executeReceiveMessageOnOpSepolia(attestation);
+    
+    if (result.alreadyCompleted) {
+      console.log('✅ USDC already transferred to winner (completed by CCTP)');
+    } else {
+      console.log(`✅ USDC transferred to winner: ${result.transactionHash}`);
+    }
+    
+    console.log('\n🎉 ========== SETTLE DISPUTE FLOW COMPLETED ==========\n');
+    
+    return {
+      success: true,
+      disputeId,
+      arbitrumTxHash,
+      completionTxHash: result.transactionHash,
+      alreadyCompleted: result.alreadyCompleted
+    };
+    
+  } catch (error) {
+    console.error('\n❌ ========== SETTLE DISPUTE FLOW FAILED ==========');
+    console.error(`Dispute ID: ${disputeId}`);
+    console.error(`Error: ${error.message}`);
+    console.error('====================================================\n');
+    
+    throw error;
   }
 }
 
