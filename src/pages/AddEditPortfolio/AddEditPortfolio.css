@@ -165,14 +165,15 @@
   background: #FFE0E0 !important;
 }
 
-/* Upload/Image Card - Independent white box */
+/* Upload/Image Card - Independent white box with VISIBLE border */
 .addedit-image-card {
   width: 100%;
   background: #FFFFFF;
-  border: 2px solid #F7F7F7;
+  border: 2px solid #E0E0E0;
   border-radius: 24px;
   padding: 40px;
   margin-bottom: 24px;
+  box-sizing: border-box;
 }
 
 .addedit-main-image {
@@ -339,14 +340,15 @@
   opacity: 0.4;
 }
 
-/* Description Card - Independent white box */
+/* Description Card - Independent white box with VISIBLE border */
 .addedit-description-card {
   width: 100%;
   background: #FFFFFF;
-  border: 2px solid #F7F7F7;
+  border: 2px solid #E0E0E0;
   border-radius: 24px;
   padding: 40px;
   margin-bottom: 24px;
+  box-sizing: border-box;
 }
 
 .description-textarea {
