@@ -67,9 +67,19 @@ export async function fetchAllDisputes(forceRefresh = false) {
           const jobId = extractJobId(dispute.jobId);
           const job = await genesisContract.methods.getJob(jobId).call();
           
-          // Extract job name from jobId (format: "EID-jobNumber")
-          if (job.jobId) {
-            jobName = job.jobId;
+          // Fetch job title from IPFS if available
+          if (job.jobDetailHash) {
+            try {
+              const response = await fetch(`https://gateway.pinata.cloud/ipfs/${job.jobDetailHash}`);
+              if (response.ok) {
+                const jobDetails = await response.json();
+                if (jobDetails?.title) {
+                  jobName = jobDetails.title;
+                }
+              }
+            } catch (ipfsError) {
+              console.warn(`Failed to fetch job title from IPFS for ${jobId}:`, ipfsError.message);
+            }
           }
           
           if (dispute.disputeRaiserAddress.toLowerCase() === job.jobGiver.toLowerCase()) {
