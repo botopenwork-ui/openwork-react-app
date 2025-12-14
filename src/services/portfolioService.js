@@ -182,34 +182,29 @@ export const fetchUserPortfolios = async (userAddress) => {
 export const addPortfolioToBlockchain = async (walletAddress, portfolioHash) => {
   try {
     const web3 = new Web3(window.ethereum);
-    const contract = getProfileGenesisContract(web3);
-
-    // Encode the function call for cross-chain via LOWJC
-    const functionName = 'addPortfolio';
-    const payload = web3.eth.abi.encodeParameters(
-      ['string', 'address', 'string'],
-      [functionName, walletAddress, portfolioHash]
-    );
 
     // Get LOWJC contract
-    const lowjcAddress = import.meta.env.VITE_LOWJC_ADDRESS;
+    const lowjcAddress = import.meta.env.VITE_LOWJC_CONTRACT_ADDRESS;
     const LOWJCABI = (await import('../ABIs/lowjc_ABI.json')).default;
     const lowjcContract = new web3.eth.Contract(LOWJCABI, lowjcAddress);
 
-    // Calculate fees
-    const nativeFee = await lowjcContract.methods.estimateFees(
-      40161, // Arbitrum Sepolia chain ID
-      payload,
-      false
-    ).call();
+    // Get LayerZero options from env
+    const lzOptions = import.meta.env.VITE_LAYERZERO_OPTIONS_VALUE || '0x000301001101000000000000000000000000000F4240';
 
-    // Send transaction
+    // Estimate gas for the transaction
+    const gasEstimate = await lowjcContract.methods.addPortfolio(
+      portfolioHash,
+      lzOptions
+    ).estimateGas({ from: walletAddress, value: web3.utils.toWei('0.01', 'ether') });
+
+    // Send transaction with estimated gas
     const tx = await lowjcContract.methods.addPortfolio(
       portfolioHash,
-      { nativeFee: nativeFee.nativeFee, lzTokenFee: 0 }
+      lzOptions
     ).send({
       from: walletAddress,
-      value: nativeFee.nativeFee
+      value: web3.utils.toWei('0.01', 'ether'), // LayerZero fee
+      gas: Math.floor(gasEstimate * 1.2) // 20% buffer
     });
 
     console.log('✅ Portfolio added to blockchain:', tx.transactionHash);
@@ -226,35 +221,31 @@ export const addPortfolioToBlockchain = async (walletAddress, portfolioHash) => 
 export const updatePortfolioOnBlockchain = async (walletAddress, index, newPortfolioHash) => {
   try {
     const web3 = new Web3(window.ethereum);
-    const contract = getProfileGenesisContract(web3);
-
-    // Encode the function call for cross-chain
-    const functionName = 'updatePortfolioItem';
-    const payload = web3.eth.abi.encodeParameters(
-      ['string', 'address', 'uint256', 'string'],
-      [functionName, walletAddress, index, newPortfolioHash]
-    );
 
     // Get LOWJC contract
-    const lowjcAddress = import.meta.env.VITE_LOWJC_ADDRESS;
+    const lowjcAddress = import.meta.env.VITE_LOWJC_CONTRACT_ADDRESS;
     const LOWJCABI = (await import('../ABIs/lowjc_ABI.json')).default;
     const lowjcContract = new web3.eth.Contract(LOWJCABI, lowjcAddress);
 
-    // Calculate fees
-    const nativeFee = await lowjcContract.methods.estimateFees(
-      40161,
-      payload,
-      false
-    ).call();
+    // Get LayerZero options from env
+    const lzOptions = import.meta.env.VITE_LAYERZERO_OPTIONS_VALUE || '0x000301001101000000000000000000000000000F4240';
+
+    // Estimate gas for the transaction
+    const gasEstimate = await lowjcContract.methods.updatePortfolioItem(
+      index,
+      newPortfolioHash,
+      lzOptions
+    ).estimateGas({ from: walletAddress, value: web3.utils.toWei('0.01', 'ether') });
 
     // Send transaction
     const tx = await lowjcContract.methods.updatePortfolioItem(
       index,
       newPortfolioHash,
-      { nativeFee: nativeFee.nativeFee, lzTokenFee: 0 }
+      lzOptions
     ).send({
       from: walletAddress,
-      value: nativeFee.nativeFee
+      value: web3.utils.toWei('0.01', 'ether'), // LayerZero fee
+      gas: Math.floor(gasEstimate * 1.2) // 20% buffer
     });
 
     console.log('✅ Portfolio updated on blockchain:', tx.transactionHash);
@@ -271,34 +262,29 @@ export const updatePortfolioOnBlockchain = async (walletAddress, index, newPortf
 export const deletePortfolioFromBlockchain = async (walletAddress, index) => {
   try {
     const web3 = new Web3(window.ethereum);
-    const contract = getProfileGenesisContract(web3);
-
-    // Encode the function call for cross-chain
-    const functionName = 'removePortfolioItem';
-    const payload = web3.eth.abi.encodeParameters(
-      ['string', 'address', 'uint256'],
-      [functionName, walletAddress, index]
-    );
 
     // Get LOWJC contract
-    const lowjcAddress = import.meta.env.VITE_LOWJC_ADDRESS;
+    const lowjcAddress = import.meta.env.VITE_LOWJC_CONTRACT_ADDRESS;
     const LOWJCABI = (await import('../ABIs/lowjc_ABI.json')).default;
     const lowjcContract = new web3.eth.Contract(LOWJCABI, lowjcAddress);
 
-    // Calculate fees
-    const nativeFee = await lowjcContract.methods.estimateFees(
-      40161,
-      payload,
-      false
-    ).call();
+    // Get LayerZero options from env
+    const lzOptions = import.meta.env.VITE_LAYERZERO_OPTIONS_VALUE || '0x000301001101000000000000000000000000000F4240';
+
+    // Estimate gas for the transaction
+    const gasEstimate = await lowjcContract.methods.removePortfolioItem(
+      index,
+      lzOptions
+    ).estimateGas({ from: walletAddress, value: web3.utils.toWei('0.01', 'ether') });
 
     // Send transaction
     const tx = await lowjcContract.methods.removePortfolioItem(
       index,
-      { nativeFee: nativeFee.nativeFee, lzTokenFee: 0 }
+      lzOptions
     ).send({
       from: walletAddress,
-      value: nativeFee.nativeFee
+      value: web3.utils.toWei('0.01', 'ether'), // LayerZero fee
+      gas: Math.floor(gasEstimate * 1.2) // 20% buffer
     });
 
     console.log('✅ Portfolio deleted from blockchain:', tx.transactionHash);
