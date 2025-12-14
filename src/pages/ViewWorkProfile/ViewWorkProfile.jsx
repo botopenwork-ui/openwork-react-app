@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useWalletConnection } from "../../functions/useWalletConnection";
 import { fetchUserPortfolios } from "../../services/portfolioService";
+import BackButton from "../../components/BackButton/BackButton";
 import "./ViewWorkProfile.css";
 
 export default function ViewWorkProfile() {
@@ -11,24 +12,7 @@ export default function ViewWorkProfile() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [workData, setWorkData] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const handleCopyToClipboard = (address) => {
-    navigator.clipboard
-      .writeText(address)
-      .then(() => {
-        alert("Address copied to clipboard");
-      })
-      .catch((err) => {
-        console.error("Failed to copy: ", err);
-      });
-  };
-
-  function formatWalletAddress(address) {
-    if (!address) return "";
-    const start = address.substring(0, 6);
-    const end = address.substring(address.length - 4);
-    return `${start}....${end}`;
-  }
+  const [showAllSkills, setShowAllSkills] = useState(false);
 
   // Fetch portfolio item from blockchain
   useEffect(() => {
@@ -46,7 +30,7 @@ export default function ViewWorkProfile() {
           setWorkData({
             title: portfolio.title,
             userName: "molliehall2504", // TODO: Get from user profile
-            packageType: portfolio.packageType || "",
+            packageType: portfolio.packageType || "Webflow Package",
             skills: portfolio.skills || [],
             images: portfolio.images || [],
             description: portfolio.description || ""
@@ -61,10 +45,6 @@ export default function ViewWorkProfile() {
 
     loadPortfolioItem();
   }, [walletAddress, id]);
-
-  const handleBack = () => {
-    navigate(-1);
-  };
 
   if (loading) {
     return (
@@ -82,37 +62,45 @@ export default function ViewWorkProfile() {
     );
   }
 
+  const visibleSkills = showAllSkills ? workData.skills : workData.skills.slice(0, 1);
+  const remainingSkillsCount = workData.skills.length - 1;
+
   return (
-    <>
-      <div className="newTitle">
-        <div className="titleTop">
-          <button className="goBack" onClick={handleBack}>
-            <img className="goBackImage" src="/back.svg" alt="Back Button" />
-          </button>
-          <div className="titleText">{workData.title}</div>
-        </div>
-        <div className="titleBottom">
-          <div className="user-info">
-            <img src="/avatar.png" alt="User" className="user-avatar" />
-            <div className="user-details">
-              <span className="user-name">{workData.userName}</span>
-              <span className="user-separator">•</span>
-              <span className="user-package">{workData.packageType}</span>
+    <div className="viewwork-page-wrapper">
+      <div className="viewwork-container">
+        {/* Header Section */}
+        <div className="viewwork-header-section">
+          <div className="viewwork-title-row">
+            <BackButton to="/profile-portfolio" title={workData.title} />
+          </div>
+          <div className="viewwork-user-row">
+            <div className="viewwork-user-info">
+              <img src="/avatar.svg" alt="User" className="viewwork-user-avatar" />
+              <span className="viewwork-user-name">{workData.userName}</span>
+              <span className="viewwork-user-separator">•</span>
+              <span className="viewwork-user-package">{workData.packageType}</span>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="viewwork-page-wrapper">
+        {/* Content Container */}
         <div className="viewwork-content">
-          {/* Header with badges */}
+          {/* Header Bar with Skills */}
           <div className="viewwork-header-bar">
-            <div className="viewwork-badges">
-              {workData.skills.map((skill, index) => (
-                <span key={index} className="viewwork-badge">
+            <div className="viewwork-skills-section">
+              {visibleSkills.map((skill, index) => (
+                <button key={index} className="viewwork-skill-badge">
                   {skill}
-                </span>
+                </button>
               ))}
+              {remainingSkillsCount > 0 && !showAllSkills && (
+                <button 
+                  className="viewwork-more-button"
+                  onClick={() => setShowAllSkills(true)}
+                >
+                  +{remainingSkillsCount} More
+                </button>
+              )}
             </div>
           </div>
 
@@ -144,6 +132,6 @@ export default function ViewWorkProfile() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
