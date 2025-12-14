@@ -249,7 +249,7 @@ export default function AddEditPortfolio() {
               </div>
             </>
           ) : (
-            <div className="addedit-upload-area">
+            <div className="addedit-upload-area" onClick={() => document.getElementById('image-upload').click()}>
               <input
                 type="file"
                 accept="image/*"
@@ -258,10 +258,10 @@ export default function AddEditPortfolio() {
                 id="image-upload"
                 style={{ display: 'none' }}
               />
-              <label htmlFor="image-upload" className="upload-label">
+              <div className="upload-label">
                 <img src="/upload-icon.svg" alt="Upload" />
                 <span>Click to upload images</span>
-              </label>
+              </div>
             </div>
           )}
         </div>
