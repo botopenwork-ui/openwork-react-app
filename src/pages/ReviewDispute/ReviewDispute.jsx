@@ -286,45 +286,56 @@ export default function ReviewDispute() {
       // Create Native Athena contract instance
       const nativeAthena = new web3.eth.Contract(NativeAthenaABI, NATIVE_ATHENA_ADDRESS);
 
-      // Call vote function: vote(VotingType, disputeId, voteFor, claimAddress)
-      // VotingType.Dispute = 0
-      const receipt = await nativeAthena.methods
-        .vote(0, disputeId, voteFor, fromAddress)
-        .send({
-          from: fromAddress,
-        });
-
-      setLoadingT("");
-      setTxHash(receipt.transactionHash);
-      setSuccessMessage(`Vote submitted successfully! You voted ${voteFor ? 'FOR' : 'AGAINST'} the dispute.`);
-      
-      // Refresh dispute data after 2 seconds
-      setTimeout(() => window.location.reload(), 2000);
+      // Use Promise-based approach with proper event handling
+      return new Promise((resolve, reject) => {
+        nativeAthena.methods
+          .vote(0, disputeId, voteFor, fromAddress)
+          .send({ from: fromAddress })
+          .on('transactionHash', (hash) => {
+            console.log("Vote transaction sent! Hash:", hash);
+            setTxHash(hash);
+          })
+          .on('receipt', (receipt) => {
+            console.log("Vote receipt received:", receipt);
+            setLoadingT("");
+            
+            if (receipt.status == 1 || receipt.status == "1") {
+              setSuccessMessage(`Vote submitted successfully! You voted ${voteFor ? 'FOR' : 'AGAINST'} the dispute.`);
+              setTimeout(() => window.location.reload(), 2000);
+              resolve(receipt);
+            } else {
+              setErrorMessage("Transaction reverted by the blockchain");
+              reject(new Error("Transaction reverted"));
+            }
+          })
+          .on('error', (error) => {
+            console.error("Vote transaction error:", error);
+            setLoadingT("");
+            
+            const errorMsg = error.message || "";
+            
+            if (errorMsg.includes("user rejected")) {
+              setErrorMessage("Transaction was rejected in MetaMask");
+            } else if (errorMsg.includes("Already voted")) {
+              setErrorMessage("You have already voted on this dispute");
+            } else if (errorMsg.includes("Insufficient stake")) {
+              setErrorMessage("You need at least 100 OW tokens (staked or earned) to vote");
+            } else if (errorMsg.includes("Voting period has expired")) {
+              setErrorMessage("Voting period has ended");
+            } else if (errorMsg.includes("Failed to fetch") || errorMsg.includes("rate limited")) {
+              setErrorMessage("Network error. Your vote may have been submitted - please refresh to check.");
+            } else {
+              setErrorMessage("Vote failed: " + errorMsg.substring(0, 100));
+            }
+            
+            reject(error);
+          });
+      });
 
     } catch (error) {
-      console.error("Error voting on dispute:", error);
+      console.error("Error in handleVote:", error);
       setLoadingT("");
-      
-      // Parse specific error messages
-      const errorMsg = error.message || "";
-      
-      if (errorMsg.includes("Failed to fetch") || errorMsg.includes("rate limited")) {
-        setErrorMessage("Network error: RPC endpoint unavailable or rate limited. Please try again in 30 seconds.");
-      } else if (errorMsg.includes("Voting period has expired")) {
-        setErrorMessage("Voting period has ended. Please refresh the page.");
-      } else if (errorMsg.includes("Already voted")) {
-        setErrorMessage("You have already voted on this dispute");
-      } else if (errorMsg.includes("Insufficient stake")) {
-        setErrorMessage("You need at least 100 OW tokens (staked or earned) to vote");
-      } else if (errorMsg.includes("Voting is not active")) {
-        setErrorMessage("Voting is not active for this dispute");
-      } else if (errorMsg.includes("Dispute does not exist")) {
-        setErrorMessage("Dispute not found. It may have been deleted or doesn't exist.");
-      } else if (errorMsg.includes("user rejected")) {
-        setErrorMessage("Transaction was rejected in MetaMask");
-      } else {
-        setErrorMessage("Vote failed: " + errorMsg.substring(0, 150));
-      }
+      setErrorMessage("Failed to submit vote: " + (error.message || "Unknown error"));
     }
   };
 
@@ -370,14 +381,31 @@ export default function ReviewDispute() {
       // Create Native Athena contract instance
       const nativeAthena = new web3.eth.Contract(NativeAthenaABI, NATIVE_ATHENA_ADDRESS);
 
-      // Call settleDispute function
-      const receipt = await nativeAthena.methods
-        .settleDispute(disputeId)
-        .send({
-          from: fromAddress,
-        });
+      // Use Promise-based approach with proper event handling
+      const receipt = await new Promise((resolve, reject) => {
+        nativeAthena.methods
+          .settleDispute(disputeId)
+          .send({ from: fromAddress })
+          .on('transactionHash', (hash) => {
+            console.log("Settle transaction sent! Hash:", hash);
+            setLoadingT("Transaction submitted - waiting for confirmation...");
+          })
+          .on('receipt', (receipt) => {
+            console.log("Settle receipt received:", receipt);
+            
+            if (receipt.status == 1 || receipt.status == "1") {
+              console.log("✅ Dispute settled on Arbitrum! TX:", receipt.transactionHash);
+              resolve(receipt);
+            } else {
+              reject(new Error("Transaction reverted by the blockchain"));
+            }
+          })
+          .on('error', (error) => {
+            console.error("Settle transaction error:", error);
+            reject(error);
+          });
+      });
 
-      console.log("✅ Dispute settled on Arbitrum! TX:", receipt.transactionHash);
       setLoadingT("✅ Dispute settled! Backend processing CCTP transfer...");
       
       // Send to backend for CCTP completion (like startJob does)
