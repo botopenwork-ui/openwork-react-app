@@ -115,6 +115,7 @@
 .proposal-type {
     text-align: left;
     padding-left: 0 !important;
+    margin-left: -1px;
 }
 
 /* Time Left Column Data Styling */
@@ -122,6 +123,7 @@
     text-align: left;
     padding-left: 0 !important;
     padding-right: 13px !important;
+    margin-left: 2px;
 }
 
 /* Time Left Column Heading Styling */
