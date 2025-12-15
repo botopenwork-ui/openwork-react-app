@@ -98,18 +98,44 @@
 | **Main DAO** (Proxy) | `0xc3579BDC6eC1fAad8a67B1Dc5542EBcf28456465` | `src/openwork-full-contract-suite-layerzero+CCTP/main-dao-final.sol` | ✅ |
 | **Main DAO** (Implementation) | `0xbde733D64D8C2bcA369433E7dC96DC3ecFE414e4` | `src/openwork-full-contract-suite-layerzero+CCTP/main-dao-final.sol` | ✅ |
 
-## Ethereum Sepolia (Local Chain) - NEW DEPLOYMENT
+## Ethereum Sepolia (Local Chain)
 
-**⚠️ Note**: These are the NEW correctly deployed addresses with WALL2 as deployer (October 9, 2025)
+**Latest Deployment**: December 15-16, 2025 (Upgrades + CCTP Fix)  
+**Deployer**: WALL2 (`0xfD08836eeE6242092a9c869237a8d122275b024A`)
 
-| Contract | Address | File Path | Verified |
-|----------|---------|-----------|----------|
-| **Local Bridge** | `0xb9AD7758d2B5c80cAd30b471D07a8351653d24eb` | `src/suites/openwork-full-contract-suite-layerzero+CCTP 5 Oct /local-bridge.sol` | ⚠️ |
-| **CCTPv2 Transceiver** | `0x6DB4326E2CD04481A7F558B40eb223E13c6C6e98` | `src/suites/openwork-full-contract-suite-layerzero+CCTP 5 Oct /cctp-v2-ft-transceiver.sol` | ⚠️ |
-| **Athena Client** (Implementation) | `0x3da42f82241977516568702E24B23989DD7c5fFD` | `src/suites/openwork-full-contract-suite-layerzero+CCTP 5 Oct /athena-client.sol` | ⚠️ |
-| **Athena Client** (Proxy) | `0xA08a6E73397EaE0A3Df9eb528d9118ae4AF80fcf` | `src/suites/openwork-full-contract-suite-layerzero+CCTP 5 Oct /proxy.sol` | ⚠️ |
-| **LOWJC** (Implementation) | `0xB1C38C374e8589B7172541C678075FE31ca1044C` | `src/suites/openwork-full-contract-suite-layerzero+CCTP 5 Oct /lowjc.sol` | ⚠️ |
-| **LOWJC** (Proxy) | `0x3b4cE6441aB77437e306F396c83779A2BC8E5134` | `src/suites/openwork-full-contract-suite-layerzero+CCTP 5 Oct /proxy.sol` | ⚠️ |
+### **Active Contracts**
+
+| Contract | Address | Deployment Date | Verified |
+|----------|---------|----------------|----------|
+| **LOWJC** (Proxy) | `0x3b4cE6441aB77437e306F396c83779A2BC8E5134` | Oct 9, 2025 | ✅ |
+| **LOWJC** (Implementation - Latest) | `0x1CC95A9F409667006F4C3f6c2721056EDE516Ec1` | Dec 15, 2025 | ✅ |
+| **Athena Client** (Proxy) | `0xA08a6E73397EaE0A3Df9eb528d9118ae4AF80fcf` | Oct 9, 2025 | ✅ |
+| **Athena Client** (Implementation - Latest) | `0x61CC8AEE524F2eFa7E9F7669eEDe71e513BdC347` | Dec 15, 2025 | ✅ |
+| **Local Bridge** | `0xb9AD7758d2B5c80cAd30b471D07a8351653d24eb` | Oct 9, 2025 | ✅ |
+| **CCTPv2 Transceiver** (Fixed) | `0x0ad0306EAfCBf121Ed9990055b89e1249011455F` | Dec 16, 2025 | ✅ |
+
+### **Previous Implementations**
+
+| Contract | Address | Deployment Date | Status |
+|----------|---------|----------------|--------|
+| **LOWJC** (Previous Implementation) | `0xB1C38C374e8589B7172541C678075FE31ca1044C` | Oct 9, 2025 | 🔄 |
+| **Athena Client** (Previous Implementation) | `0x3da42f82241977516568702E24B23989DD7c5fFD` | Oct 9, 2025 | 🔄 |
+| **CCTPv2 Transceiver** (Deprecated - Wrong TokenMessenger) | `0x6DB4326E2CD04481A7F558B40eb223E13c6C6e98` | Oct 9, 2025 | 🔄 |
+
+### **December 16, 2025 - CCTP Fix**
+**Issue**: Original CCTP deployed with wrong TokenMessenger address (`0x72d6...` instead of `0x8FE6...`)  
+**Solution**: Redeployed with correct Circle CCTP infrastructure addresses  
+**New CCTP**: `0x0ad0306EAfCBf121Ed9990055b89e1249011455F`  
+**Documentation**: See `/Users/anas/openwork-manual/references/logs/ethereum-sepolia-cctp-fix-16-dec-2025.md`
+
+### **December 15, 2025 - Contract Upgrades**
+**LOWJC**: Upgraded to implementation `0x1CC95A9F409667006F4C3f6c2721056EDE516Ec1`  
+**Athena Client**: Upgraded to implementation `0x61CC8AEE524F2eFa7E9F7669eEDe71e513BdC347`  
+**Features**: Enhanced cross-chain payment, improved milestone management, fee routing to native chain
+
+### **Standard CCTP Addresses (Used in Correct Deployment)**
+- **TokenMessenger**: `0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA` (standard across all testnets)
+- **MessageTransmitter**: `0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275` (standard across all testnets)
 
 ## Infrastructure
 
