@@ -7,6 +7,7 @@ import { columnPositions, statusColors } from './data/columnPositions';
 import { arrowConnections } from './data/arrowConnections';
 import { buildOppyContext, FALLBACK_RESPONSES } from './data/oppyKnowledge';
 import flowsData from './data/flowsData';
+import multiChainIntegrationGuide from './data/multiChainIntegrationGuide';
 import FlowVisualizer from '../../components/FlowVisualizer';
 import UserFlowsOverview from '../../components/UserFlowsOverview';
 import AdminLogin from '../../components/AdminLogin';
@@ -442,6 +443,21 @@ const OpenworkDocs = () => {
             </div>
           </div>
 
+          <div>
+            <div 
+              onClick={() => {
+                setSelectedContract('multichain');
+                setActiveTab('docs');
+              }}
+              className={`docs-sidebar-item docs-sidebar-item-flows ${selectedContract === 'multichain' ? 'docs-sidebar-item-flows-active' : ''}`}
+            >
+              <div className="docs-sidebar-item-content">
+                <Workflow className="docs-sidebar-item-icon" />
+                <span className="docs-sidebar-item-text">Multi-Chain Integration</span>
+              </div>
+            </div>
+          </div>
+
           <div className="docs-sidebar-section">
             <h3 className="docs-sidebar-section-title">Base Sepolia (Main Chain)</h3>
             {contractsByChain.base.contracts.map(c => (
@@ -710,7 +726,7 @@ const OpenworkDocs = () => {
         ))}
       </div>
 
-      {(selected || selectedContract === 'ipfs' || selectedContract === 'oppy' || selectedContract === 'flows') && (
+      {(selected || selectedContract === 'ipfs' || selectedContract === 'oppy' || selectedContract === 'flows' || selectedContract === 'multichain') && (
         <div className="docs-details-panel">
           <button
             onClick={() => {
@@ -739,6 +755,16 @@ const OpenworkDocs = () => {
                   <h2 className="docs-details-title">Agent Oppy</h2>
                 </div>
                 <p className="docs-details-subtitle">Your OpenWork assistant</p>
+              </>
+            )}
+
+            {selectedContract === 'multichain' && (
+              <>
+                <div className="docs-details-header-flows">
+                  <Workflow className="docs-details-header-icon" />
+                  <h2 className="docs-details-title">Multi-Chain Integration</h2>
+                </div>
+                <p className="docs-details-subtitle">Complete guide for developers to add new blockchains</p>
               </>
             )}
 
@@ -1036,6 +1062,132 @@ const OpenworkDocs = () => {
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {activeTab === 'docs' && selectedContract === 'multichain' && (
+                  <div>
+                    {multiChainIntegrationGuide['add-new-chain'] && (
+                      <>
+                        <div className="docs-prose">
+                          <p>{multiChainIntegrationGuide['add-new-chain'].description}</p>
+                        </div>
+
+                        {/* Prerequisites Section */}
+                        <div className="docs-section">
+                          <h3 className="docs-section-title">📋 Prerequisites</h3>
+                          <ul className="docs-feature-list">
+                            {multiChainIntegrationGuide['add-new-chain'].prerequisites.map((prereq, idx) => (
+                              <li key={idx} className="docs-feature-item">{prereq}</li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        {/* Integration Steps */}
+                        <div className="docs-section">
+                          <h3 className="docs-section-title">🚀 Integration Steps</h3>
+                          {multiChainIntegrationGuide['add-new-chain'].steps.map((step, idx) => (
+                            <div key={idx} className="docs-function-item" style={{ marginBottom: '16px' }}>
+                              <button
+                                onClick={() => toggleSection(`multichain-step-${idx}`)}
+                                className="docs-function-toggle"
+                              >
+                                <span className="docs-function-name">
+                                  {step.icon} Step {step.step}: {step.title}
+                                </span>
+                                {expandedSections[`multichain-step-${idx}`] ? 
+                                  <ChevronDown className="docs-function-icon" /> : 
+                                  <ChevronRight className="docs-function-icon" />
+                                }
+                              </button>
+                              
+                              {expandedSections[`multichain-step-${idx}`] && (
+                                <div className="docs-function-content">
+                                  <p className="docs-function-text" style={{ marginBottom: '12px' }}>
+                                    {step.description}
+                                  </p>
+                                  
+                                  <div className="docs-function-section">
+                                    <h5 className="docs-function-section-title">Details:</h5>
+                                    <ul className="docs-function-steps">
+                                      {step.details.map((detail, detailIdx) => (
+                                        <li key={detailIdx} className="docs-function-step">{detail}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+
+                                  <div className="docs-function-section">
+                                    <h5 className="docs-function-section-title">Code Example:</h5>
+                                    <pre className="docs-code-block" style={{ margin: 0 }}>
+                                      <code>{step.codeSnippet}</code>
+                                    </pre>
+                                  </div>
+
+                                  {step.notes && step.notes.length > 0 && (
+                                    <div className="docs-function-section">
+                                      <h5 className="docs-function-section-title">Important Notes:</h5>
+                                      <ul className="docs-feature-list">
+                                        {step.notes.map((note, noteIdx) => (
+                                          <li key={noteIdx} className="docs-feature-item">{note}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Common Issues Section */}
+                        <div className="docs-section">
+                          <h3 className="docs-section-title">⚠️ Common Issues & Solutions</h3>
+                          {multiChainIntegrationGuide['add-new-chain'].commonIssues.map((issue, idx) => (
+                            <div key={idx} className="docs-dependency-card" style={{ marginBottom: '12px' }}>
+                              <div className="docs-dependency-header">
+                                <span className="docs-dependency-name">{issue.issue}</span>
+                              </div>
+                              <p className="docs-dependency-reason" style={{ marginBottom: '6px' }}>
+                                <strong>Solution:</strong> {issue.solution}
+                              </p>
+                              <p className="docs-dependency-reason" style={{ fontSize: '11px', color: '#6b7280' }}>
+                                <strong>Debug:</strong> {issue.debug}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Supported Chains Table */}
+                        <div className="docs-section">
+                          <h3 className="docs-section-title">🌐 Supported Chains</h3>
+                          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 2fr', gap: '8px', fontSize: '12px' }}>
+                            <div style={{ fontWeight: 'bold', padding: '8px', background: '#f3f4f6', borderRadius: '4px' }}>Chain</div>
+                            <div style={{ fontWeight: 'bold', padding: '8px', background: '#f3f4f6', borderRadius: '4px' }}>Chain ID</div>
+                            <div style={{ fontWeight: 'bold', padding: '8px', background: '#f3f4f6', borderRadius: '4px' }}>LZ EID</div>
+                            <div style={{ fontWeight: 'bold', padding: '8px', background: '#f3f4f6', borderRadius: '4px' }}>Status</div>
+                            
+                            {multiChainIntegrationGuide['add-new-chain'].supportedChains.map((chain, idx) => (
+                              <React.Fragment key={idx}>
+                                <div style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>{chain.name}</div>
+                                <div style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', fontFamily: 'monospace', fontSize: '11px' }}>{chain.chainId}</div>
+                                <div style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', fontFamily: 'monospace', fontSize: '11px' }}>{chain.eid}</div>
+                                <div style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>{chain.status}</div>
+                              </React.Fragment>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Key Takeaways Section */}
+                        <div className="docs-section">
+                          <h3 className="docs-section-title">💡 Key Takeaways</h3>
+                          <ul className="docs-feature-list">
+                            {multiChainIntegrationGuide['add-new-chain'].keyTakeaways.map((takeaway, idx) => (
+                              <li key={idx} className="docs-feature-item">{takeaway}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
