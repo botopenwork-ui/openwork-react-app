@@ -343,7 +343,7 @@ export default function ViewReceivedApplication() {
       setTransactionStatus(`💰 Step 1/3: Approving ${firstMilestoneAmount} USDC spending - Please confirm in MetaMask`);
       
       const approveTx = await usdcContract.methods.approve(
-        CONTRACT_ADDRESS, 
+        lowjcAddress, 
         amountInUSDCUnits.toString()
       ).send({ from: walletAddress });
       
