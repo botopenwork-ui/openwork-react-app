@@ -15,8 +15,10 @@ import RadioButton from "../../components/RadioButton/RadioButton";
 import Milestone from "../../components/Milestone/Milestone";
 import Warning from "../../components/Warning/Warning";
 
-const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
-const LAYERZERO_OPTIONS_VALUE = import.meta.env.VITE_LAYERZERO_OPTIONS_VALUE;
+// Multi-chain support
+import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
+import { postJob as postJobMultiChain } from "../../services/localChainService";
+import { getLocalChains } from "../../config/chainConfig";
 
 // Browse Jobs contract (NOWJC on Arbitrum Sepolia)
 const BROWSE_JOBS_CONTRACT = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS;
@@ -231,6 +233,10 @@ function FileUpload({ onFilesUploaded, uploadedFiles }) {
 }
 
 export default function PostJob() {
+  // Multi-chain support - detect user's network
+  const { chainId, chainConfig, isAllowed, error: chainError, isLoading: chainLoading } = useChainDetection();
+  const { address: userAddress } = useWalletAddress();
+  
   const { walletAddress, connectWallet, disconnectWallet } =
     useWalletConnection();
   const [jobTitle, setJobTitle] = useState("");
@@ -254,6 +260,15 @@ export default function PostJob() {
   ]);
 
   const navigate = useNavigate();
+  
+  // Update transaction status when chain changes
+  useEffect(() => {
+    if (chainConfig && isAllowed) {
+      setTransactionStatus(`Ready to post on ${chainConfig.name}. Job posting requires blockchain transaction fees.`);
+    } else if (chainError) {
+      setTransactionStatus(`⚠️ ${chainError}`);
+    }
+  }, [chainId, chainConfig, isAllowed, chainError]);
 
   // Function to extract job ID from LayerZero logs
   const extractJobIdFromLayerZeroLogs = (receipt) => {
@@ -576,16 +591,15 @@ export default function PostJob() {
         const web3 = new Web3(window.ethereum);
         await window.ethereum.request({ method: "eth_requestAccounts" });
         
-        // Check if user is connected to OP Sepolia
-        const chainId = await web3.eth.getChainId();
-        const OP_SEPOLIA_CHAIN_ID = 11155420;
-        
-        if (Number(chainId) !== OP_SEPOLIA_CHAIN_ID) {
-          alert(`Please switch to OP Sepolia network. Current chain ID: ${chainId}, Required: ${OP_SEPOLIA_CHAIN_ID}`);
+        // Multi-chain validation - check if user is on an allowed chain
+        if (!isAllowed) {
+          alert(`Cannot post jobs on ${chainConfig?.name || 'this network'}.\n\n${chainError}\n\nSupported chains: ${getLocalChains().map(c => c.name).join(', ')}`);
           setLoadingT(false);
-          setTransactionStatus("❌ Wrong network - please switch to OP Sepolia");
+          setTransactionStatus(`❌ ${chainError}`);
           return;
         }
+        
+        console.log(`✅ Posting job on ${chainConfig.name} (Chain ID: ${chainId})`);
         
         const accounts = await web3.eth.getAccounts();
         const fromAddress = accounts[0];
@@ -649,26 +663,26 @@ export default function PostJob() {
           const jobDetailHash = jobResponse.IpfsHash;
           console.log("Job IPFS Hash:", jobDetailHash);
 
-          // Step 4: Prepare contract parameters
+          // Step 4: Prepare contract parameters - USE DETECTED CHAIN CONFIG
+          const lowjcAddress = chainConfig.contracts.lowjc;
+          const layerzeroOptions = chainConfig.layerzero.options;
+          
           const contract = new web3.eth.Contract(
             JobContractABI,
-            contractAddress,
+            lowjcAddress,
           );
 
           // DEBUG: Log all transaction data
-          console.log("=== TRANSACTION DEBUG ===");
-          console.log("Contract Address:", contractAddress);
-          console.log("Job Detail Hash:", jobDetailHash);
-          console.log("Milestone Hashes (descriptions):", milestoneHashes);
-          console.log("Milestone Amounts:", milestoneAmounts);
-          console.log("LayerZero Options Value:", LAYERZERO_OPTIONS_VALUE);
-          console.log("From Address:", fromAddress);
-          console.log(
-            "Transaction Value:",
-            web3.utils.toWei("0.001", "ether"),
-          );
-          console.log("Job Details Object:", jobDetails);
-          console.log("========================");
+          console.log("=== MULTI-CHAIN TRANSACTION DEBUG ===");
+          console.log("🌐 Chain:", chainConfig.name, `(${chainId})`);
+          console.log("📍 LOWJC Address:", lowjcAddress);
+          console.log("📄 Job Detail Hash:", jobDetailHash);
+          console.log("📋 Milestone Hashes:", milestoneHashes);
+          console.log("💰 Milestone Amounts:", milestoneAmounts);
+          console.log("⚡ LayerZero Options:", layerzeroOptions);
+          console.log("👤 From Address:", fromAddress);
+          console.log("📦 Job Details:", jobDetails);
+          console.log("========================================");
 
           // Step 5: Get LayerZero fee quote
           setTransactionStatus("Getting LayerZero fee quote...");
@@ -688,9 +702,9 @@ export default function PostJob() {
           
           const bridgeContract = new web3.eth.Contract(bridgeABI, bridgeAddress);
           
-          // Get current job count to predict next jobId
+          // Get current job count to predict next jobId - DYNAMIC CHAIN ID
           const jobCounter = await contract.methods.getJobCount().call();
-          const nextJobId = `11155420-${Number(jobCounter) + 1}`; // OP Sepolia chainId
+          const nextJobId = `${chainId}-${Number(jobCounter) + 1}`; // Use detected chainId
           console.log("📊 Current job count:", jobCounter);
           console.log("🔮 Predicted next jobId:", nextJobId);
           
@@ -700,7 +714,7 @@ export default function PostJob() {
             ['postJob', nextJobId, fromAddress, jobDetailHash, milestoneHashes, milestoneAmounts]
           );
           
-          const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, LAYERZERO_OPTIONS_VALUE).call();
+          const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, layerzeroOptions).call();
           console.log("💰 LayerZero quoted fee:", web3.utils.fromWei(quotedFee, 'ether'), "ETH");
           
           // FIXED FEE OVERRIDE: Use 0.001 ETH instead of quoted fee
@@ -710,14 +724,14 @@ export default function PostJob() {
           console.log("⚠️ Using fixed fee override:", web3.utils.fromWei(feeToUse, 'ether'), "ETH");
           
           // Step 6: Call postJob function with milestone hashes as descriptions
-          setTransactionStatus("Sending transaction to blockchain...");
+          setTransactionStatus(`Sending transaction on ${chainConfig.name}...`);
           
           contract.methods
             .postJob(
               jobDetailHash,
               milestoneHashes,
               milestoneAmounts,
-              LAYERZERO_OPTIONS_VALUE,
+              layerzeroOptions,
             )
             .send({
               from: fromAddress,
@@ -852,6 +866,59 @@ export default function PostJob() {
                 uploadedFiles={uploadedFiles}
               />
             </div>
+            
+            {/* Multi-Chain Indicator */}
+            {chainConfig && isAllowed && (
+              <div className="form-groupDC" style={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '8px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '18px' }}>📡</span>
+                  <div>
+                    <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Posting on {chainConfig.name}</div>
+                    <div style={{ fontSize: '11px', opacity: 0.9 }}>Job will sync to all chains via LayerZero</div>
+                  </div>
+                </div>
+                <div style={{ 
+                  background: 'rgba(255,255,255,0.2)', 
+                  padding: '4px 10px', 
+                  borderRadius: '12px',
+                  fontSize: '11px',
+                  fontWeight: 'bold'
+                }}>
+                  Chain ID: {chainId}
+                </div>
+              </div>
+            )}
+            
+            {/* Chain Error Warning */}
+            {!isAllowed && chainConfig && (
+              <div className="form-groupDC" style={{
+                background: '#fff3cd',
+                border: '1px solid #ffc107',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                color: '#856404',
+                marginBottom: '12px'
+              }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>⚠️ Cannot Post Jobs on {chainConfig.name}</div>
+                <div style={{ fontSize: '13px', marginBottom: '8px' }}>{chainError}</div>
+                <div style={{ fontSize: '12px', fontWeight: 'bold' }}>Supported chains:</div>
+                <ul style={{ margin: '4px 0 0 20px', fontSize: '12px' }}>
+                  {getLocalChains().map(chain => (
+                    <li key={chain.chainId}>{chain.name}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            
             <div className="lineDC form-groupDC"></div>
             <div className="form-groupDC">
               <RadioButton
