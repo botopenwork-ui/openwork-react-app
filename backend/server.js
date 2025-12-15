@@ -548,14 +548,21 @@ async function startEventListener() {
     try {
       const latestBlock = await web3.eth.getBlockNumber();
       
-      if (latestBlock <= lastProcessedBlock) {
+      // Limit block range to 10 for free-tier RPC
+      const maxBlockRange = 10;
+      const toBlock = Math.min(
+        Number(latestBlock),
+        Number(lastProcessedBlock) + maxBlockRange
+      );
+      
+      if (toBlock <= lastProcessedBlock) {
         return; // No new blocks
       }
 
-      // Check for PaymentReleased events only
+      // Check for PaymentReleased events only (with 10-block limit)
       const paymentReleasedEvents = await nowjcContract.getPastEvents('PaymentReleased', {
         fromBlock: lastProcessedBlock + 1n,
-        toBlock: latestBlock
+        toBlock: BigInt(toBlock)
       });
 
       // Process PaymentReleased events
@@ -676,11 +683,8 @@ app.listen(PORT, () => {
   console.log(`   - Health: http://localhost:${PORT}/health`);
   console.log(`   - Stats:  http://localhost:${PORT}/stats`);
   console.log(`   - API: http://localhost:${PORT}/api/*\n`);
-  console.log('✅ Server ready to accept requests\n');
-  
-  // Auto-start event listener for release-payment flow
-  console.log('🎧 Starting event listener automatically...\n');
-  startEventListener();
+  console.log('✅ Server ready to accept requests');
+  console.log('ℹ️  Event listener is OFF by default (start via /api/start-listener when needed)\n');
 });
 
 // Graceful shutdown
