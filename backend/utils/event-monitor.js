@@ -26,13 +26,24 @@ async function waitForNOWJCEvent(eventName, jobId, timeout = config.EVENT_DETECT
     timeout: `${timeout / 1000} seconds`
   });
   
+  let currentBlock = startBlock;
+  
   while (Date.now() < endTime) {
     try {
-      // Get events for our specific jobId
+      const latestBlock = await web3.eth.getBlockNumber();
+      
+      // Limit block range to 10 for free-tier RPC
+      const maxBlockRange = 10;
+      const toBlock = Math.min(
+        Number(latestBlock),
+        Number(currentBlock) + maxBlockRange
+      );
+      
+      // Get events for our specific jobId (with 10-block limit)
       const events = await nowjcContract.getPastEvents(eventName, {
         filter: { jobId: jobId },
-        fromBlock: startBlock,
-        toBlock: 'latest'
+        fromBlock: currentBlock,
+        toBlock: BigInt(toBlock)
       });
       
       if (events.length > 0) {
@@ -46,6 +57,9 @@ async function waitForNOWJCEvent(eventName, jobId, timeout = config.EVENT_DETECT
         
         return event.transactionHash;
       }
+      
+      // Move forward to next 10-block chunk
+      currentBlock = BigInt(toBlock);
       
       // Wait before next check
       await sleep(config.EVENT_POLL_INTERVAL);
