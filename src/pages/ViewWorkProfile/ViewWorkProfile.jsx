@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useWalletConnection } from "../../functions/useWalletConnection";
 import { fetchUserPortfolios } from "../../services/portfolioService";
-import BackButton from "../../components/BackButton/BackButton";
 import "./ViewWorkProfile.css";
 
 export default function ViewWorkProfile() {
@@ -65,79 +64,81 @@ export default function ViewWorkProfile() {
   const remainingSkillsCount = workData.skills.length - 1;
 
   return (
-    <div className="viewwork-page-wrapper">
-      <div className="viewwork-container">
-        {/* Header Section - Outside the card */}
-        <div className="viewwork-header-section">
-          <BackButton to="/profile-portfolio" title={workData.title} />
+    <div className="viewwork-wrapper">
+      {/* Main Card Container */}
+      <div className="viewwork-card">
+        {/* Back Button */}
+        <button className="viewwork-back-button" onClick={() => navigate(-1)}>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M15.8332 10.0003H4.1665M4.1665 10.0003L9.99984 15.8337M4.1665 10.0003L9.99984 4.16699" stroke="#767676" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+
+        {/* Title and User Info */}
+        <div className="viewwork-title-section">
+          <h1 className="viewwork-title">{workData.title}</h1>
           <div className="viewwork-user-info">
-            <img src="/avatar.svg" alt="User" className="viewwork-user-avatar" />
-            <span className="viewwork-user-name">{workData.userName}</span>
-            <span className="viewwork-user-separator">•</span>
-            <span className="viewwork-user-package">{workData.packageType}</span>
+            <img src="/avatar.svg" alt="User" className="viewwork-avatar" />
+            <span className="viewwork-username">{workData.userName}</span>
+            <span className="viewwork-separator">•</span>
+            <span className="viewwork-package">{workData.packageType}</span>
           </div>
         </div>
 
-        {/* Main Content Card */}
-        <div className="viewwork-content-card">
-          {/* Floating Skills Section - Top Right */}
-          <div className="viewwork-skills-floating">
-            {workData.skills.length > 0 && (
-              <>
-                <button className="viewwork-skill-badge">
-                  {workData.skills[0]}
-                </button>
-                {remainingSkillsCount > 0 && (
-                  <div className="viewwork-more-wrapper">
-                    <button 
-                      className="viewwork-more-button"
-                      onClick={() => setShowSkillsDropdown(!showSkillsDropdown)}
-                    >
-                      +{remainingSkillsCount} More
-                    </button>
-                    {showSkillsDropdown && (
-                      <div className="viewwork-skills-dropdown">
+        {/* Skills Badges - Top Right */}
+        <div className="viewwork-skills-badges">
+          {workData.skills.length > 0 && (
+            <>
+              <div className="viewwork-badge">{workData.skills[0]}</div>
+              {remainingSkillsCount > 0 && (
+                <div className="viewwork-more-badge-wrapper">
+                  <button 
+                    className="viewwork-badge viewwork-badge-clickable"
+                    onClick={() => setShowSkillsDropdown(!showSkillsDropdown)}
+                  >
+                    +{remainingSkillsCount} More
+                  </button>
+                  {showSkillsDropdown && (
+                    <div className="viewwork-skills-dropdown">
+                      <div className="viewwork-dropdown-arrow"></div>
+                      <div className="viewwork-dropdown-content">
                         {workData.skills.map((skill, index) => (
-                          <div key={index} className="viewwork-dropdown-item">
-                            <span className="viewwork-dropdown-text">{skill}</span>
-                            {index === 0 && <span className="viewwork-dropdown-check">✓</span>}
+                          <div key={index} className="viewwork-dropdown-badge">
+                            {skill}
                           </div>
                         ))}
                       </div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Main Image Display */}
-          <div className="viewwork-main-image">
-            <img
-              src={`https://gateway.pinata.cloud/ipfs/${workData.images[selectedImage]}`}
-              alt="Work preview"
-              className="main-image"
-            />
-          </div>
-
-          {/* Image Gallery Thumbnails */}
-          <div className="viewwork-image-gallery">
-            {workData.images.map((image, index) => (
-              <div
-                key={index}
-                className={`gallery-thumbnail ${selectedImage === index ? "active" : ""}`}
-                onClick={() => setSelectedImage(index)}
-              >
-                <img src={`https://gateway.pinata.cloud/ipfs/${image}`} alt={`Thumbnail ${index + 1}`} />
-              </div>
-            ))}
-          </div>
-
-          {/* Description */}
-          <div className="viewwork-description">
-            <p>{workData.description}</p>
-          </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
         </div>
+
+        {/* Main Image */}
+        <div className="viewwork-main-image">
+          <img
+            src={`https://gateway.pinata.cloud/ipfs/${workData.images[selectedImage]}`}
+            alt="Work preview"
+          />
+        </div>
+
+        {/* Gallery Thumbnails */}
+        <div className="viewwork-gallery">
+          {workData.images.map((image, index) => (
+            <div
+              key={index}
+              className={`viewwork-thumbnail ${selectedImage === index ? "active" : ""}`}
+              onClick={() => setSelectedImage(index)}
+            >
+              <img src={`https://gateway.pinata.cloud/ipfs/${image}`} alt={`Thumbnail ${index + 1}`} />
+            </div>
+          ))}
+        </div>
+
+        {/* Description */}
+        <p className="viewwork-description">{workData.description}</p>
       </div>
     </div>
   );
