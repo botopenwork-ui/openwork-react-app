@@ -270,12 +270,12 @@ export default function PostJob() {
     }
   }, [chainId, chainConfig, isAllowed, chainError]);
 
-  // Function to extract job ID from LayerZero logs
+  // Function to extract job ID from LayerZero logs (MULTI-CHAIN COMPATIBLE)
   const extractJobIdFromLayerZeroLogs = (receipt) => {
     try {
       console.log("🔍 Searching for LayerZero logs in transaction...");
       
-      // LayerZero event signature from the documentation
+      // LayerZero event signature
       const layerZeroSignature = "0x1ab700d4ced0c005b164c0f789fd09fcbb0156d4c2041b8a3bfbcd961cd1567f";
       
       // Find LayerZero message log
@@ -285,58 +285,31 @@ export default function PostJob() {
       
       if (!layerZeroLog) {
         console.log("❌ LayerZero message log not found");
-        console.log("📋 Available logs:", receipt.logs);
         return null;
       }
       
-      console.log("✅ Found LayerZero log:", layerZeroLog);
+      console.log("✅ Found LayerZero log");
       
       // Extract job ID from the log data
       const logData = layerZeroLog.data;
-      console.log("📊 LayerZero log data:", logData);
-      
-      // Parse the hex data to find job ID pattern (40232-XXX)
       const dataStr = logData.slice(2); // Remove 0x prefix
       const chunks = dataStr.match(/.{1,64}/g) || []; // Split into 32-byte chunks
       
+      // Method 1: Try to decode each chunk and find job ID pattern
       for (const chunk of chunks) {
         try {
-          // Clean chunk (remove trailing zeros)
           const cleanChunk = chunk.replace(/00+$/, "");
           if (cleanChunk.length > 0) {
             const decoded = Web3.utils.hexToUtf8("0x" + cleanChunk);
-            console.log("🔤 Decoded chunk:", decoded);
             
-            // Check if it matches job ID pattern (numbers-numbers)
+            // Match ANY chainId-jobNumber pattern (works for all chains)
             if (decoded.match(/^\d+-\d+$/)) {
               console.log("🎯 Found job ID:", decoded);
               return decoded;
             }
           }
         } catch (e) {
-          // Skip invalid UTF8 sequences
           continue;
-        }
-      }
-      
-      // Alternative method: Look for specific hex pattern for job IDs starting with 40232
-      // "40232-" in hex is "34303233322d"
-      const jobIdMatch = dataStr.match(/34303233322d[\da-f]+/i);
-      if (jobIdMatch) {
-        try {
-          const decoded = Web3.utils.hexToUtf8("0x" + jobIdMatch[0]);
-          console.log("🎯 Found job ID (pattern match):", decoded);
-          
-          // Extract just the job ID part (40232-XXX) from the decoded string
-          const cleanJobId = decoded.match(/^\d+-\d+/);
-          if (cleanJobId) {
-            console.log("✨ Cleaned job ID:", cleanJobId[0]);
-            return cleanJobId[0];
-          }
-          
-          return decoded;
-        } catch (e) {
-          console.log("❌ Failed to decode pattern match");
         }
       }
       
@@ -344,7 +317,7 @@ export default function PostJob() {
       return null;
       
     } catch (error) {
-      console.error("❌ Error extracting job ID from LayerZero logs:", error);
+      console.error("❌ Error extracting job ID:", error);
       return null;
     }
   };
@@ -866,59 +839,6 @@ export default function PostJob() {
                 uploadedFiles={uploadedFiles}
               />
             </div>
-            
-            {/* Multi-Chain Indicator */}
-            {chainConfig && isAllowed && (
-              <div className="form-groupDC" style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                borderRadius: '8px',
-                padding: '12px 16px',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '8px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '18px' }}>📡</span>
-                  <div>
-                    <div style={{ fontWeight: 'bold', fontSize: '14px' }}>Posting on {chainConfig.name}</div>
-                    <div style={{ fontSize: '11px', opacity: 0.9 }}>Job will sync to all chains via LayerZero</div>
-                  </div>
-                </div>
-                <div style={{ 
-                  background: 'rgba(255,255,255,0.2)', 
-                  padding: '4px 10px', 
-                  borderRadius: '12px',
-                  fontSize: '11px',
-                  fontWeight: 'bold'
-                }}>
-                  Chain ID: {chainId}
-                </div>
-              </div>
-            )}
-            
-            {/* Chain Error Warning */}
-            {!isAllowed && chainConfig && (
-              <div className="form-groupDC" style={{
-                background: '#fff3cd',
-                border: '1px solid #ffc107',
-                borderRadius: '8px',
-                padding: '12px 16px',
-                color: '#856404',
-                marginBottom: '12px'
-              }}>
-                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>⚠️ Cannot Post Jobs on {chainConfig.name}</div>
-                <div style={{ fontSize: '13px', marginBottom: '8px' }}>{chainError}</div>
-                <div style={{ fontSize: '12px', fontWeight: 'bold' }}>Supported chains:</div>
-                <ul style={{ margin: '4px 0 0 20px', fontSize: '12px' }}>
-                  {getLocalChains().map(chain => (
-                    <li key={chain.chainId}>{chain.name}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            
             <div className="lineDC form-groupDC"></div>
             <div className="form-groupDC">
               <RadioButton
