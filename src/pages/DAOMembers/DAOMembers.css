@@ -39,7 +39,7 @@
 .proposals-created {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 .proposals-created span {
@@ -54,7 +54,7 @@
 .proposals-voted {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 .proposals-voted span {
@@ -70,7 +70,6 @@
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    padding-left: 24px;
 }
 
 .last-activity span {
@@ -86,7 +85,6 @@
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    padding-left: 24px;
 }
 
 .wallet-address span {
@@ -101,9 +99,8 @@
 .tokens-staked {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: flex-start;
     gap: 8px;
-    padding-right: 24px;
 }
 
 .tokens-staked span {

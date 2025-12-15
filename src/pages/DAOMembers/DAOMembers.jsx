@@ -215,7 +215,7 @@ export default function DAOMembers() {
                                 : member.tokensStaked.toLocaleString()
                             }
                         </span>
-                        <img src="/openwork-token.svg" alt="OW Token" className="tokenIcon" />
+                        <img src="/OWIcon.svg" alt="OW Token" className="tokenIcon" />
                     </div>
                 ),
             };
