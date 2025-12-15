@@ -676,8 +676,11 @@ app.listen(PORT, () => {
   console.log(`   - Health: http://localhost:${PORT}/health`);
   console.log(`   - Stats:  http://localhost:${PORT}/stats`);
   console.log(`   - API: http://localhost:${PORT}/api/*\n`);
-  console.log('✅ Server ready to accept requests');
-  console.log('ℹ️  Event listener is OFF by default (start via API when needed)\n');
+  console.log('✅ Server ready to accept requests\n');
+  
+  // Auto-start event listener for release-payment flow
+  console.log('🎧 Starting event listener automatically...\n');
+  startEventListener();
 });
 
 // Graceful shutdown
