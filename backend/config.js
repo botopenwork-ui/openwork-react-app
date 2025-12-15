@@ -2,6 +2,7 @@ require('dotenv').config();
 
 module.exports = {
   // RPC URLs
+  ETHEREUM_SEPOLIA_RPC: process.env.ETHEREUM_SEPOLIA_RPC_URL,
   OP_SEPOLIA_RPC: process.env.OP_SEPOLIA_RPC_URL,
   ARBITRUM_SEPOLIA_RPC: process.env.ARBITRUM_SEPOLIA_RPC_URL,
 
@@ -30,10 +31,12 @@ module.exports = {
   EVENT_DETECTION_TIMEOUT: parseInt(process.env.EVENT_DETECTION_TIMEOUT) || 300000,
   CCTP_ATTESTATION_TIMEOUT: parseInt(process.env.CCTP_ATTESTATION_TIMEOUT) || 300000,
 
-  // CCTP Domains
+  // CCTP Domains (for reference - use chain-utils.js for dynamic detection)
   DOMAINS: {
+    ETHEREUM_SEPOLIA: 0,
     OP_SEPOLIA: 2,
-    ARBITRUM_SEPOLIA: 3
+    ARBITRUM_SEPOLIA: 3,
+    BASE_SEPOLIA: 6
   },
 
   // Contract ABIs (minimal required functions)
