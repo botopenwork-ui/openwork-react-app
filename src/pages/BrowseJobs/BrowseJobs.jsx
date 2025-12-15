@@ -88,11 +88,10 @@ export default function BrowseJobs() {
         { id: "actions", label: "", required: true },
     ];
 
-    // Selected columns state - includes chain as default visible column
+    // Selected columns state - keep 6 total columns (replaced 'postedBy' with 'chain')
     const [selectedColumns, setSelectedColumns] = useState([
         "title",
         "chain",
-        "postedBy", 
         "skills",
         "status",
         "budget",
@@ -352,6 +351,9 @@ export default function BrowseJobs() {
             const jobChainId = extractChainIdFromJobId(job.id);
             const chainLogo = getChainLogo(jobChainId);
             const chainName = getChainConfig(jobChainId)?.name || "Unknown";
+            
+            // Debug chain extraction
+            console.log(`Job ${job.id} → chainId: ${jobChainId}, logo: ${chainLogo}, name: ${chainName}`);
 
             // Create all possible column data
             const allColumnData = {
