@@ -1,6 +1,7 @@
 const { pollCCTPAttestation } = require('../utils/cctp-poller');
 const { executeReceiveMessageOnOpSepolia } = require('../utils/tx-executor');
 const { getDomainFromJobId, getChainNameFromJobId } = require('../utils/chain-utils');
+const { saveCCTPTransfer, updateCCTPStatus } = require('../utils/cctp-storage');
 const config = require('../config');
 
 /**
@@ -30,13 +31,25 @@ async function processSettleDispute(disputeId, jobId, sourceTxHash) {
   console.log(`Source TX (Arbitrum Sepolia): ${sourceTxHash}`);
   
   try {
+    // Save to database
+    saveCCTPTransfer('settleDispute', jobId, sourceTxHash, 'Arbitrum Sepolia', config.DOMAINS.ARBITRUM_SEPOLIA, disputeId);
+    
     // STEP 1: Poll Circle API for CCTP attestation
+    updateCCTPStatus(jobId, 'settleDispute', { step: 'polling_attestation' });
+    
     console.log('\n📍 STEP 1/2: Polling Circle API for CCTP attestation...');
     const attestation = await pollCCTPAttestation(
       sourceTxHash, 
       config.DOMAINS.ARBITRUM_SEPOLIA // Domain 3
     );
     console.log('✅ Attestation received');
+    
+    // Update - attestation received
+    updateCCTPStatus(jobId, 'settleDispute', {
+      step: 'executing_receive',
+      attestationMessage: attestation.message,
+      attestationSignature: attestation.attestation
+    });
     
     // STEP 2: Execute receiveMessage() on destination chain
     console.log(`\n📍 STEP 2/2: Executing receiveMessage() on ${destinationChain}...`);
@@ -47,6 +60,12 @@ async function processSettleDispute(disputeId, jobId, sourceTxHash) {
     } else {
       console.log(`✅ USDC transferred to winner on ${destinationChain}: ${result.transactionHash}`);
     }
+    
+    // Mark as completed in DB
+    updateCCTPStatus(jobId, 'settleDispute', {
+      status: 'completed',
+      completionTxHash: result.transactionHash || 'already_completed'
+    });
     
     console.log('\n🎉 ========== SETTLE DISPUTE FLOW COMPLETED ==========\n');
     return {
@@ -62,6 +81,12 @@ async function processSettleDispute(disputeId, jobId, sourceTxHash) {
     console.error(`Dispute ID: ${disputeId}`);
     console.error(`Error: ${error.message}`);
     console.error('====================================================\n');
+    
+    // Mark as failed in DB
+    updateCCTPStatus(jobId, 'settleDispute', {
+      status: 'failed',
+      lastError: error.message
+    });
     
     throw error;
   }
