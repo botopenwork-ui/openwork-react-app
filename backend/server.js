@@ -456,39 +456,53 @@ app.post('/api/compile', async (req, res) => {
 });
 
 /**
- * Process Start Job directly from OP Sepolia tx hash
+ * Process Start Job directly from source chain tx hash
  * No need to wait for NOWJC event
  */
-async function processStartJobDirect(jobId, opSepoliaTxHash) {
+async function processStartJobDirect(jobId, sourceTxHash) {
   try {
     console.log('\n🚀 ========== START JOB DIRECT FLOW ==========');
     console.log(`Job ID: ${jobId}`);
-    console.log(`OP Sepolia TX: ${opSepoliaTxHash}`);
+    console.log(`Source TX: ${sourceTxHash}`);
+    
+    // Import utilities
+    const { getDomainFromJobId, getChainNameFromJobId } = require('./utils/chain-utils');
+    
+    // Detect source chain from job ID
+    let sourceChain, sourceDomain;
+    try {
+      sourceChain = getChainNameFromJobId(jobId);
+      sourceDomain = getDomainFromJobId(jobId);
+      console.log(`Source Chain: ${sourceChain} (Domain ${sourceDomain})`);
+    } catch (error) {
+      console.error(`❌ Failed to detect chain from job ID: ${error.message}`);
+      throw error;
+    }
     
     // Update status
     jobStatuses.set(jobId, {
       status: 'polling_attestation',
-      message: 'Polling Circle API for CCTP attestation...',
-      txHash: opSepoliaTxHash
+      message: `Polling Circle API for CCTP attestation from ${sourceChain}...`,
+      txHash: sourceTxHash
     });
     
-    // Import utilities
+    // Import CCTP utilities
     const { pollCCTPAttestation } = require('./utils/cctp-poller');
     const { executeReceiveOnArbitrum } = require('./utils/tx-executor');
     
     // STEP 1: Poll Circle API for CCTP attestation
-    console.log('\n📍 STEP 1/2: Polling Circle API for CCTP attestation...');
+    console.log(`\n📍 STEP 1/2: Polling Circle API for CCTP attestation (Domain ${sourceDomain})...`);
     const attestation = await pollCCTPAttestation(
-      opSepoliaTxHash, 
-      config.DOMAINS.OP_SEPOLIA // Domain 2
+      sourceTxHash, 
+      sourceDomain  // Dynamic domain based on job ID
     );
-    console.log('✅ Attestation received');
+    console.log(`✅ Attestation received from ${sourceChain}`);
     
     // Update status
     jobStatuses.set(jobId, {
       status: 'executing_receive',
       message: 'Executing receive() on Arbitrum CCTP Transceiver...',
-      txHash: opSepoliaTxHash
+      txHash: sourceTxHash
     });
     
     // STEP 2: Execute receive() on Arbitrum
@@ -506,7 +520,8 @@ async function processStartJobDirect(jobId, opSepoliaTxHash) {
     return {
       success: true,
       jobId,
-      opSepoliaTxHash,
+      sourceTxHash,
+      sourceChain,
       completionTxHash: result.transactionHash,
       alreadyCompleted: result.alreadyCompleted
     };
