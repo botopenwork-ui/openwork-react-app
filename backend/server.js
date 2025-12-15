@@ -426,6 +426,98 @@ app.post('/api/stop-listener', (req, res) => {
   });
 });
 
+// CCTP Status endpoint - Check transfer status from database
+app.get('/api/cctp-status/:operation/:jobId', (req, res) => {
+  const { operation, jobId } = req.params;
+  
+  const { getCCTPStatus } = require('./utils/cctp-storage');
+  const status = getCCTPStatus(jobId, operation);
+  
+  if (!status) {
+    return res.json({ 
+      found: false,
+      jobId,
+      operation
+    });
+  }
+  
+  res.json({
+    found: true,
+    jobId,
+    operation,
+    status: status.status,
+    step: status.step,
+    lastError: status.last_error,
+    sourceChain: status.source_chain,
+    sourceTxHash: status.source_tx_hash,
+    completionTxHash: status.completion_tx_hash,
+    retryCount: status.retry_count,
+    createdAt: status.created_at,
+    updatedAt: status.updated_at,
+    completedAt: status.completed_at
+  });
+});
+
+// CCTP Retry endpoint - Retry failed transfer
+app.post('/api/cctp-retry/:operation/:jobId', async (req, res) => {
+  const { operation, jobId } = req.params;
+  
+  const { getCCTPStatus, updateCCTPStatus } = require('./utils/cctp-storage');
+  const status = getCCTPStatus(jobId, operation);
+  
+  if (!status) {
+    return res.status(404).json({
+      success: false,
+      error: 'CCTP transfer record not found'
+    });
+  }
+  
+  if (status.status === 'completed') {
+    return res.json({
+      success: true,
+      message: 'Transfer already completed',
+      status: 'completed'
+    });
+  }
+  
+  console.log(`\n🔄 CCTP Retry requested for ${operation}/${jobId}`);
+  
+  // Increment retry count
+  updateCCTPStatus(jobId, operation, { 
+    incrementRetry: true,
+    status: 'pending',
+    step: 'retry_initiated'
+  });
+  
+  // Re-trigger the appropriate flow
+  try {
+    if (operation === 'startJob') {
+      // Re-process from the saved tx hash
+      processStartJobDirect(jobId, status.source_tx_hash)
+        .catch(err => console.error(`Retry failed for ${jobId}:`, err.message));
+    } else if (operation === 'releasePayment') {
+      processReleasePaymentFlow(jobId)
+        .catch(err => console.error(`Retry failed for ${jobId}:`, err.message));
+    } else if (operation === 'settleDispute') {
+      processSettleDisputeFlow(status.dispute_id, status.source_tx_hash)
+        .catch(err => console.error(`Retry failed for ${status.dispute_id}:`, err.message));
+    }
+    
+    res.json({
+      success: true,
+      message: `Retry initiated for ${operation}`,
+      jobId,
+      retryCount: status.retry_count + 1
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Compile contract endpoint
 app.post('/api/compile', async (req, res) => {
   const { contractName } = req.body;
@@ -473,6 +565,7 @@ async function processStartJobDirect(jobId, sourceTxHash) {
     
     // Import utilities
     const { getDomainFromJobId, getChainNameFromJobId } = require('./utils/chain-utils');
+    const { saveCCTPTransfer, updateCCTPStatus } = require('./utils/cctp-storage');
     
     // Detect source chain from job ID
     let sourceChain, sourceDomain;
@@ -485,12 +578,18 @@ async function processStartJobDirect(jobId, sourceTxHash) {
       throw error;
     }
     
-    // Update status
+    // Save to database
+    saveCCTPTransfer('startJob', jobId, sourceTxHash, sourceChain, sourceDomain);
+    
+    // Update in-memory status
     jobStatuses.set(jobId, {
       status: 'polling_attestation',
       message: `Polling Circle API for CCTP attestation from ${sourceChain}...`,
       txHash: sourceTxHash
     });
+    
+    // Update DB
+    updateCCTPStatus(jobId, 'startJob', { step: 'polling_attestation' });
     
     // Import CCTP utilities
     const { pollCCTPAttestation } = require('./utils/cctp-poller');
@@ -504,7 +603,13 @@ async function processStartJobDirect(jobId, sourceTxHash) {
     );
     console.log(`✅ Attestation received from ${sourceChain}`);
     
-    // Update status
+    // Update status - attestation received
+    updateCCTPStatus(jobId, 'startJob', {
+      step: 'executing_receive',
+      attestationMessage: attestation.message,
+      attestationSignature: attestation.attestation
+    });
+    
     jobStatuses.set(jobId, {
       status: 'executing_receive',
       message: 'Executing receive() on Arbitrum CCTP Transceiver...',
@@ -520,6 +625,12 @@ async function processStartJobDirect(jobId, sourceTxHash) {
     } else {
       console.log(`✅ USDC transferred to NOWJC: ${result.transactionHash}`);
     }
+    
+    // Mark as completed in DB
+    updateCCTPStatus(jobId, 'startJob', {
+      status: 'completed',
+      completionTxHash: result.transactionHash || 'already_completed'
+    });
     
     console.log('\n🎉 ========== START JOB FLOW COMPLETED ==========\n');
     
@@ -537,6 +648,13 @@ async function processStartJobDirect(jobId, sourceTxHash) {
     console.error(`Job ID: ${jobId}`);
     console.error(`Error: ${error.message}`);
     console.error('===============================================\n');
+    
+    // Mark as failed in DB
+    const { updateCCTPStatus } = require('./utils/cctp-storage');
+    updateCCTPStatus(jobId, 'startJob', {
+      status: 'failed',
+      lastError: error.message
+    });
     
     throw error;
   }
