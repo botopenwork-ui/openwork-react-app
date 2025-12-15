@@ -4,6 +4,7 @@ import JobsTable from "../../components/JobsTable/JobsTable";
 import "./DAO.css";
 import DetailButton from "../../components/DetailButton/DetailButton";
 import BlueButton from "../../components/BlueButton/BlueButton";
+import Loading from "../../components/Loading";
 import { getDAOStats, getAllProposals } from "../../services/daoService";
 
 export default function DAO() {
@@ -223,6 +224,11 @@ export default function DAO() {
     const handleReferEarnClick = () => {
         navigate('/refer-earn');
     };
+
+    // Show loading state while fetching blockchain data
+    if (loading) {
+        return <Loading />;
+    }
 
     return (
         <div className="body-container">
