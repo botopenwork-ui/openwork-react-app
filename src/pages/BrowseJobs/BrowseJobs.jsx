@@ -163,13 +163,13 @@ export default function BrowseJobs() {
             ],
         },
         {
-            title: "Filter by Chain",
+            title: "Filter",
             items: [
-                "All Chains",
+                "All",
+                "Active",
+                "Completed",
                 "OP Sepolia",
-                "Ethereum Sepolia",
-                "Arbitrum Sepolia",
-                "Base Sepolia"
+                "Ethereum Sepolia"
             ],
         },
     ];
@@ -339,13 +339,22 @@ export default function BrowseJobs() {
         }
     }, [contract]);
 
-    // Filter jobs by chain
+    // Filter jobs by status OR chain
     const filteredJobs = useMemo(() => {
-        if (chainFilter === "All Chains") {
+        // No filter or "All" selected
+        if (chainFilter === "All" || chainFilter === "All Chains") {
             return jobs;
         }
         
-        // Map filter name to chain config
+        // Status filters
+        if (chainFilter === "Active") {
+            return jobs.filter(job => job.status === 0 || job.status === 1); // Open or In Progress
+        }
+        if (chainFilter === "Completed") {
+            return jobs.filter(job => job.status === 2); // Completed
+        }
+        
+        // Chain filters (OP Sepolia, Ethereum Sepolia)
         return jobs.filter(job => {
             const jobChainId = extractChainIdFromJobId(job.id);
             const chainName = getChainConfig(jobChainId)?.name;
