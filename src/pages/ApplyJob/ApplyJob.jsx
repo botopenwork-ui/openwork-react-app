@@ -6,11 +6,9 @@ import BlueButton from "../../components/BlueButton/BlueButton";
 import Milestone from "../../components/Milestone/Milestone";
 import RadioButton from "../../components/RadioButton/RadioButton";
 import Warning from "../../components/Warning/Warning";
-import contractABI from "../../ABIs/lowjc_ABI.json";
-
-// LOWJC Contract on OP Sepolia
-const CONTRACT_ADDRESS = import.meta.env.VITE_LOWJC_CONTRACT_ADDRESS || "0x896a3Bc6ED01f549Fe20bD1F25067951913b793C";
-const OP_SEPOLIA_RPC = import.meta.env.VITE_OPTIMISM_SEPOLIA_RPC_URL;
+import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
+import { applyToJob, getLOWJCContract } from "../../services/localChainService";
+import { getChainConfig } from "../../config/chainConfig";
 
 // Backend URL for secure API calls
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
@@ -47,49 +45,18 @@ export default function ApplyJob() {
   const jobId = searchParams.get('jobId');
   const [jobDescription, setJobDescription] = useState("");
   const [loadingT, setLoadingT] = useState("");
+  const [transactionStatus, setTransactionStatus] = useState("");
   const [selectedOption, setSelectedOption] = useState('Single Milestone');
-  const [walletAddress, setWalletAddress] = useState("");
+  
+  // Multi-chain hooks
+  const { chainId, chainConfig, isAllowed, error: chainError } = useChainDetection();
+  const { address: walletAddress, connect: connectWallet } = useWalletAddress();
   const [milestone1Amount, setMilestone1Amount] = useState(1);
   const [milestone2Amount, setMilestone2Amount] = useState(1);
   const [milestone1Title, setMilestone1Title] = useState("Milestone 1");
   const [milestone2Title, setMilestone2Title] = useState("Milestone 2");
   const [milestone1Content, setMilestone1Content] = useState("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.");
   const [milestone2Content, setMilestone2Content] = useState("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.");
-
-  // Check wallet connection on component mount
-  useEffect(() => {
-    const checkWalletConnection = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({
-            method: "eth_accounts",
-          });
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-          }
-        } catch (error) {
-          console.error("Failed to check wallet connection:", error);
-        }
-      }
-    };
-
-    checkWalletConnection();
-  }, []);
-
-  const connectWallet = async () => {
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({
-          method: "eth_requestAccounts",
-        });
-        setWalletAddress(accounts[0]);
-      } catch (error) {
-        console.error("Failed to connect wallet:", error);
-      }
-    } else {
-      alert("MetaMask is not installed. Please install it to use this app.");
-    }
-  };
 
   // Upload milestone data to IPFS (following PostJob pattern)
   const pinMilestoneToIPFS = async (milestone, index) => {
@@ -165,23 +132,31 @@ export default function ApplyJob() {
   };
 
   const handleApplyToJob = async () => {
+    // Validation
     if (!walletAddress) {
-      alert("Please connect your wallet first");
+      setTransactionStatus("Please connect your wallet first");
       return;
     }
 
     if (!jobId) {
-      alert("Job ID not found in URL");
+      setTransactionStatus("Job ID not found in URL");
       return;
     }
 
     if (!jobDescription.trim()) {
-      alert("Please provide a description for your application");
+      setTransactionStatus("Please provide a description for your application");
+      return;
+    }
+
+    // Chain validation
+    if (!isAllowed) {
+      setTransactionStatus(chainConfig?.reason || "Transactions not allowed on this network. Please switch to OP Sepolia or Ethereum Sepolia.");
       return;
     }
 
     try {
       setLoadingT(true);
+      setTransactionStatus(`Preparing application on ${chainConfig?.name}...`);
       
       // Prepare milestone data
       const milestones = selectedOption === 'Single Milestone' 
@@ -192,7 +167,7 @@ export default function ApplyJob() {
           ];
 
       // Upload each milestone to IPFS and get their hashes
-      console.log("Uploading milestones to IPFS...");
+      setTransactionStatus("Uploading milestones to IPFS...");
       const milestoneHashes = [];
       for (let i = 0; i < milestones.length; i++) {
         const hash = await pinMilestoneToIPFS(milestones[i], i);
@@ -203,13 +178,15 @@ export default function ApplyJob() {
       }
 
       // Upload application details to IPFS
-      console.log("Uploading application details to IPFS...");
+      setTransactionStatus("Uploading application details to IPFS...");
       const applicationDetails = {
         description: jobDescription,
         applicant: walletAddress,
         jobId: jobId,
         milestones: milestones,
-        preferredChain: "OP Sepolia",
+        preferredChain: chainConfig?.name,
+        appliedFromChain: chainConfig?.name,
+        appliedFromChainId: chainId,
         timestamp: new Date().toISOString(),
       };
 
@@ -218,27 +195,16 @@ export default function ApplyJob() {
         throw new Error("Failed to upload application details to IPFS");
       }
 
-      const web3 = new Web3(window.ethereum);
-      const contract = new web3.eth.Contract(contractABI, CONTRACT_ADDRESS);
-      
-      // Use IPFS hashes as descriptions
-      const descriptions = milestoneHashes;
-      
-      // Convert to USDC units (6 decimals) - use plain numbers, not BigInt
+      // Convert to USDC units (6 decimals)
       const amounts = milestones.map(m => Math.floor(m.amount * 1000000));
       
-      // OP Sepolia chain domain
-      const preferredChainDomain = 2;
+      // Get LayerZero fee quote
+      setTransactionStatus("Estimating LayerZero fee...");
+      const web3 = new Web3(window.ethereum);
+      const contract = await getLOWJCContract(chainId);
+      const lzOptions = chainConfig.layerzero.options;
       
-      // LayerZero options (standard)
-      const nativeOptions = "0x0003010011010000000000000000000000000007a120";
-      
-      // Get LayerZero fee quote from bridge
-      console.log("📊 Getting LayerZero fee quote...");
       const bridgeAddress = await contract.methods.bridge().call();
-      console.log("Bridge address:", bridgeAddress);
-      
-      // Bridge ABI for quoteNativeChain function
       const bridgeABI = [{
         "inputs": [
           {"type": "bytes", "name": "_payload"},
@@ -251,59 +217,40 @@ export default function ApplyJob() {
       }];
       
       const bridgeContract = new web3.eth.Contract(bridgeABI, bridgeAddress);
-      
-      // Encode payload matching LOWJC's internal encoding
-      // LOWJC sends: abi.encode("applyToJob", msg.sender, _jobId, _appHash, _descriptions, _amounts, _preferredChainDomain)
       const payload = web3.eth.abi.encodeParameters(
         ['string', 'address', 'string', 'string', 'string[]', 'uint256[]', 'uint32'],
-        ['applyToJob', walletAddress, jobId, applicationHash, descriptions, amounts, preferredChainDomain]
+        ['applyToJob', walletAddress, jobId, applicationHash, milestoneHashes, amounts, 3] // 3 = Arbitrum domain
       );
       
-      // Get quote from bridge
-      const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, nativeOptions).call();
-      console.log("💰 LayerZero quoted fee:", quotedFee.toString(), "wei");
-      console.log("💰 LayerZero quoted fee:", web3.utils.fromWei(quotedFee, 'ether'), "ETH");
+      const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, lzOptions).call();
+      console.log(`💰 LayerZero fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH`);
       
-      // Detailed logging for debugging
-      console.log("============ APPLY JOB DEBUG INFO ============");
-      console.log("1. jobId:", jobId, "| Type:", typeof jobId);
-      console.log("2. applicationHash:", applicationHash, "| Type:", typeof applicationHash);
-      console.log("3. descriptions:", descriptions);
-      console.log("   - Length:", descriptions.length);
-      console.log("   - Types:", descriptions.map(d => typeof d));
-      console.log("4. amounts:", amounts);
-      console.log("   - Length:", amounts.length);
-      console.log("   - Types:", amounts.map(a => typeof a));
-      console.log("   - Values:", amounts.map(a => a.toString()));
-      console.log("5. preferredChainDomain:", preferredChainDomain, "| Type:", typeof preferredChainDomain);
-      console.log("6. nativeOptions:", nativeOptions, "| Type:", typeof nativeOptions);
-      console.log("7. Using quoted fee:", quotedFee.toString(), "wei");
-      console.log("8. From address:", walletAddress);
-      console.log("==============================================");
+      // Submit application via localChainService
+      setTransactionStatus(`Submitting application on ${chainConfig?.name}...`);
       
-      // Call the contract with quoted fee
       const tx = await contract.methods.applyToJob(
         jobId,
         applicationHash,
-        descriptions,
+        milestoneHashes,
         amounts,
-        preferredChainDomain,
-        nativeOptions
+        3, // Arbitrum domain (preferredChainDomain)
+        lzOptions
       ).send({
         from: walletAddress,
-        value: quotedFee // Use the exact LayerZero quoted fee
+        value: quotedFee
       });
       
-      console.log("Application submitted successfully:", tx.transactionHash);
+      console.log("✅ Application submitted:", tx.transactionHash);
+      setTransactionStatus(`Success! Application submitted on ${chainConfig?.name}. Syncing to Arbitrum Genesis...`);
       
-      // Redirect to job details or success page
+      // Redirect to job details
       setTimeout(() => {
         window.location.href = `/job-deep-view/${jobId}`;
       }, 2000);
       
     } catch (error) {
       console.error("Error applying to job:", error);
-      alert(`Failed to submit application: ${error.message}`);
+      setTransactionStatus(`Failed to submit application: ${error.message}`);
       setLoadingT(false);
     }
   };
@@ -339,6 +286,21 @@ export default function ApplyJob() {
         </div>
         <div className="form-body raiseBody">
           <div>
+            {chainError && (
+              <div className="form-groupDC warning-form">
+                <Warning content={chainError} icon="/triangle_warning.svg"/>
+              </div>
+            )}
+            {!isAllowed && chainConfig?.reason && (
+              <div className="form-groupDC warning-form">
+                <Warning content={chainConfig.reason} icon="/triangle_warning.svg"/>
+              </div>
+            )}
+            {transactionStatus && (
+              <div className="form-groupDC warning-form">
+                <Warning content={transactionStatus} icon="/info.svg"/>
+              </div>
+            )}
             <div className="form-groupDC warning-form">
               <Warning content={"Please make sure your OpenWork Profile is up to date!"} icon="/triangle_warning.svg"/>
             </div>
@@ -353,7 +315,12 @@ export default function ApplyJob() {
               </div>
             </div>
             
-            {/* Wallet Connection */}
+            {/* Chain & Wallet Info */}
+            {chainConfig && isAllowed && (
+              <div className="form-groupDC warning-form">
+                <Warning content={`Connected to ${chainConfig.name}`} icon="/info.svg"/>
+              </div>
+            )}
             {!walletAddress ? (
               <div className="form-groupDC">
                 <BlueButton
@@ -424,6 +391,7 @@ export default function ApplyJob() {
             <BlueButton 
               label="Submit Application" 
               onClick={handleApplyToJob}
+              disabled={!walletAddress || !isAllowed}
               style={{width: '100%', justifyContent: 'center', marginTop:'20px', marginBottom:'13px', padding:'10px 14px'}}
             />
           </div>
