@@ -208,4 +208,36 @@ export function toHexChainId(chainId) {
   return '0x' + chainId.toString(16);
 }
 
+/**
+ * Extract chain ID from job ID (format: "chainId-jobNumber")
+ * @param {string} jobId - Job ID (e.g., "40232-1", "40161-2")
+ * @returns {number} Chain ID
+ */
+export function extractChainIdFromJobId(jobId) {
+  if (!jobId || typeof jobId !== 'string') return null;
+  const parts = jobId.split('-');
+  return parts.length > 0 ? parseInt(parts[0]) : null;
+}
+
+/**
+ * Get chain logo path for a chain ID
+ * @param {number} chainId - Chain ID
+ * @returns {string} Logo path
+ */
+export function getChainLogo(chainId) {
+  const logos = {
+    11155420: '/optimism-chain.png',  // OP Sepolia
+    11155111: '/ethereum-chain.png',  // Ethereum Sepolia
+    421614: '/arbitrum-chain.png',    // Arbitrum Sepolia
+    84532: '/base-chain.png',         // Base Sepolia
+    // Mainnet logos (same as testnet)
+    10: '/optimism-chain.png',        // OP Mainnet
+    1: '/ethereum-chain.png',         // Ethereum Mainnet
+    42161: '/arbitrum-chain.png',     // Arbitrum One
+    8453: '/base-chain.png',          // Base Mainnet
+    137: '/polygon-chain.png'         // Polygon
+  };
+  return logos[chainId] || '/question-mark.svg';
+}
+
 export default CHAIN_CONFIG;

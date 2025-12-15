@@ -6,6 +6,7 @@ import JobsTable from "../../components/JobsTable/JobsTable";
 import "./BrowseJobs.css";
 import SkillBox from "../../components/SkillBox/SkillBox";
 import DetailButton from "../../components/DetailButton/DetailButton";
+import { extractChainIdFromJobId, getChainLogo, getChainConfig } from "../../config/chainConfig";
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_GENESIS_CONTRACT_ADDRESS;
 const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
@@ -76,6 +77,7 @@ export default function BrowseJobs() {
     // Column configuration
     const allColumns = [
         { id: "title", label: "Job Title", required: true },
+        { id: "chain", label: "Chain", required: false },
         { id: "postedBy", label: "Posted by", required: false },
         { id: "skills", label: "Skills Required", required: false },
         { id: "timeline", label: "Timeline", required: false },
@@ -86,12 +88,13 @@ export default function BrowseJobs() {
         { id: "actions", label: "", required: true },
     ];
 
-    // Selected columns state - default to first 6 columns
+    // Selected columns state - includes chain as default visible column
     const [selectedColumns, setSelectedColumns] = useState([
         "title",
+        "chain",
         "postedBy", 
         "skills",
-        "timeline",
+        "status",
         "budget",
         "actions"
     ]);
@@ -136,8 +139,8 @@ export default function BrowseJobs() {
                 if (prev.length <= 4) return prev;
                 return prev.filter(id => id !== columnId);
             } else {
-                // Can't select if at maximum (6 columns)
-                if (prev.length >= 6) return prev;
+                // Can't select if at maximum (7 columns including chain)
+                if (prev.length >= 7) return prev;
                 
                 // Maintain column order from allColumns
                 const allColumnIds = allColumns.map(col => col.id);
@@ -345,13 +348,18 @@ export default function BrowseJobs() {
             const additionalSkillsCount =
                 job.skills && job.skills.length > 1 ? job.skills.length - 1 : 0;
 
+            // Extract chain info from job ID
+            const jobChainId = extractChainIdFromJobId(job.id);
+            const chainLogo = getChainLogo(jobChainId);
+            const chainName = getChainConfig(jobChainId)?.name || "Unknown";
+
             // Create all possible column data
             const allColumnData = {
                 title: (
                     <div
                         style={{
                             display: "flex",
-                            alignItems: "flex-start",
+                            alignItems: "center",
                             gap: "8px",
                         }}
                     >
@@ -359,7 +367,7 @@ export default function BrowseJobs() {
                             src="/doc.svg"
                             alt="Document Icon"
                             className="docIcon"
-                            style={{ marginTop: "2px", flexShrink: 0 }}
+                            style={{ flexShrink: 0 }}
                         />
                         {job.title && (
                             <span
@@ -380,6 +388,16 @@ export default function BrowseJobs() {
                         )}
                     </div>
                 ),
+                chain: (
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                        <img 
+                            src={chainLogo} 
+                            alt={chainName}
+                            title={chainName}
+                            style={{ width: "24px", height: "24px", objectFit: "contain" }}
+                        />
+                    </div>
+                ),
                 postedBy: <div title={job.jobGiver}>{job.postedBy}</div>,
                 skills: (
                     <div className="skills-required">
@@ -397,9 +415,9 @@ export default function BrowseJobs() {
                     </div>
                 ),
                 budget: (
-                    <div className="budget">
+                    <div className="budget" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <img src="/xdc.svg" alt="Budget" style={{ width: "20px", height: "20px" }} />
                         <span>{job.budget}</span>
-                        <img src="/xdc.svg" alt="Budget" />
                     </div>
                 ),
                 status: <div>{statusLabels[job.status] || "Unknown"}</div>,
@@ -433,12 +451,6 @@ export default function BrowseJobs() {
             <div className="loading-containerT">
                 <div className="loading-icon">
                     <img src="/OWIcon.svg" alt="Loading..." />
-                </div>
-                <div className="loading-message">
-                    <h1 id="txText">Loading Jobs...</h1>
-                    <p id="txSubtext">
-                        Fetching job data from the blockchain. Please wait...
-                    </p>
                 </div>
             </div>
         );
@@ -493,7 +505,7 @@ export default function BrowseJobs() {
 
     return (
         <div className="body-container">
-            <div className="view-jobs-container">
+            <div className="view-jobs-container browse-jobs-page">
                 <JobsTable
                     title={"OpenWork Ledger"}
                     tableData={currentJobs}
