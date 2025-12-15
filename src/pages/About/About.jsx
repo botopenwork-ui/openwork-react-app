@@ -6,12 +6,8 @@ const ABOUTITEMS = [
     {
         icon: '/whitepaper.svg',
         title: 'Read the Whitepaper'
-    },
-    {
-        icon: '/OWToken.svg',
-        title: 'Buy OpenWork Tokens'
     }
-] 
+]
 
 const COLLAPSEITEMS = [
     {
