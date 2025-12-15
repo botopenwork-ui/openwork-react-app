@@ -96,10 +96,10 @@ const Header = () => {
       <div className="right-header">
         {walletAddress ? (
           <>
-            <div className="alarm" onClick={goNotification}>
+            {/* <div className="alarm" onClick={goNotification}>
               <img src="/alarm.svg" alt="Alarm" />
               <span className="alarm-badge">2</span>
-            </div>
+            </div> */}
             <div className="dropdownButtonContainer-home">
               <div
                 className={`dropdownButton-home ${dropdownVisible ? "clicked-home" : ""}`}
