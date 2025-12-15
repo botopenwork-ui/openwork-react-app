@@ -318,6 +318,66 @@ git push
       '📖 Keep documentation updated',
       '🌐 Users can immediately post jobs on new chain once live'
     ],
+    multiChainLifecycleRules: {
+      title: 'Multi-Chain Lifecycle & Chain Restrictions',
+      description: 'Understanding which actions can be performed from any chain vs. specific chains',
+      rules: [
+        {
+          category: 'Actions from ANY Chain',
+          icon: '🌐',
+          description: 'These actions can be performed from any supported local chain',
+          actions: [
+            { name: 'Post Job', description: 'Users can post jobs from OP Sepolia, Ethereum Sepolia, or any future local chain' },
+            { name: 'Apply to Job', description: 'Freelancers can apply to ANY job from ANY chain (cross-chain applications fully supported)' },
+            { name: 'Create Profile', description: 'Users can create their profile from any local chain' },
+            { name: 'Add Portfolio', description: 'Portfolio items can be added from any local chain' },
+            { name: 'Raise Dispute', description: 'Disputes can be raised from any local chain (fees route to Arbitrum)' }
+          ]
+        },
+        {
+          category: 'Actions from POSTING Chain',
+          icon: '🔒',
+          description: 'Job giver MUST be on the chain where the job was originally posted',
+          actions: [
+            { name: 'Start Job', description: 'Must connect to posting chain. Job ID reveals posting chain (e.g., 40232-1 = OP Sepolia)' },
+            { name: 'Release Payment', description: 'Must be on posting chain to release milestone payments' },
+            { name: 'Lock Next Milestone', description: 'Must be on posting chain to escrow next milestone funds' },
+            { name: 'Cancel Job', description: 'Must be on posting chain to cancel and refund' }
+          ],
+          warning: 'Job givers should bookmark/remember which chain they posted from. UI should show posting chain clearly and prompt to switch if needed.'
+        },
+        {
+          category: 'Actions from APPLICATION Chain',
+          icon: '🎯',
+          description: 'Job taker MUST be on the chain they applied from',
+          actions: [
+            { name: 'Submit Work', description: 'Must connect to application chain to submit milestone deliverables' }
+          ],
+          warning: 'Freelancers should remember which chain they applied from. Application data stores this info.'
+        }
+      ],
+      implementationGuidance: [
+        '📌 Extract posting chain from job ID: job.id.split("-")[0] gives EID, map to chain ID',
+        '📌 Store application chain when user applies (track in local state or derive from application ID)',
+        '📌 Before startJob/releasePayment: check user is on posting chain, prompt to switch if not',
+        '📌 Before submitWork: check user is on application chain',
+        '📌 Use Warning component to show: "This action requires {chainName}. Please switch networks."',
+        '📌 Use switchToChain() utility to help users switch automatically'
+      ],
+      exampleCode: `// Example: Validate chain before startJob
+const jobChainId = extractChainIdFromJobId(jobId); // Get posting chain
+const { chainId: userChainId } = useChainDetection();
+
+if (userChainId !== jobChainId) {
+  const jobChainName = getChainConfig(jobChainId)?.name;
+  alert(\`Please switch to \${jobChainName} to start this job.\`);
+  await switchToChain(jobChainId);
+  return;
+}
+
+// Proceed with startJob...
+await startJob(jobChainId, userAddress, startData);`
+    },
     commonIssues: [
       {
         issue: 'Jobs not syncing to Arbitrum',

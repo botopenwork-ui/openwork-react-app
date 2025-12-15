@@ -1177,6 +1177,62 @@ const OpenworkDocs = () => {
                           </div>
                         </div>
 
+                        {/* Multi-Chain Lifecycle Rules Section */}
+                        {multiChainIntegrationGuide['add-new-chain'].multiChainLifecycleRules && (
+                          <div className="docs-section">
+                            <h3 className="docs-section-title">🔐 {multiChainIntegrationGuide['add-new-chain'].multiChainLifecycleRules.title}</h3>
+                            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>
+                              {multiChainIntegrationGuide['add-new-chain'].multiChainLifecycleRules.description}
+                            </p>
+                            
+                            {multiChainIntegrationGuide['add-new-chain'].multiChainLifecycleRules.rules.map((rule, idx) => (
+                              <div key={idx} style={{ marginBottom: '20px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                  <span style={{ fontSize: '20px' }}>{rule.icon}</span>
+                                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>{rule.category}</h4>
+                                </div>
+                                <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '12px' }}>{rule.description}</p>
+                                <ul className="docs-feature-list">
+                                  {rule.actions.map((action, actionIdx) => (
+                                    <li key={actionIdx} className="docs-feature-item">
+                                      <strong>{action.name}:</strong> {action.description}
+                                    </li>
+                                  ))}
+                                </ul>
+                                {rule.warning && (
+                                  <div style={{ 
+                                    background: '#fef3c7', 
+                                    border: '1px solid #fde047', 
+                                    borderRadius: '8px', 
+                                    padding: '12px',
+                                    marginTop: '12px',
+                                    fontSize: '13px',
+                                    color: '#92400e'
+                                  }}>
+                                    <strong>⚠️ Important:</strong> {rule.warning}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                            
+                            <div style={{ marginTop: '20px' }}>
+                              <h5 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Implementation Guidance:</h5>
+                              <ul className="docs-feature-list">
+                                {multiChainIntegrationGuide['add-new-chain'].multiChainLifecycleRules.implementationGuidance.map((guide, idx) => (
+                                  <li key={idx} className="docs-feature-item">{guide}</li>
+                                ))}
+                              </ul>
+                            </div>
+                            
+                            <div style={{ marginTop: '16px' }}>
+                              <h5 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Code Example:</h5>
+                              <pre className="docs-code-block" style={{ margin: 0 }}>
+                                <code>{multiChainIntegrationGuide['add-new-chain'].multiChainLifecycleRules.exampleCode}</code>
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Key Takeaways Section */}
                         <div className="docs-section">
                           <h3 className="docs-section-title">💡 Key Takeaways</h3>
