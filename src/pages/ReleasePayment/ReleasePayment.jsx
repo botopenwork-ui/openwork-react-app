@@ -9,6 +9,10 @@ import DropDown from "../../components/DropDown/DropDown";
 import Warning from "../../components/Warning/Warning";
 import Milestone from "../../components/Milestone/Milestone";
 import BlueButton from "../../components/BlueButton/BlueButton";
+import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
+import { getChainConfig, extractChainIdFromJobId } from "../../config/chainConfig";
+import { switchToChain } from "../../utils/switchNetwork";
+import { getLOWJCContract } from "../../services/localChainService";
 
 const OPTIONS = [
   'Milestone 1','Milestone 2','Milestone 3'
@@ -37,13 +41,20 @@ export default function ReleasePayment() {
   const [account, setAccount] = useState(null);
   const navigate = useNavigate();
   const [loadingT, setLoadingT] = useState("");
-  const [walletAddress, setWalletAddress] = useState("");
   const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [loading, setLoading] = useState(true); // Initialize loading state
+  const [loading, setLoading] = useState(true);
   const [transactionStatus, setTransactionStatus] = useState("Click to release milestone payment");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
   const [currentMilestoneNumber, setCurrentMilestoneNumber] = useState(1);
+
+  // Multi-chain hooks
+  const { chainId: userChainId, chainConfig: userChainConfig } = useChainDetection();
+  const { address: walletAddress, connect: connectWallet } = useWalletAddress();
+  
+  // Get job posting chain from jobId
+  const jobChainId = jobId ? extractChainIdFromJobId(jobId) : null;
+  const jobChainConfig = jobChainId ? getChainConfig(jobChainId) : null;
 
   function formatWalletAddressH(address) {
     if (!address) return "";
@@ -64,48 +75,12 @@ export default function ReleasePayment() {
       });
   };
 
-  // Check if user is already connected to MetaMask
-  useEffect(() => {
-    const checkWalletConnection = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({
-            method: "eth_accounts",
-          });
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-          }
-        } catch (error) {
-          console.error("Failed to check wallet connection:", error);
-        }
-      }
-    };
-
-    checkWalletConnection();
-  }, []);
-
   function formatWalletAddress(address) {
     if (!address) return "";
     const start = address.substring(0, 6);
     const end = address.substring(address.length - 4);
     return `${start}....${end}`;
   }
-
-  const connectWallet = async () => {
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({
-          method: "eth_requestAccounts",
-        });
-        setWalletAddress(accounts[0]);
-        setAccount(accounts[0]); // Set account when wallet is connected
-      } catch (error) {
-        console.error("Failed to connect wallet:", error);
-      }
-    } else {
-      alert("MetaMask is not installed. Please install it to use this app.");
-    }
-  };
 
   const toggleDropdown = () => {
     setDropdownVisible(!dropdownVisible);
@@ -247,42 +222,29 @@ export default function ReleasePayment() {
       return;
     }
 
+    // CRITICAL: Validate user is on POSTING chain
+    if (!jobChainId || !jobChainConfig) {
+      setTransactionStatus("❌ Could not determine job posting chain from job ID");
+      return;
+    }
+
+    if (userChainId !== jobChainId) {
+      setTransactionStatus(`⚠️ Please switch to ${jobChainConfig.name} to release payment. ReleasePayment must be called from the posting chain.`);
+      try {
+        await switchToChain(jobChainId);
+        setTransactionStatus(`Switched to ${jobChainConfig.name}. Please try again.`);
+      } catch (switchError) {
+        setTransactionStatus(`❌ Failed to switch to ${jobChainConfig.name}: ${switchError.message}`);
+      }
+      return;
+    }
+
     try {
       setIsProcessing(true);
-      setTransactionStatus("🔄 Step 1/2: Releasing payment on OP Sepolia...");
+      setTransactionStatus(`🔄 Step 1/2: Releasing payment on ${jobChainConfig.name}...`);
       
-      const OP_SEPOLIA_RPC = import.meta.env.VITE_OPTIMISM_SEPOLIA_RPC_URL;
-      const LOWJC_CONTRACT_ADDRESS = import.meta.env.VITE_LOWJC_CONTRACT_ADDRESS || "0x896a3Bc6ED01f549Fe20bD1F25067951913b793C";
       const web3 = new Web3(window.ethereum);
-      
-      // Ensure user is on OP Sepolia
-      const chainId = await web3.eth.getChainId();
-      const opSepoliaChainId = 11155420;
-      
-      if (chainId !== opSepoliaChainId) {
-        setTransactionStatus("🔗 Switching to OP Sepolia network...");
-        try {
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0xaa37dc' }],
-          });
-        } catch (switchError) {
-          if (switchError.code === 4902) {
-            await window.ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: '0xaa37dc',
-                chainName: 'OP Sepolia',
-                rpcUrls: [OP_SEPOLIA_RPC],
-              }],
-            });
-          } else {
-            throw switchError;
-          }
-        }
-      }
-
-      const lowjcContract = new web3.eth.Contract(lowjcABI, LOWJC_CONTRACT_ADDRESS);
+      const lowjcContract = await getLOWJCContract(jobChainId);
       
       // Get the amount to release (convert BigInt to string for web3.js)
       const amount = (job.currentLockedAmount || 0).toString();
@@ -303,7 +265,7 @@ export default function ReleasePayment() {
       }];
       
       const bridgeContract = new web3.eth.Contract(bridgeABI, bridgeAddress);
-      const nativeOptions = "0x0003010011010000000000000000000000000007a120";
+      const nativeOptions = jobChainConfig.layerzero.options;
       
       // Encode payload for releasePaymentCrossChain (must match LOWJC's encoding)
       const payload = web3.eth.abi.encodeParameters(
@@ -312,9 +274,9 @@ export default function ReleasePayment() {
       );
       
       const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, nativeOptions).call();
-      console.log("💰 LayerZero quoted fee:", web3.utils.fromWei(quotedFee, 'ether'), "ETH");
+      console.log(`💰 LayerZero quoted fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH`);
       
-      setTransactionStatus("💰 Releasing payment - Please confirm in MetaMask");
+      setTransactionStatus(`💰 Releasing payment on ${jobChainConfig.name} - Please confirm in MetaMask`);
       
       const releasePaymentTx = await lowjcContract.methods.releasePaymentCrossChain(
         jobId,
@@ -326,10 +288,10 @@ export default function ReleasePayment() {
         value: quotedFee // Use quoted fee
       });
 
-      console.log("✅ Payment release initiated:", releasePaymentTx.transactionHash);
+      console.log(`✅ Payment release initiated on ${jobChainConfig.name}:`, releasePaymentTx.transactionHash);
       
       // Step 2: Send to backend for CCTP processing
-      setTransactionStatus("🔄 Step 2/2: Backend processing CCTP transfer...");
+      setTransactionStatus(`🔄 Step 2/2: Backend processing CCTP transfer from ${jobChainConfig.name}...`);
       
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
       const response = await fetch(`${backendUrl}/api/release-payment`, {
@@ -422,41 +384,30 @@ export default function ReleasePayment() {
       return;
     }
 
+    // CRITICAL: Validate user is on POSTING chain
+    if (!jobChainId || !jobChainConfig) {
+      setTransactionStatus("❌ Could not determine job posting chain from job ID");
+      return;
+    }
+
+    if (userChainId !== jobChainId) {
+      setTransactionStatus(`⚠️ Please switch to ${jobChainConfig.name} to lock milestone. LockNextMilestone must be called from the posting chain.`);
+      try {
+        await switchToChain(jobChainId);
+        setTransactionStatus(`Switched to ${jobChainConfig.name}. Please try again.`);
+      } catch (switchError) {
+        setTransactionStatus(`❌ Failed to switch to ${jobChainConfig.name}: ${switchError.message}`);
+      }
+      return;
+    }
+
     try {
       setIsLocking(true);
-      setTransactionStatus(`🔒 Locking Milestone ${currentMilestoneNumber + 1}...`);
+      setTransactionStatus(`🔒 Locking Milestone ${currentMilestoneNumber + 1} on ${jobChainConfig.name}...`);
       
-      const OP_SEPOLIA_RPC = import.meta.env.VITE_OPTIMISM_SEPOLIA_RPC_URL;
-      const LOWJC_CONTRACT_ADDRESS = import.meta.env.VITE_LOWJC_CONTRACT_ADDRESS || "0x896a3Bc6ED01f549Fe20bD1F25067951913b793C";
-      const USDC_ADDRESS = "0x5fd84259d66Cd46123540766Be93DFE6d43130D7"; // OP Sepolia USDC
+      const USDC_ADDRESS = jobChainConfig.contracts.usdc;
+      const LOWJC_ADDRESS = jobChainConfig.contracts.lowjc;
       const web3 = new Web3(window.ethereum);
-      
-      // Ensure user is on OP Sepolia
-      const chainId = await web3.eth.getChainId();
-      const opSepoliaChainId = 11155420;
-      
-      if (chainId !== opSepoliaChainId) {
-        setTransactionStatus("🔗 Switching to OP Sepolia network...");
-        try {
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0xaa37dc' }],
-          });
-        } catch (switchError) {
-          if (switchError.code === 4902) {
-            await window.ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: '0xaa37dc',
-                chainName: 'OP Sepolia',
-                rpcUrls: [OP_SEPOLIA_RPC],
-              }],
-            });
-          } else {
-            throw switchError;
-          }
-        }
-      }
 
       // Get next milestone amount from job data
       const nextMilestoneIndex = currentMilestoneNumber; // 0-indexed
@@ -475,7 +426,7 @@ export default function ReleasePayment() {
         USDC_ADDRESS
       );
       
-      await usdcContract.methods.approve(LOWJC_CONTRACT_ADDRESS, nextMilestoneAmount).send({
+      await usdcContract.methods.approve(LOWJC_ADDRESS, nextMilestoneAmount).send({
         from: walletAddress
       });
 
@@ -483,7 +434,7 @@ export default function ReleasePayment() {
       
       // Get LayerZero fee quote for lockNextMilestone
       setTransactionStatus("🔒 Getting LayerZero fee quote...");
-      const lowjcContract = new web3.eth.Contract(lowjcABI, LOWJC_CONTRACT_ADDRESS);
+      const lowjcContract = await getLOWJCContract(jobChainId);
       const bridgeAddress = await lowjcContract.methods.bridge().call();
       
       const bridgeABI = [{
@@ -498,7 +449,7 @@ export default function ReleasePayment() {
       }];
       
       const bridgeContract = new web3.eth.Contract(bridgeABI, bridgeAddress);
-      const nativeOptions = "0x0003010011010000000000000000000000000007a120";
+      const nativeOptions = jobChainConfig.layerzero.options;
       
       // Encode payload for lockNextMilestone
       const payload = web3.eth.abi.encodeParameters(
@@ -668,6 +619,14 @@ export default function ReleasePayment() {
             <div className="warning-form">
               <Warning content={transactionStatus} />
             </div>
+            {jobChainConfig && userChainId !== jobChainId && (
+              <div className="warning-form">
+                <Warning 
+                  content={`⚠️ Payment operations require ${jobChainConfig.name}. You are on ${userChainConfig?.name || 'unknown chain'}. Please switch networks.`} 
+                  icon="/triangle_warning.svg"
+                />
+              </div>
+            )}
           </div>
         </div>
         {/* <PaymentItem title="Payment 2" />
