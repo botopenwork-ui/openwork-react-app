@@ -391,14 +391,12 @@ export default function BrowseJobs() {
                     </div>
                 ),
                 chain: (
-                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-                        <img 
-                            src={chainLogo} 
-                            alt={chainName}
-                            title={chainName}
-                            style={{ width: "24px", height: "24px", objectFit: "contain" }}
-                        />
-                    </div>
+                    <img 
+                        src={chainLogo} 
+                        alt={chainName}
+                        title={chainName}
+                        style={{ width: "24px", height: "24px", objectFit: "contain", display: "block" }}
+                    />
                 ),
                 postedBy: <div title={job.jobGiver}>{job.postedBy}</div>,
                 skills: (
