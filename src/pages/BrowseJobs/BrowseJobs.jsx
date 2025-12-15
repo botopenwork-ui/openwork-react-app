@@ -73,6 +73,7 @@ export default function BrowseJobs() {
     const [contract, setContract] = useState(null);
     const hasFetchedRef = React.useRef(false);
     const navigate = useNavigate();
+    const [chainFilter, setChainFilter] = useState("All Chains");
 
     // Column configuration
     const allColumns = [
@@ -162,14 +163,22 @@ export default function BrowseJobs() {
             ],
         },
         {
-            title: "Filter",
+            title: "Filter by Chain",
             items: [
-                "All",
-                "Active",
-                "Completed"
+                "All Chains",
+                "OP Sepolia",
+                "Ethereum Sepolia",
+                "Arbitrum Sepolia",
+                "Base Sepolia"
             ],
         },
     ];
+    
+    // Handle chain filter change
+    const handleChainFilterChange = (filter) => {
+        setChainFilter(filter);
+        setCurrentPage(1); // Reset to first page when filter changes
+    };
 
     // Initialize Web3 and contract
     useEffect(() => {
@@ -330,6 +339,20 @@ export default function BrowseJobs() {
         }
     }, [contract]);
 
+    // Filter jobs by chain
+    const filteredJobs = useMemo(() => {
+        if (chainFilter === "All Chains") {
+            return jobs;
+        }
+        
+        // Map filter name to chain config
+        return jobs.filter(job => {
+            const jobChainId = extractChainIdFromJobId(job.id);
+            const chainName = getChainConfig(jobChainId)?.name;
+            return chainName === chainFilter;
+        });
+    }, [jobs, chainFilter]);
+
     // Transform job data for table display
     const tableData = useMemo(() => {
         // Status mapping
@@ -341,7 +364,7 @@ export default function BrowseJobs() {
             4: "Disputed"
         };
 
-        return jobs.map((job) => {
+        return filteredJobs.map((job) => {
             const primarySkill =
                 job.skills && job.skills.length > 0 ? job.skills[0] : "General";
             const additionalSkillsCount =
@@ -439,13 +462,13 @@ export default function BrowseJobs() {
             // Filter based on selected columns
             return selectedColumns.map(columnId => allColumnData[columnId]);
         });
-    }, [jobs, selectedColumns]);
+    }, [filteredJobs, selectedColumns]);
 
     const indexOfLastJob = currentPage * jobsPerPage;
     const indexOfFirstJob = indexOfLastJob - jobsPerPage;
     const currentJobs = tableData.slice(indexOfFirstJob, indexOfLastJob);
 
-    const totalPages = Math.ceil(jobs.length / jobsPerPage);
+    const totalPages = Math.ceil(tableData.length / jobsPerPage);
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
     if (loading) {
@@ -520,6 +543,8 @@ export default function BrowseJobs() {
                     selectedColumns={selectedColumns}
                     onColumnToggle={handleColumnToggle}
                     allColumns={allColumns}
+                    selectedFilter={chainFilter}
+                    onFilterChange={handleChainFilterChange}
                 />
             </div>
         </div>
