@@ -47,6 +47,7 @@ export default function ReleasePayment() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
   const [currentMilestoneNumber, setCurrentMilestoneNumber] = useState(1);
+  const [cctpStatus, setCctpStatus] = useState(null);
 
   // Multi-chain hooks
   const { chainId: userChainId, chainConfig: userChainConfig } = useChainDetection();
@@ -157,6 +158,50 @@ export default function ReleasePayment() {
       fetchJobDetails();
     }
   }, [jobId]);
+
+  // Poll CCTP status for release payment
+  useEffect(() => {
+    if (!jobId) return;
+
+    const pollCCTPStatus = async () => {
+      try {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+        const response = await fetch(`${backendUrl}/api/cctp-status/releasePayment/${jobId}`);
+        const data = await response.json();
+        
+        if (data.found) {
+          setCctpStatus(data);
+        }
+      } catch (error) {
+        console.warn('CCTP status poll error:', error);
+      }
+    };
+
+    pollCCTPStatus();
+    const interval = setInterval(pollCCTPStatus, 5000); // Poll every 5 seconds
+    
+    return () => clearInterval(interval);
+  }, [jobId]);
+
+  // Retry CCTP transfer
+  const handleRetryCCTP = async () => {
+    try {
+      setTransactionStatus('🔄 Retrying CCTP transfer...');
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const response = await fetch(`${backendUrl}/api/cctp-retry/releasePayment/${jobId}`, {
+        method: 'POST'
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        setTransactionStatus(`✅ Retry initiated (Attempt ${data.retryCount}). Monitoring...`);
+      } else {
+        setTransactionStatus(`❌ Retry failed: ${data.error}`);
+      }
+    } catch (error) {
+      setTransactionStatus(`❌ Retry error: ${error.message}`);
+    }
+  };
 
 
   // Multi-gateway IPFS fetch function
@@ -619,6 +664,33 @@ export default function ReleasePayment() {
             <div className="warning-form">
               <Warning content={transactionStatus} />
             </div>
+            
+            {/* CCTP Status Warnings */}
+            {cctpStatus?.status === 'pending' && (
+              <div className="warning-form">
+                <Warning 
+                  content={`⏳ Cross-chain transfer processing: ${cctpStatus.step || 'waiting for event'}...`}
+                  icon="/info.svg"
+                />
+              </div>
+            )}
+            
+            {cctpStatus?.status === 'failed' && (
+              <>
+                <div className="warning-form">
+                  <Warning 
+                    content={`⚠️ Transfer incomplete: ${cctpStatus.lastError}. Retry attempts: ${cctpStatus.retryCount}`}
+                    icon="/orange-warning.svg"
+                  />
+                </div>
+                <BlueButton 
+                  label="Retry CCTP Transfer"
+                  onClick={handleRetryCCTP}
+                  style={{width: '100%', justifyContent: 'center', marginTop: '12px'}}
+                />
+              </>
+            )}
+            
             {jobChainConfig && userChainId !== jobChainId && (
               <div className="warning-form">
                 <Warning 
