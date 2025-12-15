@@ -133,6 +133,7 @@ export default function ViewReceivedApplication() {
   const [transactionStatus, setTransactionStatus] = useState("Start job requires USDC approval and blockchain transaction fees");
   const [isProcessing, setIsProcessing] = useState(false);
   const hasFetchedRef = React.useRef(false);
+  const [cctpStatus, setCctpStatus] = useState(null);
 
   // Multi-chain hooks
   const { chainId: userChainId, chainConfig: userChainConfig } = useChainDetection();
@@ -243,6 +244,48 @@ export default function ViewReceivedApplication() {
       fetchApplicationData();
     }
   }, [jobId, applicationId, jobChainConfig]);
+
+  // Poll CCTP status for this job
+  useEffect(() => {
+    if (!jobId) return;
+
+    const pollCCTPStatus = async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/cctp-status/startJob/${jobId}`);
+        const data = await response.json();
+        
+        if (data.found) {
+          setCctpStatus(data);
+        }
+      } catch (error) {
+        console.warn('CCTP status poll error:', error);
+      }
+    };
+
+    pollCCTPStatus();
+    const interval = setInterval(pollCCTPStatus, 5000); // Poll every 5 seconds
+    
+    return () => clearInterval(interval);
+  }, [jobId]);
+
+  // Retry CCTP transfer
+  const handleRetryCCTP = async () => {
+    try {
+      setTransactionStatus('🔄 Retrying CCTP transfer...');
+      const response = await fetch(`${BACKEND_URL}/api/cctp-retry/startJob/${jobId}`, {
+        method: 'POST'
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        setTransactionStatus(`✅ Retry initiated (Attempt ${data.retryCount}). Monitoring...`);
+      } else {
+        setTransactionStatus(`❌ Retry failed: ${data.error}`);
+      }
+    } catch (error) {
+      setTransactionStatus(`❌ Retry error: ${error.message}`);
+    }
+  };
 
   const formatWalletAddress = (address) => {
     if (!address) return "Unknown";
@@ -626,6 +669,36 @@ export default function ViewReceivedApplication() {
                <div className="warning-form">
                  <Warning content={transactionStatus} />
                </div>
+               
+               {/* CCTP Status Warnings */}
+               {cctpStatus?.status === 'pending' && (
+                 <div className="warning-form">
+                   <Warning 
+                     content={`⏳ Cross-chain transfer processing: ${cctpStatus.step || 'polling attestation'}...`}
+                     icon="/info.svg"
+                   />
+                 </div>
+               )}
+               
+               {cctpStatus?.status === 'failed' && (
+                 <>
+                   <div className="warning-form">
+                     <Warning 
+                       content={`⚠️ Transfer incomplete: ${cctpStatus.lastError}. Retry attempts: ${cctpStatus.retryCount}`}
+                       icon="/orange-warning.svg"
+                     />
+                   </div>
+                   <div style={{marginTop: '12px'}}>
+                     <Button 
+                       label="Retry CCTP Transfer"
+                       buttonCss={'downvote-button upvote-button'}
+                       onClick={handleRetryCCTP}
+                       style={{ width: '100%' }}
+                     />
+                   </div>
+                 </>
+               )}
+               
                {jobChainConfig && userChainId !== jobChainId && (
                  <div className="warning-form">
                    <Warning 
