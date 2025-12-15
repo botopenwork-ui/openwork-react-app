@@ -209,14 +209,33 @@ export function toHexChainId(chainId) {
 }
 
 /**
- * Extract chain ID from job ID (format: "chainId-jobNumber")
+ * Map LayerZero EID to Chain ID
+ * Job IDs use EIDs (40232, 40161) not chain IDs (11155420, 11155111)
+ */
+const EID_TO_CHAIN_ID = {
+  40232: 11155420,  // OP Sepolia
+  40161: 11155111,  // Ethereum Sepolia  
+  40231: 421614,    // Arbitrum Sepolia
+  40245: 84532,     // Base Sepolia
+  // Mainnets
+  30111: 10,        // OP Mainnet
+  30101: 1,         // Ethereum Mainnet
+  30110: 42161,     // Arbitrum One
+  30184: 8453,      // Base Mainnet
+  30109: 137        // Polygon
+};
+
+/**
+ * Extract chain ID from job ID (format: "eid-jobNumber")
  * @param {string} jobId - Job ID (e.g., "40232-1", "40161-2")
- * @returns {number} Chain ID
+ * @returns {number} Chain ID (actual chain ID, not EID)
  */
 export function extractChainIdFromJobId(jobId) {
   if (!jobId || typeof jobId !== 'string') return null;
   const parts = jobId.split('-');
-  return parts.length > 0 ? parseInt(parts[0]) : null;
+  const eid = parts.length > 0 ? parseInt(parts[0]) : null;
+  // Convert EID to actual chain ID
+  return EID_TO_CHAIN_ID[eid] || eid;
 }
 
 /**
