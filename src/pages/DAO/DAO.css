@@ -111,16 +111,30 @@
     color: #FFFFFF;
 }
 
+/* Type Column Styling - Ensure alignment */
+.proposal-type {
+    text-align: left;
+    padding-left: 0 !important;
+}
+
 /* Time Left Column Data Styling */
 .time-left {
-    padding-left: 25px !important;
+    text-align: left;
+    padding-left: 0 !important;
     padding-right: 13px !important;
 }
 
 /* Time Left Column Heading Styling */
 .table thead tr th:nth-child(5) {
-    padding-left: 10px !important;
+    text-align: left;
+    padding-left: 0 !important;
     padding-right: 80px !important;
+}
+
+/* Type Column Heading Styling */
+.table thead tr th:nth-child(4) {
+    text-align: left;
+    padding-left: 0 !important;
 }
 
 /* Page Transition Animations */
