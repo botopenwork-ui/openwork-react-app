@@ -17,7 +17,57 @@ export default function DAO() {
     const [walletAddress, setWalletAddress] = useState("");
     const [selectedFilter, setSelectedFilter] = useState('All');
 
-    const headers = ["Request Title", "Proposed By", "Vote Submissions", "Type", "Time Left", ""];
+    // Column configuration
+    const allColumns = [
+        { id: "title", label: "Request Title", required: true },
+        { id: "proposedBy", label: "Proposed By", required: false },
+        { id: "voteSubmissions", label: "Vote Submissions", required: false },
+        { id: "type", label: "Type", required: false },
+        { id: "timeLeft", label: "Time Left", required: false },
+        { id: "actions", label: "", required: true },
+    ];
+
+    // Selected columns state - default to all columns
+    const [selectedColumns, setSelectedColumns] = useState([
+        "title",
+        "proposedBy",
+        "voteSubmissions",
+        "type",
+        "timeLeft",
+        "actions"
+    ]);
+
+    // Generate headers based on selected columns
+    const headers = selectedColumns.map(colId => {
+        const column = allColumns.find(col => col.id === colId);
+        return column ? column.label : "";
+    });
+
+    // Column toggle handler
+    const handleColumnToggle = (columnId) => {
+        setSelectedColumns(prev => {
+            const isCurrentlySelected = prev.includes(columnId);
+            const column = allColumns.find(col => col.id === columnId);
+            
+            // Can't toggle required columns
+            if (column?.required) return prev;
+            
+            if (isCurrentlySelected) {
+                // Can't deselect if at minimum (4 columns)
+                if (prev.length <= 4) return prev;
+                return prev.filter(id => id !== columnId);
+            } else {
+                // Can't select if at maximum (6 columns)
+                if (prev.length >= 6) return prev;
+                
+                // Maintain column order from allColumns
+                const allColumnIds = allColumns.map(col => col.id);
+                return allColumnIds.filter(id => 
+                    prev.includes(id) || id === columnId
+                );
+            }
+        });
+    };
 
     // Fetch DAO data from both chains
     useEffect(() => {
@@ -164,34 +214,50 @@ export default function DAO() {
 
     const tableData = useMemo(() => {
         return displayProposals.map((proposal) => {
-            return [
-                <div className="proposal-title">
-                    <img src="/doc.svg" alt="" className="docIcon" />
-                    {proposal.title && <span>{proposal.title}</span>}
-                </div>,
-                <div className="proposed-by">
-                    <span>{proposal.proposedBy}</span>
-                </div>,
-                <div className="vote-progress">
-                    <div className="progress-bar-container">
-                        <div 
-                            className="progress-bar-fill" 
-                            style={{ 
-                                width: `${proposal.voteSubmissions}%`,
-                                backgroundColor: proposal.color 
-                            }}
-                        />
+            // Create all possible column data
+            const allColumnData = {
+                title: (
+                    <div className="proposal-title">
+                        <img src="/doc.svg" alt="" className="docIcon" />
+                        {proposal.title && <span>{proposal.title}</span>}
                     </div>
-                    <span className="vote-percentage">{proposal.voteSubmissions}%</span>
-                </div>,
-                <div className="proposal-type">{proposal.type}</div>,
-                <div className="time-left">{proposal.timeLeft}</div>,
-                <div className="view-detail">
-                    <DetailButton to={proposal.viewUrl} imgSrc="/view.svg" alt="detail" />
-                </div>
-            ];
+                ),
+                proposedBy: (
+                    <div className="proposed-by">
+                        <span>{proposal.proposedBy}</span>
+                    </div>
+                ),
+                voteSubmissions: (
+                    <div className="vote-progress">
+                        <div className="progress-bar-container">
+                            <div 
+                                className="progress-bar-fill" 
+                                style={{ 
+                                    width: `${proposal.voteSubmissions}%`,
+                                    backgroundColor: proposal.color 
+                                }}
+                            />
+                        </div>
+                        <span className="vote-percentage">{proposal.voteSubmissions}%</span>
+                    </div>
+                ),
+                type: (
+                    <div className="proposal-type">{proposal.type}</div>
+                ),
+                timeLeft: (
+                    <div className="time-left">{proposal.timeLeft}</div>
+                ),
+                actions: (
+                    <div className="view-detail">
+                        <DetailButton to={proposal.viewUrl} imgSrc="/view.svg" alt="detail" />
+                    </div>
+                ),
+            };
+
+            // Filter based on selected columns
+            return selectedColumns.map(columnId => allColumnData[columnId]);
         });
-    }, [displayProposals, navigate]);
+    }, [displayProposals, navigate, selectedColumns]);
 
     // Calculate indices for pagination
     const indexOfLastProposal = currentPage * proposalsPerPage;
@@ -246,6 +312,9 @@ export default function DAO() {
                     filterOptions={filterOptions}
                     selectedFilter={selectedFilter}
                     onFilterChange={setSelectedFilter}
+                    selectedColumns={selectedColumns}
+                    onColumnToggle={handleColumnToggle}
+                    allColumns={allColumns}
                     applyNow={false}
                     boxSection={true}
                     customBoxItems={customBoxItems}
