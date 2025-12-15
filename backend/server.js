@@ -185,6 +185,12 @@ app.post('/api/release-payment', async (req, res) => {
     });
   }
   
+  // Auto-start event listener if not active (for PaymentReleased monitoring)
+  if (!eventListenerActive) {
+    console.log('🎧 Auto-starting event listener for release payment flow...');
+    startEventListener();
+  }
+  
   const key = `payment-${jobId}`;
   
   if (processingJobs.has(key)) {
