@@ -8,7 +8,9 @@ export function Layout({ children }) {
     
     return (
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', overflowX: 'hidden' }}>
-            {walletAddress && <ChainSelector walletAddress={walletAddress} />}
+            {walletAddress && walletAddress.length > 0 && (
+                <ChainSelector key={walletAddress} walletAddress={walletAddress} />
+            )}
             <Header>
             </Header>
             {children}
