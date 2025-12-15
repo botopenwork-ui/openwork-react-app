@@ -12,22 +12,39 @@ import Milestone from "../../components/Milestone/Milestone";
 import Warning from "../../components/Warning/Warning";
 import Collapse from "../../components/Collapse/Collapse";
 import SkillBox from "../../components/SkillBox/SkillBox";
+import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
+import { getChainConfig, extractChainIdFromJobId } from "../../config/chainConfig";
+import { switchToChain } from "../../utils/switchNetwork";
+import { getLOWJCContract } from "../../services/localChainService";
 
-// Contract addresses and configuration
-const CONTRACT_ADDRESS = import.meta.env.VITE_LOWJC_CONTRACT_ADDRESS || "0x896a3Bc6ED01f549Fe20bD1F25067951913b793C";
-const OP_SEPOLIA_RPC = import.meta.env.VITE_OPTIMISM_SEPOLIA_RPC_URL;
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
-
-// Network configuration
-const OP_SEPOLIA_NETWORK = {
-  chainId: '0xaa37dc', // 11155420
-  name: 'OP Sepolia',
-  rpcUrl: OP_SEPOLIA_RPC
-};
 
 // IPFS cache with 1-hour TTL
 const ipfsCache = new Map();
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+// USDC ERC20 ABI (minimal required functions)
+const ERC20_ABI = [
+  {
+    "inputs": [
+      {"internalType": "address", "name": "spender", "type": "address"},
+      {"internalType": "uint256", "name": "amount", "type": "uint256"}
+    ],
+    "name": "approve",
+    "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "address", "name": "owner", "type": "address"}
+    ],
+    "name": "balanceOf",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  }
+];
 
 // Multi-gateway IPFS fetch function with caching
 const fetchFromIPFS = async (hash, timeout = 5000) => {
@@ -76,29 +93,6 @@ const fetchFromIPFS = async (hash, timeout = 5000) => {
   throw new Error(`Failed to fetch ${hash} from all gateways`);
 };
 
-// Network switching utilities
-const switchToNetwork = async (network) => {
-  try {
-    await window.ethereum.request({
-      method: 'wallet_switchEthereumChain',
-      params: [{ chainId: network.chainId }],
-    });
-  } catch (switchError) {
-    // Network not added to MetaMask
-    if (switchError.code === 4902) {
-      await window.ethereum.request({
-        method: 'wallet_addEthereumChain',
-        params: [{
-          chainId: network.chainId,
-          chainName: network.name,
-          rpcUrls: [network.rpcUrl],
-        }],
-      });
-    } else {
-      throw switchError;
-    }
-  }
-};
 
 
 function JobdetailItem ({title, icon , amount, token}) {
@@ -133,7 +127,6 @@ export default function ViewReceivedApplication() {
   const [application, setApplication] = useState(null);
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [walletAddress, setWalletAddress] = useState("");
   const [applicationDetails, setApplicationDetails] = useState(null);
   const [jobDetails, setJobDetails] = useState(null);
   const [milestoneDetails, setMilestoneDetails] = useState([]);
@@ -141,30 +134,25 @@ export default function ViewReceivedApplication() {
   const [isProcessing, setIsProcessing] = useState(false);
   const hasFetchedRef = React.useRef(false);
 
-  // Check wallet connection
-  useEffect(() => {
-    const checkWalletConnection = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({
-            method: "eth_accounts",
-          });
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-          }
-        } catch (error) {
-          console.error("Failed to check wallet connection:", error);
-        }
-      }
-    };
-    checkWalletConnection();
-  }, []);
+  // Multi-chain hooks
+  const { chainId: userChainId, chainConfig: userChainConfig } = useChainDetection();
+  const { address: walletAddress, connect: connectWallet } = useWalletAddress();
+  
+  // Get job posting chain from jobId
+  const jobChainId = jobId ? extractChainIdFromJobId(jobId) : null;
+  const jobChainConfig = jobChainId ? getChainConfig(jobChainId) : null;
 
   // Fetch application data
   useEffect(() => {
     async function fetchApplicationData() {
       if (!jobId || !applicationId) {
         console.error("Missing jobId or applicationId in URL");
+        setLoading(false);
+        return;
+      }
+
+      if (!jobChainConfig) {
+        console.error("Could not determine job posting chain");
         setLoading(false);
         return;
       }
@@ -177,8 +165,8 @@ export default function ViewReceivedApplication() {
 
       try {
         setLoading(true);
-        const web3 = new Web3(OP_SEPOLIA_RPC);
-        const contract = new web3.eth.Contract(contractABI, CONTRACT_ADDRESS);
+        const web3 = new Web3(jobChainConfig.rpcUrl);
+        const contract = new web3.eth.Contract(contractABI, jobChainConfig.contracts.lowjc);
 
         // Fetch job data
         const jobData = await contract.methods.getJob(jobId).call();
@@ -251,10 +239,10 @@ export default function ViewReceivedApplication() {
       }
     }
 
-    if ((jobId && applicationId) && !hasFetchedRef.current) {
+    if ((jobId && applicationId && jobChainConfig) && !hasFetchedRef.current) {
       fetchApplicationData();
     }
-  }, [jobId, applicationId]);
+  }, [jobId, applicationId, jobChainConfig]);
 
   const formatWalletAddress = (address) => {
     if (!address) return "Unknown";
@@ -300,46 +288,42 @@ export default function ViewReceivedApplication() {
       return;
     }
 
+    // CRITICAL: Validate user is on POSTING chain
+    if (!jobChainId || !jobChainConfig) {
+      setTransactionStatus("❌ Could not determine job posting chain from job ID");
+      return;
+    }
+
+    if (userChainId !== jobChainId) {
+      setTransactionStatus(`⚠️ Please switch to ${jobChainConfig.name} to start this job. StartJob must be called from the posting chain.`);
+      try {
+        await switchToChain(jobChainId);
+        setTransactionStatus(`Switched to ${jobChainConfig.name}. Please try again.`);
+      } catch (switchError) {
+        setTransactionStatus(`❌ Failed to switch to ${jobChainConfig.name}: ${switchError.message}`);
+      }
+      return;
+    }
+
     try {
       setIsProcessing(true);
-      setTransactionStatus("🔄 Validating requirements and checking balances...");
-      console.log("🚀 Starting simplified job flow:", { jobId, applicationId, firstMilestoneAmount });
-      
-      // Ensure user is on OP Sepolia
-      await switchToNetwork(OP_SEPOLIA_NETWORK);
+      setTransactionStatus(`🔄 Validating requirements on ${jobChainConfig.name}...`);
+      console.log("🚀 Starting job flow:", { jobId, applicationId, firstMilestoneAmount, chain: jobChainConfig.name });
       
       // Initialize Web3
       const web3 = new Web3(window.ethereum);
       
-      // Contract addresses
-      const usdcTokenAddress = "0x5fd84259d66cd46123540766be93dfe6d43130d7"; // OP Sepolia USDC
+      // Get chain-specific contract addresses
+      const usdcTokenAddress = jobChainConfig.contracts.usdc;
+      const lowjcAddress = jobChainConfig.contracts.lowjc;
       
-      // USDC ERC20 ABI (minimal required functions)
-      const erc20ABI = [
-        {
-          "inputs": [
-            {"internalType": "address", "name": "spender", "type": "address"},
-            {"internalType": "uint256", "name": "amount", "type": "uint256"}
-          ],
-          "name": "approve",
-          "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        },
-        {
-          "inputs": [
-            {"internalType": "address", "name": "owner", "type": "address"}
-          ],
-          "name": "balanceOf",
-          "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-          "stateMutability": "view",
-          "type": "function"
-        }
-      ];
+      if (!usdcTokenAddress || !lowjcAddress) {
+        throw new Error(`Contract addresses not configured for ${jobChainConfig.name}`);
+      }
       
       // Initialize contracts
-      const usdcContract = new web3.eth.Contract(erc20ABI, usdcTokenAddress);
-      const lowjcContract = new web3.eth.Contract(contractABI, CONTRACT_ADDRESS);
+      const usdcContract = new web3.eth.Contract(ERC20_ABI, usdcTokenAddress);
+      const lowjcContract = await getLOWJCContract(jobChainId);
       
       // Calculate amount in USDC units (6 decimals)
       const amountInUSDCUnits = Math.floor(firstMilestoneAmount * 1000000);
@@ -373,8 +357,8 @@ export default function ViewReceivedApplication() {
       // Wait for transaction to be properly mined
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // ============ STEP 2: START JOB ON OP SEPOLIA ============
-      setTransactionStatus("🔧 Step 2/3: Getting LayerZero fee quote...");
+      // ============ STEP 2: START JOB ON POSTING CHAIN ============
+      setTransactionStatus(`🔧 Step 2/3: Getting LayerZero fee quote on ${jobChainConfig.name}...`);
       
       // Get LayerZero fee quote from bridge
       const bridgeAddress = await lowjcContract.methods.bridge().call();
@@ -394,8 +378,8 @@ export default function ViewReceivedApplication() {
       
       const bridgeContract = new web3.eth.Contract(bridgeABI, bridgeAddress);
       
-      // LayerZero options
-      const nativeOptions = "0x0003010011010000000000000000000000000007a120";
+      // LayerZero options from config
+      const nativeOptions = jobChainConfig.layerzero.options;
       
       // Encode payload matching LOWJC's internal encoding for startJob
       // LOWJC sends: abi.encode("startJob", msg.sender, _jobId, _applicationId, _useAppMilestones)
@@ -406,10 +390,9 @@ export default function ViewReceivedApplication() {
       
       // Get quote from bridge
       const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, nativeOptions).call();
-      console.log("💰 LayerZero quoted fee:", quotedFee.toString(), "wei");
-      console.log("💰 LayerZero quoted fee:", web3.utils.fromWei(quotedFee, 'ether'), "ETH");
+      console.log(`💰 LayerZero quoted fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH`);
       
-      setTransactionStatus("🔧 Step 2/3: Starting job on OP Sepolia - Please confirm in MetaMask");
+      setTransactionStatus(`🔧 Step 2/3: Starting job on ${jobChainConfig.name} - Please confirm in MetaMask`);
       
       const startJobTx = await lowjcContract.methods.startJob(
         jobId,
@@ -425,8 +408,8 @@ export default function ViewReceivedApplication() {
         throw new Error("Start job transaction failed");
       }
       
-      console.log("✅ Job started on OP Sepolia:", startJobTx.transactionHash);
-      setTransactionStatus(`✅ Step 2/3: Job started on OP Sepolia`);
+      console.log(`✅ Job started on ${jobChainConfig.name}:`, startJobTx.transactionHash);
+      setTransactionStatus(`✅ Step 2/3: Job started on ${jobChainConfig.name}`);
       
       // ============ STEP 3: SEND TO BACKEND & POLL FOR STATUS ============
       setTransactionStatus("📡 Step 3/3: Backend processing CCTP transfer...");
@@ -643,6 +626,14 @@ export default function ViewReceivedApplication() {
                <div className="warning-form">
                  <Warning content={transactionStatus} />
                </div>
+               {jobChainConfig && userChainId !== jobChainId && (
+                 <div className="warning-form">
+                   <Warning 
+                     content={`⚠️ StartJob requires ${jobChainConfig.name}. You are on ${userChainConfig?.name || 'unknown chain'}. Please switch networks.`} 
+                     icon="/triangle_warning.svg"
+                   />
+                 </div>
+               )}
             </div>
           </div>
         </div>
