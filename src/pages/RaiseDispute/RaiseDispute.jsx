@@ -6,29 +6,20 @@ import athenaClientABI from "../../ABIs/athena-client_ABI.json";
 import genesisABI from "../../ABIs/genesis_ABI.json";
 import nativeAthenaABI from "../../ABIs/native-athena_ABI.json";
 import "./RaiseDispute.css";
-import { useWalletConnection } from "../../functions/useWalletConnection";
 import { formatWalletAddress } from "../../functions/formatWalletAddress";
-
 import BackButton from "../../components/BackButton/BackButton";
 import SkillBox from "../../components/SkillBox/SkillBox";
 import DropDown from "../../components/DropDown/DropDown";
 import BlueButton from "../../components/BlueButton/BlueButton";
 import Warning from "../../components/Warning/Warning";
+import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
+import { getChainConfig } from "../../config/chainConfig";
+import { getAthenaClientContract } from "../../services/localChainService";
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS;
 const GENESIS_CONTRACT_ADDRESS = import.meta.env.VITE_GENESIS_CONTRACT_ADDRESS || "0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C";
 const NATIVE_ATHENA_ADDRESS = "0x098E52Aff44AEAd944AFf86F4A5b90dbAF5B86bd";
 const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
-
-// Athena Client on OP Sepolia
-const ATHENA_CLIENT_ADDRESS = "0x45E51B424c87Eb430E705CcE3EcD8e22baD267f7";
-const USDC_ADDRESS = "0x5fd84259d66cd46123540766be93dfe6d43130d7";
-const OP_SEPOLIA_RPC = import.meta.env.VITE_OPTIMISM_SEPOLIA_RPC_URL;
-
-// LayerZero options
-const LZ_OPTIONS = "0x0003010011010000000000000000000000000007a120";
-
-// Backend URL for secure API calls
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
 const SKILLOPTIONS = [
@@ -100,8 +91,11 @@ function ImageUpload({ onFileSelected, selectedFile }) {
 }
 
 export default function RaiseDispute() {
-  const { walletAddress, connectWallet, disconnectWallet } = useWalletConnection();
   const { jobId } = useParams();
+  
+  // Multi-chain hooks
+  const { chainId, chainConfig, isAllowed, error: chainError } = useChainDetection();
+  const { address: walletAddress, connect: connectWallet } = useWalletAddress();
   const [job, setJob] = useState(null);
   const [disputeTitle, setDisputeTitle] = useState("");
   const [disputeDescription, setDisputeDescription] = useState("");
@@ -409,104 +403,106 @@ export default function RaiseDispute() {
     e.preventDefault();
 
     // Validation
+    if (!walletAddress) {
+      setTransactionStatus("❌ Please connect your wallet first");
+      return;
+    }
+    
+    if (!isAllowed) {
+      setTransactionStatus(chainConfig?.reason || "Transactions not allowed on this network. Please switch to OP Sepolia or Ethereum Sepolia.");
+      return;
+    }
+    
     if (!disputeTitle.trim()) {
-      alert("Please enter a dispute title");
+      setTransactionStatus("❌ Please enter a dispute title");
       return;
     }
     if (!disputeDescription.trim()) {
-      alert("Please enter a dispute explanation");
+      setTransactionStatus("❌ Please enter a dispute explanation");
       return;
     }
     if (!disputeAmount || parseFloat(disputeAmount) <= 0) {
-      alert("Please enter a valid disputed amount");
+      setTransactionStatus("❌ Please enter a valid disputed amount");
       return;
     }
     if (!compensation || parseFloat(compensation) <= 0) {
-      alert("Please enter a valid compensation amount");
+      setTransactionStatus("❌ Please enter a valid compensation amount");
+      return;
+    }
+    if (!selectedOracle) {
+      setTransactionStatus("❌ Please select an oracle for dispute resolution");
       return;
     }
 
-    if (window.ethereum) {
-      try {
-        setLoadingT(true);
-        setTransactionStatus("Preparing transaction...");
+    try {
+      setLoadingT(true);
+      setTransactionStatus(`Preparing dispute on ${chainConfig?.name}...`);
 
-        const web3 = new Web3(window.ethereum);
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        
-        // Check if user is on OP Sepolia
-        const chainId = await web3.eth.getChainId();
-        const OP_SEPOLIA_CHAIN_ID = 11155420;
-        
-        if (Number(chainId) !== OP_SEPOLIA_CHAIN_ID) {
-          alert(`Please switch to OP Sepolia network. Current chain ID: ${chainId}, Required: ${OP_SEPOLIA_CHAIN_ID}`);
-          setLoadingT(false);
-          setTransactionStatus("❌ Wrong network - please switch to OP Sepolia");
-          return;
-        }
-        
-        const accounts = await web3.eth.getAccounts();
-        const fromAddress = accounts[0];
+      const web3 = new Web3(window.ethereum);
+      const compensationAmount = Math.floor(parseFloat(compensation) * 1000000);
+      const disputedAmountUnits = Math.floor(parseFloat(disputeAmount) * 1000000);
 
-        // Step 1: Approve USDC first (shows MetaMask immediately)
-        setTransactionStatus("Approve USDC for dispute fee...");
-        const usdcContract = new web3.eth.Contract(ERC20_ABI, USDC_ADDRESS);
-        const compensationAmount = Math.floor(parseFloat(compensation) * 1000000); // Convert to 6 decimals
-        
-        await usdcContract.methods
-          .approve(ATHENA_CLIENT_ADDRESS, compensationAmount)
-          .send({ from: fromAddress });
-        
-        console.log("✅ USDC approved");
+      // Step 1: Approve USDC
+      setTransactionStatus("💰 Approving USDC for dispute fee - Please confirm in MetaMask");
+      const usdcAddress = chainConfig.contracts.usdc;
+      const athenaClientAddress = chainConfig.contracts.athenaClient;
+      
+      if (!usdcAddress || !athenaClientAddress) {
+        throw new Error(`Contracts not configured for ${chainConfig.name}`);
+      }
+      
+      const usdcContract = new web3.eth.Contract(ERC20_ABI, usdcAddress);
+      await usdcContract.methods
+        .approve(athenaClientAddress, compensationAmount)
+        .send({ from: walletAddress });
+      
+      console.log("✅ USDC approved");
 
-        // Step 2: Upload dispute evidence to IPFS (during approval confirmation)
-        setTransactionStatus("Uploading dispute evidence to IPFS...");
-        const disputeHash = await uploadDisputeToIPFS();
-        console.log("📦 Dispute IPFS hash:", disputeHash);
+      // Step 2: Upload dispute evidence to IPFS
+      setTransactionStatus("📤 Uploading dispute evidence to IPFS...");
+      const disputeHash = await uploadDisputeToIPFS();
+      console.log("📦 Dispute IPFS hash:", disputeHash);
 
-        // Step 3: Raise dispute
-        setTransactionStatus("Raising dispute on blockchain...");
-        const athenaContract = new web3.eth.Contract(athenaClientABI, ATHENA_CLIENT_ADDRESS);
-        const disputedAmountUnits = Math.floor(parseFloat(disputeAmount) * 1000000);
+      // Step 3: Raise dispute on current chain
+      setTransactionStatus(`📝 Raising dispute on ${chainConfig.name} - Please confirm in MetaMask`);
+      const athenaContract = await getAthenaClientContract(chainId);
+      const lzOptions = chainConfig.layerzero.options;
 
-        // Validate oracle selection
-        if (!selectedOracle) {
-          alert("Please select an oracle for dispute resolution");
-          setLoadingT(false);
-          return;
-        }
+      const receipt = await athenaContract.methods
+        .raiseDispute(
+          jobId,
+          disputeHash,
+          selectedOracle,
+          compensationAmount,
+          disputedAmountUnits,
+          lzOptions
+        )
+        .send({
+          from: walletAddress,
+          value: web3.utils.toWei("0.001", "ether"),
+          gas: 5000000  // Explicit gas limit
+        });
 
-        const receipt = await athenaContract.methods
-          .raiseDispute(
-            jobId,
-            disputeHash,
-            selectedOracle, // Use dynamically selected oracle
-            compensationAmount,
-            disputedAmountUnits,
-            LZ_OPTIONS
-          )
-          .send({
-            from: fromAddress,
-            value: web3.utils.toWei("0.001", "ether"),
-            gasPrice: await web3.eth.getGasPrice(),
-          });
-
-        console.log("✅ Dispute raised! Receipt:", receipt);
-        setLoadingT(false);
+      console.log(`✅ Dispute raised on ${chainConfig.name}!`, receipt.transactionHash);
+      setTransactionStatus(`✅ Dispute raised on ${chainConfig.name}! Syncing to Arbitrum...`);
+      setLoadingT(false);
         
         // Start polling for cross-chain sync
         await pollForDisputeSync(jobId);
 
       } catch (error) {
         console.error("Error submitting dispute:", error);
-        setTransactionStatus(`❌ ${error.message || "Transaction failed"}`);
+        
+        let errorMessage = error.message;
+        if (error.code === 4001) {
+          errorMessage = "Transaction cancelled by user";
+        } else if (error.message?.includes("insufficient funds")) {
+          errorMessage = "Insufficient funds for gas + dispute fee";
+        }
+        
+        setTransactionStatus(`❌ ${errorMessage}`);
         setLoadingT(false);
       }
-    } else {
-      console.error("MetaMask not detected");
-      alert("Please install MetaMask to raise a dispute");
-      setLoadingT(false);
-    }
   };
 
   if (loadingT) {
@@ -695,8 +691,25 @@ export default function RaiseDispute() {
                 <span>This is the compensation that you're willing to pay to members of the Skill Oracle for their efforts in helping you resolve this dispute</span>
               </div>
             </div>
+            {chainError && (
+              <div className="warning-form">
+                <Warning content={chainError} icon="/triangle_warning.svg" />
+              </div>
+            )}
+            {!isAllowed && chainConfig?.reason && (
+              <div className="warning-form">
+                <Warning content={chainConfig.reason} icon="/triangle_warning.svg" />
+              </div>
+            )}
+            {chainConfig && isAllowed && (
+              <div className="warning-form">
+                <Warning content={`Connected to ${chainConfig.name}`} icon="/info.svg" />
+              </div>
+            )}
+            
             <BlueButton 
               label="Raise Dispute" 
+              disabled={!walletAddress || !isAllowed}
               style={{width: '100%', justifyContent: 'center'}}
               onClick={handleSubmit}
             />
