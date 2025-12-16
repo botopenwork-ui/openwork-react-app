@@ -1,21 +1,24 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { useWalletConnection } from "../../functions/useWalletConnection";
 import { 
   uploadFileToIPFS, 
-  uploadJSONToIPFS, 
-  addPortfolioToBlockchain,
-  updatePortfolioOnBlockchain 
+  uploadJSONToIPFS
 } from "../../services/portfolioService";
 import BlueButton from "../../components/BlueButton/BlueButton";
 import Button from "../../components/Button/Button";
+import Warning from "../../components/Warning/Warning";
 import "./AddEditPortfolio.css";
+import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
+import { getLOWJCContract } from "../../services/localChainService";
 
 export default function AddEditPortfolio() {
   const navigate = useNavigate();
   const { id } = useParams();
   const location = useLocation();
-  const { walletAddress } = useWalletConnection();
+  
+  // Multi-chain hooks
+  const { chainId, chainConfig, isAllowed, error: chainError } = useChainDetection();
+  const { address: walletAddress, connect: connectWallet } = useWalletAddress();
   
   const isEditMode = !!id;
   const existingData = location.state?.portfolioData;
@@ -31,6 +34,7 @@ export default function AddEditPortfolio() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [transactionStatus, setTransactionStatus] = useState("");
 
   function formatWalletAddress(address) {
     if (!address) return "0xfd08...024a";
@@ -96,21 +100,27 @@ export default function AddEditPortfolio() {
 
   const handleSave = async () => {
     if (!walletAddress) {
-      alert("Please connect your wallet first");
+      setTransactionStatus("❌ Please connect your wallet first");
+      return;
+    }
+    
+    if (!isAllowed) {
+      setTransactionStatus(chainConfig?.reason || "Transactions not allowed on this network. Please switch to OP Sepolia or Ethereum Sepolia.");
       return;
     }
 
     if (!projectName.trim() || projectName === "Project Name") {
-      alert("Please enter a project name");
+      setTransactionStatus("❌ Please enter a project name");
       return;
     }
 
     if (images.length === 0) {
-      alert("Please add at least one image");
+      setTransactionStatus("❌ Please add at least one image");
       return;
     }
 
     setLoading(true);
+    setTransactionStatus(`Preparing portfolio on ${chainConfig.name}...`);
 
     try {
       const portfolioData = {
@@ -118,11 +128,13 @@ export default function AddEditPortfolio() {
         description: description,
         skills: skills,
         images: images,
+        createdFromChain: chainConfig?.name,
+        createdFromChainId: chainId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
-      console.log('📤 Uploading portfolio data to IPFS...');
+      setTransactionStatus('📤 Uploading portfolio data to IPFS...');
       const portfolioHash = await uploadJSONToIPFS(
         portfolioData,
         `portfolio-${projectName.replace(/\s+/g, '-')}-${Date.now()}.json`
@@ -130,19 +142,73 @@ export default function AddEditPortfolio() {
 
       console.log('✅ Portfolio data uploaded to IPFS:', portfolioHash);
 
+      // Get contract and LayerZero options
+      const web3 = new Web3(window.ethereum);
+      const lowjcContract = await getLOWJCContract(chainId);
+      const lzOptions = chainConfig.layerzero.options;
+
+      // Get LayerZero fee
+      setTransactionStatus(`💰 Getting LayerZero fee quote on ${chainConfig.name}...`);
+      const bridgeAddress = await lowjcContract.methods.bridge().call();
+      const bridgeABI = [{
+        "inputs": [{"type": "bytes"}, {"type": "bytes"}],
+        "name": "quoteNativeChain",
+        "outputs": [{"type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function"
+      }];
+      
+      const bridgeContract = new web3.eth.Contract(bridgeABI, bridgeAddress);
+      
+      const payload = isEditMode
+        ? web3.eth.abi.encodeParameters(
+            ['string', 'address', 'uint256', 'string'],
+            ['updatePortfolioItem', walletAddress, parseInt(id), portfolioHash]
+          )
+        : web3.eth.abi.encodeParameters(
+            ['string', 'address', 'string'],
+            ['addPortfolio', walletAddress, portfolioHash]
+          );
+      
+      const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, lzOptions).call();
+      console.log(`💰 LayerZero fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH`);
+
+      // Call contract
       if (isEditMode) {
-        await updatePortfolioOnBlockchain(walletAddress, parseInt(id), portfolioHash);
-        alert('Portfolio updated successfully!');
+        setTransactionStatus(`Updating portfolio on ${chainConfig.name}...`);
+        await lowjcContract.methods
+          .updatePortfolioItem(parseInt(id), portfolioHash, lzOptions)
+          .send({ 
+            from: walletAddress,
+            value: quotedFee,
+            gas: 5000000
+          });
+        setTransactionStatus(`✅ Portfolio updated on ${chainConfig.name}!`);
       } else {
-        await addPortfolioToBlockchain(walletAddress, portfolioHash);
-        alert('Portfolio created successfully!');
+        setTransactionStatus(`Adding portfolio on ${chainConfig.name}...`);
+        await lowjcContract.methods
+          .addPortfolio(portfolioHash, lzOptions)
+          .send({ 
+            from: walletAddress,
+            value: quotedFee,
+            gas: 5000000
+          });
+        setTransactionStatus(`✅ Portfolio added on ${chainConfig.name}!`);
       }
 
-      navigate("/profile-portfolio");
+      setTimeout(() => navigate("/profile-portfolio"), 2000);
+      
     } catch (error) {
       console.error("Error saving portfolio:", error);
-      alert(`Failed to save portfolio: ${error.message}`);
-    } finally {
+      
+      let errorMessage = error.message;
+      if (error.code === 4001) {
+        errorMessage = "Transaction cancelled by user";
+      } else if (error.message?.includes("insufficient funds")) {
+        errorMessage = "Insufficient ETH for gas fees";
+      }
+      
+      setTransactionStatus(`❌ ${errorMessage}`);
       setLoading(false);
     }
   };
@@ -291,12 +357,33 @@ export default function AddEditPortfolio() {
           />
         </div>
 
-        {/* Submit Button */}
+        {/* Status and Submit Section */}
+        {chainError && (
+          <div className="warning-form" style={{marginBottom: '12px'}}>
+            <Warning content={chainError} icon="/triangle_warning.svg" />
+          </div>
+        )}
+        {!isAllowed && chainConfig?.reason && (
+          <div className="warning-form" style={{marginBottom: '12px'}}>
+            <Warning content={chainConfig.reason} icon="/triangle_warning.svg" />
+          </div>
+        )}
+        {chainConfig && isAllowed && (
+          <div className="warning-form" style={{marginBottom: '12px'}}>
+            <Warning content={`Connected to ${chainConfig.name}`} icon="/info.svg" />
+          </div>
+        )}
+        {transactionStatus && (
+          <div className="warning-form" style={{marginBottom: '12px'}}>
+            <Warning content={transactionStatus} />
+          </div>
+        )}
+        
         <div className="addedit-submit-section">
           <BlueButton
             label={loading ? "Saving..." : "Send changes"}
             onClick={handleSave}
-            disabled={loading}
+            disabled={loading || !isAllowed}
           />
         </div>
 

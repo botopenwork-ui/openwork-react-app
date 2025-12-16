@@ -7,11 +7,10 @@ import DropDown from "../../components/DropDown/DropDown";
 import Button from "../../components/Button/Button";
 import BlueButton from "../../components/BlueButton/BlueButton";
 import Warning from "../../components/Warning/Warning";
-import { useWalletConnection } from "../../functions/useWalletConnection";
 import ProfileGenesisABI from "../../ABIs/profile-genesis_ABI.json";
-import LOWJCABI from "../../ABIs/lowjc_ABI.json";
+import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
+import { getLOWJCContract } from "../../services/localChainService";
 
-// Backend URL for secure API calls
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
 const COUNTRYITEMS = [
@@ -58,7 +57,11 @@ function ReferInfo() {
 export default function ProfileOwnerView() {
     const { address } = useParams();
     const navigate = useNavigate();
-    const { walletAddress } = useWalletConnection();
+    
+    // Multi-chain hooks
+    const { chainId, chainConfig, isAllowed, error: chainError } = useChainDetection();
+    const { address: walletAddress, connect: connectWallet } = useWalletAddress();
+    
     const [hasProfile, setHasProfile] = useState(false);
     const [profileLoading, setProfileLoading] = useState(true);
     const [transactionStatus, setTransactionStatus] = useState("");
@@ -177,7 +180,12 @@ export default function ProfileOwnerView() {
     // Function to handle save/create profile
     const handleSaveChanges = async () => {
         if (!walletAddress) {
-            alert("Please connect your wallet first");
+            setTransactionStatus("❌ Please connect your wallet first");
+            return;
+        }
+        
+        if (!isAllowed) {
+            setTransactionStatus(chainConfig?.reason || "Transactions not allowed on this network. Please switch to OP Sepolia or Ethereum Sepolia.");
             return;
         }
 
@@ -185,7 +193,7 @@ export default function ProfileOwnerView() {
         setTransactionStatus("Collecting profile data...");
 
         try {
-            // Collect profile data from the form (using state values)
+            // Collect profile data from the form
             const profileData = {
                 username: username,
                 firstName: firstName,
@@ -201,57 +209,48 @@ export default function ProfileOwnerView() {
                 email: email,
                 telegram: telegram,
                 phone: phone,
-                profilePhotoHash: profilePhotoHash || "", // Include IPFS hash of uploaded photo
+                profilePhotoHash: profilePhotoHash || "",
                 profilePhoto: profilePhotoHash 
                     ? `https://gateway.pinata.cloud/ipfs/${profilePhotoHash}` 
-                    : "/user.png"
+                    : "/user.png",
+                createdFromChain: chainConfig?.name,
+                createdFromChainId: chainId
             };
 
             // Step 1: Pin to IPFS
-            setTransactionStatus("Uploading profile data to IPFS...");
+            setTransactionStatus("📤 Uploading profile data to IPFS...");
             const ipfsResponse = await pinProfileToIPFS(profileData);
             const ipfsHash = ipfsResponse.IpfsHash;
-            console.log("IPFS Hash:", ipfsHash);
+            console.log("✅ IPFS Hash:", ipfsHash);
 
-            // Step 2: Connect to LOWJC contract on OP Sepolia
-            setTransactionStatus("Connecting to blockchain...");
+            // Step 2: Get contract for current chain
+            setTransactionStatus(`Connecting to ${chainConfig.name}...`);
             const web3 = new Web3(window.ethereum);
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
-            
-            const lowjcAddress = import.meta.env.VITE_LOWJC_CONTRACT_ADDRESS;
-            const contract = new web3.eth.Contract(LOWJCABI, lowjcAddress);
-
-            // Native options for LayerZero (gas settings)
-            const nativeOptions = import.meta.env.VITE_LAYERZERO_OPTIONS_VALUE || "0x000301001101000000000000000000000000000F4240";
+            const lowjcContract = await getLOWJCContract(chainId);
+            const lzOptions = chainConfig.layerzero.options;
 
             // Step 3: Get LayerZero fee quote
-            setTransactionStatus("Getting LayerZero fee quote...");
-            const bridgeAddress = await contract.methods.bridge().call();
+            setTransactionStatus(`💰 Getting LayerZero fee quote on ${chainConfig.name}...`);
+            const bridgeAddress = await lowjcContract.methods.bridge().call();
             
-            // Bridge ABI for quoteNativeChain function
             const bridgeABI = [{
-                "inputs": [
-                    {"type": "bytes", "name": "payload"},
-                    {"type": "bytes", "name": "options"}
-                ],
+                "inputs": [{"type": "bytes"}, {"type": "bytes"}],
                 "name": "quoteNativeChain",
-                "outputs": [{"type": "uint256", "name": "fee"}],
+                "outputs": [{"type": "uint256"}],
                 "stateMutability": "view",
                 "type": "function"
             }];
             
             const bridgeContract = new web3.eth.Contract(bridgeABI, bridgeAddress);
             
-            // Encode proper payload based on create vs update
+            // Encode payload
             let payload;
             if (hasProfile) {
-                // For updateProfile: encode (functionName, userAddress, ipfsHash)
                 payload = web3.eth.abi.encodeParameters(
                     ['string', 'address', 'string'],
                     ['updateProfile', walletAddress, ipfsHash]
                 );
             } else {
-                // For createProfile: encode (functionName, userAddress, ipfsHash, referrerAddress)
                 const referrerAddress = "0x0000000000000000000000000000000000000000";
                 payload = web3.eth.abi.encodeParameters(
                     ['string', 'address', 'string', 'address'],
@@ -259,32 +258,31 @@ export default function ProfileOwnerView() {
                 );
             }
             
-            const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, nativeOptions).call();
-            
-            console.log("💰 LayerZero quoted fee:", web3.utils.fromWei(quotedFee, 'ether'), "ETH");
+            const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, lzOptions).call();
+            console.log(`💰 LayerZero fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH`);
 
-            // Step 4: Call appropriate contract function with quoted fee
+            // Step 4: Call contract function
             if (hasProfile) {
-                // Update existing profile
-                setTransactionStatus("Updating profile on blockchain...");
-                await contract.methods
-                    .updateProfile(ipfsHash, nativeOptions)
+                setTransactionStatus(`Updating profile on ${chainConfig.name}...`);
+                await lowjcContract.methods
+                    .updateProfile(ipfsHash, lzOptions)
                     .send({ 
                         from: walletAddress,
-                        value: quotedFee // Use the quoted fee
+                        value: quotedFee,
+                        gas: 5000000
                     });
-                setTransactionStatus("✅ Profile updated successfully!");
+                setTransactionStatus(`✅ Profile updated on ${chainConfig.name}!`);
             } else {
-                // Create new profile
-                setTransactionStatus("Creating profile on blockchain...");
-                const referrerAddress = "0x0000000000000000000000000000000000000000"; // Zero address for no referrer
-                await contract.methods
-                    .createProfile(ipfsHash, referrerAddress, nativeOptions)
+                setTransactionStatus(`Creating profile on ${chainConfig.name}...`);
+                const referrerAddress = "0x0000000000000000000000000000000000000000";
+                await lowjcContract.methods
+                    .createProfile(ipfsHash, referrerAddress, lzOptions)
                     .send({ 
                         from: walletAddress,
-                        value: quotedFee // Use the quoted fee
+                        value: quotedFee,
+                        gas: 5000000
                     });
-                setTransactionStatus("✅ Profile created successfully!");
+                setTransactionStatus(`✅ Profile created on ${chainConfig.name}!`);
                 setHasProfile(true);
             }
 
@@ -295,9 +293,16 @@ export default function ProfileOwnerView() {
 
         } catch (error) {
             console.error("Error saving profile:", error);
-            setTransactionStatus(`❌ Error: ${error.message}`);
+            
+            let errorMessage = error.message;
+            if (error.code === 4001) {
+                errorMessage = "Transaction cancelled by user";
+            } else if (error.message?.includes("insufficient funds")) {
+                errorMessage = "Insufficient ETH for gas fees";
+            }
+            
+            setTransactionStatus(`❌ ${errorMessage}`);
             setTimeout(() => {
-                setTransactionStatus("");
                 setIsSaving(false);
             }, 5000);
         }
@@ -658,6 +663,21 @@ export default function ProfileOwnerView() {
                             />
                         </div>
                         {/* <ReferInfo/> */}
+                        {chainError && (
+                            <div className="warning-form">
+                                <Warning content={chainError} icon="/triangle_warning.svg" />
+                            </div>
+                        )}
+                        {!isAllowed && chainConfig?.reason && (
+                            <div className="warning-form">
+                                <Warning content={chainConfig.reason} icon="/triangle_warning.svg" />
+                            </div>
+                        )}
+                        {chainConfig && isAllowed && (
+                            <div className="warning-form">
+                                <Warning content={`Connected to ${chainConfig.name}`} icon="/info.svg" />
+                            </div>
+                        )}
                         {transactionStatus && (
                             <div className="warning-form">
                                 <Warning content={transactionStatus} />
@@ -669,13 +689,13 @@ export default function ProfileOwnerView() {
                                 <BlueButton 
                                     label={isSaving ? 'Processing...' : (hasProfile ? 'Save Changes' : 'Create Profile')} 
                                     onClick={handleSaveChanges}
-                                    disabled={isSaving}
+                                    disabled={isSaving || !isAllowed}
                                     style={{
                                         width: '-webkit-fill-available', 
                                         justifyContent:'center', 
                                         padding: '12px 16px',
-                                        opacity: isSaving ? 0.6 : 1,
-                                        cursor: isSaving ? 'not-allowed' : 'pointer'
+                                        opacity: (isSaving || !isAllowed) ? 0.6 : 1,
+                                        cursor: (isSaving || !isAllowed) ? 'not-allowed' : 'pointer'
                                     }}
                                 />
                             </div>
