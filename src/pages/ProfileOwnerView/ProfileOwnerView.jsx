@@ -227,16 +227,24 @@ export default function ProfileOwnerView() {
             setTransactionStatus(`Connecting to ${chainConfig.name}...`);
             const web3 = new Web3(window.ethereum);
             const lowjcContract = await getLOWJCContract(chainId);
-            const lzOptions = chainConfig.layerzero.options;
+            const lzOptions = chainConfig?.layerzero?.options;
+            
+            if (!lzOptions) {
+                throw new Error("LayerZero options not configured for this chain");
+            }
 
             // Step 3: Get LayerZero fee quote
             setTransactionStatus(`💰 Getting LayerZero fee quote on ${chainConfig.name}...`);
             const bridgeAddress = await lowjcContract.methods.bridge().call();
+            console.log("Bridge address:", bridgeAddress);
             
             const bridgeABI = [{
-                "inputs": [{"type": "bytes"}, {"type": "bytes"}],
+                "inputs": [
+                    {"name": "_payload", "type": "bytes"},
+                    {"name": "_options", "type": "bytes"}
+                ],
                 "name": "quoteNativeChain",
-                "outputs": [{"type": "uint256"}],
+                "outputs": [{"name": "fee", "type": "uint256"}],
                 "stateMutability": "view",
                 "type": "function"
             }];
@@ -257,6 +265,9 @@ export default function ProfileOwnerView() {
                     ['createProfile', walletAddress, ipfsHash, referrerAddress]
                 );
             }
+            
+            console.log("Payload:", payload);
+            console.log("LZ Options:", lzOptions);
             
             const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, lzOptions).call();
             console.log(`💰 LayerZero fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH`);
