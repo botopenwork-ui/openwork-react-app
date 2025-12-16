@@ -1,6 +1,224 @@
 // Multi-Chain Integration Guide for OpenWork Developers
 
 export const multiChainIntegrationGuide = {
+  'user-guide': {
+    id: 'user-guide',
+    title: 'Multi-Chain User Guide',
+    category: 'User Documentation',
+    description: 'How to use OpenWork across multiple blockchains. Understand which chains to use for different actions and what to do when issues occur.',
+    icon: '👤',
+    complexity: 'Easy',
+    estimatedTime: '~5 minutes',
+    
+    overview: {
+      title: 'OpenWork Multi-Chain Overview',
+      description: 'OpenWork operates on multiple blockchains to give you choice, lower costs, and seamless cross-chain functionality.',
+      supportedChains: [
+        { name: 'OP Sepolia', benefits: ['Lower gas fees', 'Faster transactions', 'Optimistic rollup security'] },
+        { name: 'Ethereum Sepolia', benefits: ['Familiar network', 'Most wallet support', 'Maximum decentralization'] }
+      ],
+      keyFeatures: [
+        '✅ Post jobs from OP or Ethereum',
+        '✅ Apply to any job from any chain',
+        '✅ Automatic fund transfers (CCTP)',
+        '✅ Real-time status tracking',
+        '✅ No manual cross-chain steps'
+      ]
+    },
+
+    cctpTracking: {
+      title: 'Understanding CCTP Transfers',
+      description: 'When you start jobs or release payments, funds move between chains automatically using Circle\'s CCTP (Cross-Chain Transfer Protocol).',
+      
+      whatIsCCTP: [
+        'CCTP = Secure cross-chain USDC transfer',
+        'Happens automatically in the background',
+        'Typically completes in 1-2 minutes',
+        'Status shows in blue info boxes',
+        'Retry available if something goes wrong'
+      ],
+
+      statusMessages: {
+        pending: {
+          message: '⏳ Cross-chain transfer processing: polling attestation...',
+          meaning: 'Backend is waiting for Circle API confirmation',
+          action: 'Wait - normal process, usually 30-120 seconds',
+          icon: '/info.svg',
+          color: 'Blue (informational)'
+        },
+        executing: {
+          message: '⏳ Cross-chain transfer processing: executing receive...',
+          meaning: 'Backend is completing the USDC transfer',
+          action: 'Wait - final step, usually 10-30 seconds',
+          icon: '/info.svg',
+          color: 'Blue (informational)'
+        },
+        completed: {
+          message: '✅ Transfer completed',
+          meaning: 'USDC successfully transferred',
+          action: 'None - proceed normally',
+          icon: '/check-circle.png',
+          color: 'Green (success)'
+        },
+        failed: {
+          message: '⚠️ Transfer incomplete: [error]. Retry attempts: X',
+          meaning: 'CCTP transfer encountered an error',
+          action: 'Click "Retry CCTP Transfer" button',
+          icon: '/orange-warning.svg',
+          color: 'Orange (warning)'
+        }
+      },
+
+      retryMechanism: {
+        title: 'How to Retry Failed Transfers',
+        steps: [
+          'You\'ll see an orange warning: "⚠️ Transfer incomplete"',
+          'Below it, a "Retry CCTP Transfer" button appears',
+          'Click the button - backend will re-attempt',
+          'Status updates automatically (polls every 5 seconds)',
+          'You can retry multiple times if needed',
+          'Status persists even if you close the page'
+        ],
+        notes: [
+          'Retries are free (no additional blockchain tx)',
+          'Uses saved attestation data from first attempt',
+          'Retry count is tracked and displayed',
+          'If retries keep failing, contact support'
+        ]
+      },
+
+      whenToWorry: [
+        '✅ Normal: Pending for 1-2 minutes',
+        '✅ Normal: One retry succeeds',
+        '⚠️ Investigate: Pending for 10+ minutes',
+        '⚠️ Investigate: 3+ retries all failing',
+        '🚨 Contact support: Still failed after 24 hours'
+      ]
+    },
+
+    commonScenarios: {
+      title: 'Common Multi-Chain Scenarios',
+      scenarios: [
+        {
+          question: 'I posted a job on OP Sepolia. Can someone apply from Ethereum Sepolia?',
+          answer: 'Yes! Applicants can apply from ANY supported chain to ANY job. Cross-chain applications are fully supported.',
+          example: 'Job 40232-1 (OP) can receive applications from Ethereum users.'
+        },
+        {
+          question: 'I see "StartJob requires OP Sepolia" but I\'m on Ethereum. What do I do?',
+          answer: 'Job management actions (Start, Release Payment) must be done from the posting chain. Switch your wallet to OP Sepolia using the network selector in MetaMask.',
+          example: 'Job ID 40232-1 → First part (40232) is OP Sepolia EID → Must use OP Sepolia'
+        },
+        {
+          question: 'How do I know which chain to use for StartJob?',
+          answer: 'Look at the job ID. First part tells you: 40232-X = OP Sepolia, 40161-X = Ethereum Sepolia. The app will warn you if you\'re on the wrong chain.',
+          example: 'Job 40161-5 → 40161 = Ethereum Sepolia → Connect to Ethereum to start'
+        },
+        {
+          question: 'What if CCTP transfer shows "incomplete" for several minutes?',
+          answer: 'First, wait 2-3 minutes (sometimes Circle API is slow). Then click "Retry CCTP Transfer" button. If retry fails 3 times, contact support.',
+          example: 'Normal: 30-120s pending → Concerning: 10+ minutes stuck'
+        },
+        {
+          question: 'Which chain is cheaper for posting jobs?',
+          answer: 'OP Sepolia typically has lower gas fees than Ethereum Sepolia. Check current gas prices and choose based on cost vs. familiarity trade-off.',
+          example: 'OP Sepolia: ~$0.10 per job post | Ethereum Sepolia: ~$2-5 per job post'
+        },
+        {
+          question: 'Can I submit work from a different chain than I applied from?',
+          answer: 'No. Submit Work must be done from your APPLICATION chain (the chain you applied from). This info is tracked in your application data.',
+          example: 'Applied from Ethereum → Submit work from Ethereum'
+        }
+      ]
+    },
+
+    troubleshooting: {
+      title: 'Multi-Chain Troubleshooting',
+      issues: [
+        {
+          symptom: 'Button is disabled / grayed out',
+          possibleCauses: ['Wallet not connected', 'Connected to wrong chain', 'Chain not allowed for this action'],
+          solutions: [
+            'Check wallet connection in top right',
+            'Look for orange warning above button',
+            'Switch to suggested network',
+            'Verify you\'re on OP Sepolia or Ethereum Sepolia'
+          ]
+        },
+        {
+          symptom: '"Please switch to [chain name]" warning appears',
+          possibleCauses: ['Action requires specific chain', 'You\'re on wrong network'],
+          solutions: [
+            'Open MetaMask network selector',
+            'Switch to the chain mentioned in warning',
+            'Try action again after switching',
+            'App may auto-switch for you'
+          ]
+        },
+        {
+          symptom: 'CCTP transfer stuck on "polling attestation"',
+          possibleCauses: ['Circle API delay', 'Network congestion', 'Transaction not yet indexed'],
+          solutions: [
+            'Wait 2-3 minutes first (normal delay)',
+            'Check the page - status updates every 5 seconds',
+            'If stuck 10+ minutes, click "Retry CCTP Transfer"',
+            'If retry fails 3 times, contact support with job ID'
+          ]
+        },
+        {
+          symptom: 'Transaction fails with "execution reverted"',
+          possibleCauses: ['Insufficient USDC balance', 'Insufficient ETH for gas', 'Contract requirements not met'],
+          solutions: [
+            'Check USDC balance (for StartJob/ReleasePayment)',
+            'Check ETH balance for gas fees',
+            'Verify you approved USDC spending',
+            'Try again with higher gas limit'
+          ]
+        },
+        {
+          symptom: 'Jobs not appearing after posting',
+          possibleCauses: ['LayerZero sync in progress', 'Wrong chain selected in filter'],
+          solutions: [
+            'Wait 30-60 seconds for cross-chain sync',
+            'Check "All" in filter dropdown',
+            'Verify chain logo shows correctly',
+            'Refresh page after 1 minute'
+          ]
+        }
+      ]
+    },
+
+    bestPractices: [
+      {
+        title: 'Choosing a Chain',
+        tips: [
+          '💰 OP Sepolia: Lower fees (~10x cheaper)',
+          '🏛️ Ethereum Sepolia: More familiar, more decentralized',
+          '📝 Remember which chain you posted from (for StartJob later)',
+          '🌐 Applicants can use any chain regardless of posting chain'
+        ]
+      },
+      {
+        title: 'Managing Jobs',
+        tips: [
+          '📌 Bookmark job ID + posting chain',
+          '🔍 Job ID tells you posting chain (40232=OP, 40161=ETH)',
+          '💡 Always connect to posting chain for management',
+          '⚡ Keep some ETH on posting chain for gas'
+        ]
+      },
+      {
+        title: 'CCTP Transfers',
+        tips: [
+          '⏱️ Expect 1-2 minute delays (normal)',
+          '🔄 Use retry button if stuck > 5 minutes',
+          '📊 Status updates automatically every 5 seconds',
+          '💾 Status persists - safe to close page and check later'
+        ]
+      }
+    ]
+  },
+  
   'add-new-chain': {
     id: 'add-new-chain',
     title: 'Adding a New Chain to OpenWork',
