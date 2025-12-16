@@ -152,12 +152,6 @@ export default function ViewReceivedApplication() {
         return;
       }
 
-      if (!jobChainConfig) {
-        console.error("Could not determine job posting chain");
-        setLoading(false);
-        return;
-      }
-
       // Prevent duplicate fetches
       if (hasFetchedRef.current) {
         return;
@@ -166,16 +160,40 @@ export default function ViewReceivedApplication() {
 
       try {
         setLoading(true);
-        const web3 = new Web3(jobChainConfig.rpcUrl);
-        const contract = new web3.eth.Contract(contractABI, jobChainConfig.contracts.lowjc);
+        // Applications are stored on Arbitrum Genesis, not on local chain
+        const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+        const GENESIS_CONTRACT = import.meta.env.VITE_GENESIS_CONTRACT_ADDRESS || "0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C";
+        
+        const web3 = new Web3(ARBITRUM_SEPOLIA_RPC);
+        const genesisABI = [{
+          "inputs": [{"type": "string"}, {"type": "uint256"}],
+          "name": "getJobApplication",
+          "outputs": [{"type": "tuple", "components": [
+            {"name": "applicant", "type": "address"},
+            {"name": "applicationHash", "type": "string"},
+            {"name": "proposedMilestones", "type": "tuple[]"},
+            {"name": "preferredChainDomain", "type": "uint32"},
+            {"name": "status", "type": "uint8"}
+          ]}],
+          "stateMutability": "view",
+          "type": "function"
+        }, {
+          "inputs": [{"type": "string"}],
+          "name": "getJob",
+          "outputs": [{"type": "tuple"}],
+          "stateMutability": "view",
+          "type": "function"
+        }];
+        
+        const contract = new web3.eth.Contract(genesisABI, GENESIS_CONTRACT);
 
         // Fetch job data
         const jobData = await contract.methods.getJob(jobId).call();
         console.log("Job data:", jobData);
         setJob(jobData);
 
-        // Fetch application data
-        const appData = await contract.methods.getApplication(jobId, applicationId).call();
+        // Fetch application data from Genesis
+        const appData = await contract.methods.getJobApplication(jobId, applicationId).call();
         console.log("Application data:", appData);
         setApplication(appData);
 
@@ -240,10 +258,10 @@ export default function ViewReceivedApplication() {
       }
     }
 
-    if ((jobId && applicationId && jobChainConfig) && !hasFetchedRef.current) {
+    if ((jobId && applicationId) && !hasFetchedRef.current) {
       fetchApplicationData();
     }
-  }, [jobId, applicationId, jobChainConfig]);
+  }, [jobId, applicationId]);
 
   // Poll CCTP status for this job
   useEffect(() => {
