@@ -14,7 +14,52 @@ export default function BrowseTalent() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const headers = ["Name", "Rating", "Skills", "Experience", "Hourly Rate", ""];
+    // Column configuration
+    const allColumns = [
+        { id: "name", label: "Name", required: true },
+        { id: "rating", label: "Rating", required: false },
+        { id: "skills", label: "Skills", required: false },
+        { id: "experience", label: "Experience", required: false },
+        { id: "hourlyRate", label: "Hourly Rate", required: false },
+        { id: "actions", label: "", required: true },
+    ];
+
+    // Selected columns state
+    const [selectedColumns, setSelectedColumns] = useState([
+        "name", "rating", "skills", "experience", "hourlyRate", "actions"
+    ]);
+
+    // Generate headers based on selected columns
+    const headers = selectedColumns.map(colId => {
+        const column = allColumns.find(col => col.id === colId);
+        return column ? column.label : "";
+    });
+
+    // Column toggle handler
+    const handleColumnToggle = (columnId) => {
+        setSelectedColumns(prev => {
+            const isCurrentlySelected = prev.includes(columnId);
+            const column = allColumns.find(col => col.id === columnId);
+
+            // Can't toggle required columns
+            if (column?.required) return prev;
+
+            if (isCurrentlySelected) {
+                // Can't deselect if at minimum (3 columns)
+                if (prev.length <= 3) return prev;
+                return prev.filter(id => id !== columnId);
+            } else {
+                // Can't select if at maximum (6 columns)
+                if (prev.length >= 6) return prev;
+
+                // Maintain column order from allColumns
+                const allColumnIds = allColumns.map(col => col.id);
+                return allColumnIds.filter(id =>
+                    prev.includes(id) || id === columnId
+                );
+            }
+        });
+    };
 
     // Fetch all profiles from blockchain
     useEffect(() => {
@@ -191,8 +236,8 @@ export default function BrowseTalent() {
         {
             title: 'People',
             items: [
-                'People',
-                'Packages'
+                'People'
+                // 'Packages' // Hidden
             ]
         }
     ]
@@ -200,13 +245,9 @@ export default function BrowseTalent() {
     const filterOptions = [
         {
             title: 'Table Columns',
-            items: [
-                'Name',
-                'Rating',
-                'Skills',
-                'Experience',
-                'Hourly Rate'
-            ]
+            items: allColumns
+                .filter(col => !col.required && col.label)
+                .map(col => col.label)
         },
         {
             title: 'Filter',
@@ -252,57 +293,73 @@ export default function BrowseTalent() {
             const displayRate = user.hourlyRate || user.hourly_rate || '30';
             const profilePhoto = user.profilePhoto || '/user.png';
             const userAddress = user.address || '';
-            
-            return [
-                <div className="user">
-                    <img 
-                        src={profilePhoto} 
-                        alt="User Icon" 
-                        className="userIcon"
-                        style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '50%',
-                            objectFit: 'cover'
-                        }}
-                    />
-                    <span>{displayName}</span>
-                </div>,
-                <div className="rating">
-                    <span>{displayRating}</span>
-                    <img src="/star.svg" alt="" />
-                </div>,
-                <div className="skills-required">
-                    {displaySkills.slice(0, 1).map((skill, idx) => (
-                        <SkillBox 
-                            key={idx} 
-                            title={typeof skill === 'string' ? skill : skill.title || 'N/A'}
+
+            // Create all possible column data
+            const allColumnData = {
+                name: (
+                    <div className="user">
+                        <img
+                            src={profilePhoto}
+                            alt="User Icon"
+                            className="userIcon"
+                            style={{
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '50%',
+                                objectFit: 'cover'
+                            }}
                         />
-                    ))}
-                    {displaySkills.length > 1 && (
-                        <SkillBox title={`+${displaySkills.length - 1}`}/>
-                    )}
-                </div>,
-                <div className="experience">
-                    {typeof displayExperience === 'string' 
-                        ? displayExperience 
-                        : `${displayExperience} Years`}
-                </div>,
-                <div className="hourly-rate">
-                    <span>{displayRate} / Hr</span>
-                    <img src="/xdc.svg" alt="Budget" />
-                </div>,
-                <div className="view-detail">
-                    <DetailButton 
-                        to={userAddress ? `/profile/${userAddress}` : `/profile`} 
-                        imgSrc="/view.svg" 
-                        alt="detail" 
-                        title="Profile" 
-                    />
-                </div>
-            ];
+                        <span>{displayName}</span>
+                    </div>
+                ),
+                rating: (
+                    <div className="rating">
+                        <span>{displayRating}</span>
+                        <img src="/star.svg" alt="" />
+                    </div>
+                ),
+                skills: (
+                    <div className="skills-required">
+                        {displaySkills.slice(0, 1).map((skill, idx) => (
+                            <SkillBox
+                                key={idx}
+                                title={typeof skill === 'string' ? skill : skill.title || 'N/A'}
+                            />
+                        ))}
+                        {displaySkills.length > 1 && (
+                            <SkillBox title={`+${displaySkills.length - 1}`}/>
+                        )}
+                    </div>
+                ),
+                experience: (
+                    <div className="experience">
+                        {typeof displayExperience === 'string'
+                            ? displayExperience
+                            : `${displayExperience} Years`}
+                    </div>
+                ),
+                hourlyRate: (
+                    <div className="hourly-rate">
+                        <span>{displayRate} / Hr</span>
+                        <img src="/xdc.svg" alt="Budget" />
+                    </div>
+                ),
+                actions: (
+                    <div className="view-detail">
+                        <DetailButton
+                            to={userAddress ? `/profile/${userAddress}` : `/profile`}
+                            imgSrc="/view.svg"
+                            alt="detail"
+                            title="Profile"
+                        />
+                    </div>
+                ),
+            };
+
+            // Filter based on selected columns
+            return selectedColumns.map(columnId => allColumnData[columnId]);
         });
-    }, [users, loading, error])
+    }, [users, loading, error, selectedColumns])
 
     const indexOfLastUser = currentPage * usersPerPage;
     const indexOfFirstUser = indexOfLastUser - usersPerPage;
@@ -323,6 +380,9 @@ export default function BrowseTalent() {
                         headers={headers}
                         titleOptions={titleOptions}
                         filterOptions={filterOptions}
+                        selectedColumns={selectedColumns}
+                        onColumnToggle={handleColumnToggle}
+                        allColumns={allColumns}
                     />
             </div>
         </div>

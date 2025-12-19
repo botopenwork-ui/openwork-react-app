@@ -27,7 +27,7 @@ const DropDown = ({ label, options, customCSS, width, onOptionSelect }) => {
         'Talent View': '/browse-talent',
         'DAO View': '/dao',
         'People': '/browse-talent',
-        'Packages': '/profile-packages',
+        // 'Packages': '/profile-packages', // Delinked - kept for reference
         'Oracles': '/skill-oracles',
         'Members': '/members-skill-oracles',
         'Disputes': '/skill-oracle-disputes',

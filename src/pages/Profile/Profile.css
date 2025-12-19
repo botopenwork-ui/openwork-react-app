@@ -45,3 +45,36 @@
     --stroke-0: #1246FF;
     --fill-0: #F2F4F7;
 }
+
+/* Button positioning to match Governance layout */
+#buttonOracle-home {
+    left: calc(50% - 209px);
+    top: 187px;
+    display: none;
+    z-index: 3;
+}
+
+#buttonOracle-home.visible-home {
+    opacity: 1;
+    animation: slideInLeft-home 1s forwards;
+}
+
+#buttonOracle-home:not(.visible-home) {
+    animation: slideOutLeft-home 1s forwards;
+}
+
+#buttonToken-home {
+    left: calc(50% + 90px);
+    top: 187px;
+    display: none;
+    z-index: 3;
+}
+
+#buttonToken-home.visible-home {
+    opacity: 1;
+    animation: slideInRight-home 1s forwards;
+}
+
+#buttonToken-home:not(.visible-home) {
+    animation: slideOutRight-home 1s forwards;
+}

@@ -198,7 +198,7 @@ export default function Profile() {
           {/* Left button - Portfolio */}
           <MenuItem
             to="/profile-portfolio"
-            id="buttonLeft-home"
+            id="buttonOracle-home"
             buttonsVisible={buttonsVisible}
             buttonFlex={buttonFlex}
             onMouseEnter={() => setButtonsVisible(true)}
@@ -211,18 +211,18 @@ export default function Profile() {
           {/* Right button - Work */}
           <MenuItem
             to={`/profile/${displayAddress}/jobs`}
-            id="buttonRight-home"
+            id="buttonToken-home"
             buttonsVisible={buttonsVisible}
             buttonFlex={buttonFlex}
             onMouseEnter={() => setButtonsVisible(true)}
             onMouseLeave={() => setButtonsVisible(false)}
             imgSrc='/radial-button.svg'
             iconSrc='/menu-work-icon.svg'
-            text='Work' 
+            text='Work'
           />
 
-          {/* Bottom button - Packages */}
-          <MenuItem
+          {/* Bottom button - Packages (hidden) */}
+          {/* <MenuItem
             to="/profile-packages"
             id="buttonBottom-home"
             buttonsVisible={buttonsVisible}
@@ -232,7 +232,7 @@ export default function Profile() {
             imgSrc="/radial-button.svg"
             iconSrc="/menu-jobs-icon.svg"
             text="Packages"
-          />
+          /> */}
   
           {/* Hover text prompting user to hover over the radial menu */}
           {/* <div
