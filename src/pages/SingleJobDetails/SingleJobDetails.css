@@ -859,10 +859,15 @@ transform: translateX(15px);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 4px;
   color: #868686;
   font-size: 14px;
   font-weight: 400;
+}
+
+.feeContent > img[src="/warning.svg"] {
+  margin-left: 2px;
+  vertical-align: middle;
 }
 
 .titleText {

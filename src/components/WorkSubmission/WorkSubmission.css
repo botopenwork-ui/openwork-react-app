@@ -66,3 +66,47 @@
     font-weight: 500;
     line-height: 24px; /* 200% */
 }
+
+.submission-attachments {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.attachments-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #767676;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.attachments-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.attachment-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #FAFAFA;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #4D4D4D;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.attachment-link:hover {
+    background: #f0f0f0;
+}
+
+.attachment-link img {
+    width: 16px;
+    height: 16px;
+    border: none !important;
+    border-radius: 0 !important;
+}

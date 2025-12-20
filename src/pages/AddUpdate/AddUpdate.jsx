@@ -8,60 +8,13 @@ import { useMobileDetection } from "../../functions/useMobileDetection";
 import BackButton from "../../components/BackButton/BackButton";
 import BlueButton from "../../components/BlueButton/BlueButton";
 import Warning from "../../components/Warning/Warning";
+import FileUpload from "../../components/FileUpload/FileUpload";
 import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
 import { getChainConfig, extractChainIdFromJobId } from "../../config/chainConfig";
 import { switchToChain } from "../../utils/switchNetwork";
 import { getLOWJCContract } from "../../services/localChainService";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-
-function ImageUpload() {
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [preview, setPreview] = useState(null);
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    setSelectedImage(file);
-    setPreview(URL.createObjectURL(file)); // For preview display
-  };
-
-  const handleImageUpload = async () => {
-    const formData = new FormData();
-    formData.append('image', selectedImage);
-
-    try {
-      // Replace 'your-api-endpoint' with the actual upload URL
-      const response = await fetch('api-endpoint', {
-        method: 'POST',
-        body: formData,
-      });
-      if (response.ok) {
-        alert('Image uploaded successfully!');
-      } else {
-        alert('Upload failed.');
-      }
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      alert('An error occurred while uploading.');
-    }
-  };
-
-  return (
-    <div>
-      <label htmlFor="image">
-        <div className="form-fileUpload">
-          <img src="/upload.svg" alt="" />
-          <span>Click here to upload or drop files here</span>
-        </div>
-      </label>
-      <input id="image" type="file" accept="image/*" onChange={handleImageChange} style={{display:'none'}} />
-      {preview && <img src={preview} alt="Image preview" width="100" />}
-      {/* <button style={{display: 'none'}} onClick={handleImageUpload} disabled={!selectedImage}>
-        Upload Image
-      </button> */}
-    </div>
-  );
-}
 
 export default function AddUpdate() {
   const { jobId } = useParams();
@@ -74,6 +27,7 @@ export default function AddUpdate() {
   const [loadingT, setLoadingT] = useState("");
   const [transactionStatus, setTransactionStatus] = useState("");
   const [applicationData, setApplicationData] = useState(null);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
   
   // Multi-chain hooks
   const { chainId: userChainId, chainConfig: userChainConfig } = useChainDetection();
@@ -147,7 +101,8 @@ export default function AddUpdate() {
         submittedFromChain: requiredChainConfig.name,
         submittedFromChainId: requiredChainId,
         date: new Date().toISOString(),
-        description: 'Completed work deliverable for milestone approval'
+        description: 'Completed work deliverable for milestone approval',
+        attachments: uploadedFiles
       };
 
       // Upload to IPFS via backend
@@ -180,26 +135,43 @@ export default function AddUpdate() {
       setTransactionStatus(`💰 Getting LayerZero fee quote on ${requiredChainConfig.name}...`);
       const web3 = new Web3(window.ethereum);
       const lowjcContract = await getLOWJCContract(requiredChainId);
-      const lzOptions = requiredChainConfig.layerzero.options;
       
-      // Get bridge for fee quote
+      // Validate LayerZero configuration
+      const lzOptions = requiredChainConfig.layerzero?.options;
+      if (!lzOptions) {
+        throw new Error(`LayerZero options not configured for ${requiredChainConfig.name}`);
+      }
+      
+      // Get bridge address and validate
       const bridgeAddress = await lowjcContract.methods.bridge().call();
+      if (!bridgeAddress || bridgeAddress === '0x0000000000000000000000000000000000000000') {
+        throw new Error("Bridge contract not configured on LOWJC");
+      }
+      
+      console.log("Bridge address:", bridgeAddress);
+      
+      // Bridge ABI for quoteNativeChain function
       const bridgeABI = [{
-        "inputs": [{"type": "bytes"}, {"type": "bytes"}],
+        "inputs": [
+          {"type": "bytes", "name": "_payload"},
+          {"type": "bytes", "name": "_options"}
+        ],
         "name": "quoteNativeChain",
-        "outputs": [{"type": "uint256"}],
+        "outputs": [{"type": "uint256", "name": "fee"}],
         "stateMutability": "view",
         "type": "function"
       }];
       
       const bridgeContract = new web3.eth.Contract(bridgeABI, bridgeAddress);
+      
+      // Encode payload matching LOWJC's internal encoding for submitWork
       const payload = web3.eth.abi.encodeParameters(
         ['string', 'address', 'string', 'string'],
         ['submitWork', walletAddress, jobId, submissionHash]
       );
       
       const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, lzOptions).call();
-      console.log(`💰 LayerZero fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH`);
+      console.log(`💰 LayerZero quoted fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH`);
 
       // Submit work
       setTransactionStatus(`📝 Submitting work on ${requiredChainConfig.name} - Please confirm in MetaMask`);
@@ -210,11 +182,11 @@ export default function AddUpdate() {
         lzOptions
       ).send({
         from: walletAddress,
-        value: quotedFee,
+        value: quotedFee, // Use the exact LayerZero quoted fee
         gas: 5000000  // Explicit gas limit
       });
 
-      console.log("✅ Work submitted successfully:", tx.transactionHash);
+      console.log(`✅ Work submitted on ${requiredChainConfig.name}:`, tx.transactionHash);
       setTransactionStatus(`✅ Work submitted on ${requiredChainConfig.name}! Syncing to Arbitrum...`);
       
       setTimeout(() => {
@@ -357,7 +329,10 @@ export default function AddUpdate() {
             )}
             
             <div className="form-groupDC">
-              <ImageUpload />
+              <FileUpload
+                onFilesUploaded={setUploadedFiles}
+                uploadedFiles={uploadedFiles}
+              />
             </div>
             <div className="form-groupDC">
               <input

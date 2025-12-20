@@ -134,6 +134,7 @@ export default function ViewReceivedApplication() {
   const [isProcessing, setIsProcessing] = useState(false);
   const hasFetchedRef = React.useRef(false);
   const [cctpStatus, setCctpStatus] = useState(null);
+  const [useAppMilestones, setUseAppMilestones] = useState(false);
 
   // Multi-chain hooks
   const { chainId: userChainId, chainConfig: userChainConfig } = useChainDetection();
@@ -160,27 +161,75 @@ export default function ViewReceivedApplication() {
 
       try {
         setLoading(true);
+        console.log("Fetching application data for:", { jobId, applicationId });
+        
         // Applications are stored on Arbitrum Genesis, not on local chain
         const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
         const GENESIS_CONTRACT = import.meta.env.VITE_GENESIS_CONTRACT_ADDRESS || "0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C";
         
+        console.log("Using Genesis contract:", GENESIS_CONTRACT);
+        console.log("Using RPC:", ARBITRUM_SEPOLIA_RPC);
+        
         const web3 = new Web3(ARBITRUM_SEPOLIA_RPC);
         const genesisABI = [{
-          "inputs": [{"type": "string"}, {"type": "uint256"}],
+          "inputs": [
+            {"name": "jobId", "type": "string"},
+            {"name": "applicationId", "type": "uint256"}
+          ],
           "name": "getJobApplication",
-          "outputs": [{"type": "tuple", "components": [
-            {"name": "applicant", "type": "address"},
-            {"name": "applicationHash", "type": "string"},
-            {"name": "proposedMilestones", "type": "tuple[]"},
-            {"name": "preferredChainDomain", "type": "uint32"},
-            {"name": "status", "type": "uint8"}
-          ]}],
+          "outputs": [{
+            "type": "tuple",
+            "components": [
+              {"name": "id", "type": "uint256"},
+              {"name": "jobId", "type": "string"},
+              {"name": "applicant", "type": "address"},
+              {"name": "applicationHash", "type": "string"},
+              {"name": "proposedMilestones", "type": "tuple[]", "components": [
+                {"name": "descriptionHash", "type": "string"},
+                {"name": "amount", "type": "uint256"}
+              ]},
+              {"name": "preferredPaymentChainDomain", "type": "uint32"},
+              {"name": "preferredPaymentAddress", "type": "address"},
+              {"name": "status", "type": "uint8"}
+            ]
+          }],
           "stateMutability": "view",
           "type": "function"
         }, {
-          "inputs": [{"type": "string"}],
+          "inputs": [{"name": "_jobId", "type": "string"}],
           "name": "getJob",
-          "outputs": [{"type": "tuple"}],
+          "outputs": [{
+            "type": "tuple",
+            "components": [
+              {"name": "id", "type": "string"},
+              {"name": "jobGiver", "type": "address"},
+              {"name": "applicants", "type": "address[]"},
+              {"name": "jobDetailHash", "type": "string"},
+              {"name": "status", "type": "uint8"},
+              {"name": "workSubmissions", "type": "string[]"},
+              {"name": "milestonePayments", "type": "tuple[]", "components": [
+                {"name": "descriptionHash", "type": "string"},
+                {"name": "amount", "type": "uint256"}
+              ]},
+              {"name": "finalMilestones", "type": "tuple[]", "components": [
+                {"name": "descriptionHash", "type": "string"},
+                {"name": "amount", "type": "uint256"}
+              ]},
+              {"name": "totalPaid", "type": "uint256"},
+              {"name": "currentLockedAmount", "type": "uint256"},
+              {"name": "currentMilestone", "type": "uint256"},
+              {"name": "selectedApplicant", "type": "address"},
+              {"name": "selectedApplicationId", "type": "uint256"},
+              {"name": "totalEscrowed", "type": "uint256"},
+              {"name": "totalReleased", "type": "uint256"}
+            ]
+          }],
+          "stateMutability": "view", 
+          "type": "function"
+        }, {
+          "inputs": [{"name": "jobId", "type": "string"}],
+          "name": "getJobApplicationCount",
+          "outputs": [{"name": "", "type": "uint256"}],
           "stateMutability": "view",
           "type": "function"
         }];
@@ -190,11 +239,41 @@ export default function ViewReceivedApplication() {
         // Fetch job data
         const jobData = await contract.methods.getJob(jobId).call();
         console.log("Job data:", jobData);
+        
+        // Check if job exists
+        if (!jobData || !jobData.jobGiver || jobData.jobGiver === '0x0000000000000000000000000000000000000000') {
+          console.error(`Job ${jobId} not found`);
+          setJob(null);
+          setLoading(false);
+          return;
+        }
+        
         setJob(jobData);
 
+        // Check application count first
+        const appCount = await contract.methods.getJobApplicationCount(jobId).call();
+        console.log(`Total applications for job ${jobId}: ${appCount}`);
+        
+        const appIdNum = parseInt(applicationId);
+        if (appIdNum > parseInt(appCount) || appIdNum < 1) {
+          console.error(`Application ID ${appIdNum} is out of range. Valid range: 1-${appCount}`);
+          setApplication(null);
+          setLoading(false);
+          return;
+        }
+
         // Fetch application data from Genesis
-        const appData = await contract.methods.getJobApplication(jobId, applicationId).call();
+        const appData = await contract.methods.getJobApplication(jobId, appIdNum).call();
         console.log("Application data:", appData);
+        
+        // Check if application exists (application ID should be non-zero)
+        if (!appData || !appData.applicant || appData.applicant === '0x0000000000000000000000000000000000000000') {
+          console.error(`Application ${applicationId} not found for job ${jobId}`);
+          setApplication(null);
+          setLoading(false);
+          return;
+        }
+        
         setApplication(appData);
 
         // Fetch job details from IPFS
@@ -342,8 +421,15 @@ export default function ViewReceivedApplication() {
       return;
     }
 
-    // Get first milestone amount from job's original milestones (since useAppMilestones = false)
-    const firstMilestoneAmount = job ? (parseFloat(job.milestonePayments[0]?.amount || 0) / 1000000) : 0;
+    // Get first milestone amount based on whether we're using applicant's milestones
+    let firstMilestoneAmount;
+    if (useAppMilestones && milestoneDetails.length > 0) {
+      // Use applicant's proposed milestone amount (already in USDC format from IPFS fetch)
+      firstMilestoneAmount = parseFloat(milestoneDetails[0].amount);
+    } else {
+      // Use job giver's original milestone amount
+      firstMilestoneAmount = job ? (parseFloat(job.milestonePayments[0]?.amount || 0) / 1000000) : 0;
+    }
     if (firstMilestoneAmount <= 0) {
       setTransactionStatus("❌ Invalid milestone amount - must be greater than 0");
       return;
@@ -446,7 +532,7 @@ export default function ViewReceivedApplication() {
       // LOWJC sends: abi.encode("startJob", msg.sender, _jobId, _applicationId, _useAppMilestones)
       const payload = web3.eth.abi.encodeParameters(
         ['string', 'address', 'string', 'uint256', 'bool'],
-        ['startJob', walletAddress, jobId, parseInt(applicationId), false]
+        ['startJob', walletAddress, jobId, parseInt(applicationId), useAppMilestones]
       );
       
       // Get quote from bridge
@@ -457,8 +543,8 @@ export default function ViewReceivedApplication() {
       
       const startJobTx = await lowjcContract.methods.startJob(
         jobId,
-        parseInt(applicationId), 
-        false, // useAppMilestones
+        parseInt(applicationId),
+        useAppMilestones,
         nativeOptions
       ).send({
         from: walletAddress,
@@ -565,7 +651,23 @@ export default function ViewReceivedApplication() {
     );
   }
 
-  if (!application || !job) {
+  if (!job) {
+    return (
+      <div className="release-payment-container">
+        <div className="form-container-release">
+          <div className="form-header" style={{marginTop:'109px'}}>
+            <BackButton to="/browse-jobs" style={{gap: '20px'}} title="Job Not Found"/>
+          </div>
+          <div className="form-body">
+            <p>Job {jobId} not found. The job may not exist on the blockchain.</p>
+            <p>Please check the job ID and try again.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!application) {
     return (
       <div className="release-payment-container">
         <div className="form-container-release">
@@ -573,8 +675,14 @@ export default function ViewReceivedApplication() {
             <BackButton to={`/job-deep-view/${jobId}`} style={{gap: '20px'}} title="Application Not Found"/>
           </div>
           <div className="form-body">
-            <p>Application not found. Please check the URL parameters.</p>
-            <p>Expected: /view-received-application?jobId={jobId}&applicationId={applicationId}</p>
+            <p>Application #{applicationId} not found for Job {jobId}.</p>
+            <p>This could mean:</p>
+            <ul style={{ textAlign: 'left', marginTop: '10px' }}>
+              <li>The application ID doesn't exist yet</li>
+              <li>The application hasn't been submitted to the blockchain</li>
+              <li>There's a network sync issue</li>
+            </ul>
+            <p style={{ marginTop: '15px' }}>Please check the console for more details or try refreshing the page.</p>
           </div>
         </div>
       </div>
@@ -629,18 +737,43 @@ export default function ViewReceivedApplication() {
                     </div>
                 </div>
             </div>
+            {applicationDetails?.attachments && applicationDetails.attachments.length > 0 && (
             <div>
                 <div className="detail-row category">
                     <span>ATTACHMENTS</span>
                     <div className="upload-content">
-                        <ATTACHMENTS title={'Scope of work.pdf'}/>
-                        <ATTACHMENTS title={'Reference 1.png'}/>
+                        {applicationDetails.attachments.map((file, index) => (
+                          <a
+                            key={index}
+                            href={`https://gateway.pinata.cloud/ipfs/${file.ipfsHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ textDecoration: 'none' }}
+                          >
+                            <ATTACHMENTS title={file.name}/>
+                          </a>
+                        ))}
                     </div>
                 </div>
             </div>
+            )}
             <div className="milestone-section">
                 <div className="milestone-section-header">
                     <span>MILESTONES</span>
+                </div>
+                <div className="milestone-toggle-container">
+                    <div className="milestone-toggle-label">
+                        <span className="milestone-toggle-title">Accept applicant's milestones</span>
+                        <span className="milestone-toggle-desc">Use applicant's proposed milestones instead of original job milestones</span>
+                    </div>
+                    <label className="milestone-toggle-switch">
+                        <input
+                            type="checkbox"
+                            checked={useAppMilestones}
+                            onChange={(e) => setUseAppMilestones(e.target.checked)}
+                        />
+                        <span className="milestone-toggle-slider"></span>
+                    </label>
                 </div>
                 <div className="milestone-section-body">
                     {milestoneDetails.length > 0 ? (

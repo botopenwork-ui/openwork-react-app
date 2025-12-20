@@ -1,50 +1,18 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Web3 from "web3";
-import L1ABI from "../../L1ABI.json";
+import nowjcABI from "../../ABIs/nowjc_ABI.json";
 import "./JobUpdate.css";
 
 import JobItem from "../../components/JobItem/JobItem";
 import BlueButton from "../../components/BlueButton/BlueButton";
 
-
-const JOBITEMS = [
-  {
-      icon: 'user.png',
-      inform: 'Mollie submitted an application!',
-      devName: 'Mollie Hall',
-      time: 20,
-  },
-  {
-      icon: 'user.png',
-      inform: 'Jollie just paid you',
-      devName: 'Jollie Hall',
-      time: 20,
-      payAmount: 28.762
-  },
-  {
-      icon: 'user.png',
-      inform: 'Mollie submitted an application!',
-      devName: 'Mollie Hall',
-      time: 20,
-  },
-  {
-      icon: 'user.png',
-      inform: 'Mollie submitted an application!',
-      devName: 'Mollie Hall',
-      time: 20,
-  }
-]
-
 export default function JobUpdate() {
   const { jobId } = useParams();
   const [job, setJob] = useState(null);
   const [updates, setUpdates] = useState([]);
-  const [walletAddress, setWalletAddress] = useState("");
-  const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [expandedCard, setExpandedCard] = useState(null);
-  const [loading, setLoading] = useState(true); // Loading state
-  const navigate = useNavigate()
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   function formatWalletAddressH(address) {
     if (!address) return "";
@@ -68,126 +36,65 @@ export default function JobUpdate() {
       });
   };
 
-  // Check if user is already connected to MetaMask
-  useEffect(() => {
-    const checkWalletConnection = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({
-            method: "eth_accounts",
-          });
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-          }
-        } catch (error) {
-          console.error("Failed to check wallet connection:", error);
-        }
-      }
-    };
-
-    checkWalletConnection();
-  }, []);
-
-  function formatWalletAddress(address) {
-    if (!address) return "";
-    const start = address.substring(0, 6);
-    const end = address.substring(address.length - 4);
-    return `${start}....${end}`;
-  }
-
-  const connectWallet = async () => {
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({
-          method: "eth_requestAccounts",
-        });
-        setWalletAddress(accounts[0]);
-      } catch (error) {
-        console.error("Failed to connect wallet:", error);
-      }
-    } else {
-      alert("MetaMask is not installed. Please install it to use this app.");
-    }
-  };
-
-  const toggleDropdown = () => {
-    setDropdownVisible(!dropdownVisible);
-  };
-
-  const disconnectWallet = () => {
-    setWalletAddress("");
-    setDropdownVisible(false);
-  };
-
-  const toggleCardExpansion = (index) => {
-    setExpandedCard(expandedCard === index ? null : index);
-  };
-
-  function formatWalletAddressH(address) {
-    if (!address) return "";
-    const start = address.substring(0, 4);
-    const end = address.substring(address.length - 4);
-    return `${start}....${end}`;
-  }
-
   useEffect(() => {
     async function fetchJobDetails() {
       try {
-        const web3 = new Web3(
-          new Web3.providers.HttpProvider("https://erpc.xinfin.network"),
-        );
+        // Get RPC URL from environment or use default Arbitrum Sepolia
+        const rpcUrl = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL || "https://sepolia-rollup.arbitrum.io/rpc";
+        const web3 = new Web3(new Web3.providers.HttpProvider(rpcUrl));
 
-        const contractAddress = "0x00844673a088cBC4d4B4D0d63a24a175A2e2E637";
-        const contract = new web3.eth.Contract(L1ABI, contractAddress);
+        // Get NOWJC contract address from environment
+        const nowjcAddress = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS;
+        if (!nowjcAddress) {
+          throw new Error("NOWJC contract address not configured");
+        }
 
-        const jobDetails = await contract.methods.getJobDetails(jobId).call();
-        const ipfsHash = jobDetails.jobDetailHash;
-        const ipfsData = await fetchFromIPFS(ipfsHash);
+        const contract = new web3.eth.Contract(nowjcABI, nowjcAddress);
+
+        // Fetch job details from nowjc contract
+        const jobDetails = await contract.methods.getJob(jobId).call();
+
+        // Fetch job detail hash from IPFS
+        const ipfsData = await fetchFromIPFS(jobDetails.jobDetailHash);
 
         setJob({
           jobId,
-          employer: jobDetails.employer,
-          escrowAmount: web3.utils.fromWei(jobDetails.escrowAmount, "ether"),
-          isJobOpen: jobDetails.isOpen,
-          title: ipfsData.title,
-          jobTaker: ipfsData.jobTaker, // Fetch jobTaker from IPFS data
+          jobGiver: jobDetails.jobGiver,
+          selectedApplicant: jobDetails.selectedApplicant,
+          status: jobDetails.status,
+          title: ipfsData.title || "Job",
           ...ipfsData,
         });
 
-        const submissionIDs = await contract.methods
-          .getJobSubmissionIDs(jobId)
-          .call();
-        const jobUpdates = await Promise.all(
-          submissionIDs.map(async (submissionID) => {
-            const submission = await contract.methods
-              .getWorkSubmission(submissionID)
-              .call();
-            const submissionHash = submission.submissionHash;
-            const submissionData = await fetchFromIPFS(submissionHash);
-            return {
-              ...submission,
-              ...submissionData,
-            };
-          }),
-        );
+        // Get work submissions from the job
+        const workSubmissions = jobDetails.workSubmissions || [];
 
-        setUpdates(jobUpdates);
-        setLoading(false); // Stop loading animation after fetching data
+        if (workSubmissions.length > 0) {
+          // Fetch each submission from IPFS
+          const jobUpdates = await Promise.all(
+            workSubmissions.map(async (submissionHash, index) => {
+              const submissionData = await fetchFromIPFS(submissionHash);
+              return {
+                id: index,
+                submissionHash,
+                ...submissionData,
+              };
+            }),
+          );
+          setUpdates(jobUpdates);
+        } else {
+          setUpdates([]);
+        }
+
+        setLoading(false);
       } catch (error) {
         console.error("Error fetching job details and updates:", error);
-        setLoading(false); // Ensure loading stops even if there is an error
+        setLoading(false);
       }
     }
 
     fetchJobDetails();
   }, [jobId]);
-
-  const handleNavigation = () => {
-    window.open(
-      "https://drive.google.com/file/d/1tdpuAM3UqiiP_TKJMa5bFtxOG4bU_6ts/view",
-      "_blank",
-    );
-  };
 
   const fetchFromIPFS = async (hash) => {
     try {
@@ -222,20 +129,12 @@ export default function JobUpdate() {
           </div>
           <div className="titleBottom">
             <p>
-              {" "}
-              Contract ID:{" "}
-              {formatWalletAddress(
-                "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d",
-              )}
+              Job ID: {jobId}
             </p>
             <img
               src="/copy.svg"
               className="copyImage"
-              onClick={() =>
-                handleCopyToClipboard(
-                  "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d",
-                )
-              }
+              onClick={() => handleCopyToClipboard(jobId)}
             />
           </div>
         </div>
@@ -258,14 +157,25 @@ export default function JobUpdate() {
           </div>
 
           <div className="job-update-content">
-            {
-                JOBITEMS.map((item, index) => (
-                  <>
-                      <JobItem key={index} icon={item.icon} inform={item.inform} devName={item.devName} time={item.time} payAmount={item.payAmount}/>
-                      {index != JOBITEMS.length-1 && (<span className="item-line"></span>)}
-                  </>
-                ))
-            }
+            {updates.length > 0 ? (
+              updates.map((update, index) => (
+                <>
+                  <JobItem
+                    key={index}
+                    icon={'user.png'}
+                    inform={update.title || update.description || 'Work submission added'}
+                    devName={formatWalletAddressH(job?.selectedApplicant || 'Worker')}
+                    time={update.timestamp ? Math.floor((Date.now() - new Date(update.timestamp).getTime()) / 60000) : 0}
+                    jobId={jobId}
+                  />
+                  {index !== updates.length - 1 && (<span className="item-line"></span>)}
+                </>
+              ))
+            ) : (
+              <div className="no-updates-message">
+                <p>No work submissions have been added yet.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

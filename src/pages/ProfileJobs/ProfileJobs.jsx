@@ -26,7 +26,52 @@ export default function ProfileJobs() {
     const [currentPage, setCurrentPage] = useState(1);
     const jobsPerPage = 5;
 
-    const headers = ["Job Title", "From", "To", "Status", "Amount", ""];
+    // Column configuration
+    const allColumns = [
+        { id: "title", label: "Job Title", required: true },
+        { id: "from", label: "From", required: false },
+        { id: "to", label: "To", required: false },
+        { id: "status", label: "Status", required: false },
+        { id: "amount", label: "Amount", required: false },
+        { id: "actions", label: "", required: true },
+    ];
+
+    // Selected columns state
+    const [selectedColumns, setSelectedColumns] = useState([
+        "title", "from", "to", "status", "amount", "actions"
+    ]);
+
+    // Generate headers based on selected columns
+    const headers = selectedColumns.map(colId => {
+        const column = allColumns.find(col => col.id === colId);
+        return column ? column.label : "";
+    });
+
+    // Column toggle handler
+    const handleColumnToggle = (columnId) => {
+        setSelectedColumns(prev => {
+            const isCurrentlySelected = prev.includes(columnId);
+            const column = allColumns.find(col => col.id === columnId);
+
+            // Can't toggle required columns
+            if (column?.required) return prev;
+
+            if (isCurrentlySelected) {
+                // Can't deselect if at minimum (3 columns)
+                if (prev.length <= 3) return prev;
+                return prev.filter(id => id !== columnId);
+            } else {
+                // Can't select if at maximum (6 columns)
+                if (prev.length >= 6) return prev;
+
+                // Maintain column order from allColumns
+                const allColumnIds = allColumns.map(col => col.id);
+                return allColumnIds.filter(id =>
+                    prev.includes(id) || id === columnId
+                );
+            }
+        });
+    };
 
     // Fetch jobs from blockchain (filtered by user if address provided)
     useEffect(() => {
@@ -167,36 +212,52 @@ export default function ProfileJobs() {
     const tableData = useMemo(() => {
         return displayJobs.map((job) => {
             const isRealData = job.jobGiver !== undefined;
-            
-            return [
-                <div>
-                    <img src="/doc.svg" alt="Document Icon" className="docIcon" />
-                    <span>{isRealData ? job.title : job.title}</span>
-                </div>,
-                <div className="job-from">
-                    <span title={job.jobGiver}>
-                        {isRealData ? formatAddress(job.jobGiver) : job.from}
-                    </span>
-                    <img src="/arrow-circle-right.svg" alt="" />
-                </div>,
-                <div className="skills-required">
-                    <span title={job.selectedApplicant}>
-                        {isRealData ? formatAddress(job.selectedApplicant) : job.to}
-                    </span>
-                </div>,
-                <div className="">
-                    <JobStatus status={isRealData ? job.status : job.status} />
-                </div>,
-                <div className="budget">
-                    <span>{job.amount}</span>
-                    <img src="/xdc.svg" alt="Budget" />
-                </div>,
-                <div className="view-detail">
-                    <DetailButton to={`/view-job-details/${job.id}`} imgSrc="/view.svg" alt="detail"  />
-                </div>
-            ];
+
+            // Create all possible column data
+            const allColumnData = {
+                title: (
+                    <div>
+                        <img src="/doc.svg" alt="Document Icon" className="docIcon" />
+                        <span>{job.title}</span>
+                    </div>
+                ),
+                from: (
+                    <div className="job-from">
+                        <span title={job.jobGiver}>
+                            {isRealData ? formatAddress(job.jobGiver) : job.from}
+                        </span>
+                        <img src="/arrow-circle-right.svg" alt="" />
+                    </div>
+                ),
+                to: (
+                    <div className="skills-required">
+                        <span title={job.selectedApplicant}>
+                            {isRealData ? formatAddress(job.selectedApplicant) : job.to}
+                        </span>
+                    </div>
+                ),
+                status: (
+                    <div className="">
+                        <JobStatus status={job.status} />
+                    </div>
+                ),
+                amount: (
+                    <div className="budget">
+                        <span>{job.amount}</span>
+                        <img src="/xdc.svg" alt="Budget" />
+                    </div>
+                ),
+                actions: (
+                    <div className="view-detail">
+                        <DetailButton to={`/view-job-details/${job.id}`} imgSrc="/view.svg" alt="detail" />
+                    </div>
+                ),
+            };
+
+            // Filter based on selected columns
+            return selectedColumns.map(columnId => allColumnData[columnId]);
         });
-    }, [displayJobs])
+    }, [displayJobs, selectedColumns])
 
     const indexOfLastJob = currentPage * jobsPerPage;
     const indexOfFirstJob = indexOfLastJob - jobsPerPage;
@@ -217,6 +278,9 @@ export default function ProfileJobs() {
                         headers={headers}
                         titleOptions={titleOptions}
                         filterOptions={filterOptions}
+                        selectedColumns={selectedColumns}
+                        onColumnToggle={handleColumnToggle}
+                        allColumns={allColumns}
                     />
             </div>
         </div>

@@ -223,6 +223,16 @@ export default function SingleJobDetails() {
 
         const totalPaidAmount = parseFloat(jobData.totalPaid);
         const currentMilestone = parseInt(jobData.currentMilestone);
+        const jobStatus = Number(jobData.status); // 0=Open, 1=InProgress, 2=Completed, 3=Cancelled
+
+        // Calculate completed milestones (currentMilestone is 1-indexed: 1 = first in progress)
+        // Completed = currentMilestone - 1 (milestones before current one)
+        // If job is completed, all milestones are done
+        const completedMilestones = jobStatus === 2
+          ? jobData.finalMilestones.length
+          : Math.max(0, currentMilestone - 1);
+
+        console.log("📊 Milestone status:", { currentMilestone, jobStatus, completedMilestones, total: jobData.finalMilestones?.length });
 
         // Calculate locked amount (remaining milestones)
         let lockedAmount = 0;
@@ -275,6 +285,7 @@ export default function SingleJobDetails() {
           status: jobData.status,
           milestones: jobData.finalMilestones,
           currentMilestone: currentMilestone,
+          completedMilestones: completedMilestones,
           totalMilestones: jobData.milestonePayments.length,
           jobGiverProfile,
           jobTakerProfile,
@@ -426,8 +437,8 @@ export default function SingleJobDetails() {
               </>
             ) : (
               <div className="titleBottom">
-                {job.currentMilestone} / {job.totalMilestones} Milestones
-                Completed
+                {job.completedMilestones} / {job.totalMilestones} Milestones{" "}
+                {job.completedMilestones === job.totalMilestones ? "Completed" : "Ongoing"}
               </div>
             )}
             <img src="/warning.svg" alt="" data-tooltip-id="mileston-tooltip" />

@@ -27,6 +27,7 @@
 .applicant-cell {
     display: flex;
     align-items: center;
+    gap: 8px;
 }
 
 .applicant-cell span {
@@ -36,6 +37,11 @@
     color: #868686;
     line-height: normal;
     letter-spacing: 0.02em;
+}
+
+.applicant-cell img {
+    width: 24px;
+    height: 24px;
 }
 
 .sent-to-cell {
@@ -61,7 +67,7 @@
 .status-cell {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 .application-status {

@@ -14,6 +14,7 @@ import BlueButton from "../../components/BlueButton/BlueButton";
 import RadioButton from "../../components/RadioButton/RadioButton";
 import Milestone from "../../components/Milestone/Milestone";
 import Warning from "../../components/Warning/Warning";
+import FileUpload from "../../components/FileUpload/FileUpload";
 
 // Multi-chain support
 import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
@@ -26,211 +27,6 @@ const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
 
 // Backend URL for secure API calls
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-
-function FileUpload({ onFilesUploaded, uploadedFiles }) {
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({});
-
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    setSelectedFiles(prev => [...prev, ...files]);
-  };
-
-  const removeFile = (index) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const removeUploadedFile = (index) => {
-    const newFiles = uploadedFiles.filter((_, i) => i !== index);
-    onFilesUploaded(newFiles);
-  };
-
-  const uploadFilesToIPFS = async () => {
-    if (selectedFiles.length === 0) return;
-
-    setUploading(true);
-    const newUploadedFiles = [];
-
-    for (let i = 0; i < selectedFiles.length; i++) {
-      const file = selectedFiles[i];
-      setUploadProgress(prev => ({ ...prev, [i]: 'Uploading...' }));
-
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch(
-          'https://api.pinata.cloud/pinning/pinFileToIPFS',
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${import.meta.env.VITE_PINATA_API_KEY}`,
-            },
-            body: formData,
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          newUploadedFiles.push({
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            ipfsHash: data.IpfsHash,
-            timestamp: new Date().toISOString(),
-          });
-          setUploadProgress(prev => ({ ...prev, [i]: 'Done ✓' }));
-        } else {
-          setUploadProgress(prev => ({ ...prev, [i]: 'Failed ✗' }));
-        }
-      } catch (error) {
-        console.error(`Error uploading file ${file.name}:`, error);
-        setUploadProgress(prev => ({ ...prev, [i]: 'Failed ✗' }));
-      }
-    }
-
-    onFilesUploaded([...uploadedFiles, ...newUploadedFiles]);
-    setSelectedFiles([]);
-    setUploadProgress({});
-    setUploading(false);
-  };
-
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-  };
-
-  return (
-    <div style={{ width: '100%' }}>
-      <label htmlFor="files">
-        <div className="form-fileUpload" style={{ cursor: 'pointer' }}>
-          <img src="/upload.svg" alt="" />
-          <span>Click here to upload or drop files here</span>
-        </div>
-      </label>
-      <input
-        id="files"
-        type="file"
-        multiple
-        onChange={handleFileChange}
-        style={{ display: 'none' }}
-      />
-      
-      {/* Selected files (not yet uploaded) */}
-      {selectedFiles.length > 0 && (
-        <div style={{ marginTop: '10px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <strong>Selected Files ({selectedFiles.length})</strong>
-            <button
-              onClick={uploadFilesToIPFS}
-              disabled={uploading}
-              style={{
-                background: uploading ? '#ccc' : '#007bff',
-                color: 'white',
-                border: 'none',
-                padding: '6px 12px',
-                borderRadius: '4px',
-                cursor: uploading ? 'not-allowed' : 'pointer',
-                fontSize: '12px',
-                fontWeight: 'bold'
-              }}
-            >
-              {uploading ? 'Uploading...' : 'Upload to IPFS'}
-            </button>
-          </div>
-          {selectedFiles.map((file, index) => (
-            <div
-              key={index}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '8px',
-                background: '#f5f5f5',
-                borderRadius: '4px',
-                marginBottom: '4px',
-                fontSize: '13px'
-              }}
-            >
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 'bold' }}>{file.name}</div>
-                <div style={{ color: '#666', fontSize: '11px' }}>
-                  {formatFileSize(file.size)} • {file.type || 'Unknown type'}
-                </div>
-              </div>
-              {uploadProgress[index] && (
-                <span style={{ marginRight: '10px', fontSize: '11px', color: '#666' }}>
-                  {uploadProgress[index]}
-                </span>
-              )}
-              {!uploading && (
-                <button
-                  onClick={() => removeFile(index)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#dc3545',
-                    cursor: 'pointer',
-                    fontSize: '18px',
-                    padding: '0 8px'
-                  }}
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Uploaded files (on IPFS) */}
-      {uploadedFiles && uploadedFiles.length > 0 && (
-        <div style={{ marginTop: '15px' }}>
-          <strong>Uploaded Files ({uploadedFiles.length})</strong>
-          {uploadedFiles.map((file, index) => (
-            <div
-              key={index}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '8px',
-                background: '#e8f5e9',
-                borderRadius: '4px',
-                marginTop: '4px',
-                fontSize: '13px'
-              }}
-            >
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 'bold' }}>✓ {file.name}</div>
-                <div style={{ color: '#666', fontSize: '11px' }}>
-                  {formatFileSize(file.size)} • IPFS: {file.ipfsHash.substring(0, 10)}...
-                </div>
-              </div>
-              <button
-                onClick={() => removeUploadedFile(index)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#dc3545',
-                  cursor: 'pointer',
-                  fontSize: '18px',
-                  padding: '0 8px'
-                }}
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function PostJob() {
   // Multi-chain support - detect user's network
@@ -302,7 +98,13 @@ export default function PostJob() {
           if (cleanChunk.length > 0) {
             const decoded = Web3.utils.hexToUtf8("0x" + cleanChunk);
             
-            // Match ANY chainId-jobNumber pattern (works for all chains)
+            // Match EID-jobNumber pattern (e.g., "40161-6", "40232-5")
+            // EIDs are 5 digits: 40161 (ETH), 40232 (OP), 40231 (ARB), 40245 (BASE)
+            if (decoded.match(/^40\d{3}-\d+$/)) {
+              console.log("🎯 Found job ID with EID pattern:", decoded);
+              return decoded;
+            }
+            // Also check for any numeric pattern as fallback
             if (decoded.match(/^\d+-\d+$/)) {
               console.log("🎯 Found job ID:", decoded);
               return decoded;
@@ -328,6 +130,7 @@ export default function PostJob() {
       console.log("🔍 Polling for job ID:", jobId);
       console.log("📍 Checking contract:", BROWSE_JOBS_CONTRACT);
       console.log("🌐 Using RPC:", ARBITRUM_SEPOLIA_RPC);
+      console.log("⏰ Current time:", new Date().toISOString());
       
       const arbitrumWeb3 = new Web3(ARBITRUM_SEPOLIA_RPC);
       const browseJobsContract = new arbitrumWeb3.eth.Contract(BrowseJobsABI, BROWSE_JOBS_CONTRACT);
@@ -336,17 +139,28 @@ export default function PostJob() {
       const jobData = await browseJobsContract.methods.getJob(jobId).call();
       console.log("📋 Job data received:", jobData);
       console.log("🆔 jobData.id:", jobData.id);
+      console.log("👤 jobData.jobGiver:", jobData.jobGiver);
       console.log("🔍 Looking for jobId:", jobId);
       
       // Check if job exists - jobData.id should match our jobId
       // Also check if jobGiver is not zero address (indicates real job)
       const jobExists = jobData && 
                         jobData.id && 
+                        jobData.id !== '' &&  // ID must not be empty
                         (jobData.id === jobId || jobData.id.toString() === jobId) &&
                         jobData.jobGiver && 
                         jobData.jobGiver !== '0x0000000000000000000000000000000000000000';
       
-      console.log("✅ Job exists on Arbitrum:", jobExists);
+      if (jobExists) {
+        console.log("✅ Job exists on Arbitrum! Job ID matches and has valid jobGiver");
+      } else {
+        console.log("⏳ Job not yet synced to Arbitrum");
+        if (jobData.id === '') console.log("   - Reason: Job ID is empty");
+        if (jobData.id !== jobId) console.log(`   - Reason: Job ID mismatch (got: '${jobData.id}', expected: '${jobId}')`);
+        if (!jobData.jobGiver || jobData.jobGiver === '0x0000000000000000000000000000000000000000') {
+          console.log("   - Reason: Invalid jobGiver address");
+        }
+      }
       return jobExists;
     } catch (error) {
       console.log("❌ Job not yet synced:", error.message);
@@ -356,13 +170,15 @@ export default function PostJob() {
 
   // Function to poll for job sync completion
   const pollForJobSync = async (jobId) => {
-    setTransactionStatus("Job posted successfully! Cross-chain sync will take 15-30 seconds...");
+    console.log("🚀 Starting cross-chain sync polling for job:", jobId);
+    setTransactionStatus(`Job posted successfully! Syncing ${jobId} to Arbitrum (15-30 seconds)...`);
     
-    // Wait 10 seconds before starting to poll
-    await new Promise(resolve => setTimeout(resolve, 10000));
-    setTransactionStatus("Checking for cross-chain sync...");
+    // Wait 15 seconds before starting to poll (LayerZero typically takes 10-20s)
+    console.log("⏳ Waiting 15 seconds for LayerZero to propagate...");
+    await new Promise(resolve => setTimeout(resolve, 15000));
+    setTransactionStatus(`Checking if ${jobId} has synced to Arbitrum...`);
     
-    const maxAttempts = 8; // 8 attempts over 35 seconds (after initial 10s wait)
+    const maxAttempts = 12; // 12 attempts over 60 seconds (after initial 15s wait)
     const pollInterval = 5000; // 5 seconds
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -377,7 +193,7 @@ export default function PostJob() {
       }
       
       // Update status with estimated time remaining
-      const timeRemaining = Math.max(0, 45 - (10 + (attempt * 5))); // Total time - elapsed time
+      const timeRemaining = Math.max(0, 75 - (15 + (attempt * 5))); // Total time - elapsed time
       setTransactionStatus(`Syncing job across chains... (~${timeRemaining}s remaining)`);
       
       // Wait before next attempt
@@ -388,6 +204,12 @@ export default function PostJob() {
     
     // If we get here, polling timed out
     setTransactionStatus("Job posted but sync taking longer than expected. Check browse jobs in a few minutes.");
+    
+    // Redirect to browse jobs page after a delay
+    console.log("⏳ Sync timeout - redirecting to browse jobs page");
+    setTimeout(() => {
+      navigate('/browse-jobs');
+    }, 3000);
   };
 
 
@@ -675,26 +497,26 @@ export default function PostJob() {
           
           const bridgeContract = new web3.eth.Contract(bridgeABI, bridgeAddress);
           
-          // Get current job count to predict next jobId - DYNAMIC CHAIN ID
+          // Get current job count to predict next jobId - MUST USE LAYERZERO EID
           const jobCounter = await contract.methods.getJobCount().call();
-          const nextJobId = `${chainId}-${Number(jobCounter) + 1}`; // Use detected chainId
-          console.log("📊 Current job count:", jobCounter);
-          console.log("🔮 Predicted next jobId:", nextJobId);
+          const layerZeroEid = chainConfig.layerzero.eid; // Get EID from chain config
+          const predictedJobId = `${layerZeroEid}-${Number(jobCounter) + 1}`; // Use LayerZero EID, not chain ID
+          console.log("📊 Current job count on", chainConfig.name + ":", jobCounter);
+          console.log("🔮 Predicted next jobId:", predictedJobId);
+          console.log("🔢 Using LayerZero EID:", layerZeroEid, "for chain:", chainId, "(" + chainConfig.name + ")");
           
           // Encode payload with predicted jobId
           const payload = web3.eth.abi.encodeParameters(
             ['string', 'string', 'address', 'string', 'string[]', 'uint256[]'],
-            ['postJob', nextJobId, fromAddress, jobDetailHash, milestoneHashes, milestoneAmounts]
+            ['postJob', predictedJobId, fromAddress, jobDetailHash, milestoneHashes, milestoneAmounts]
           );
           
           const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, layerzeroOptions).call();
           console.log("💰 LayerZero quoted fee:", web3.utils.fromWei(quotedFee, 'ether'), "ETH");
           
-          // FIXED FEE OVERRIDE: Use 0.001 ETH instead of quoted fee
-          // To switch back to dynamic quoting: change feeToUse = fixedFee to feeToUse = quotedFee
-          const fixedFee = web3.utils.toWei('0.001', 'ether');
-          const feeToUse = fixedFee; // Change to: quotedFee for dynamic quoting
-          console.log("⚠️ Using fixed fee override:", web3.utils.fromWei(feeToUse, 'ether'), "ETH");
+          // Dynamic fee from LayerZero quote
+          const feeToUse = quotedFee;
+          console.log("✅ Using quoted fee:", web3.utils.fromWei(feeToUse, 'ether'), "ETH");
           
           // Step 6: Call postJob function with milestone hashes as descriptions
           setTransactionStatus(`Sending transaction on ${chainConfig.name}...`);
@@ -714,18 +536,63 @@ export default function PostJob() {
             .on("receipt", function (receipt) {
               console.log("📄 Full transaction receipt:", receipt);
               
-              // Extract job ID from LayerZero logs
-              const jobId = extractJobIdFromLayerZeroLogs(receipt);
+              // First, try to extract job ID from JobPosted event
+              let jobId = null;
+              
+              // Look for JobPosted event in the receipt logs
+              if (receipt.events && receipt.events.JobPosted) {
+                jobId = receipt.events.JobPosted.returnValues.jobId;
+                console.log("✅ Extracted Job ID from JobPosted event:", jobId);
+              } else if (receipt.logs && receipt.logs.length > 0) {
+                // Try to find JobPosted event by topic signature
+                const jobPostedSignature = web3.utils.keccak256("JobPosted(string,address,string)");
+                const jobPostedLog = receipt.logs.find(log => 
+                  log.topics && log.topics[0] === jobPostedSignature
+                );
+                
+                if (jobPostedLog && jobPostedLog.topics[1]) {
+                  // Decode the indexed string parameter (jobId)
+                  try {
+                    // The jobId is indexed, so we need to decode it from topics
+                    const encodedJobId = jobPostedLog.topics[1];
+                    // For indexed string parameters, the hash is stored
+                    // We'll use the predicted ID as it should match
+                    jobId = predictedJobId;
+                    console.log("📝 JobPosted event found, using predicted ID:", jobId);
+                  } catch (e) {
+                    console.log("⚠️ Could not decode JobPosted event");
+                  }
+                }
+              }
+              
+              // Fallback: try to extract from LayerZero logs
+              if (!jobId) {
+                jobId = extractJobIdFromLayerZeroLogs(receipt);
+                if (jobId) {
+                  console.log("✅ Extracted Job ID from LayerZero logs:", jobId);
+                }
+              }
+              
+              // Final fallback: use predicted ID
+              if (!jobId) {
+                console.log("⚠️ Could not extract job ID from events, using predicted ID:", predictedJobId);
+                jobId = predictedJobId;
+              }
               
               if (jobId) {
-                console.log("✅ Extracted Job ID from LayerZero:", jobId);
                 setTransactionStatus("✅ Job posted successfully!");
                 setLoadingT(false);
+                
+                // For testing/debugging: log the job ID we're going to use
+                console.log("🎯 Final Job ID for redirect:", jobId);
+                
+                // TEMPORARY: Override for testing - remove this when done
+                // jobId = "40161-3"; // Uncomment to test with specific job
                 
                 // Start polling for cross-chain sync
                 pollForJobSync(jobId);
               } else {
-                console.log("❌ Could not extract job ID from LayerZero logs");
+                console.log("❌ Failed to determine job ID");
                 setTransactionStatus("✅ Transaction confirmed but job ID extraction failed");
                 setLoadingT(false);
               }

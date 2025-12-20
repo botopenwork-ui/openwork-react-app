@@ -2,7 +2,6 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./JobsTable.css";
 import DropDown from "../DropDown/DropDown";
-import SearchInput from "../SearchInput/SearchInput";
 import BlueButton from "../BlueButton/BlueButton";
 import FilterOption from "../FilterOption/FilterOption";
 import DetailButton from "../DetailButton/DetailButton";
@@ -100,7 +99,6 @@ export default function JobsTable({ title, tableData, currentPage, totalPages, o
             </div>
             <div className="table-section">
                 <div className="filter-section">
-                    <SearchInput />
                     <div className="title-option">
                     {
                         filterOptions.map((options, index) => {

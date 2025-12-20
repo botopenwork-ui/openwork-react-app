@@ -12,7 +12,52 @@ export default function SkillOracleDisputes() {
     const [currentPage, setCurrentPage] = useState(1);
     const disputesPerPage = 5;
 
-    const headers = ["Request Title", "Proposed By", "Role", "Vote Submissions", "Amount", ""];
+    // Column configuration
+    const allColumns = [
+        { id: "title", label: "Request Title", required: true },
+        { id: "proposedBy", label: "Proposed By", required: false },
+        { id: "role", label: "Role", required: false },
+        { id: "voteSubmissions", label: "Vote Submissions", required: false },
+        { id: "amount", label: "Amount", required: false },
+        { id: "actions", label: "", required: true },
+    ];
+
+    // Selected columns state
+    const [selectedColumns, setSelectedColumns] = useState([
+        "title", "proposedBy", "role", "voteSubmissions", "amount", "actions"
+    ]);
+
+    // Generate headers based on selected columns
+    const headers = selectedColumns.map(colId => {
+        const column = allColumns.find(col => col.id === colId);
+        return column ? column.label : "";
+    });
+
+    // Column toggle handler
+    const handleColumnToggle = (columnId) => {
+        setSelectedColumns(prev => {
+            const isCurrentlySelected = prev.includes(columnId);
+            const column = allColumns.find(col => col.id === columnId);
+
+            // Can't toggle required columns
+            if (column?.required) return prev;
+
+            if (isCurrentlySelected) {
+                // Can't deselect if at minimum (3 columns)
+                if (prev.length <= 3) return prev;
+                return prev.filter(id => id !== columnId);
+            } else {
+                // Can't select if at maximum (6 columns)
+                if (prev.length >= 6) return prev;
+
+                // Maintain column order from allColumns
+                const allColumnIds = allColumns.map(col => col.id);
+                return allColumnIds.filter(id =>
+                    prev.includes(id) || id === columnId
+                );
+            }
+        });
+    };
 
     // Fetch disputes from blockchain
     useEffect(() => {
@@ -118,7 +163,7 @@ export default function SkillOracleDisputes() {
                 'Oracles',
                 'Members',
                 'Disputes',
-                'Proposals'
+                // 'Proposals' // TODO: Re-enable when DAO proposals integration is ready
             ]
         }
     ]
@@ -126,13 +171,9 @@ export default function SkillOracleDisputes() {
     const filterOptions = [
         {
             title: 'Table Columns',
-            items: [
-                'Request Title',
-                'Proposed By',
-                'Role',
-                'Vote Submissions',
-                'Amount'
-            ]
+            items: allColumns
+                .filter(col => !col.required && col.label)
+                .map(col => col.label)
         },
         {
             title: 'Filter',
@@ -150,42 +191,58 @@ export default function SkillOracleDisputes() {
     const tableData = useMemo(() => {
         return displayDisputes.map((dispute) => {
             const isRealData = dispute.proposedBy && dispute.proposedBy.startsWith('0x');
-            
-            return [
-                <div className="dispute-title">
-                    <img src="/file-05.svg" alt="File Icon" className="fileIcon" />
-                    <span>{dispute.title}</span>
-                </div>,
-                <div className="proposed-by">
-                    <span title={dispute.proposedBy}>
-                        {isRealData ? formatAddress(dispute.proposedBy) : dispute.proposedBy}
-                    </span>
-                </div>,
-                <div className="dispute-role">
-                    <span>{dispute.role}</span>
-                </div>,
-                <div className="vote-progress">
-                    <div className="progress-bar-container">
-                        <div 
-                            className="progress-bar-fill" 
-                            style={{ 
-                                width: `${dispute.voteSubmissions}%`,
-                                backgroundColor: dispute.color 
-                            }}
-                        />
+
+            // Create all possible column data
+            const allColumnData = {
+                title: (
+                    <div className="dispute-title">
+                        <img src="/file-05.svg" alt="File Icon" className="fileIcon" />
+                        <span>{dispute.title}</span>
                     </div>
-                    <span className="vote-percentage">{dispute.voteSubmissions}%</span>
-                </div>,
-                <div className="dispute-amount">
-                    <span>{dispute.amount}</span>
-                    <img src="/usdc.svg" alt="USDC" className="currencyIcon" />
-                </div>,
-                <div className="view-detail">
-                    <DetailButton to={`/dispute-view/${dispute.id}`} title={'View'} imgSrc="/view.svg" alt="view"/>
-                </div>
-            ];
+                ),
+                proposedBy: (
+                    <div className="proposed-by">
+                        <span title={dispute.proposedBy}>
+                            {isRealData ? formatAddress(dispute.proposedBy) : dispute.proposedBy}
+                        </span>
+                    </div>
+                ),
+                role: (
+                    <div className="dispute-role">
+                        <span>{dispute.role}</span>
+                    </div>
+                ),
+                voteSubmissions: (
+                    <div className="vote-progress">
+                        <div className="progress-bar-container">
+                            <div
+                                className="progress-bar-fill"
+                                style={{
+                                    width: `${dispute.voteSubmissions}%`,
+                                    backgroundColor: dispute.color
+                                }}
+                            />
+                        </div>
+                        <span className="vote-percentage">{dispute.voteSubmissions}%</span>
+                    </div>
+                ),
+                amount: (
+                    <div className="dispute-amount">
+                        <span>{dispute.amount}</span>
+                        <img src="/usdc.svg" alt="USDC" className="currencyIcon" />
+                    </div>
+                ),
+                actions: (
+                    <div className="view-detail">
+                        <DetailButton to={`/dispute-view/${dispute.id}`} title={'View'} imgSrc="/view.svg" alt="view"/>
+                    </div>
+                ),
+            };
+
+            // Filter based on selected columns
+            return selectedColumns.map(columnId => allColumnData[columnId]);
         });
-    }, [displayDisputes])
+    }, [displayDisputes, selectedColumns])
 
     const indexOfLastDispute = currentPage * disputesPerPage;
     const indexOfFirstDispute = indexOfLastDispute - disputesPerPage;
@@ -208,6 +265,9 @@ export default function SkillOracleDisputes() {
                         titleOptions={titleOptions}
                         filterOptions={filterOptions}
                         applyNow={true}
+                        selectedColumns={selectedColumns}
+                        onColumnToggle={handleColumnToggle}
+                        allColumns={allColumns}
                     />
             </div>
         </div>

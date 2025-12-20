@@ -225,7 +225,7 @@ app.post('/api/release-payment', async (req, res) => {
   }
   
   // Process in background
-  processReleasePaymentFlow(jobId)
+  processReleasePaymentFlow(jobId, jobStatuses)
     .then(() => {
       jobStatuses.set(jobId, {
         status: 'completed',
@@ -496,7 +496,7 @@ app.post('/api/cctp-retry/:operation/:jobId', async (req, res) => {
       processStartJobDirect(jobId, status.source_tx_hash)
         .catch(err => console.error(`Retry failed for ${jobId}:`, err.message));
     } else if (operation === 'releasePayment') {
-      processReleasePaymentFlow(jobId)
+      processReleasePaymentFlow(jobId, jobStatuses)
         .catch(err => console.error(`Retry failed for ${jobId}:`, err.message));
     } else if (operation === 'settleDispute') {
       processSettleDisputeFlow(status.dispute_id, status.source_tx_hash)
@@ -719,7 +719,7 @@ async function startEventListener() {
           processingJobs.add(key);
           
           // Process in background
-          processReleasePaymentFlow(jobId)
+          processReleasePaymentFlow(jobId, jobStatuses)
             .finally(() => {
               processingJobs.delete(key);
               completedJobs.set(key, Date.now());
@@ -742,9 +742,9 @@ async function startEventListener() {
 /**
  * Process Release Payment flow with error handling
  */
-async function processReleasePaymentFlow(jobId) {
+async function processReleasePaymentFlow(jobId, statusMap) {
   try {
-    await processReleasePayment(jobId);
+    await processReleasePayment(jobId, statusMap);
   } catch (error) {
     console.error(`Failed to process Release Payment for ${jobId}:`, error.message);
   }

@@ -23,11 +23,64 @@ export default function SkillOracle() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
-    
+
     const membersPerPage = 5;
 
-    // Original headers
-    const headers = ["Member Name", "Rating", "Skills", "Experience", "Resolution Accuracy", ""];
+    // Column configuration
+    const allColumns = [
+        { id: "memberName", label: "Member Name", required: true },
+        { id: "rating", label: "Rating", required: false },
+        { id: "skills", label: "Skills", required: false },
+        { id: "experience", label: "Experience", required: false },
+        { id: "votingPower", label: "Voting Power", required: false },
+        { id: "stake", label: "Stake + Earned", required: false },
+        { id: "votesCast", label: "Votes Cast", required: false },
+        { id: "status", label: "Status", required: false },
+        { id: "accuracy", label: "Resolution Accuracy", required: false },
+        { id: "actions", label: "", required: true },
+    ];
+
+    // Selected columns state - rating and accuracy hidden by default
+    const [selectedColumns, setSelectedColumns] = useState([
+        "memberName",
+        "skills",
+        "votingPower",
+        "stake",
+        "status",
+        "actions"
+    ]);
+
+    // Generate headers based on selected columns
+    const headers = selectedColumns.map(colId => {
+        const column = allColumns.find(col => col.id === colId);
+        return column ? column.label : "";
+    });
+
+    // Column toggle handler
+    const handleColumnToggle = (columnId) => {
+        setSelectedColumns(prev => {
+            const isCurrentlySelected = prev.includes(columnId);
+            const column = allColumns.find(col => col.id === columnId);
+
+            // Can't toggle required columns
+            if (column?.required) return prev;
+
+            if (isCurrentlySelected) {
+                // Can't deselect if at minimum (4 columns)
+                if (prev.length <= 4) return prev;
+                return prev.filter(id => id !== columnId);
+            } else {
+                // Can't select if at maximum (6 columns)
+                if (prev.length >= 6) return prev;
+
+                // Maintain column order from allColumns
+                const allColumnIds = allColumns.map(col => col.id);
+                return allColumnIds.filter(id =>
+                    prev.includes(id) || id === columnId
+                );
+            }
+        });
+    };
 
     // Fetch oracle data from blockchain
     useEffect(() => {
@@ -72,70 +125,116 @@ export default function SkillOracle() {
                 'Oracles',
                 'Members',
                 'Disputes',
-                'Proposals'
+                // 'Proposals' // TODO: Re-enable when DAO proposals integration is ready
             ]
         }
     ];
 
-    // Original filterOptions
-    const filterOptions = [
-        {
-            title: 'Table Columns',
-            items: [
-                'Name',
-                'Rating',
-                'Skills',
-                'Experience',
-                'Completion Rate'
-            ]
-        },
-        {
-            title: 'Filter',
-            items: ['UX/UI Oracle', 'Web Dev Oracle', 'React Oracle', 'UX Design', 'Webflow']
-        }
-    ];
+    // Generate filter options from actual data
+    const filterOptions = useMemo(() => {
+        // Get unique oracle names from the data
+        const oracleNames = [...new Set(
+            oracleData.oracles?.map(oracle => oracle.name) || []
+        )];
+
+        return [
+            {
+                title: 'Table Columns',
+                items: allColumns
+                    .filter(col => !col.required && col.label) // Exclude required and empty label columns
+                    .map(col => col.label)
+            },
+            {
+                title: 'Filter',
+                items: oracleNames.length > 0 ? oracleNames : ['All Oracles']
+            }
+        ];
+    }, [oracleData.oracles, allColumns]);
 
     // Generate table data with real blockchain information in original format
     const tableData = useMemo(() => {
         const members = oracleData.members || [];
-        
+
         return members.map((member) => {
             const accuracyColor = getAccuracyColor(member.accuracy);
-            
-            return [
-                <div className="user">
-                    <img src="/user.png" alt="User Icon" className="userIcon" />
-                    <span title={member.address}>{formatAddress(member.address)}</span>
-                </div>,
-                <div className="rating">
-                    <span>N/A</span>
-                    <img src="/star.svg" alt="" />
-                </div>,
-                <div className="skills-required">
-                    <SkillBox title={member.oracle} />
-                    <SkillBox title="+0" />
-                </div>,
-                <div className="experience">
-                    {member.daysSinceActivity >= 0 ? `${Math.floor(member.daysSinceActivity / 365)} Years` : "N/A"}
-                </div>,
-                <div className="vote-progress">
-                    <div className="progress-bar-container">
-                        <div 
-                            className="progress-bar-fill" 
-                            style={{ 
-                                width: `${member.accuracy}%`,
-                                backgroundColor: accuracyColor
-                            }}
-                        />
+
+            // Create all possible column data
+            const allColumnData = {
+                memberName: (
+                    <div className="user">
+                        <img src="/user.png" alt="User Icon" className="userIcon" />
+                        <span title={member.address}>{formatAddress(member.address)}</span>
                     </div>
-                    <span className="vote-percentage">{member.accuracy}%</span>
-                </div>,
-                <div className="view-detail">
-                    <DetailButton to={`/profile/${member.address}`} imgSrc="/view.svg" alt="detail" />
-                </div>
-            ];
+                ),
+                rating: (
+                    <div className="rating">
+                        <span>N/A</span>
+                        <img src="/star.svg" alt="" />
+                    </div>
+                ),
+                skills: (
+                    <div className="skills-required">
+                        <SkillBox title={member.allOracles?.[0] || member.oracle} />
+                        {member.allOracles?.length > 1 && (
+                            <SkillBox title={`+${member.allOracles.length - 1}`} />
+                        )}
+                    </div>
+                ),
+                experience: (
+                    <div className="experience">
+                        {member.daysSinceActivity >= 0 ? `${Math.floor(member.daysSinceActivity / 365)} Years` : "N/A"}
+                    </div>
+                ),
+                votingPower: (
+                    <div className="voting-power">
+                        <span>{formatVotingPower(member.votingPower)}</span>
+                    </div>
+                ),
+                stake: (
+                    <div className="stake" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <img src="/xdc.svg" alt="OW" style={{ width: "16px", height: "16px" }} />
+                        <span>
+                            {formatStakeAmount(
+                                (BigInt(member.stakeAmount || "0") + BigInt(member.earnedTokens || "0")).toString()
+                            )}
+                        </span>
+                    </div>
+                ),
+                votesCast: (
+                    <div className="votes-cast">
+                        <span>{member.totalVotes || 0}</span>
+                    </div>
+                ),
+                status: (
+                    <div className={`status-badge ${member.isActive ? 'active' : 'inactive'}`}>
+                        <span>{member.isActive ? 'Active' : 'Inactive'}</span>
+                    </div>
+                ),
+                accuracy: (
+                    <div className="vote-progress">
+                        <div className="progress-bar-container">
+                            <div
+                                className="progress-bar-fill"
+                                style={{
+                                    width: `${member.accuracy}%`,
+                                    backgroundColor: accuracyColor
+                                }}
+                            />
+                        </div>
+                        <span className="vote-percentage">{member.accuracy}%</span>
+                    </div>
+                ),
+                actions: (
+                    <div className="view-detail">
+                        <DetailButton to={`/profile/${member.address}`} imgSrc="/view.svg" alt="detail" />
+                    </div>
+                ),
+            };
+
+            // Filter based on selected columns
+            return selectedColumns.map(columnId => allColumnData[columnId]);
         });
-    }, [oracleData.members]);
+    }, [oracleData.members, selectedColumns]);
 
     // Calculate indices for pagination
     const indexOfLastUser = currentPage * membersPerPage;
@@ -160,6 +259,9 @@ export default function SkillOracle() {
                     titleOptions={titleOptions}
                     filterOptions={filterOptions}
                     applyNow={true}
+                    selectedColumns={selectedColumns}
+                    onColumnToggle={handleColumnToggle}
+                    allColumns={allColumns}
                 />
             </div>
         </div>

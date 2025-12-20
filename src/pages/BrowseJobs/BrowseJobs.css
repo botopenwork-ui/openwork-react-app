@@ -8,11 +8,21 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  justify-content: flex-end;
 }
 
 .view-detail {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Fix budget column alignment - fine-tuned to align icon with header text */
+.browse-jobs-page .table tbody tr td:nth-child(5) {
+  padding-left: 29px !important;
+  text-align: left !important;
+}
+
+.browse-jobs-page .table thead tr th:nth-child(5) {
+  padding-left: 24px !important;
+  text-align: left !important;
 }

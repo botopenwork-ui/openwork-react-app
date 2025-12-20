@@ -6,12 +6,12 @@ import './JobItem.css'
 
 export default function JobItem ({icon, inform, devName,time, payAmount, jobId}) {
     const navigate = useNavigate();
-    
+
     const viewWork =() => {
         if (jobId) {
-            navigate(`/view-job-details/${jobId}`);
+            navigate(`/view-work/${jobId}`);
         } else {
-            navigate('/view-work/0');
+            console.error('No jobId provided to JobItem');
         }
     }
     return (

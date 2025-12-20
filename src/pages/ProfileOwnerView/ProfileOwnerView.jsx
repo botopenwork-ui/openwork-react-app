@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import Web3 from "web3";
 import "./ProfileOwnerView.css";
 import SkillBox from "../../components/SkillBox/SkillBox";
@@ -57,16 +57,20 @@ function ReferInfo() {
 export default function ProfileOwnerView() {
     const { address } = useParams();
     const navigate = useNavigate();
-    
+    const [searchParams] = useSearchParams();
+
+    // Get referrer from URL params (from referral link)
+    const referrerFromUrl = searchParams.get('ref');
+
     // Multi-chain hooks
     const { chainId, chainConfig, isAllowed, error: chainError } = useChainDetection();
     const { address: walletAddress, connect: connectWallet } = useWalletAddress();
-    
+
     const [hasProfile, setHasProfile] = useState(false);
     const [profileLoading, setProfileLoading] = useState(true);
     const [transactionStatus, setTransactionStatus] = useState("");
     const [isSaving, setIsSaving] = useState(false);
-    
+
     // Profile field states - initialize with empty values
     const [username, setUsername] = useState("");
     const [firstName, setFirstName] = useState("");
@@ -79,6 +83,9 @@ export default function ProfileOwnerView() {
     const [location, setLocation] = useState("");
     const [profilePhotoHash, setProfilePhotoHash] = useState("");
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+    // Referrer address state - initialize from URL param if available
+    const [referrerAddress, setReferrerAddress] = useState(referrerFromUrl || "");
     
     // Reference for hidden file input
     const fileInputRef = React.useRef(null);
@@ -253,16 +260,20 @@ export default function ProfileOwnerView() {
             
             // Encode payload
             let payload;
+            // Use referrer from URL param/state, or zero address if not provided
+            const referrerForProfile = referrerAddress && web3.utils.isAddress(referrerAddress)
+                ? referrerAddress
+                : "0x0000000000000000000000000000000000000000";
+
             if (hasProfile) {
                 payload = web3.eth.abi.encodeParameters(
                     ['string', 'address', 'string'],
                     ['updateProfile', walletAddress, ipfsHash]
                 );
             } else {
-                const referrerAddress = "0x0000000000000000000000000000000000000000";
                 payload = web3.eth.abi.encodeParameters(
                     ['string', 'address', 'string', 'address'],
-                    ['createProfile', walletAddress, ipfsHash, referrerAddress]
+                    ['createProfile', walletAddress, ipfsHash, referrerForProfile]
                 );
             }
             
@@ -285,10 +296,10 @@ export default function ProfileOwnerView() {
                 setTransactionStatus(`✅ Profile updated on ${chainConfig.name}!`);
             } else {
                 setTransactionStatus(`Creating profile on ${chainConfig.name}...`);
-                const referrerAddress = "0x0000000000000000000000000000000000000000";
+                console.log("Creating profile with referrer:", referrerForProfile);
                 await lowjcContract.methods
-                    .createProfile(ipfsHash, referrerAddress, lzOptions)
-                    .send({ 
+                    .createProfile(ipfsHash, referrerForProfile, lzOptions)
+                    .send({
                         from: walletAddress,
                         value: quotedFee,
                         gas: 5000000
@@ -673,7 +684,44 @@ export default function ProfileOwnerView() {
                                 }}
                             />
                         </div>
-                        {/* <ReferInfo/> */}
+                        {/* Referrer Address - only show when creating new profile */}
+                        {isOwner && !hasProfile && (
+                            <div className="profile-item refer-info">
+                                <div className="refer-info-user">
+                                    <img src="/refer-user.svg" alt="" />
+                                    <span>Referrer Info</span>
+                                </div>
+                                <span className="refer-line"/>
+                                <div className="refer-content">
+                                    {referrerFromUrl
+                                        ? "Referrer address from your referral link:"
+                                        : "Enter the wallet address of the person who referred you to OpenWork (optional):"
+                                    }
+                                </div>
+                                <div className="profile-item">
+                                    <input
+                                        type="text"
+                                        value={referrerAddress}
+                                        onChange={(e) => setReferrerAddress(e.target.value)}
+                                        placeholder="0x..."
+                                        style={{
+                                            border: 'none',
+                                            background: 'transparent',
+                                            width: '100%',
+                                            outline: 'none',
+                                            fontFamily: 'monospace',
+                                            fontSize: '12px'
+                                        }}
+                                    />
+                                </div>
+                                {referrerAddress && (
+                                    <Warning
+                                        content={`Referrer will earn 1% from your platform activities`}
+                                        icon="/info.svg"
+                                    />
+                                )}
+                            </div>
+                        )}
                         {chainError && (
                             <div className="warning-form">
                                 <Warning content={chainError} icon="/triangle_warning.svg" />

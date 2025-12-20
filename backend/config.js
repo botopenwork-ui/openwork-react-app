@@ -5,6 +5,7 @@ module.exports = {
   ETHEREUM_SEPOLIA_RPC: process.env.ETHEREUM_SEPOLIA_RPC_URL,
   OP_SEPOLIA_RPC: process.env.OP_SEPOLIA_RPC_URL,
   ARBITRUM_SEPOLIA_RPC: process.env.ARBITRUM_SEPOLIA_RPC_URL,
+  BASE_SEPOLIA_RPC: process.env.BASE_SEPOLIA_RPC_URL,
 
   // Contract Addresses
   LOWJC_ADDRESS: process.env.LOWJC_CONTRACT_ADDRESS,

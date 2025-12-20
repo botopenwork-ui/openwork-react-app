@@ -94,6 +94,7 @@ function FileUpload() {
 function ATTACHMENTS({ title, ipfsHash }) {
   const handleClick = () => {
     if (ipfsHash) {
+      // Use Pinata's dedicated gateway for files uploaded through Pinata
       window.open(`https://gateway.pinata.cloud/ipfs/${ipfsHash}`, '_blank');
     }
   };
@@ -271,15 +272,31 @@ export default function JobInfo() {
         const formattedTotalBudget = (totalBudget / 1000000).toFixed(2);
 
         // Process milestones for display
+        // currentMilestone is 1-indexed: 1 = working on first, 2 = first completed & working on second, etc.
+        const currentMilestoneNum = Number(jobData.currentMilestone);
+        const jobStatus = Number(jobData.status); // 0=Open, 1=InProgress, 2=Completed, 3=Cancelled
+
+        console.log("📊 Milestone debug:", { currentMilestoneNum, jobStatus, totalMilestones: jobData.finalMilestones?.length });
+
         const processedMilestones = [];
         if (jobData.finalMilestones && jobData.finalMilestones.length > 0) {
           for (let i = 0; i < jobData.finalMilestones.length; i++) {
             const milestone = jobData.finalMilestones[i];
             let status = "Pending";
 
-            if (i < Number(jobData.currentMilestone) - 1) {
+            // Milestone status logic (1-indexed currentMilestone):
+            // - currentMilestone = 1 means milestone 1 (index 0) is in progress
+            // - Milestones before (currentMilestone - 1) are Completed
+            // - Milestone at (currentMilestone - 1) is In Progress
+            // - Milestones after are Pending
+            if (jobStatus === 2) {
+              // Job is completed - all milestones are completed
               status = "Completed";
-            } else if (i === Number(jobData.currentMilestone) - 1) {
+            } else if (i < currentMilestoneNum - 1) {
+              // Milestones before current one are completed
+              status = "Completed";
+            } else if (i === currentMilestoneNum - 1 && jobStatus === 1) {
+              // Current milestone is in progress
               status = "In Progress";
             }
 
@@ -317,6 +334,9 @@ export default function JobInfo() {
         const additionalSkillsCount =
           Array.isArray(skills) && skills.length > 1 ? skills.length - 1 : 0;
 
+        // Calculate completed milestones count from processed milestones
+        const completedMilestonesCount = processedMilestones.filter(m => m.status === "Completed").length;
+
         // Set the job state
         setJob({
           jobId: jobData.id,
@@ -329,7 +349,8 @@ export default function JobInfo() {
           selectedApplicant: jobData.selectedApplicant,
           status: jobData.status,
           milestones: processedMilestones,
-          currentMilestone: parseInt(jobData.currentMilestone),
+          currentMilestone: currentMilestoneNum,
+          completedMilestones: completedMilestonesCount,
           totalMilestones: jobData.finalMilestones.length,
           totalBudget: formattedTotalBudget,
           jobGiverProfile,
@@ -554,8 +575,8 @@ export default function JobInfo() {
               <div className="milestone-section">
                 <div className="milestone-section-header">
                   <span>
-                    MILESTONES ({job.currentMilestone} / {job.totalMilestones}{" "}
-                    Completed)
+                    MILESTONES ({job.completedMilestones} / {job.totalMilestones}{" "}
+                    {job.completedMilestones === job.totalMilestones ? "Completed" : "Ongoing"})
                   </span>
                 </div>
                 <div className="milestone-section-body">

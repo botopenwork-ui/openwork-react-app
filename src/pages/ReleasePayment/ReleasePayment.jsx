@@ -107,6 +107,14 @@ export default function ReleasePayment() {
         // Fetch job details from NOWJC contract
         const jobData = await contract.methods.getJob(jobId).call();
         console.log("📋 Job data from NOWJC:", jobData);
+        
+        // Check if job exists (id should not be empty)
+        if (!jobData.id || jobData.id === "") {
+          console.warn("Job not found or not synced yet");
+          setJob(null);
+          setLoading(false);
+          return;
+        }
 
         // Fetch job details from IPFS
         let jobDetails = {};
@@ -125,26 +133,59 @@ export default function ReleasePayment() {
         
         const totalBudgetUSDC = (totalBudget / 1000000).toFixed(2); // Convert from USDC units
 
-        // For release payment, we need to check current milestone status
-        // This is a simplified version - you may need to add more logic based on milestone completion
+        // Get current milestone information from contract data
         const currentMilestone = jobData.currentMilestone ? Number(jobData.currentMilestone) : 0;
-        const releasableAmount = currentMilestone < jobData.milestonePayments.length 
-          ? (parseFloat(jobData.milestonePayments[currentMilestone]?.amount || 0) / 1000000).toFixed(2)
-          : "0.00";
+        const totalPaid = jobData.totalPaid || "0";
+        
+        // Parse milestone payments properly - use finalMilestones if applicant was selected
+        const milestonePayments = jobData.finalMilestones && jobData.finalMilestones.length > 0 
+          ? jobData.finalMilestones 
+          : jobData.milestonePayments;
+        
+        // Calculate current locked amount based on milestone progress
+        // The locked amount is the amount for the current milestone that hasn't been released yet
+        let currentLockedAmount = "0";
+        
+        // Check if we have a current milestone that's been locked
+        if (currentMilestone > 0 && currentMilestone <= milestonePayments.length) {
+          // Calculate how much should have been paid up to the previous milestone
+          const previousMilestonesTotal = milestonePayments
+            .slice(0, currentMilestone - 1)
+            .reduce((sum, m) => sum + parseFloat(m.amount || 0), 0);
+          
+          // If total paid equals previous milestones total, current milestone is locked
+          // If total paid is less, we might have unreleased previous milestones
+          const totalPaidNum = parseFloat(totalPaid);
+          if (totalPaidNum >= previousMilestonesTotal) {
+            // Current milestone is locked if we haven't paid it yet
+            const currentMilestoneAmount = parseFloat(milestonePayments[currentMilestone - 1].amount || 0);
+            if (totalPaidNum < previousMilestonesTotal + currentMilestoneAmount) {
+              currentLockedAmount = milestonePayments[currentMilestone - 1].amount;
+            }
+          }
+        }
+        
+        // Calculate releasable amount - it's the currently locked amount
+        const releasableAmount = (parseFloat(currentLockedAmount) / 1000000).toFixed(2);
 
         setJob({
           jobId,
           jobGiver: jobData.jobGiver,
           selectedApplicant: jobData.selectedApplicant,
-          jobStatus: jobData.status,
+          jobStatus: Number(jobData.status), // Convert to number to match the status checks
           totalBudget: totalBudgetUSDC,
           currentMilestone,
           releasableAmount,
-          milestonePayments: jobData.milestonePayments,
-          currentLockedAmount: jobData.currentLockedAmount || 0,
-          totalReleased: jobData.totalReleased || 0,
+          milestonePayments,
+          currentLockedAmount,
+          totalReleased: totalPaid,
+          title: jobDetails.title || `Job #${jobId}`,
+          description: jobDetails.description || '',
           ...jobDetails,
         });
+        
+        // Set the current milestone number (already 1-indexed from contract, 0 means no milestone)
+        setCurrentMilestoneNumber(currentMilestone);
 
         console.log("✅ Job details loaded successfully");
         setLoading(false);
@@ -291,8 +332,11 @@ export default function ReleasePayment() {
       const web3 = new Web3(window.ethereum);
       const lowjcContract = await getLOWJCContract(jobChainId);
       
-      // Get the amount to release (convert BigInt to string for web3.js)
-      const amount = (job.currentLockedAmount || 0).toString();
+      // Get the amount to release - it's the current milestone amount
+      let amount = "0";
+      if (job.currentMilestone > 0 && job.currentMilestone <= job.milestonePayments.length) {
+        amount = job.milestonePayments[job.currentMilestone - 1].amount.toString();
+      }
       
       // Get LayerZero fee quote
       setTransactionStatus("💰 Getting LayerZero fee quote...");
@@ -330,13 +374,14 @@ export default function ReleasePayment() {
         nativeOptions
       ).send({
         from: walletAddress,
-        value: quotedFee // Use quoted fee
+        value: quotedFee, // Use quoted fee
+        gas: 2000000 // Set reasonable gas limit (2M instead of 21M)
       });
 
       console.log(`✅ Payment release initiated on ${jobChainConfig.name}:`, releasePaymentTx.transactionHash);
       
       // Step 2: Send to backend for CCTP processing
-      setTransactionStatus(`🔄 Step 2/2: Backend processing CCTP transfer from ${jobChainConfig.name}...`);
+      setTransactionStatus(`🔄 Step 2/3: Waiting for LayerZero message to reach Arbitrum (30-60 seconds)...`);
       
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
       const response = await fetch(`${backendUrl}/api/release-payment`, {
@@ -351,9 +396,9 @@ export default function ReleasePayment() {
       const result = await response.json();
       
       if (result.success) {
-        setTransactionStatus("✅ Backend is processing payment! You can close this window.");
+        setTransactionStatus("🔄 Step 3/3: Backend processing CCTP transfer to recipient's chain...");
         
-        // Optional: Poll for status updates
+        // Poll for status updates
         pollPaymentStatus(jobId, backendUrl);
       } else {
         throw new Error(result.error || 'Backend failed to start processing');
@@ -393,13 +438,25 @@ export default function ReleasePayment() {
         
         if (status.success) {
           if (status.status === 'completed') {
-            setTransactionStatus("🎉 Milestone payment released! You can now lock the next milestone.");
+            setTransactionStatus("🎉 Milestone payment released successfully to the applicant!");
             setIsProcessing(false);
             return;
           } else if (status.status === 'failed') {
             setTransactionStatus(`❌ Payment failed: ${status.error || status.message}`);
             setIsProcessing(false);
             return;
+          } else if (status.status === 'waiting_for_event') {
+            setTransactionStatus(`⏳ Waiting for LayerZero message to reach Arbitrum...`);
+            attempts++;
+            setTimeout(checkStatus, 5000);
+          } else if (status.status === 'polling_attestation') {
+            setTransactionStatus(`🔄 Polling Circle API for CCTP attestation...`);
+            attempts++;
+            setTimeout(checkStatus, 5000);
+          } else if (status.status === 'executing_receive') {
+            setTransactionStatus(`🔗 Executing CCTP transfer to recipient's chain...`);
+            attempts++;
+            setTimeout(checkStatus, 5000);
           } else {
             // Still processing
             setTransactionStatus(`🔄 ${status.message || 'Processing...'}`);
@@ -448,14 +505,14 @@ export default function ReleasePayment() {
 
     try {
       setIsLocking(true);
-      setTransactionStatus(`🔒 Locking Milestone ${currentMilestoneNumber + 1} on ${jobChainConfig.name}...`);
+      setTransactionStatus(`🔒 Locking Milestone ${job.currentMilestone + 1} on ${jobChainConfig.name}...`);
       
       const USDC_ADDRESS = jobChainConfig.contracts.usdc;
       const LOWJC_ADDRESS = jobChainConfig.contracts.lowjc;
       const web3 = new Web3(window.ethereum);
 
       // Get next milestone amount from job data
-      const nextMilestoneIndex = currentMilestoneNumber; // 0-indexed
+      const nextMilestoneIndex = job.currentMilestone; // Already 0-indexed from contract
       if (nextMilestoneIndex >= job.milestonePayments.length) {
         setTransactionStatus("❌ No more milestones to lock");
         setIsLocking(false);
@@ -472,7 +529,8 @@ export default function ReleasePayment() {
       );
       
       await usdcContract.methods.approve(LOWJC_ADDRESS, nextMilestoneAmount).send({
-        from: walletAddress
+        from: walletAddress,
+        gas: 100000 // Set reasonable gas limit for approve
       });
 
       console.log("✅ USDC approval successful");
@@ -512,13 +570,18 @@ export default function ReleasePayment() {
         nativeOptions
       ).send({
         from: walletAddress,
-        value: quotedFee // Use quoted fee
+        value: quotedFee, // Use quoted fee
+        gas: 2000000 // Set reasonable gas limit (2M instead of default)
       });
 
       console.log("✅ Milestone locked:", lockTx.transactionHash);
       
-      setTransactionStatus(`✅ Milestone ${currentMilestoneNumber + 1} locked successfully! You can now release it.`);
-      setCurrentMilestoneNumber(currentMilestoneNumber + 1);
+      setTransactionStatus(`✅ Milestone ${job.currentMilestone + 1} locked successfully! You can now release it.`);
+      
+      // Refresh job data to get updated state
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
       setIsLocking(false);
       
     } catch (error) {
@@ -560,7 +623,19 @@ export default function ReleasePayment() {
   }
 
   if (!job) {
-    return <div>Loading...</div>;
+    return (
+      <div className="loading-container">
+        <div style={{textAlign: 'center'}}>
+          <img src="/OWIcon.svg" alt="OpenWork" className="loading-icon" style={{marginBottom: '20px'}} />
+          <h2>Job Not Found</h2>
+          <p>Job {jobId} is not available or hasn't synced to Arbitrum yet.</p>
+          <p>Please wait a moment for cross-chain sync to complete.</p>
+          <Link to="/browse-jobs" style={{color: '#007bff', textDecoration: 'none', marginTop: '20px', display: 'inline-block'}}>
+            Browse Jobs →
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -568,13 +643,13 @@ export default function ReleasePayment() {
       <div className="newTitle">
          <div className="titleTop">
           <Link className="goBack" to={`/job-details/${jobId}`}><img className="goBackImage" src="/back.svg" alt="Back Button" /></Link>  
-          <div className="titleText" style={{fontWeight:'550'}}>{job.title}</div>
+          <div className="titleText" style={{fontWeight:'550'}}>{job.title || `Job #${jobId}`}</div>
          </div>
-         <div className="titleBottom"><p>  Contract ID:{" "}
-         {formatWalletAddress("0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d")}
+         <div className="titleBottom"><p>  Job ID:{" "}
+         {jobId}
          </p><img src="/copy.svg" className="copyImage" onClick={() =>
                  handleCopyToClipboard(
-                   "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d"
+                   jobId
                  )
                }
                /></div>
@@ -586,33 +661,83 @@ export default function ReleasePayment() {
             <span id="rel-title">Release Payment</span>
           </div>
           <div className="release-payment-body">
+            {/* Job Participants Section */}
+            <div className="form-groupDC job-body">
+              <div className="job-detail-sectionR">
+                <div className="job-detail-item">
+                  <span className="job-detail-item-title">JOB GIVER</span>
+                  <div>{formatWalletAddressH(job.jobGiver)}</div>
+                </div>
+                <div className="job-detail-item">
+                  <span className="job-detail-item-title">SELECTED APPLICANT</span>
+                  <div>{job.selectedApplicant !== '0x0000000000000000000000000000000000000000' 
+                    ? formatWalletAddressH(job.selectedApplicant) 
+                    : 'Not Selected'}
+                  </div>
+                </div>
+                <div className="job-detail-item">
+                  <span className="job-detail-item-title">JOB STATUS</span>
+                  <div>{job.jobStatus === 0 ? 'Open' : 
+                        job.jobStatus === 1 ? 'In Progress' : 
+                        job.jobStatus === 2 ? 'Completed' : 
+                        job.jobStatus === 3 ? 'Cancelled' : 
+                        `Unknown (${job.jobStatus})`}</div>
+                </div>
+                <div className="job-detail-item">
+                  <span className="job-detail-item-title">POSTING CHAIN</span>
+                  <div>{jobChainConfig?.name || 'Unknown'}</div>
+                </div>
+              </div>
+            </div>
+            {/* Budget Information */}
             <div className="form-groupDC job-body">
               <div className="job-detail-sectionR">
                 <JobdetailItem 
-                  title={`CURRENT MILESTONE #${currentMilestoneNumber}`} 
-                  amount={job.milestonePayments[currentMilestoneNumber - 1] ? formatAmount(safeNumber(job.milestonePayments[currentMilestoneNumber - 1].amount) / 1000000) : '0'}
-                />
-                <JobdetailItem 
-                  title="TOTAL MILESTONES" 
-                  amount={job.milestonePayments.length}
+                  title="TOTAL BUDGET" 
+                  amount={job.totalBudget}
                 />
                 <JobdetailItem 
                   title="AMOUNT RELEASED" 
-                  amount={formatAmount(safeNumber(job.totalReleased || 0) / 1000000)}
+                  amount={formatAmount(safeNumber(job.totalReleased) / 1000000)}
                 />
                 <JobdetailItem 
-                  title="AMOUNT LOCKED" 
-                  amount={formatAmount(safeNumber(job.currentLockedAmount || 0) / 1000000)}
+                  title="AMOUNT LOCKED (RELEASABLE)" 
+                  amount={job.currentLockedAmount && job.currentLockedAmount !== '0' 
+                    ? formatAmount(safeNumber(job.currentLockedAmount) / 1000000) 
+                    : '0'}
+                />
+                <JobdetailItem 
+                  title={`CURRENT MILESTONE${job.currentMilestone > 0 ? ` (#${job.currentMilestone} of ${job.milestonePayments.length})` : ' (None Locked)'}`} 
+                  amount={job.currentMilestone > 0 && job.currentMilestone <= job.milestonePayments.length 
+                    ? formatAmount(safeNumber(job.milestonePayments[job.currentMilestone - 1].amount) / 1000000) 
+                    : job.currentMilestone === 0 ? 'None' : 'Complete'}
                 />
               </div>
             </div>
             <div className="form-groupDC">
-              <DropDown label={OPTIONS[0]} options={OPTIONS} customCSS="form-dropdown" width={true}/>
+              <DropDown 
+                label={job.currentMilestone > 0 ? `Milestone ${job.currentMilestone}` : 'Select Milestone'} 
+                options={job.milestonePayments.map((_, idx) => `Milestone ${idx + 1}`)} 
+                customCSS="form-dropdown" 
+                width={true}
+              />
             </div>
             <div className="form-groupDC job-body">
               <div className="job-detail-sectionR">
-                <JobdetailItem title="MILESTONE 3 AMOUNT" icon={true} amount={250}/>
-                <JobdetailItem title="NEXT MILESTONE AMOUNT" icon={true} amount={250}/>
+                <JobdetailItem 
+                  title={job.currentMilestone > 0 ? `MILESTONE ${job.currentMilestone} AMOUNT` : 'NO MILESTONE LOCKED'} 
+                  icon={true} 
+                  amount={job.currentMilestone > 0 && job.currentMilestone <= job.milestonePayments.length 
+                    ? formatAmount(safeNumber(job.milestonePayments[job.currentMilestone - 1].amount) / 1000000) 
+                    : '0'}
+                />
+                <JobdetailItem 
+                  title="NEXT MILESTONE AMOUNT" 
+                  icon={true} 
+                  amount={job.currentMilestone < job.milestonePayments.length 
+                    ? formatAmount(safeNumber(job.milestonePayments[job.currentMilestone].amount) / 1000000) 
+                    : 'N/A'}
+                />
               </div>
             </div>
             <div className="form-groupDC">
@@ -634,21 +759,21 @@ export default function ReleasePayment() {
             <div className="form-groupDC" style={{display:'flex', alignItems:'center', gap:'16px'}}>
               <BlueButton 
                 label={isProcessing ? 'Processing...' : 'Release'} 
-                amount={job.milestonePayments[currentMilestoneNumber - 1] ? formatAmount(safeNumber(job.milestonePayments[currentMilestoneNumber - 1].amount) / 1000000) : '0'} 
+                amount={formatAmount(safeNumber(job.currentLockedAmount) / 1000000)} 
                 style={{
                   width: '242px', 
                   justifyContent:'center', 
                   padding: '8px 16px', 
                   borderRadius: '12px',
-                  opacity: isProcessing ? 0.7 : 1,
-                  cursor: isProcessing ? 'not-allowed' : 'pointer'
+                  opacity: (isProcessing || job.currentLockedAmount === '0') ? 0.7 : 1,
+                  cursor: (isProcessing || job.currentLockedAmount === '0') ? 'not-allowed' : 'pointer'
                 }} 
                 onClick={handleReleasePayment}
-                disabled={isProcessing}
+                disabled={isProcessing || job.currentLockedAmount === '0'}
               />
               <BlueButton 
                 label={isLocking ? 'Locking...' : 'Lock Next'} 
-                amount={job.milestonePayments[currentMilestoneNumber] ? formatAmount(safeNumber(job.milestonePayments[currentMilestoneNumber].amount) / 1000000) : '0'} 
+                amount={job.currentMilestone < job.milestonePayments.length ? formatAmount(safeNumber(job.milestonePayments[job.currentMilestone].amount) / 1000000) : '0'} 
                 style={{
                   width: '198px', 
                   justifyContent:'center', 
@@ -664,6 +789,16 @@ export default function ReleasePayment() {
             <div className="warning-form">
               <Warning content={transactionStatus} />
             </div>
+            
+            {/* Permission Check */}
+            {walletAddress && job.jobGiver && walletAddress.toLowerCase() !== job.jobGiver.toLowerCase() && (
+              <div className="warning-form">
+                <Warning 
+                  content="⚠️ Only the job giver can release payments. You are not the job giver for this job."
+                  icon="/orange-warning.svg"
+                />
+              </div>
+            )}
             
             {/* CCTP Status Warnings */}
             {cctpStatus?.status === 'pending' && (
@@ -704,8 +839,18 @@ export default function ReleasePayment() {
         {/* <PaymentItem title="Payment 2" />
         <PaymentItem title="Payment 1" /> */}
         <div className="milestone-section-body">
-            <Milestone amount={25} title="Milestone 1" date="7 May, 2024" content={"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."} editable={true}/>
-            <Milestone amount={25} title="Milestone 2" date="2 May, 2024" content={"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."} editable={true}/>
+            {job.milestonePayments.map((milestone, index) => (
+              <Milestone 
+                key={index}
+                amount={formatAmount(safeNumber(milestone.amount) / 1000000)} 
+                title={`Milestone ${index + 1}`} 
+                date={milestone.dueDate || 'No due date'} 
+                content={milestone.description || `Milestone ${index + 1} deliverables`} 
+                editable={false}
+                completed={index < job.currentMilestone}
+                current={index === job.currentMilestone}
+              />
+            ))}
         </div>
       </div>
     </>

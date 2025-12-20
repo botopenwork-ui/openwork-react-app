@@ -2,11 +2,13 @@ import Web3 from "web3";
 import GenesisABI from "../ABIs/genesis_ABI.json";
 import NativeAthenaABI from "../ABIs/native-athena_ABI.json";
 import NativeDAOABI from "../ABIs/native-dao_ABI.json";
+import NativeRewardsABI from "../ABIs/native-rewards_ABI.json";
 
 // Contract addresses
 const GENESIS_ADDRESS = import.meta.env.VITE_GENESIS_CONTRACT_ADDRESS || "0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C";
 const ATHENA_ADDRESS = import.meta.env.VITE_NATIVE_ATHENA_ADDRESS || "0x098E52Aff44AEAd944AFf86F4A5b90dbAF5B86bd";
 const DAO_ADDRESS = import.meta.env.VITE_NATIVE_DAO_ADDRESS || "0x21451dCE07Ad3Ab638Ec71299C1D2BD2064b90E5";
+const REWARDS_ADDRESS = import.meta.env.VITE_NATIVE_REWARDS_ADDRESS || "0x947cAd64a26Eae5F82aF68b7Dbf8b457a8f492De";
 const RPC_URL = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
 
 // Cache configuration
@@ -34,12 +36,13 @@ function initializeContracts() {
   }
 
   const web3 = new Web3(RPC_URL);
-  
+
   const genesisContract = new web3.eth.Contract(GenesisABI, GENESIS_ADDRESS);
   const athenaContract = new web3.eth.Contract(NativeAthenaABI, ATHENA_ADDRESS);
   const daoContract = new web3.eth.Contract(NativeDAOABI, DAO_ADDRESS);
+  const rewardsContract = new web3.eth.Contract(NativeRewardsABI, REWARDS_ADDRESS);
 
-  return { web3, genesisContract, athenaContract, daoContract };
+  return { web3, genesisContract, athenaContract, daoContract, rewardsContract };
 }
 
 /**
@@ -199,9 +202,9 @@ async function fetchMemberVotingPower(memberAddress) {
 async function fetchMemberStake(memberAddress) {
   try {
     const { daoContract } = initializeContracts();
-    
+
     const stakeInfo = await daoContract.methods.getStakerInfo(memberAddress).call();
-    
+
     return {
       stakeAmount: stakeInfo.amount.toString(),
       unlockTime: Number(stakeInfo.unlockTime),
@@ -215,6 +218,31 @@ async function fetchMemberStake(memberAddress) {
       unlockTime: 0,
       durationMinutes: 0,
       isActiveStaker: false,
+    };
+  }
+}
+
+/**
+ * Fetch member earned tokens from Native Rewards
+ */
+async function fetchMemberEarnedTokens(memberAddress) {
+  try {
+    const { rewardsContract } = initializeContracts();
+
+    const earnedTokens = await rewardsContract.methods.getUserTotalTokensEarned(memberAddress).call();
+    const claimedTokens = await rewardsContract.methods.getUserTotalTokensClaimed(memberAddress).call();
+
+    return {
+      earnedTokens: earnedTokens.toString(),
+      claimedTokens: claimedTokens.toString(),
+      unclaimedTokens: (BigInt(earnedTokens) - BigInt(claimedTokens)).toString(),
+    };
+  } catch (error) {
+    console.error(`Error fetching earned tokens for ${memberAddress}:`, error);
+    return {
+      earnedTokens: "0",
+      claimedTokens: "0",
+      unclaimedTokens: "0",
     };
   }
 }
@@ -304,10 +332,11 @@ async function fetchMemberDetails(memberAddress, oracleName) {
 
   try {
     // Fetch all member data in parallel
-    const [activity, votingPower, stake, accuracy, threshold] = await Promise.all([
+    const [activity, votingPower, stake, earned, accuracy, threshold] = await Promise.all([
       fetchMemberActivity(memberAddress),
       fetchMemberVotingPower(memberAddress),
       fetchMemberStake(memberAddress),
+      fetchMemberEarnedTokens(memberAddress),
       calculateResolutionAccuracy(memberAddress),
       fetchActivityThreshold(),
     ]);
@@ -318,7 +347,7 @@ async function fetchMemberDetails(memberAddress, oracleName) {
       ? Math.floor((now - activity.lastActivityTimestamp) / (24 * 60 * 60))
       : -1;
 
-    const isActive = activity.lastActivityTimestamp > 0 
+    const isActive = activity.lastActivityTimestamp > 0
       && (now - activity.lastActivityTimestamp) <= threshold.thresholdSeconds;
 
     const memberDetails = {
@@ -327,6 +356,7 @@ async function fetchMemberDetails(memberAddress, oracleName) {
       ...activity,
       ...votingPower,
       ...stake,
+      ...earned,
       ...accuracy,
       daysSinceActivity,
       isActive,
@@ -378,21 +408,39 @@ export async function fetchAllOracleData(forceRefresh = false) {
 
     // Step 3: Fetch member details for all members
     const allMembersWithDetails = [];
-    
+    const membersByAddress = new Map(); // Track all oracles per member
+
     for (const oracle of oracleData) {
       if (oracle.members && oracle.members.length > 0) {
         const memberPromises = oracle.members.map(memberAddress =>
           fetchMemberDetails(memberAddress, oracle.name)
         );
-        
+
         try {
           const members = await Promise.all(memberPromises);
-          allMembersWithDetails.push(...members);
+          // Track all oracles per member
+          for (const member of members) {
+            const addressLower = member.address.toLowerCase();
+            if (membersByAddress.has(addressLower)) {
+              // Member already exists - add this oracle to their list
+              const existingMember = membersByAddress.get(addressLower);
+              if (!existingMember.allOracles.includes(oracle.name)) {
+                existingMember.allOracles.push(oracle.name);
+              }
+            } else {
+              // New member - initialize with this oracle
+              member.allOracles = [oracle.name];
+              membersByAddress.set(addressLower, member);
+            }
+          }
         } catch (error) {
           console.error(`Error fetching member details for oracle ${oracle.name}:`, error);
         }
       }
     }
+
+    // Convert map to array
+    allMembersWithDetails.push(...membersByAddress.values());
 
     const result = {
       oracles: oracleData,

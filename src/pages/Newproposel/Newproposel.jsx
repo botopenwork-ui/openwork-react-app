@@ -12,11 +12,11 @@ export default function Newproposel() {
             title: "Treasury Proposal",
             path: "/treasury-proposal"
         },
-        {
-            icon: "/openwork-job-icon.svg",
-            title: "OpenWork Job Proposal",
-            path: "/openworkjobproposel"
-        },
+        // {
+        //     icon: "/openwork-job-icon.svg",
+        //     title: "OpenWork Job Proposal",
+        //     path: "/openworkjobproposel"
+        // },
         {
             icon: "/upgrade-icon.svg",
             title: "Contract Upgrade Proposal",

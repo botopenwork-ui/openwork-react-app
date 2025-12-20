@@ -6,39 +6,13 @@ import BlueButton from "../../components/BlueButton/BlueButton";
 import Milestone from "../../components/Milestone/Milestone";
 import RadioButton from "../../components/RadioButton/RadioButton";
 import Warning from "../../components/Warning/Warning";
+import FileUpload from "../../components/FileUpload/FileUpload";
 import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
 import { applyToJob, getLOWJCContract } from "../../services/localChainService";
 import { getChainConfig } from "../../config/chainConfig";
 
 // Backend URL for secure API calls
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-
-function ImageUpload() {
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [preview, setPreview] = useState(null);
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    setSelectedImage(file);
-    setPreview(URL.createObjectURL(file)); // For preview display
-  };
-
-  return (
-    <div>
-      <label htmlFor="image">
-        <div className="form-fileUpload">
-          <img src="/upload.svg" alt="" />
-          <span>Click here to upload or drop files here</span>
-        </div>
-      </label>
-      <input id="image" type="file" accept="image/*" onChange={handleImageChange} style={{display:'none'}} />
-      {preview && <img src={preview} alt="Image preview" width="100" />}
-      {/* <button style={{display: 'none'}} onClick={handleImageUpload} disabled={!selectedImage}>
-        Upload Image
-      </button> */}
-    </div>
-  );
-}
 
 export default function ApplyJob() {
   const [searchParams] = useSearchParams();
@@ -57,6 +31,7 @@ export default function ApplyJob() {
   const [milestone2Title, setMilestone2Title] = useState("Milestone 2");
   const [milestone1Content, setMilestone1Content] = useState("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.");
   const [milestone2Content, setMilestone2Content] = useState("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.");
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
   // Upload milestone data to IPFS (following PostJob pattern)
   const pinMilestoneToIPFS = async (milestone, index) => {
@@ -184,6 +159,7 @@ export default function ApplyJob() {
         applicant: walletAddress,
         jobId: jobId,
         milestones: milestones,
+        attachments: uploadedFiles,
         preferredChain: chainConfig?.name,
         appliedFromChain: chainConfig?.name,
         appliedFromChainId: chainId,
@@ -343,7 +319,10 @@ export default function ApplyJob() {
               ></textarea>
             </div>
             <div className="form-groupDC">
-              <ImageUpload />
+              <FileUpload
+                onFilesUploaded={setUploadedFiles}
+                uploadedFiles={uploadedFiles}
+              />
             </div>
             <div className="lineDC form-groupDC" style={{margin:'32px 0px'}}></div>
             <div className="form-groupDC">

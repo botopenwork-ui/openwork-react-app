@@ -103,19 +103,19 @@
     align-items: center;
 }
 
-/* Target the 5th column (Amount) specifically */
-.table tbody tr td:nth-child(5) {
+/* Target the 5th column (Amount) specifically - SCOPED TO VIEW JOB APPLICATIONS ONLY */
+.view-jobs-container .table tbody tr td:nth-child(5) {
     text-align: right !important;
     padding-right: 50px !important;
 }
 
-.table thead tr th:nth-child(5) {
+.view-jobs-container .table thead tr th:nth-child(5) {
     text-align: right !important;
     padding-right: 50px !important;
 }
 
-/* Budget column styling to match BrowseJobs */
-.budget {
+/* Budget column styling to match BrowseJobs - SCOPED TO VIEW JOB APPLICATIONS ONLY */
+.view-jobs-container .budget {
     display: flex !important;
     align-items: center !important;
     gap: 8px !important;

@@ -5,7 +5,8 @@ import Collapse from "../../components/Collapse/Collapse";
 const ABOUTITEMS = [
     {
         icon: '/whitepaper.svg',
-        title: 'Read the Whitepaper'
+        title: 'Read the Whitepaper',
+        url: 'https://drive.google.com/file/d/1tdpuAM3UqiiP_TKJMa5bFtxOG4bU_6ts/view'
     }
 ]
 
@@ -28,15 +29,15 @@ const COLLAPSEITEMS = [
     }
 ]
 
-function AboutItem ({icon, title}) {
+function AboutItem ({icon, title, url}) {
     return (
-        <div className="about-item">
+        <a href={url} target="_blank" rel="noopener noreferrer" className="about-item" style={{ textDecoration: 'none', color: 'inherit' }}>
             <div className="about-item-title">
                 <img src={icon} alt="" />
                 <span>{title}</span>
             </div>
             <img src="./go.svg" alt="" />
-        </div>
+        </a>
     )
 }
 
@@ -57,7 +58,7 @@ export default function () {
                 </div>
                 <div className="about-item-section">
                     {ABOUTITEMS.map((item, index) => (
-                        <AboutItem icon={item.icon} title={item.title} key={index}/>
+                        <AboutItem icon={item.icon} title={item.title} url={item.url} key={index}/>
                     ))}
                 </div>
                 <div className="know-more">Know More</div>

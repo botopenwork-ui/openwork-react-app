@@ -1039,7 +1039,8 @@ export async function createOracleMemberRecruitmentProposal({
   memberAddress,
   emailOrTelegram,
   reason,
-  userAddress
+  userAddress,
+  attachments = []
 }) {
   try {
     if (!window.ethereum) {
@@ -1106,7 +1107,56 @@ export async function createOracleMemberRecruitmentProposal({
     // Create proposal and wait for confirmation
     return new Promise((resolve, reject) => {
       console.log("[SERVICE TIMING] Creating member recruitment proposal:", new Date().toISOString());
-      
+
+      let txHash = null;
+      let resolved = false;
+
+      // Helper function to save and resolve
+      const saveAndResolve = async (transactionHash, blockNumber = null) => {
+        if (resolved) return;
+        resolved = true;
+
+        const result = {
+          success: true,
+          transactionHash,
+          proposalId
+        };
+
+        // Save to database
+        console.log("💾 Saving member recruitment proposal to database...");
+        const dbSaveResult = await saveProposalToDatabase({
+          proposalId: proposalId.toString(),
+          chain: 'Arbitrum',
+          proposalType: 'Oracle Member Recruitment',
+          title: `Recruit Member to ${oracleName}`,
+          description: proposalDescription,
+          proposerAddress: fromAddress,
+          recipientAddress: NATIVE_ATHENA_ADDRESS,
+          amount: null,
+          transactionHash,
+          blockNumber: blockNumber ? Number(blockNumber) : null,
+          metadata: {
+            oracleName,
+            memberAddress,
+            emailOrTelegram,
+            reason,
+            attachments,
+            targets,
+            values: values.map(v => typeof v === 'bigint' ? v.toString() : v),
+            calldatas
+          }
+        });
+
+        if (dbSaveResult.success) {
+          console.log("✅ DATABASE SAVE SUCCESSFUL for proposal:", proposalId);
+        } else {
+          console.error("❌ DATABASE SAVE FAILED:", dbSaveResult.error);
+        }
+
+        console.log("Member recruitment proposal created successfully:", result);
+        resolve(result);
+      };
+
       nativeDAOContract.methods
         .propose(targets, values, calldatas, proposalDescription)
         .send({
@@ -1116,62 +1166,33 @@ export async function createOracleMemberRecruitmentProposal({
         .on('transactionHash', (hash) => {
           console.log("[SERVICE TIMING] transactionHash event fired:", new Date().toISOString());
           console.log("Transaction hash:", hash);
+          txHash = hash;
         })
         .on('receipt', async (receipt) => {
           console.log("[SERVICE TIMING] receipt event fired:", new Date().toISOString());
           console.log("Transaction receipt:", receipt);
           console.log("Receipt status:", receipt.status);
-          
+
           // Check if transaction was successful
           if (receipt.status == 1 || receipt.status == "1") {
             console.log("✅ Transaction successful! Using calculated proposal ID:", proposalId);
-            
-            const result = {
-              success: true,
-              transactionHash: receipt.transactionHash,
-              proposalId
-            };
-            
-            // Save to database
-            console.log("💾 Saving member recruitment proposal to database...");
-            const dbSaveResult = await saveProposalToDatabase({
-              proposalId: proposalId.toString(),
-              chain: 'Arbitrum',
-              proposalType: 'Oracle Member Recruitment',
-              title: `Recruit Member to ${oracleName}`,
-              description: proposalDescription,
-              proposerAddress: fromAddress,
-              recipientAddress: NATIVE_ATHENA_ADDRESS,
-              amount: null,
-              transactionHash: receipt.transactionHash,
-              blockNumber: Number(receipt.blockNumber),
-              metadata: {
-                oracleName,
-                memberAddress,
-                emailOrTelegram,
-                reason,
-                targets,
-                values: values.map(v => typeof v === 'bigint' ? v.toString() : v),
-                calldatas
-              }
-            });
-            
-            if (dbSaveResult.success) {
-              console.log("✅ DATABASE SAVE SUCCESSFUL for proposal:", proposalId);
-            } else {
-              console.error("❌ DATABASE SAVE FAILED:", dbSaveResult.error);
-            }
-            
-            console.log("Member recruitment proposal created successfully:", result);
-            resolve(result);
+            await saveAndResolve(receipt.transactionHash, receipt.blockNumber);
           } else {
             console.log("Transaction reverted");
             reject(new Error("Transaction reverted by the blockchain"));
           }
         })
-        .on('error', (error) => {
+        .on('error', async (error) => {
           console.error("Transaction error:", error);
-          reject(error);
+
+          // Handle timeout errors - if we have a txHash, the transaction was sent
+          // and likely succeeded on-chain even if we timed out waiting for receipt
+          if (txHash && (error.message?.includes('timeout') || error.message?.includes('Timeout') || error.name === 'TransactionBlockTimeoutError')) {
+            console.log("⚠️ Transaction timed out but was sent. Assuming success since txHash exists:", txHash);
+            await saveAndResolve(txHash);
+          } else {
+            reject(error);
+          }
         });
     });
 
