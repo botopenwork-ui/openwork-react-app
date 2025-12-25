@@ -28,7 +28,7 @@ export default function SkillOracle() {
 
     // Column configuration
     const allColumns = [
-        { id: "memberName", label: "Member Name", required: true },
+        { id: "memberName", label: "Member Address", required: true },
         { id: "rating", label: "Rating", required: false },
         { id: "skills", label: "Skills", required: false },
         { id: "experience", label: "Experience", required: false },

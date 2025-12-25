@@ -123,3 +123,34 @@
   background-color: transparent !important;
   border-bottom: 1px solid #e9ecf0 !important;
 }
+
+/* Shift Voting Power column (3rd column) 40px right */
+.skill-oracle-page .table thead tr th:nth-child(3),
+.skill-oracle-page .table tbody tr td:nth-child(3) {
+  transform: translateX(40px) !important;
+}
+
+/* Shift Stake + Earned column cells (4th column) 5px left, header stays in place */
+.skill-oracle-page .table tbody tr td:nth-child(4) {
+  transform: translateX(-5px) !important;
+}
+
+/* Shift Status column cells (5th column) 20px right, header stays in place */
+.skill-oracle-page .table tbody tr td:nth-child(5) {
+  transform: translateX(20px) !important;
+}
+
+/* Hide the user icon next to member address */
+.skill-oracle-page .user .userIcon {
+  display: none !important;
+}
+
+/* Hide the dropdown arrow next to Member Address header */
+.skill-oracle-page .table thead tr th:first-child img {
+  display: none !important;
+}
+
+/* Shift view details button (last column) 25px left */
+.skill-oracle-page .table tbody tr td:last-child {
+  transform: translateX(-25px) !important;
+}
