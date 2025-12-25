@@ -25,4 +25,64 @@
 .browse-jobs-page .table thead tr th:nth-child(5) {
   padding-left: 24px !important;
   text-align: left !important;
+  transform: translateX(-7px) !important;
 }
+
+/* Larger back button for BrowseJobs page only */
+.browse-jobs-page .backIconV,
+.browse-jobs-page .title-section .backIconV,
+.browse-jobs-page .back .backIconV,
+.browse-jobs-page img.backIconV {
+  width: 44px !important;
+  height: 44px !important;
+}
+
+/* Increased padding for title section on BrowseJobs page */
+.browse-jobs-page .title-section {
+  padding-top: 55px !important;
+  padding-bottom: 55px !important;
+}
+
+/* Larger font for OpenWork Ledger title */
+.browse-jobs-page .tableTitleV {
+  font-size: 21px !important;
+}
+
+/* Shift table up on smaller height screens */
+@media (max-height: 800px) {
+  .browse-jobs-page {
+    margin-top: -65px !important;
+  }
+}
+
+/* Clip table row borders 1% on each side */
+.browse-jobs-page .table tbody tr::after {
+  left: 1% !important;
+  right: 1% !important;
+}
+
+/* Hide individual th borders and use row-level border for header */
+.browse-jobs-page .table thead th::after {
+  display: none !important;
+}
+
+.browse-jobs-page .table thead tr {
+  position: relative !important;
+}
+
+.browse-jobs-page .table thead tr::after {
+  content: "" !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 1% !important;
+  right: 1% !important;
+  height: 1px !important;
+  background-color: transparent !important;
+  border-bottom: 1px solid #e9ecf0 !important;
+}
+
+/* Adjust Job Status column cells alignment - shift left */
+.browse-jobs-page .table tbody tr td:nth-child(4) > div {
+  margin-left: -4px !important;
+}
+

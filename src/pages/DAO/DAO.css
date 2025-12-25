@@ -208,3 +208,69 @@
     align-items: center;
     padding-right: 32px;
 }
+
+/* ===== Layout styles to match other views ===== */
+
+/* Larger back button */
+.dao-page .backIconV,
+.dao-page .title-section .backIconV,
+.dao-page .back .backIconV,
+.dao-page img.backIconV {
+  width: 44px !important;
+  height: 44px !important;
+}
+
+/* Padding for back-section (top title with back button) */
+.dao-page .title-section.back-section {
+  padding-top: 55px !important;
+  padding-bottom: 24px !important;
+}
+
+/* Padding for second title section (below boxes) */
+.dao-page .title-section:not(.back-section) {
+  padding-top: 55px !important;
+  padding-bottom: 55px !important;
+}
+
+/* Larger font for titles */
+.dao-page .tableTitleV {
+  font-size: 21px !important;
+}
+
+/* Shift body up */
+.view-jobs-container.dao-page {
+  transform: translateY(-50px) !important;
+}
+
+/* Shift table up on smaller height screens */
+@media (max-height: 800px) {
+  .dao-page {
+    margin-top: -65px !important;
+  }
+}
+
+/* Clip table row borders 1% on each side */
+.dao-page .table tbody tr::after {
+  left: 1% !important;
+  right: 1% !important;
+}
+
+/* Hide individual th borders and use row-level border for header */
+.dao-page .table thead th::after {
+  display: none !important;
+}
+
+.dao-page .table thead tr {
+  position: relative !important;
+}
+
+.dao-page .table thead tr::after {
+  content: "" !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 1% !important;
+  right: 1% !important;
+  height: 1px !important;
+  background-color: transparent !important;
+  border-bottom: 1px solid #e9ecf0 !important;
+}

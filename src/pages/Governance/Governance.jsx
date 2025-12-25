@@ -16,7 +16,7 @@ export default function Governance() {
                 display: 'flex',
                 justifyContent: 'center',
                 position: 'absolute',
-                top: -105,
+                top: -120,
             }}>
                 <BackButton to="/" title="Governance"/>
             </div>

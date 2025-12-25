@@ -370,7 +370,7 @@ export default function BrowseTalent() {
 
     return (
         <div className="body-container">
-            <div className="view-jobs-container">
+            <div className="view-jobs-container browse-talent-page">
                     <JobsTable
                         title={`OpenWork Ledger`}
                         tableData={currentUsers}

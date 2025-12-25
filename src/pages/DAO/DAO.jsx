@@ -298,7 +298,7 @@ export default function DAO() {
 
     return (
         <div className="body-container">
-            <div className="view-jobs-container">
+            <div className="view-jobs-container dao-page">
                 <JobsTable
                     title={`OpenWork DAO`}
                     ledgerTitle={`OpenWork Ledger`}

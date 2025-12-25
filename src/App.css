@@ -252,11 +252,11 @@ img#connectButton-home {
 
 .dropdownMenu-home {
   z-index: 10;
-  width: 168px;
+  width: 208px;
   padding: 20px 24px;
   position: absolute;
   top: 50px;
-  right: -28px;
+  right: -8px;
   background-color: white;
   border: 1px solid #ddd;
   border-radius: 12px;

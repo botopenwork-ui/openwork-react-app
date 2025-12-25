@@ -15,7 +15,7 @@ export default function ProjectComplete() {
                 <span>Looks like this project was a great success! Please drop a rating for this freelancer</span>
             </div>
             <div className="success-star">
-                <div className="star">
+                <div className="success-star-icons">
                     {[...Array(5)].map((_, index) => (
                         <img key={index} src="/star.png" alt="star" />
                     ))}

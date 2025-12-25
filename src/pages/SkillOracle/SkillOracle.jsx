@@ -247,7 +247,7 @@ export default function SkillOracle() {
 
     return (
         <div className="body-container">
-            <div className="view-jobs-container">
+            <div className="view-jobs-container skill-oracle-page">
                 <JobsTable
                     title={`OpenWork Ledger`}
                     backUrl="/governance"

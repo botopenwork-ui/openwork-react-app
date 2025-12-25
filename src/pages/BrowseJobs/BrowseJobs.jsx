@@ -463,6 +463,7 @@ export default function BrowseJobs() {
                             to={`/job-details/${job.id}`}
                             imgSrc="/view.svg"
                             alt="detail"
+                            title="Details"
                         />
                     </div>
                 ),
