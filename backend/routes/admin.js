@@ -333,4 +333,76 @@ router.put('/contracts/:contractId/docs', requireAdmin, (req, res) => {
   }
 });
 
+// POST /api/admin/migrate-contract-ids - Fix contract IDs in database
+router.post('/migrate-contract-ids', requireAdmin, (req, res) => {
+  try {
+    console.log('🔧 Running contract ID migration...');
+
+    const results = [];
+
+    // Simple pattern updates
+    const updates = [
+      { pattern: '%main-dao%', newId: 'mainDAO' },
+      { pattern: '%native-dao%', newId: 'nativeDAO' },
+      { pattern: '%native-athena%', newId: 'nativeAthena' },
+      { pattern: '%native-bridge%', newId: 'nativeBridge' },
+      { pattern: '%main-chain-bridge%', newId: 'mainBridge' },
+      { pattern: '%cross-chain-rewards%', newId: 'mainRewards' },
+      { pattern: '%oracle-manager%', newId: 'oracleManager' },
+      { pattern: '%nowjc%', newId: 'nowjc' },
+      { pattern: '%native-rewards%', newId: 'nativeRewards' },
+      { pattern: '%cctpv2%', newId: 'cctpTransceiver' },
+    ];
+
+    for (const { pattern, newId } of updates) {
+      const result = db.prepare(`UPDATE deployments SET contract_id = ? WHERE contract_id LIKE ?`).run(newId, pattern);
+      if (result.changes > 0) {
+        results.push(`${pattern} → ${newId}: ${result.changes} rows`);
+      }
+    }
+
+    // Network-specific updates
+    const networkUpdates = [
+      { pattern: '%athena-client%', network: '%OP%', newId: 'athenaClientOp' },
+      { pattern: '%athena-client%', network: '%Ethereum%', newId: 'athenaClientEth' },
+      { pattern: '%local-bridge%', network: '%OP%', newId: 'localBridgeOp' },
+      { pattern: '%local-bridge%', network: '%Ethereum%', newId: 'localBridgeEth' },
+      { pattern: '%lowjc%', network: '%OP%', newId: 'lowjcOp' },
+      { pattern: '%lowjc%', network: '%Ethereum%', newId: 'lowjcEth' },
+    ];
+
+    for (const { pattern, network, newId } of networkUpdates) {
+      const result = db.prepare(`UPDATE deployments SET contract_id = ? WHERE contract_id LIKE ? AND network_name LIKE ?`).run(newId, pattern, network);
+      if (result.changes > 0) {
+        results.push(`${pattern} (${network}) → ${newId}: ${result.changes} rows`);
+      }
+    }
+
+    // Clean up contract_name (remove asterisks)
+    const cleanNames = db.prepare(`UPDATE deployments SET contract_name = REPLACE(REPLACE(contract_name, '**', ''), '*', '')`).run();
+    if (cleanNames.changes > 0) {
+      results.push(`Cleaned asterisks from ${cleanNames.changes} contract names`);
+    }
+
+    // Get final state
+    const finalIds = db.prepare('SELECT DISTINCT contract_id FROM deployments ORDER BY contract_id').all();
+
+    console.log('✅ Migration complete:', results);
+
+    res.json({
+      success: true,
+      message: 'Migration completed',
+      updates: results,
+      currentContractIds: finalIds.map(r => r.contract_id)
+    });
+
+  } catch (error) {
+    console.error('Error running migration:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
