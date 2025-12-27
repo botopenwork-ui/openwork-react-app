@@ -2082,38 +2082,37 @@ const OpenworkDocs = () => {
                           </div>
                         )}
 
-                        {!selected.deployConfig.type || selected.deployConfig.type !== 'uups' ? (
-                          <div className="docs-deploy-params-section">
-                            <h4>Constructor Parameters:</h4>
-                            {selected.deployConfig.constructor.map((param, idx) => (
-                              <div key={idx} className="docs-deploy-param">
-                                <label>
-                                  {param.name}
-                                  <span className="docs-deploy-param-type">({param.type})</span>
-                                </label>
-                                <p className="docs-deploy-param-desc">{param.description}</p>
-                                <input
-                                  type="text"
-                                  value={deployParams[param.name] || ''}
-                                  onChange={(e) => setDeployParams(prev => ({
-                                    ...prev,
-                                    [param.name]: e.target.value
-                                  }))}
-                                  placeholder={param.placeholder || param.name}
-                                  disabled={deployStatus === 'deploying'}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="docs-deploy-info" style={{ background: '#fef3c7', border: '1px solid #fde047', color: '#78350f' }}>
+                        {selected.deployConfig.type === 'uups' && (
+                          <div className="docs-deploy-info" style={{ background: '#dbeafe', border: '1px solid #3b82f6', color: '#1e40af' }}>
                             <AlertCircle size={16} />
                             <div>
-                              <strong>UUPS Deployment:</strong> Implementation and Proxy deploy without parameters. 
-                              After deployment, initialize the proxy manually on the block scanner.
+                              <strong>UUPS Deployment:</strong> 2-step process - deploys implementation first, then proxy with initialize() call.
                             </div>
                           </div>
                         )}
+
+                        <div className="docs-deploy-params-section">
+                          <h4>{selected.deployConfig.type === 'uups' ? 'Initialize Parameters:' : 'Constructor Parameters:'}</h4>
+                          {selected.deployConfig.constructor.map((param, idx) => (
+                            <div key={idx} className="docs-deploy-param">
+                              <label>
+                                {param.name}
+                                <span className="docs-deploy-param-type">({param.type})</span>
+                              </label>
+                              <p className="docs-deploy-param-desc">{param.description}</p>
+                              <input
+                                type="text"
+                                value={deployParams[param.name] || ''}
+                                onChange={(e) => setDeployParams(prev => ({
+                                  ...prev,
+                                  [param.name]: e.target.value
+                                }))}
+                                placeholder={param.placeholder || param.name}
+                                disabled={deployStatus === 'deploying'}
+                              />
+                            </div>
+                          ))}
+                        </div>
 
                         <div className="docs-deploy-info">
                           <AlertCircle size={16} />
@@ -2152,12 +2151,10 @@ const OpenworkDocs = () => {
                               // Check if this is a UUPS contract
                               const isUUPS = selected.deployConfig.type === 'uups';
 
-                              // Validate constructor args (skip for UUPS - no params needed)
-                              if (!isUUPS) {
-                                const invalidParams = selected.deployConfig.constructor.filter(p => !deployParams[p.name]);
-                                if (invalidParams.length > 0) {
-                                  throw new Error(`Missing required parameters: ${invalidParams.map(p => p.name).join(', ')}`);
-                                }
+                              // Validate parameters (constructor for regular, initialize for UUPS)
+                              const invalidParams = selected.deployConfig.constructor.filter(p => !deployParams[p.name]);
+                              if (invalidParams.length > 0) {
+                                throw new Error(`Missing required parameters: ${invalidParams.map(p => p.name).join(', ')}`);
                               }
 
                               if (isUUPS) {
@@ -2337,7 +2334,7 @@ const OpenworkDocs = () => {
                               setDeployStatus('idle');
                             }
                           }}
-                          disabled={!isAdmin || deployStatus === 'deploying' || (!selected.deployConfig.type && !deployParams.initialOwner)}
+                          disabled={!isAdmin || deployStatus === 'deploying' || selected.deployConfig.constructor.some(p => !deployParams[p.name])}
                           className="docs-deploy-button"
                           title={!isAdmin ? 'Admin login required to deploy' : ''}
                         >
