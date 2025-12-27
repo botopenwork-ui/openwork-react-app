@@ -80,7 +80,7 @@ const OpenworkDocs = () => {
       setBackendError(null);
       
       // Use registry endpoint to get all fields including is_current
-      const response = await fetch(`http://localhost:3001/api/registry/${contractId}/history`, {
+      const response = await fetch(`${BACKEND_URL}/api/registry/${contractId}/history`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -118,7 +118,7 @@ const OpenworkDocs = () => {
   // Save deployment to backend
   const saveDeployment = async (contractId, contractName, address, txHash) => {
     try {
-      const response = await fetch('http://localhost:3001/api/deployments', {
+      const response = await fetch(`${BACKEND_URL}/api/deployments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -150,7 +150,7 @@ const OpenworkDocs = () => {
     const username = localStorage.getItem('adminUsername');
     if (token && username) {
       // Verify token is still valid
-      fetch('http://localhost:3001/api/admin/verify', {
+      fetch(`${BACKEND_URL}/api/admin/verify`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -177,7 +177,7 @@ const OpenworkDocs = () => {
   // Load custom docs when contract changes
   useEffect(() => {
     if (selectedContract && selectedContract !== 'ipfs' && selectedContract !== 'oppy' && selectedContract !== 'flows') {
-      fetch(`http://localhost:3001/api/admin/contracts/${selectedContract}/docs`)
+      fetch(`${BACKEND_URL}/api/admin/contracts/${selectedContract}/docs`)
         .then(r => r.json())
         .then(data => {
           if (data.success && data.docs) {
@@ -1311,7 +1311,7 @@ const OpenworkDocs = () => {
                                 // Validate JSON
                                 const parsedData = JSON.parse(editedFullData);
                                 
-                                const response = await fetch(`http://localhost:3001/api/admin/contracts/${selectedContract}/docs`, {
+                                const response = await fetch(`${BACKEND_URL}/api/admin/contracts/${selectedContract}/docs`, {
                                   method: 'PUT',
                                   headers: {
                                     'Authorization': `Bearer ${adminToken}`,
@@ -1393,7 +1393,7 @@ const OpenworkDocs = () => {
                           <button
                             onClick={async () => {
                               try {
-                                const response = await fetch(`http://localhost:3001/api/admin/contracts/${selectedContract}/docs`, {
+                                const response = await fetch(`${BACKEND_URL}/api/admin/contracts/${selectedContract}/docs`, {
                                   method: 'PUT',
                                   headers: {
                                     'Authorization': `Bearer ${adminToken}`,
@@ -1684,7 +1684,7 @@ const OpenworkDocs = () => {
                           <button
                             onClick={async () => {
                               try {
-                                const response = await fetch(`http://localhost:3001/api/admin/contracts/${selectedContract}/docs`, {
+                                const response = await fetch(`${BACKEND_URL}/api/admin/contracts/${selectedContract}/docs`, {
                                   method: 'PUT',
                                   headers: {
                                     'Authorization': `Bearer ${adminToken}`,
@@ -2137,7 +2137,7 @@ const OpenworkDocs = () => {
                                 
                                 // Step 1: Compile implementation contract
                                 console.log('📦 Step 1: Compiling implementation...');
-                                const implCompileResponse = await fetch('http://localhost:3001/api/compile', {
+                                const implCompileResponse = await fetch(`${BACKEND_URL}/api/compile`, {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ contractName: compilerContractName })
@@ -2183,7 +2183,7 @@ const OpenworkDocs = () => {
                                 
                                 // Step 3: Compile proxy contract
                                 console.log('📦 Step 3: Compiling proxy...');
-                                const proxyCompileResponse = await fetch('http://localhost:3001/api/compile', {
+                                const proxyCompileResponse = await fetch(`${BACKEND_URL}/api/compile`, {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ contractName: 'UUPSProxy' })
@@ -2245,7 +2245,7 @@ const OpenworkDocs = () => {
                               } else {
                                 // ====== REGULAR CONTRACT DEPLOYMENT ======
                                 console.log('📦 Compiling contract...');
-                                const compileResponse = await fetch('http://localhost:3001/api/compile', {
+                                const compileResponse = await fetch(`${BACKEND_URL}/api/compile`, {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ contractName: compilerContractName })
@@ -2410,7 +2410,7 @@ const OpenworkDocs = () => {
                                             onClick={async () => {
                                               try {
                                                 const response = await fetch(
-                                                  `http://localhost:3001/api/admin/deployments/${deployment.id}/set-current`,
+                                                  `${BACKEND_URL}/api/admin/deployments/${deployment.id}/set-current`,
                                                   {
                                                     method: 'PUT',
                                                     headers: {
