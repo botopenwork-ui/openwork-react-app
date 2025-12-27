@@ -2013,13 +2013,13 @@ const OpenworkDocs = () => {
                         <div className="docs-deploy-next-steps">
                           <h4>Next Steps:</h4>
                           <ul>
-                            {selected.deployConfig.postDeploy.nextSteps.map((step, idx) => (
+                            {selected.deployConfig.postDeploy.nextSteps.slice(0, 4).map((step, idx) => (
                               <li key={idx}>{step}</li>
                             ))}
                           </ul>
                         </div>
 
-                        <button 
+                        <button
                           onClick={() => {
                             setDeployStatus('idle');
                             setDeployedAddress(null);
@@ -2029,6 +2029,35 @@ const OpenworkDocs = () => {
                         >
                           Deploy Another
                         </button>
+
+                        {/* Show deployment history in success view */}
+                        {deploymentHistory.length > 0 && (
+                          <div className="docs-deployment-history" style={{ marginTop: '20px' }}>
+                            <h4 className="docs-deployment-history-title">
+                              <History size={18} />
+                              <span>All Deployments ({deploymentHistory.length})</span>
+                            </h4>
+                            <div className="docs-deployment-history-list">
+                              {deploymentHistory.slice(0, 5).map((deployment, idx) => {
+                                const isCurrent = deployment.is_current === 1;
+                                return (
+                                  <div key={idx} className={`docs-deployment-history-item ${isCurrent ? 'current' : ''}`}>
+                                    <div className="docs-deployment-history-item-header">
+                                      <span className="docs-deployment-history-address">
+                                        {deployment.address?.slice(0, 10)}...{deployment.address?.slice(-8)}
+                                      </span>
+                                      {isCurrent && <span className="docs-deployment-current-badge">Current</span>}
+                                    </div>
+                                    <div className="docs-deployment-history-item-meta">
+                                      <span>{deployment.network_name}</span>
+                                      <span>{new Date(deployment.deployed_at).toLocaleDateString()}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="docs-deploy-form-container">
