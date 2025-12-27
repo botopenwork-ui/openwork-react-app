@@ -2082,37 +2082,38 @@ const OpenworkDocs = () => {
                           </div>
                         )}
 
-                        {selected.deployConfig.type === 'uups' && (
-                          <div className="docs-deploy-info" style={{ background: '#dbeafe', border: '1px solid #3b82f6', color: '#1e40af' }}>
+                        {selected.deployConfig.type === 'uups' ? (
+                          <div className="docs-deploy-info" style={{ background: '#fef3c7', border: '1px solid #fde047', color: '#78350f' }}>
                             <AlertCircle size={16} />
                             <div>
-                              <strong>UUPS Deployment:</strong> 2-step process - deploys implementation first, then proxy with initialize() call.
+                              <strong>UUPS Deployment:</strong> Deploys implementation + proxy without parameters.
+                              After deployment, initialize the proxy manually on the block scanner using cast send or Etherscan.
                             </div>
                           </div>
+                        ) : (
+                          <div className="docs-deploy-params-section">
+                            <h4>Constructor Parameters:</h4>
+                            {selected.deployConfig.constructor.map((param, idx) => (
+                              <div key={idx} className="docs-deploy-param">
+                                <label>
+                                  {param.name}
+                                  <span className="docs-deploy-param-type">({param.type})</span>
+                                </label>
+                                <p className="docs-deploy-param-desc">{param.description}</p>
+                                <input
+                                  type="text"
+                                  value={deployParams[param.name] || ''}
+                                  onChange={(e) => setDeployParams(prev => ({
+                                    ...prev,
+                                    [param.name]: e.target.value
+                                  }))}
+                                  placeholder={param.placeholder || param.name}
+                                  disabled={deployStatus === 'deploying'}
+                                />
+                              </div>
+                            ))}
+                          </div>
                         )}
-
-                        <div className="docs-deploy-params-section">
-                          <h4>{selected.deployConfig.type === 'uups' ? 'Initialize Parameters:' : 'Constructor Parameters:'}</h4>
-                          {selected.deployConfig.constructor.map((param, idx) => (
-                            <div key={idx} className="docs-deploy-param">
-                              <label>
-                                {param.name}
-                                <span className="docs-deploy-param-type">({param.type})</span>
-                              </label>
-                              <p className="docs-deploy-param-desc">{param.description}</p>
-                              <input
-                                type="text"
-                                value={deployParams[param.name] || ''}
-                                onChange={(e) => setDeployParams(prev => ({
-                                  ...prev,
-                                  [param.name]: e.target.value
-                                }))}
-                                placeholder={param.placeholder || param.name}
-                                disabled={deployStatus === 'deploying'}
-                              />
-                            </div>
-                          ))}
-                        </div>
 
                         <div className="docs-deploy-info">
                           <AlertCircle size={16} />
@@ -2151,10 +2152,12 @@ const OpenworkDocs = () => {
                               // Check if this is a UUPS contract
                               const isUUPS = selected.deployConfig.type === 'uups';
 
-                              // Validate parameters (constructor for regular, initialize for UUPS)
-                              const invalidParams = selected.deployConfig.constructor.filter(p => !deployParams[p.name]);
-                              if (invalidParams.length > 0) {
-                                throw new Error(`Missing required parameters: ${invalidParams.map(p => p.name).join(', ')}`);
+                              // Validate parameters (only for regular contracts, UUPS initialized separately)
+                              if (!isUUPS) {
+                                const invalidParams = selected.deployConfig.constructor.filter(p => !deployParams[p.name]);
+                                if (invalidParams.length > 0) {
+                                  throw new Error(`Missing required parameters: ${invalidParams.map(p => p.name).join(', ')}`);
+                                }
                               }
 
                               if (isUUPS) {
@@ -2223,27 +2226,13 @@ const OpenworkDocs = () => {
                                 const proxyArtifact = await proxyCompileResponse.json();
                                 console.log('✅ Proxy compiled');
                                 
-                                // Step 4: Encode initialize() call with user params
-                                console.log('🔧 Step 4: Encoding initialize call...');
-                                const initData = web3.eth.abi.encodeFunctionCall(
-                                  {
-                                    name: 'initialize',
-                                    type: 'function',
-                                    inputs: selected.deployConfig.constructor.map(param => ({
-                                      type: param.type,
-                                      name: param.name
-                                    }))
-                                  },
-                                  selected.deployConfig.constructor.map(p => deployParams[p.name])
-                                );
-                                console.log('✅ Initialize data encoded');
-                                
-                                // Step 5: Deploy proxy with (implementation, initData)
-                                console.log('🚀 Step 5: Deploying proxy...');
+                                // Step 4: Deploy proxy with (implementation, 0x) - empty init data
+                                // Initialize is done separately via block scanner after deployment
+                                console.log('🚀 Step 4: Deploying proxy with empty init data...');
                                 const proxyContract = new web3.eth.Contract(proxyArtifact.abi);
                                 const proxyDeployTx = proxyContract.deploy({
                                   data: proxyArtifact.bytecode,
-                                  arguments: [implAddress, initData]
+                                  arguments: [implAddress, '0x']
                                 });
 
                                 const proxyGas = await proxyDeployTx.estimateGas({ from: account });
@@ -2334,7 +2323,7 @@ const OpenworkDocs = () => {
                               setDeployStatus('idle');
                             }
                           }}
-                          disabled={!isAdmin || deployStatus === 'deploying' || selected.deployConfig.constructor.some(p => !deployParams[p.name])}
+                          disabled={!isAdmin || deployStatus === 'deploying' || (selected.deployConfig.type !== 'uups' && selected.deployConfig.constructor.some(p => !deployParams[p.name]))}
                           className="docs-deploy-button"
                           title={!isAdmin ? 'Admin login required to deploy' : ''}
                         >
