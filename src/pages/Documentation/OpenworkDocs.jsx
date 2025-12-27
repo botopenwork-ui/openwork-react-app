@@ -85,31 +85,38 @@ const OpenworkDocs = () => {
   // Load deployment history for a contract
   const loadDeploymentHistory = async (contractId) => {
     if (!contractId) return;
-    
+
     try {
       setLoadingHistory(true);
       setBackendError(null);
-      
+
+      console.log('📥 Loading deployment history for:', contractId);
+
       // Use registry endpoint to get all fields including is_current
       const response = await fetch(`${BACKEND_URL}/api/registry/${contractId}/history`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
-      
+
       if (response.status === 404) {
         // No history for this contract yet - not an error
+        console.log('📥 No history found for:', contractId);
         setDeploymentHistory([]);
         setBackendError(null);
         return;
       }
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
+        console.log('📥 Loaded', data.history?.length || 0, 'deployments for:', contractId);
+        if (data.history?.length > 0) {
+          console.log('📥 Most recent deployment:', data.history[0].address, 'at', data.history[0].deployed_at);
+        }
         setDeploymentHistory(data.history || []);
       } else {
         setDeploymentHistory([]);
@@ -129,6 +136,8 @@ const OpenworkDocs = () => {
   // Save deployment to backend
   const saveDeployment = async (contractId, contractName, address, txHash, options = {}) => {
     try {
+      console.log('📝 Saving deployment:', { contractId, contractName, address, options });
+
       const response = await fetch(`${BACKEND_URL}/api/deployments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -145,14 +154,20 @@ const OpenworkDocs = () => {
           isUUPS: options.isUUPS || false
         })
       });
-      
-      if (response.ok) {
-        console.log('✅ Deployment saved to history');
-        // Reload history after save
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        console.log('✅ Deployment saved to history, ID:', data.deploymentId);
+        // Reload history after save - wait a moment for DB to commit
+        await new Promise(resolve => setTimeout(resolve, 100));
         await loadDeploymentHistory(contractId);
+        console.log('✅ History reloaded for:', contractId);
+      } else {
+        console.error('❌ Failed to save deployment:', data.error || 'Unknown error');
       }
     } catch (error) {
-      console.error('Error saving deployment:', error);
+      console.error('❌ Error saving deployment:', error);
       // Don't fail the deployment if history save fails
     }
   };
@@ -2348,12 +2363,16 @@ const OpenworkDocs = () => {
                         )}
 
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             setDeployStatus('idle');
                             setDeployedAddress(null);
                             setDeployedImplAddress(null);
                             setTxHash(null);
                             setShowInitializeForm(false);
+                            // Refresh history to ensure it's up to date
+                            if (selected?.id) {
+                              await loadDeploymentHistory(selected.id);
+                            }
                           }}
                           className="docs-deploy-button"
                         >

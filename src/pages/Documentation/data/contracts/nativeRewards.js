@@ -716,7 +716,7 @@ await nowjc.syncRewardsData(lzOptions, { value: lzFee });`,
     'ProfileGenesis integration: flexible referral system with fallback'
   ],
   
-  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/native-rewards.sol
+  code: `// Full implementation: contracts/openwork-full-contract-suite-26-Dec-version/native-rewards.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
@@ -725,33 +725,50 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract OpenWorkRewardsContract is 
+// Interface for OpenworkGenesis storage contract (data source)
+interface IOpenworkGenesis {
+    function getUserReferrer(address user) external view returns (address);
+    function totalPlatformPayments() external view returns (uint256);
+    function getUserTotalGovernanceActions(address user) external view returns (uint256);
+    function setUserTotalOWTokens(address user, uint256 tokens) external;
+    function getUserEarnedTokens(address user) external view returns (uint256);
+}
+
+// Interface for ProfileGenesis contract (profile/referrer data)
+interface IProfileGenesis {
+    function getUserReferrer(address user) external view returns (address);
+}
+
+contract OpenWorkRewardsContract is
     Initializable,
     OwnableUpgradeable,
     UUPSUpgradeable
 {
     // ==================== REWARD STRUCTURES ====================
+
     struct RewardBand {
-        uint256 minAmount;
-        uint256 maxAmount;
-        uint256 owPerDollar;
+        uint256 minAmount;      // Minimum cumulative amount for this band
+        uint256 maxAmount;      // Maximum cumulative amount for this band
+        uint256 owPerDollar;    // OW tokens per USDT for earning (scaled by 1e18)
+        uint256 tokensPerGovernanceAction;  // OW tokens unlocked per governance action (scaled by 1e18)
     }
-    
+
     struct UserBandRewards {
-        uint256 band;
-        uint256 tokensEarned;
-        uint256 tokensClaimable;
-        uint256 tokensClaimed;
+        uint256 band;              // Reward band (0, 1, 2, etc.)
+        uint256 tokensEarned;      // Total tokens earned in this band
+        uint256 tokensClaimable;   // Tokens unlocked by governance actions
+        uint256 tokensClaimed;     // Tokens already claimed
     }
 
     // ==================== STATE VARIABLES ====================
+
     address public jobContract;
     IOpenworkGenesis public genesis;
     IProfileGenesis public profileGenesis;
     RewardBand[] public rewardBands;
     uint256 public totalPlatformPayments;
     uint256 public currentPlatformBand;
-    
+
     mapping(address => UserBandRewards[]) public userBandRewards;
     mapping(address => mapping(uint256 => uint256)) public userBandIndex;
     mapping(address => mapping(uint256 => bool)) public userHasBandRewards;
@@ -760,7 +777,22 @@ contract OpenWorkRewardsContract is
     mapping(address => mapping(uint256 => uint256)) public userGovernanceActionsByBand;
     mapping(address => uint256) public userTotalGovernanceActions;
 
-    // ==================== INITIALIZATION ====================
+    // ==================== EVENTS ====================
+
+    event TokensEarnedInBand(address indexed user, uint256 tokensEarned, uint256 indexed band, uint256 newBandTotal, uint256 newUserTotal);
+    event GovernanceActionRecorded(address indexed user, uint256 indexed band, uint256 newBandActions, uint256 newTotalActions);
+    event JobContractUpdated(address indexed oldContract, address indexed newContract);
+    event RewardBandAdded(uint256 indexed bandIndex, uint256 minAmount, uint256 maxAmount, uint256 owPerDollar);
+    event RewardBandUpdated(uint256 indexed bandIndex, uint256 minAmount, uint256 maxAmount, uint256 owPerDollar);
+
+    // ==================== MODIFIERS ====================
+
+    modifier onlyJobContract() {
+        require(msg.sender == jobContract, "Only job contract can call");
+        _;
+    }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
@@ -772,27 +804,60 @@ contract OpenWorkRewardsContract is
     ) public initializer {
         __Ownable_init(_owner);
         __UUPSUpgradeable_init();
-        
+
         jobContract = _jobContract;
         genesis = IOpenworkGenesis(_genesis);
         totalPlatformPayments = 0;
         currentPlatformBand = 0;
-        
+
         _initializeRewardBands();
     }
-    
+
+    function _authorizeUpgrade(address) internal view override {
+        require(owner() == _msgSender(), "Unauthorized upgrade");
+    }
+
+    // ==================== ADMIN FUNCTIONS ====================
+
+    function setJobContract(address _jobContract) external onlyOwner {
+        address oldContract = jobContract;
+        jobContract = _jobContract;
+        emit JobContractUpdated(oldContract, _jobContract);
+    }
+
+    function setGenesis(address _genesis) external onlyOwner {
+        genesis = IOpenworkGenesis(_genesis);
+    }
+
+    function setProfileGenesis(address _profileGenesis) external onlyOwner {
+        profileGenesis = IProfileGenesis(_profileGenesis);
+    }
+
+    // ==================== REWARD BANDS INITIALIZATION ====================
+
     function _initializeRewardBands() private {
         // 20 reward bands, each distributing 30M OW tokens
-        rewardBands.push(RewardBand(0, 100000 * 1e6, 300 * 1e18));                    // Band 1
-        rewardBands.push(RewardBand(100000 * 1e6, 200000 * 1e6, 300 * 1e18));         // Band 2
-        rewardBands.push(RewardBand(200000 * 1e6, 400000 * 1e6, 150 * 1e18));         // Band 3
-        // ... 17 more bands
-        rewardBands.push(RewardBand(26214400000 * 1e6, 52428800000 * 1e6, 11444091796875 * 1e2)); // Band 20
+        // Format: minAmount, maxAmount, owPerDollar (earning rate), tokensPerGovernanceAction (unlock rate)
+
+        rewardBands.push(RewardBand(0, 100000 * 1e6, 300 * 1e18, 10000 * 1e18));                    // Band 0: $0-$100k
+        rewardBands.push(RewardBand(100000 * 1e6, 200000 * 1e6, 300 * 1e18, 5000 * 1e18));         // Band 1: $100k-$200k
+        rewardBands.push(RewardBand(200000 * 1e6, 400000 * 1e6, 150 * 1e18, 2500 * 1e18));         // Band 2: $200k-$400k
+        rewardBands.push(RewardBand(400000 * 1e6, 800000 * 1e6, 75 * 1e18, 1250 * 1e18));          // Band 3: $400k-$800k
+        rewardBands.push(RewardBand(800000 * 1e6, 1600000 * 1e6, 375 * 1e17, 625 * 1e18));        // Band 4: $800k-$1.6M
+        // ... remaining bands with separate earning and unlock rates
+        rewardBands.push(RewardBand(26214400000 * 1e6, 52428800000 * 1e6, 11444091796875 * 1e2, 1 * 1e18)); // Band 19
     }
+
+    function resetRewardBands() external onlyOwner {
+        delete rewardBands;
+        _initializeRewardBands();
+    }
+
+    // ==================== BAND CALCULATION FUNCTIONS ====================
 
     function getCurrentBand() public view returns (uint256) {
         for (uint256 i = 0; i < rewardBands.length; i++) {
-            if (totalPlatformPayments >= rewardBands[i].minAmount && 
+            if (totalPlatformPayments >= rewardBands[i].minAmount &&
                 totalPlatformPayments <= rewardBands[i].maxAmount) {
                 return i;
             }
@@ -801,38 +866,42 @@ contract OpenWorkRewardsContract is
     }
 
     // ==================== CORE REWARD PROCESSING ====================
+
     function processJobPayment(
         address jobGiver,
-        address jobTaker, 
+        address jobTaker,
         uint256 amount,
         uint256 newPlatformTotal
     ) external onlyJobContract returns (uint256[] memory tokensAwarded) {
         totalPlatformPayments = newPlatformTotal;
-        
-        // Get referrers
+
+        // Get referrers (ProfileGenesis first, fallback to Genesis)
         address jobGiverReferrer = address(0);
         address jobTakerReferrer = address(0);
-        
+
         if (address(profileGenesis) != address(0)) {
             jobGiverReferrer = profileGenesis.getUserReferrer(jobGiver);
             jobTakerReferrer = profileGenesis.getUserReferrer(jobTaker);
+        } else if (address(genesis) != address(0)) {
+            jobGiverReferrer = genesis.getUserReferrer(jobGiver);
+            jobTakerReferrer = genesis.getUserReferrer(jobTaker);
         }
-        
+
         // Calculate reward distribution (job giver 80%, referrers 10% each)
         uint256 jobGiverAmount = amount;
         uint256 jobGiverReferrerAmount = 0;
         uint256 jobTakerReferrerAmount = 0;
-        
-        if (jobGiverReferrer != address(0)) {
+
+        if (jobGiverReferrer != address(0) && jobGiverReferrer != jobGiver) {
             jobGiverReferrerAmount = amount / 10;
             jobGiverAmount -= jobGiverReferrerAmount;
         }
-        
-        if (jobTakerReferrer != address(0)) {
+
+        if (jobTakerReferrer != address(0) && jobTakerReferrer != jobTaker && jobTakerReferrer != jobGiverReferrer) {
             jobTakerReferrerAmount = amount / 10;
             jobGiverAmount -= jobTakerReferrerAmount;
         }
-        
+
         // Award tokens
         tokensAwarded = new uint256[](3);
         if (jobGiverAmount > 0) {
@@ -844,7 +913,7 @@ contract OpenWorkRewardsContract is
         if (jobTakerReferrerAmount > 0) {
             tokensAwarded[2] = _awardTokensInCurrentBand(jobTakerReferrer, jobTakerReferrerAmount, newPlatformTotal - amount);
         }
-        
+
         return tokensAwarded;
     }
 
@@ -855,52 +924,92 @@ contract OpenWorkRewardsContract is
         emit GovernanceActionRecorded(user, currentBand, userGovernanceActionsByBand[user][currentBand], userTotalGovernanceActions[user]);
     }
 
-    // ==================== CLAIMABLE CALCULATION ====================
+    // ==================== CLAIMABLE CALCULATION (FIXED) ====================
+
     function getUserTotalClaimableTokens(address user) external view returns (uint256) {
         uint256 totalClaimable = 0;
         UserBandRewards[] memory rewards = userBandRewards[user];
-        
+
         for (uint256 i = 0; i < rewards.length; i++) {
             totalClaimable += _calculateBandClaimable(user, rewards[i]);
         }
-        
+
         return totalClaimable;
     }
-    
+
+    /**
+     * @dev Calculate claimable tokens for a specific band
+     * FIXED: Now uses tokensPerGovernanceAction instead of owPerDollar for unlock calculation
+     */
     function _calculateBandClaimable(address user, UserBandRewards memory bandReward) internal view returns (uint256) {
         uint256 govActionsInBand = userGovernanceActionsByBand[user][bandReward.band];
-        uint256 rewardRate = rewardBands[bandReward.band].owPerDollar;
-        uint256 maxClaimableFromGovActions = govActionsInBand * rewardRate;
-        
-        uint256 availableToEarn = bandReward.tokensEarned > bandReward.tokensClaimed ? 
+
+        // FIXED: Use separate unlock rate (tokensPerGovernanceAction) instead of earning rate (owPerDollar)
+        uint256 unlockRate = rewardBands[bandReward.band].tokensPerGovernanceAction;
+        uint256 maxClaimableFromGovActions = govActionsInBand * unlockRate;
+
+        uint256 availableToEarn = bandReward.tokensEarned > bandReward.tokensClaimed ?
             bandReward.tokensEarned - bandReward.tokensClaimed : 0;
-        
-        return availableToEarn > maxClaimableFromGovActions ? 
+
+        return availableToEarn > maxClaimableFromGovActions ?
             maxClaimableFromGovActions : availableToEarn;
     }
 
     function markTokensClaimed(address user, uint256 amountClaimed) external onlyJobContract returns (bool) {
         uint256 remainingToClaim = amountClaimed;
-        
+
         for (uint256 i = 0; i < userBandRewards[user].length && remainingToClaim > 0; i++) {
             UserBandRewards memory bandReward = userBandRewards[user][i];
             uint256 bandClaimable = _calculateBandClaimable(user, bandReward);
-            
+
             if (bandClaimable > 0) {
-                uint256 claimFromThisBand = remainingToClaim > bandClaimable ? 
+                uint256 claimFromThisBand = remainingToClaim > bandClaimable ?
                     bandClaimable : remainingToClaim;
-                
+
                 uint256 bandIndex = userBandIndex[user][bandReward.band];
                 userBandRewards[user][bandIndex].tokensClaimed += claimFromThisBand;
                 remainingToClaim -= claimFromThisBand;
             }
         }
-        
+
         userTotalTokensClaimed[user] += amountClaimed;
         return true;
     }
 
-    // ... Additional view and calculation functions
-    // See full implementation in repository
+    // ==================== VIEW FUNCTIONS ====================
+
+    function getUserBandRewards(address user) external view returns (UserBandRewards[] memory) {
+        return userBandRewards[user];
+    }
+
+    function getRewardBandsCount() external view returns (uint256) {
+        return rewardBands.length;
+    }
+
+    function getRewardBand(uint256 index) external view returns (uint256 minAmount, uint256 maxAmount, uint256 owPerDollar) {
+        require(index < rewardBands.length, "Invalid band index");
+        RewardBand memory band = rewardBands[index];
+        return (band.minAmount, band.maxAmount, band.owPerDollar);
+    }
+
+    function getPlatformBandInfo() external view returns (
+        uint256 currentBand,
+        uint256 currentTotal,
+        uint256 bandMinAmount,
+        uint256 bandMaxAmount,
+        uint256 governanceRewardRate
+    ) {
+        currentBand = getCurrentBand();
+        currentTotal = totalPlatformPayments;
+
+        if (currentBand < rewardBands.length) {
+            RewardBand memory band = rewardBands[currentBand];
+            bandMinAmount = band.minAmount;
+            bandMaxAmount = band.maxAmount;
+            governanceRewardRate = band.owPerDollar;
+        }
+    }
+
+    // ... Additional helper and calculation functions in full implementation
 }`
 };
