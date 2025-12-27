@@ -36,9 +36,20 @@ const OpenworkDocs = () => {
   const [deployParams, setDeployParams] = useState({});
   const [deployStatus, setDeployStatus] = useState('idle'); // idle, deploying, success, error
   const [deployedAddress, setDeployedAddress] = useState(null);
+  const [deployedImplAddress, setDeployedImplAddress] = useState(null); // For UUPS: track implementation address
   const [txHash, setTxHash] = useState(null);
   const [deployReceipt, setDeployReceipt] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // UUPS deployment mode: 'deployNew' | 'deployImplOnly' | 'upgradeProxy'
+  const [uupsMode, setUupsMode] = useState('deployNew');
+  const [existingProxyAddress, setExistingProxyAddress] = useState('');
+  const [existingImplAddress, setExistingImplAddress] = useState('');
+  const [useExistingImpl, setUseExistingImpl] = useState(false);
+
+  // Initialize state (for post-deployment initialization)
+  const [showInitializeForm, setShowInitializeForm] = useState(false);
+  const [initializeParams, setInitializeParams] = useState({});
   
   // Deployment history state
   const [deploymentHistory, setDeploymentHistory] = useState([]);
@@ -1968,62 +1979,370 @@ const OpenworkDocs = () => {
                         <div className="docs-deploy-success-icon">
                           <Check size={48} />
                         </div>
-                        <h3>Deployment Successful!</h3>
-                        <p>{selected.deployConfig.postDeploy.message}</p>
-                        
+                        <h3>
+                          {selected.deployConfig.type === 'uups'
+                            ? (uupsMode === 'deployNew' ? 'Deployment Successful!'
+                              : uupsMode === 'deployImplOnly' ? 'Implementation Deployed!'
+                              : 'Proxy Upgraded!')
+                            : 'Deployment Successful!'}
+                        </h3>
+                        <p>
+                          {selected.deployConfig.type === 'uups'
+                            ? (uupsMode === 'deployNew' ? 'Implementation and Proxy deployed. Initialize the proxy to complete setup.'
+                              : uupsMode === 'deployImplOnly' ? 'Implementation contract deployed. Use this address to upgrade a proxy.'
+                              : 'Proxy has been upgraded to the new implementation.')
+                            : selected.deployConfig.postDeploy.message}
+                        </p>
+
                         <div className="docs-deploy-result-card">
-                          <div className="docs-deploy-result-row">
-                            <span>Contract Address:</span>
-                            <div className="docs-deploy-address">
-                              {deployedAddress}
-                              <button 
-                                onClick={() => navigator.clipboard.writeText(deployedAddress)}
-                                className="docs-deploy-copy-btn"
-                              >
-                                <Copy size={16} />
-                              </button>
-                              <a 
-                                href={(() => {
-                                  const explorers = {
-                                    1: 'https://etherscan.io',
-                                    5: 'https://goerli.etherscan.io',
-                                    11155111: 'https://sepolia.etherscan.io',
-                                    8453: 'https://basescan.org',
-                                    84532: 'https://sepolia.basescan.org',
-                                    42161: 'https://arbiscan.io',
-                                    421614: 'https://sepolia.arbiscan.io',
-                                    10: 'https://optimistic.etherscan.io',
-                                    420: 'https://goerli-optimism.etherscan.io',
-                                    137: 'https://polygonscan.com',
-                                    80001: 'https://mumbai.polygonscan.com'
-                                  };
-                                  const explorerUrl = explorers[currentNetwork?.chainId] || 'https://etherscan.io';
-                                  return `${explorerUrl}/address/${deployedAddress}`;
-                                })()}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="docs-deploy-copy-btn"
-                              >
-                                <ExternalLink size={16} />
-                              </a>
+                          {/* Show Proxy Address for deployNew mode */}
+                          {selected.deployConfig.type === 'uups' && uupsMode === 'deployNew' && (
+                            <div className="docs-deploy-result-row">
+                              <span>Proxy Address:</span>
+                              <div className="docs-deploy-address">
+                                {deployedAddress}
+                                <button
+                                  onClick={() => navigator.clipboard.writeText(deployedAddress)}
+                                  className="docs-deploy-copy-btn"
+                                >
+                                  <Copy size={16} />
+                                </button>
+                                <a
+                                  href={(() => {
+                                    const explorers = {
+                                      1: 'https://etherscan.io',
+                                      5: 'https://goerli.etherscan.io',
+                                      11155111: 'https://sepolia.etherscan.io',
+                                      8453: 'https://basescan.org',
+                                      84532: 'https://sepolia.basescan.org',
+                                      42161: 'https://arbiscan.io',
+                                      421614: 'https://sepolia.arbiscan.io',
+                                      10: 'https://optimistic.etherscan.io',
+                                      420: 'https://goerli-optimism.etherscan.io',
+                                      137: 'https://polygonscan.com',
+                                      80001: 'https://mumbai.polygonscan.com'
+                                    };
+                                    const explorerUrl = explorers[currentNetwork?.chainId] || 'https://etherscan.io';
+                                    return `${explorerUrl}/address/${deployedAddress}`;
+                                  })()}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="docs-deploy-copy-btn"
+                                >
+                                  <ExternalLink size={16} />
+                                </a>
+                              </div>
                             </div>
-                          </div>
+                          )}
+
+                          {/* Show Implementation Address */}
+                          {selected.deployConfig.type === 'uups' && deployedImplAddress && (
+                            <div className="docs-deploy-result-row" style={{ marginTop: selected.deployConfig.type === 'uups' && uupsMode === 'deployNew' ? '12px' : '0' }}>
+                              <span>Implementation Address:</span>
+                              <div className="docs-deploy-address">
+                                {deployedImplAddress}
+                                <button
+                                  onClick={() => navigator.clipboard.writeText(deployedImplAddress)}
+                                  className="docs-deploy-copy-btn"
+                                >
+                                  <Copy size={16} />
+                                </button>
+                                <a
+                                  href={(() => {
+                                    const explorers = {
+                                      1: 'https://etherscan.io',
+                                      5: 'https://goerli.etherscan.io',
+                                      11155111: 'https://sepolia.etherscan.io',
+                                      8453: 'https://basescan.org',
+                                      84532: 'https://sepolia.basescan.org',
+                                      42161: 'https://arbiscan.io',
+                                      421614: 'https://sepolia.arbiscan.io',
+                                      10: 'https://optimistic.etherscan.io',
+                                      420: 'https://goerli-optimism.etherscan.io',
+                                      137: 'https://polygonscan.com',
+                                      80001: 'https://mumbai.polygonscan.com'
+                                    };
+                                    const explorerUrl = explorers[currentNetwork?.chainId] || 'https://etherscan.io';
+                                    return `${explorerUrl}/address/${deployedImplAddress}`;
+                                  })()}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="docs-deploy-copy-btn"
+                                >
+                                  <ExternalLink size={16} />
+                                </a>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Standard contract address for non-UUPS */}
+                          {selected.deployConfig.type !== 'uups' && (
+                            <div className="docs-deploy-result-row">
+                              <span>Contract Address:</span>
+                              <div className="docs-deploy-address">
+                                {deployedAddress}
+                                <button
+                                  onClick={() => navigator.clipboard.writeText(deployedAddress)}
+                                  className="docs-deploy-copy-btn"
+                                >
+                                  <Copy size={16} />
+                                </button>
+                                <a
+                                  href={(() => {
+                                    const explorers = {
+                                      1: 'https://etherscan.io',
+                                      5: 'https://goerli.etherscan.io',
+                                      11155111: 'https://sepolia.etherscan.io',
+                                      8453: 'https://basescan.org',
+                                      84532: 'https://sepolia.basescan.org',
+                                      42161: 'https://arbiscan.io',
+                                      421614: 'https://sepolia.arbiscan.io',
+                                      10: 'https://optimistic.etherscan.io',
+                                      420: 'https://goerli-optimism.etherscan.io',
+                                      137: 'https://polygonscan.com',
+                                      80001: 'https://mumbai.polygonscan.com'
+                                    };
+                                    const explorerUrl = explorers[currentNetwork?.chainId] || 'https://etherscan.io';
+                                    return `${explorerUrl}/address/${deployedAddress}`;
+                                  })()}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="docs-deploy-copy-btn"
+                                >
+                                  <ExternalLink size={16} />
+                                </a>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
-                        <div className="docs-deploy-next-steps">
-                          <h4>Next Steps:</h4>
-                          <ul>
-                            {selected.deployConfig.postDeploy.nextSteps.slice(0, 4).map((step, idx) => (
-                              <li key={idx}>{step}</li>
+                        {/* Initialize Section for UUPS Deploy New */}
+                        {selected.deployConfig.type === 'uups' && uupsMode === 'deployNew' && !showInitializeForm && (
+                          <div style={{
+                            background: '#fef3c7',
+                            border: '2px solid #fde047',
+                            borderRadius: '12px',
+                            padding: '20px',
+                            marginTop: '20px'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                              <AlertCircle size={20} style={{ color: '#d97706' }} />
+                              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#92400e' }}>
+                                Proxy Needs Initialization
+                              </h4>
+                            </div>
+                            <p style={{ fontSize: '13px', color: '#78350f', marginBottom: '16px' }}>
+                              The proxy has been deployed but needs to be initialized before use.
+                            </p>
+                            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                              <button
+                                onClick={() => {
+                                  setShowInitializeForm(true);
+                                  // Pre-populate initialize params with defaults
+                                  const params = {};
+                                  if (selected.deployConfig.constructor) {
+                                    selected.deployConfig.constructor.forEach(param => {
+                                      if (param.default === 'WALLET') {
+                                        params[param.name] = account;
+                                      } else if (param.name === 'chainId' && currentNetwork) {
+                                        params[param.name] = currentNetwork.chainId.toString();
+                                      }
+                                    });
+                                  }
+                                  setInitializeParams(params);
+                                }}
+                                className="docs-deploy-button"
+                                style={{ background: '#f59e0b' }}
+                              >
+                                <Play size={18} />
+                                <span>Initialize Proxy</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setDeployStatus('idle');
+                                  setDeployedAddress(null);
+                                  setDeployedImplAddress(null);
+                                  setTxHash(null);
+                                  setShowInitializeForm(false);
+                                }}
+                                className="docs-network-toggle-button"
+                              >
+                                Skip - Initialize Later
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Initialize Form */}
+                        {selected.deployConfig.type === 'uups' && uupsMode === 'deployNew' && showInitializeForm && (
+                          <div style={{
+                            background: '#f0fdf4',
+                            border: '2px solid #86efac',
+                            borderRadius: '12px',
+                            padding: '20px',
+                            marginTop: '20px'
+                          }}>
+                            <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 600, color: '#166534' }}>
+                              Initialize Proxy
+                            </h4>
+
+                            {selected.deployConfig.constructor && selected.deployConfig.constructor.map((param, idx) => (
+                              <div key={idx} className="docs-deploy-param" style={{ marginBottom: '12px' }}>
+                                <label>
+                                  {param.name}
+                                  <span className="docs-deploy-param-type">({param.type})</span>
+                                </label>
+                                <p className="docs-deploy-param-desc">{param.description}</p>
+                                <input
+                                  type="text"
+                                  value={initializeParams[param.name] || ''}
+                                  onChange={(e) => setInitializeParams(prev => ({
+                                    ...prev,
+                                    [param.name]: e.target.value
+                                  }))}
+                                  placeholder={param.placeholder || param.name}
+                                />
+                              </div>
                             ))}
-                          </ul>
-                        </div>
+
+                            {errorMessage && (
+                              <div className="docs-deploy-error" style={{ marginBottom: '12px' }}>
+                                <AlertCircle size={16} />
+                                <span>{errorMessage}</span>
+                              </div>
+                            )}
+
+                            <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    setErrorMessage('');
+
+                                    // Validate params
+                                    const invalidParams = selected.deployConfig.constructor.filter(p => !initializeParams[p.name]);
+                                    if (invalidParams.length > 0) {
+                                      throw new Error(`Missing required parameters: ${invalidParams.map(p => p.name).join(', ')}`);
+                                    }
+
+                                    // Get the ABI for the contract
+                                    const contractNameMapping = {
+                                      'mainDAO': 'MainDAO',
+                                      'token': 'VotingToken',
+                                      'nowjc': 'NOWJC',
+                                      'nativeAthena': 'NativeAthena',
+                                      'nativeRewards': 'NativeRewards',
+                                      'nativeBridge': 'NativeBridge',
+                                      'mainRewards': 'MainRewards'
+                                    };
+                                    const compilerContractName = contractNameMapping[selected.id];
+
+                                    console.log('📦 Loading ABI for initialize...');
+                                    const compileResponse = await fetch(`${BACKEND_URL}/api/compile`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ contractName: compilerContractName })
+                                    });
+
+                                    if (!compileResponse.ok) {
+                                      throw new Error('Failed to load contract ABI');
+                                    }
+
+                                    const artifact = await compileResponse.json();
+
+                                    // Find initialize function in ABI
+                                    const initializeAbi = artifact.abi.find(item => item.name === 'initialize');
+                                    if (!initializeAbi) {
+                                      throw new Error('No initialize function found in contract ABI');
+                                    }
+
+                                    // Prepare arguments in the correct order based on ABI
+                                    const args = initializeAbi.inputs.map(input => initializeParams[input.name]);
+
+                                    console.log('🚀 Calling initialize on proxy:', deployedAddress);
+                                    console.log('📋 Arguments:', args);
+
+                                    // Create contract instance pointing to proxy address
+                                    const proxyContract = new web3.eth.Contract(artifact.abi, deployedAddress);
+
+                                    const initTx = proxyContract.methods.initialize(...args);
+
+                                    let initGas;
+                                    try {
+                                      initGas = await initTx.estimateGas({ from: account });
+                                    } catch (gasError) {
+                                      console.log('⚠️ Gas estimation failed:', gasError.message);
+                                      if (gasError.message.includes('already initialized') || gasError.message.includes('Initializable')) {
+                                        throw new Error('Proxy is already initialized');
+                                      }
+                                      initGas = BigInt(500000);
+                                    }
+
+                                    const initGasWithBuffer = initGas + (initGas * 20n / 100n);
+
+                                    await initTx.send({
+                                      from: account,
+                                      gas: initGasWithBuffer
+                                    });
+
+                                    console.log('✅ Proxy initialized successfully!');
+
+                                    setShowInitializeForm(false);
+                                    alert('✅ Proxy initialized successfully! The contract is now ready for use.');
+
+                                  } catch (error) {
+                                    console.error('❌ Initialize error:', error);
+                                    setErrorMessage(error.message || 'Initialize failed');
+                                  }
+                                }}
+                                className="docs-deploy-button"
+                                style={{ background: '#16a34a' }}
+                              >
+                                <Check size={18} />
+                                <span>Initialize</span>
+                              </button>
+                              <button
+                                onClick={() => setShowInitializeForm(false)}
+                                className="docs-network-toggle-button"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Next Steps for non-UUPS or after initialization */}
+                        {(selected.deployConfig.type !== 'uups' || uupsMode !== 'deployNew') && (
+                          <div className="docs-deploy-next-steps">
+                            <h4>Next Steps:</h4>
+                            <ul>
+                              {selected.deployConfig.type === 'uups' && uupsMode === 'deployImplOnly' ? (
+                                <>
+                                  <li>Copy the implementation address above</li>
+                                  <li>Use "Upgrade Proxy" mode to upgrade an existing proxy</li>
+                                  <li>Or save this address for future upgrades</li>
+                                </>
+                              ) : selected.deployConfig.type === 'uups' && uupsMode === 'upgradeProxy' ? (
+                                <>
+                                  <li>Verify the upgrade was successful on the block explorer</li>
+                                  <li>Test the proxy to ensure it works with the new implementation</li>
+                                  <li>Update any frontend configurations if needed</li>
+                                </>
+                              ) : (
+                                selected.deployConfig.postDeploy.nextSteps.slice(0, 4).map((step, idx) => (
+                                  <li key={idx}>{step}</li>
+                                ))
+                              )}
+                            </ul>
+                          </div>
+                        )}
 
                         <button
                           onClick={() => {
                             setDeployStatus('idle');
                             setDeployedAddress(null);
+                            setDeployedImplAddress(null);
                             setTxHash(null);
+                            setShowInitializeForm(false);
                           }}
                           className="docs-deploy-button"
                         >
@@ -2083,12 +2402,166 @@ const OpenworkDocs = () => {
                         )}
 
                         {selected.deployConfig.type === 'uups' ? (
-                          <div className="docs-deploy-info" style={{ background: '#fef3c7', border: '1px solid #fde047', color: '#78350f' }}>
-                            <AlertCircle size={16} />
-                            <div>
-                              <strong>UUPS Deployment:</strong> Deploys implementation + proxy without parameters.
-                              After deployment, initialize the proxy manually on the block scanner using cast send or Etherscan.
+                          <div className="docs-uups-mode-section">
+                            {/* UUPS Mode Selector */}
+                            <div className="docs-uups-mode-selector">
+                              <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600, color: '#374151' }}>
+                                Deployment Mode:
+                              </h4>
+                              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                <button
+                                  onClick={() => setUupsMode('deployNew')}
+                                  className={`docs-uups-mode-btn ${uupsMode === 'deployNew' ? 'docs-uups-mode-btn-active' : ''}`}
+                                  style={{
+                                    padding: '12px 16px',
+                                    borderRadius: '8px',
+                                    border: uupsMode === 'deployNew' ? '2px solid #3b82f6' : '2px solid #e5e7eb',
+                                    background: uupsMode === 'deployNew' ? '#eff6ff' : 'white',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                    flex: '1',
+                                    minWidth: '140px'
+                                  }}
+                                >
+                                  <div style={{ fontWeight: 600, fontSize: '13px', color: uupsMode === 'deployNew' ? '#1d4ed8' : '#374151' }}>
+                                    Deploy New
+                                  </div>
+                                  <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+                                    Implementation + Proxy
+                                  </div>
+                                </button>
+                                <button
+                                  onClick={() => setUupsMode('deployImplOnly')}
+                                  className={`docs-uups-mode-btn ${uupsMode === 'deployImplOnly' ? 'docs-uups-mode-btn-active' : ''}`}
+                                  style={{
+                                    padding: '12px 16px',
+                                    borderRadius: '8px',
+                                    border: uupsMode === 'deployImplOnly' ? '2px solid #8b5cf6' : '2px solid #e5e7eb',
+                                    background: uupsMode === 'deployImplOnly' ? '#f5f3ff' : 'white',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                    flex: '1',
+                                    minWidth: '140px'
+                                  }}
+                                >
+                                  <div style={{ fontWeight: 600, fontSize: '13px', color: uupsMode === 'deployImplOnly' ? '#6d28d9' : '#374151' }}>
+                                    Deploy Impl Only
+                                  </div>
+                                  <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+                                    For upgrades
+                                  </div>
+                                </button>
+                                <button
+                                  onClick={() => setUupsMode('upgradeProxy')}
+                                  className={`docs-uups-mode-btn ${uupsMode === 'upgradeProxy' ? 'docs-uups-mode-btn-active' : ''}`}
+                                  style={{
+                                    padding: '12px 16px',
+                                    borderRadius: '8px',
+                                    border: uupsMode === 'upgradeProxy' ? '2px solid #f59e0b' : '2px solid #e5e7eb',
+                                    background: uupsMode === 'upgradeProxy' ? '#fffbeb' : 'white',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                    flex: '1',
+                                    minWidth: '140px'
+                                  }}
+                                >
+                                  <div style={{ fontWeight: 600, fontSize: '13px', color: uupsMode === 'upgradeProxy' ? '#b45309' : '#374151' }}>
+                                    Upgrade Proxy
+                                  </div>
+                                  <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+                                    Existing proxy
+                                  </div>
+                                </button>
+                              </div>
                             </div>
+
+                            {/* Mode-specific content */}
+                            {uupsMode === 'deployNew' && (
+                              <div className="docs-deploy-info" style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af', marginTop: '16px' }}>
+                                <AlertCircle size={16} />
+                                <div>
+                                  <strong>Deploy New:</strong> Deploys implementation + proxy with empty init data.
+                                  After deployment, you can initialize the proxy using the Initialize button.
+                                </div>
+                              </div>
+                            )}
+
+                            {uupsMode === 'deployImplOnly' && (
+                              <div className="docs-deploy-info" style={{ background: '#f5f3ff', border: '1px solid #c4b5fd', color: '#5b21b6', marginTop: '16px' }}>
+                                <AlertCircle size={16} />
+                                <div>
+                                  <strong>Deploy Implementation Only:</strong> Deploys only the implementation contract.
+                                  Use this when you want to upgrade an existing proxy to a new implementation.
+                                </div>
+                              </div>
+                            )}
+
+                            {uupsMode === 'upgradeProxy' && (
+                              <div style={{ marginTop: '16px' }}>
+                                <div className="docs-deploy-info" style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', marginBottom: '16px' }}>
+                                  <AlertCircle size={16} />
+                                  <div>
+                                    <strong>Upgrade Proxy:</strong> Upgrades an existing proxy to a new implementation.
+                                    You must be the owner of the proxy to perform this operation.
+                                  </div>
+                                </div>
+
+                                {/* Existing Proxy Address Input */}
+                                <div className="docs-deploy-param" style={{ marginBottom: '16px' }}>
+                                  <label>
+                                    Existing Proxy Address
+                                    <span className="docs-deploy-param-type">(address)</span>
+                                  </label>
+                                  <p className="docs-deploy-param-desc">The proxy contract you want to upgrade</p>
+                                  <input
+                                    type="text"
+                                    value={existingProxyAddress}
+                                    onChange={(e) => setExistingProxyAddress(e.target.value)}
+                                    placeholder="0x..."
+                                    disabled={deployStatus === 'deploying'}
+                                  />
+                                </div>
+
+                                {/* Implementation Source */}
+                                <div style={{ marginBottom: '16px' }}>
+                                  <label style={{ display: 'block', fontWeight: 600, fontSize: '13px', marginBottom: '8px' }}>
+                                    New Implementation:
+                                  </label>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                      <input
+                                        type="radio"
+                                        checked={!useExistingImpl}
+                                        onChange={() => setUseExistingImpl(false)}
+                                        style={{ margin: 0 }}
+                                      />
+                                      <span style={{ fontSize: '13px' }}>Deploy new implementation</span>
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                      <input
+                                        type="radio"
+                                        checked={useExistingImpl}
+                                        onChange={() => setUseExistingImpl(true)}
+                                        style={{ margin: 0 }}
+                                      />
+                                      <span style={{ fontSize: '13px' }}>Use existing implementation address</span>
+                                    </label>
+                                  </div>
+
+                                  {useExistingImpl && (
+                                    <div className="docs-deploy-param" style={{ marginTop: '12px' }}>
+                                      <input
+                                        type="text"
+                                        value={existingImplAddress}
+                                        onChange={(e) => setExistingImplAddress(e.target.value)}
+                                        placeholder="0x... (implementation address)"
+                                        disabled={deployStatus === 'deploying'}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="docs-deploy-params-section">
@@ -2161,102 +2634,241 @@ const OpenworkDocs = () => {
                               }
 
                               if (isUUPS) {
-                                // ====== UUPS 2-STEP DEPLOYMENT ======
-                                console.log('🔷 Deploying UUPS contract (2-step process)...');
-                                
-                                // Step 1: Compile implementation contract
-                                console.log('📦 Step 1: Compiling implementation...');
-                                const implCompileResponse = await fetch(`${BACKEND_URL}/api/compile`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ contractName: compilerContractName })
-                                });
-                                
-                                if (!implCompileResponse.ok) {
-                                  const errorData = await implCompileResponse.json();
-                                  throw new Error(`Implementation compilation failed: ${errorData.error || 'Unknown error'}`);
-                                }
-                                
-                                const implArtifact = await implCompileResponse.json();
-                                console.log('✅ Implementation compiled');
-                                
-                                // Step 2: Deploy implementation (NO constructor args)
-                                console.log('🚀 Step 2: Deploying implementation...');
-                                const implContract = new web3.eth.Contract(implArtifact.abi);
-                                const implDeployTx = implContract.deploy({
-                                  data: implArtifact.bytecode
-                                  // NO arguments - UUPS implementation has no constructor params!
-                                });
+                                // ====== UUPS DEPLOYMENT MODES ======
 
-                                // Use fixed gas limit for large contracts to avoid estimation issues
-                                let implGas;
-                                try {
-                                  implGas = await implDeployTx.estimateGas({ from: account });
-                                  console.log('✅ Gas estimated:', implGas.toString());
-                                } catch (gasError) {
-                                  console.log('⚠️ Gas estimation failed, using fixed limit');
-                                  // Use a high fixed gas limit for complex contracts like MainDAO
-                                  implGas = BigInt(5000000); // 5M gas
-                                }
-                                
-                                const implGasWithBuffer = implGas + (implGas * 20n / 100n);
-                                console.log('🔧 Using gas limit:', implGasWithBuffer.toString());
-                                
-                                const deployedImpl = await implDeployTx.send({
-                                  from: account,
-                                  gas: implGasWithBuffer
-                                });
-                                
-                                const implAddress = deployedImpl.options.address;
-                                console.log('✅ Implementation deployed at:', implAddress);
-                                
-                                // Step 3: Compile proxy contract
-                                console.log('📦 Step 3: Compiling proxy...');
-                                const proxyCompileResponse = await fetch(`${BACKEND_URL}/api/compile`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ contractName: 'UUPSProxy' })
-                                });
-                                
-                                if (!proxyCompileResponse.ok) {
-                                  const errorData = await proxyCompileResponse.json();
-                                  throw new Error(`Proxy compilation failed: ${errorData.error || 'Unknown error'}`);
-                                }
-                                
-                                const proxyArtifact = await proxyCompileResponse.json();
-                                console.log('✅ Proxy compiled');
-                                
-                                // Step 4: Deploy proxy with (implementation, 0x) - empty init data
-                                // Initialize is done separately via block scanner after deployment
-                                console.log('🚀 Step 4: Deploying proxy with empty init data...');
-                                const proxyContract = new web3.eth.Contract(proxyArtifact.abi);
-                                const proxyDeployTx = proxyContract.deploy({
-                                  data: proxyArtifact.bytecode,
-                                  arguments: [implAddress, '0x']
-                                });
+                                if (uupsMode === 'deployNew') {
+                                  // MODE 1: Deploy Implementation + Proxy
+                                  console.log('🔷 Deploying UUPS contract (Implementation + Proxy)...');
 
-                                const proxyGas = await proxyDeployTx.estimateGas({ from: account });
-                                const proxyGasWithBuffer = proxyGas + (proxyGas * 20n / 100n);
-                                
-                                const deployedProxy = await proxyDeployTx.send({
-                                  from: account,
-                                  gas: proxyGasWithBuffer
-                                });
-                                
-                                const proxyAddress = deployedProxy.options.address;
-                                console.log('✅ Proxy deployed at:', proxyAddress);
-                                console.log('🎉 UUPS deployment complete!');
-                                
-                                // Set proxy as primary address
-                                setDeployedAddress(proxyAddress);
-                                setTxHash(proxyAddress);
-                                setDeployStatus('success');
-                                
-                                // Save deployment with implementation address
-                                await saveDeployment(selected.id, selected.name, proxyAddress, proxyAddress, {
-                                  implementationAddress: implAddress,
-                                  isUUPS: true
-                                });
+                                  // Step 1: Compile implementation contract
+                                  console.log('📦 Step 1: Compiling implementation...');
+                                  const implCompileResponse = await fetch(`${BACKEND_URL}/api/compile`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ contractName: compilerContractName })
+                                  });
+
+                                  if (!implCompileResponse.ok) {
+                                    const errorData = await implCompileResponse.json();
+                                    throw new Error(`Implementation compilation failed: ${errorData.error || 'Unknown error'}`);
+                                  }
+
+                                  const implArtifact = await implCompileResponse.json();
+                                  console.log('✅ Implementation compiled');
+
+                                  // Step 2: Deploy implementation (NO constructor args)
+                                  console.log('🚀 Step 2: Deploying implementation...');
+                                  const implContract = new web3.eth.Contract(implArtifact.abi);
+                                  const implDeployTx = implContract.deploy({
+                                    data: implArtifact.bytecode
+                                  });
+
+                                  let implGas;
+                                  try {
+                                    implGas = await implDeployTx.estimateGas({ from: account });
+                                    console.log('✅ Gas estimated:', implGas.toString());
+                                  } catch (gasError) {
+                                    console.log('⚠️ Gas estimation failed, using fixed limit');
+                                    implGas = BigInt(5000000);
+                                  }
+
+                                  const implGasWithBuffer = implGas + (implGas * 20n / 100n);
+                                  const deployedImpl = await implDeployTx.send({
+                                    from: account,
+                                    gas: implGasWithBuffer
+                                  });
+
+                                  const implAddress = deployedImpl.options.address;
+                                  console.log('✅ Implementation deployed at:', implAddress);
+
+                                  // Step 3: Compile proxy contract
+                                  console.log('📦 Step 3: Compiling proxy...');
+                                  const proxyCompileResponse = await fetch(`${BACKEND_URL}/api/compile`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ contractName: 'UUPSProxy' })
+                                  });
+
+                                  if (!proxyCompileResponse.ok) {
+                                    const errorData = await proxyCompileResponse.json();
+                                    throw new Error(`Proxy compilation failed: ${errorData.error || 'Unknown error'}`);
+                                  }
+
+                                  const proxyArtifact = await proxyCompileResponse.json();
+                                  console.log('✅ Proxy compiled');
+
+                                  // Step 4: Deploy proxy with (implementation, 0x)
+                                  console.log('🚀 Step 4: Deploying proxy...');
+                                  const proxyContract = new web3.eth.Contract(proxyArtifact.abi);
+                                  const proxyDeployTx = proxyContract.deploy({
+                                    data: proxyArtifact.bytecode,
+                                    arguments: [implAddress, '0x']
+                                  });
+
+                                  const proxyGas = await proxyDeployTx.estimateGas({ from: account });
+                                  const proxyGasWithBuffer = proxyGas + (proxyGas * 20n / 100n);
+
+                                  const deployedProxy = await proxyDeployTx.send({
+                                    from: account,
+                                    gas: proxyGasWithBuffer
+                                  });
+
+                                  const proxyAddress = deployedProxy.options.address;
+                                  console.log('✅ Proxy deployed at:', proxyAddress);
+                                  console.log('🎉 UUPS deployment complete!');
+
+                                  setDeployedAddress(proxyAddress);
+                                  setDeployedImplAddress(implAddress);
+                                  setTxHash(proxyAddress);
+                                  setDeployStatus('success');
+
+                                  await saveDeployment(selected.id, selected.name, proxyAddress, proxyAddress, {
+                                    implementationAddress: implAddress,
+                                    isUUPS: true
+                                  });
+
+                                } else if (uupsMode === 'deployImplOnly') {
+                                  // MODE 2: Deploy Implementation Only
+                                  console.log('🔷 Deploying Implementation Only...');
+
+                                  const implCompileResponse = await fetch(`${BACKEND_URL}/api/compile`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ contractName: compilerContractName })
+                                  });
+
+                                  if (!implCompileResponse.ok) {
+                                    const errorData = await implCompileResponse.json();
+                                    throw new Error(`Implementation compilation failed: ${errorData.error || 'Unknown error'}`);
+                                  }
+
+                                  const implArtifact = await implCompileResponse.json();
+                                  console.log('✅ Implementation compiled');
+
+                                  const implContract = new web3.eth.Contract(implArtifact.abi);
+                                  const implDeployTx = implContract.deploy({
+                                    data: implArtifact.bytecode
+                                  });
+
+                                  let implGas;
+                                  try {
+                                    implGas = await implDeployTx.estimateGas({ from: account });
+                                  } catch (gasError) {
+                                    implGas = BigInt(5000000);
+                                  }
+
+                                  const implGasWithBuffer = implGas + (implGas * 20n / 100n);
+                                  const deployedImpl = await implDeployTx.send({
+                                    from: account,
+                                    gas: implGasWithBuffer
+                                  });
+
+                                  const implAddress = deployedImpl.options.address;
+                                  console.log('✅ Implementation deployed at:', implAddress);
+
+                                  setDeployedAddress(implAddress);
+                                  setDeployedImplAddress(implAddress);
+                                  setTxHash(implAddress);
+                                  setDeployStatus('success');
+
+                                } else if (uupsMode === 'upgradeProxy') {
+                                  // MODE 3: Upgrade Existing Proxy
+                                  console.log('🔷 Upgrading existing proxy...');
+
+                                  if (!existingProxyAddress || !existingProxyAddress.startsWith('0x')) {
+                                    throw new Error('Please enter a valid proxy address');
+                                  }
+
+                                  let newImplAddress;
+
+                                  if (useExistingImpl) {
+                                    // Use existing implementation address
+                                    if (!existingImplAddress || !existingImplAddress.startsWith('0x')) {
+                                      throw new Error('Please enter a valid implementation address');
+                                    }
+                                    newImplAddress = existingImplAddress;
+                                    console.log('📍 Using existing implementation:', newImplAddress);
+                                  } else {
+                                    // Deploy new implementation first
+                                    console.log('📦 Deploying new implementation...');
+                                    const implCompileResponse = await fetch(`${BACKEND_URL}/api/compile`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ contractName: compilerContractName })
+                                    });
+
+                                    if (!implCompileResponse.ok) {
+                                      const errorData = await implCompileResponse.json();
+                                      throw new Error(`Implementation compilation failed: ${errorData.error || 'Unknown error'}`);
+                                    }
+
+                                    const implArtifact = await implCompileResponse.json();
+
+                                    const implContract = new web3.eth.Contract(implArtifact.abi);
+                                    const implDeployTx = implContract.deploy({
+                                      data: implArtifact.bytecode
+                                    });
+
+                                    let implGas;
+                                    try {
+                                      implGas = await implDeployTx.estimateGas({ from: account });
+                                    } catch (gasError) {
+                                      implGas = BigInt(5000000);
+                                    }
+
+                                    const implGasWithBuffer = implGas + (implGas * 20n / 100n);
+                                    const deployedImpl = await implDeployTx.send({
+                                      from: account,
+                                      gas: implGasWithBuffer
+                                    });
+
+                                    newImplAddress = deployedImpl.options.address;
+                                    console.log('✅ New implementation deployed at:', newImplAddress);
+                                  }
+
+                                  // Call upgradeToAndCall on the proxy
+                                  console.log('🔄 Calling upgradeToAndCall on proxy...');
+                                  const UUPS_UPGRADE_ABI = [{
+                                    "inputs": [
+                                      { "name": "newImplementation", "type": "address" },
+                                      { "name": "data", "type": "bytes" }
+                                    ],
+                                    "name": "upgradeToAndCall",
+                                    "outputs": [],
+                                    "stateMutability": "payable",
+                                    "type": "function"
+                                  }];
+
+                                  const proxyContract = new web3.eth.Contract(UUPS_UPGRADE_ABI, existingProxyAddress);
+
+                                  const upgradeTx = proxyContract.methods.upgradeToAndCall(newImplAddress, '0x');
+
+                                  let upgradeGas;
+                                  try {
+                                    upgradeGas = await upgradeTx.estimateGas({ from: account });
+                                  } catch (gasError) {
+                                    console.log('⚠️ Gas estimation failed:', gasError.message);
+                                    // Common error: not owner or upgrade not authorized
+                                    if (gasError.message.includes('revert') || gasError.message.includes('OwnableUnauthorizedAccount')) {
+                                      throw new Error('Upgrade failed: You are not the owner of this proxy, or upgrade is not authorized.');
+                                    }
+                                    upgradeGas = BigInt(200000);
+                                  }
+
+                                  const upgradeGasWithBuffer = upgradeGas + (upgradeGas * 20n / 100n);
+
+                                  await upgradeTx.send({
+                                    from: account,
+                                    gas: upgradeGasWithBuffer
+                                  });
+
+                                  console.log('✅ Proxy upgraded successfully!');
+
+                                  setDeployedAddress(existingProxyAddress);
+                                  setDeployedImplAddress(newImplAddress);
+                                  setTxHash(existingProxyAddress);
+                                  setDeployStatus('success');
+                                }
                               } else {
                                 // ====== REGULAR CONTRACT DEPLOYMENT ======
                                 console.log('📦 Compiling contract...');
@@ -2323,19 +2935,39 @@ const OpenworkDocs = () => {
                               setDeployStatus('idle');
                             }
                           }}
-                          disabled={!isAdmin || deployStatus === 'deploying' || (selected.deployConfig.type !== 'uups' && selected.deployConfig.constructor.some(p => !deployParams[p.name]))}
+                          disabled={
+                            !isAdmin ||
+                            deployStatus === 'deploying' ||
+                            (selected.deployConfig.type !== 'uups' && selected.deployConfig.constructor.some(p => !deployParams[p.name])) ||
+                            (selected.deployConfig.type === 'uups' && uupsMode === 'upgradeProxy' && !existingProxyAddress) ||
+                            (selected.deployConfig.type === 'uups' && uupsMode === 'upgradeProxy' && useExistingImpl && !existingImplAddress)
+                          }
                           className="docs-deploy-button"
                           title={!isAdmin ? 'Admin login required to deploy' : ''}
                         >
                           {deployStatus === 'deploying' ? (
                             <>
                               <div className="docs-deploy-spinner"></div>
-                              <span>Deploying...</span>
+                              <span>
+                                {selected.deployConfig.type === 'uups'
+                                  ? (uupsMode === 'deployNew' ? 'Deploying...'
+                                    : uupsMode === 'deployImplOnly' ? 'Deploying Implementation...'
+                                    : 'Upgrading Proxy...')
+                                  : 'Deploying...'}
+                              </span>
                             </>
                           ) : (
                             <>
                               <Rocket size={20} />
-                              <span>{isAdmin ? 'Deploy Contract' : 'Admin Login Required'}</span>
+                              <span>
+                                {!isAdmin
+                                  ? 'Admin Login Required'
+                                  : selected.deployConfig.type === 'uups'
+                                    ? (uupsMode === 'deployNew' ? 'Deploy Implementation + Proxy'
+                                      : uupsMode === 'deployImplOnly' ? 'Deploy Implementation'
+                                      : 'Upgrade Proxy')
+                                    : 'Deploy Contract'}
+                              </span>
                             </>
                           )}
                         </button>
