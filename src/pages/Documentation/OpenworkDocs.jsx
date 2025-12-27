@@ -2818,6 +2818,12 @@ const OpenworkDocs = () => {
                                   setTxHash(implAddress);
                                   setDeployStatus('success');
 
+                                  // Save implementation-only deployment to history
+                                  await saveDeployment(selected.id, selected.name, implAddress, implAddress, {
+                                    implementationAddress: implAddress,
+                                    isUUPS: false // Implementation only, not a proxy
+                                  });
+
                                 } else if (uupsMode === 'upgradeProxy') {
                                   // MODE 3: Upgrade Existing Proxy
                                   console.log('🔷 Upgrading existing proxy...');
@@ -2915,6 +2921,12 @@ const OpenworkDocs = () => {
                                   setDeployedImplAddress(newImplAddress);
                                   setTxHash(existingProxyAddress);
                                   setDeployStatus('success');
+
+                                  // Save upgrade to history
+                                  await saveDeployment(selected.id, selected.name, existingProxyAddress, existingProxyAddress, {
+                                    implementationAddress: newImplAddress,
+                                    isUUPS: true
+                                  });
                                 }
                               } else {
                                 // ====== REGULAR CONTRACT DEPLOYMENT ======
