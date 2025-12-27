@@ -2337,8 +2337,9 @@ const OpenworkDocs = () => {
                               setDeployStatus('idle');
                             }
                           }}
-                          disabled={deployStatus === 'deploying' || (!selected.deployConfig.type && !deployParams.initialOwner)}
+                          disabled={!isAdmin || deployStatus === 'deploying' || (!selected.deployConfig.type && !deployParams.initialOwner)}
                           className="docs-deploy-button"
+                          title={!isAdmin ? 'Admin login required to deploy' : ''}
                         >
                           {deployStatus === 'deploying' ? (
                             <>
@@ -2348,7 +2349,7 @@ const OpenworkDocs = () => {
                           ) : (
                             <>
                               <Rocket size={20} />
-                              <span>Deploy Contract</span>
+                              <span>{isAdmin ? 'Deploy Contract' : 'Admin Login Required'}</span>
                             </>
                           )}
                         </button>
