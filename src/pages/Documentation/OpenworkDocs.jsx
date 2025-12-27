@@ -127,7 +127,7 @@ const OpenworkDocs = () => {
   };
 
   // Save deployment to backend
-  const saveDeployment = async (contractId, contractName, address, txHash) => {
+  const saveDeployment = async (contractId, contractName, address, txHash, options = {}) => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/deployments`, {
         method: 'POST',
@@ -140,7 +140,9 @@ const OpenworkDocs = () => {
           chainId: currentNetwork.chainId,
           deployerAddress: account,
           transactionHash: txHash || null,
-          constructorParams: deployParams
+          constructorParams: deployParams,
+          implementationAddress: options.implementationAddress || null,
+          isUUPS: options.isUUPS || false
         })
       });
       
@@ -2232,7 +2234,16 @@ const OpenworkDocs = () => {
                                       'nativeAthena': 'NativeAthena',
                                       'nativeRewards': 'NativeRewards',
                                       'nativeBridge': 'NativeBridge',
-                                      'mainRewards': 'MainRewards'
+                                      'mainRewards': 'MainRewards',
+                                      'nativeDAO': 'NativeDAO',
+                                      'mainBridge': 'MainBridge',
+                                      'oracleManager': 'OracleManager',
+                                      'lowjcOP': 'LOWJC',
+                                      'lowjcETH': 'LOWJC',
+                                      'athenaClientOP': 'AthenaClient',
+                                      'athenaClientETH': 'AthenaClient',
+                                      'localBridgeOP': 'LocalBridge',
+                                      'localBridgeETH': 'LocalBridge'
                                     };
                                     const compilerContractName = contractNameMapping[selected.id];
 
@@ -2614,7 +2625,24 @@ const OpenworkDocs = () => {
                                 'nativeAthena': 'NativeAthena',
                                 'nativeRewards': 'NativeRewards',
                                 'nativeBridge': 'NativeBridge',
-                                'mainRewards': 'MainRewards'
+                                'mainRewards': 'MainRewards',
+                                'nativeDAO': 'NativeDAO',
+                                'mainBridge': 'MainBridge',
+                                'oracleManager': 'OracleManager',
+                                'openworkGenesis': 'OpenworkGenesis',
+                                'profileGenesis': 'ProfileGenesis',
+                                'profileManager': 'ProfileManager',
+                                'contractRegistry': 'ContractRegistry',
+                                'lowjcOP': 'LOWJC',
+                                'lowjcETH': 'LOWJC',
+                                'athenaClientOP': 'AthenaClient',
+                                'athenaClientETH': 'AthenaClient',
+                                'localBridgeOP': 'LocalBridge',
+                                'localBridgeETH': 'LocalBridge',
+                                'cctpTransceiverL2': 'CCTPTransceiver',
+                                'cctpTransceiverOP': 'CCTPTransceiver',
+                                'cctpTransceiverETH': 'CCTPTransceiver',
+                                'genesisReaderHelper': 'GenesisReaderHelper'
                               };
 
                               const compilerContractName = contractNameMapping[selected.id];

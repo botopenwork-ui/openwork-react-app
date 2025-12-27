@@ -13,7 +13,9 @@ router.post('/', (req, res) => {
       chainId,
       deployerAddress,
       transactionHash,
-      constructorParams
+      constructorParams,
+      implementationAddress,
+      isUUPS
     } = req.body;
 
     // Validate required fields
@@ -32,13 +34,16 @@ router.post('/', (req, res) => {
       });
     }
 
+    // Determine deployment type
+    const deploymentType = isUUPS ? 'uups_proxy' : 'standalone';
+
     // Insert deployment (NOT marked as current by default - admin must set it)
     const insert = db.prepare(`
       INSERT INTO deployments (
-        contract_id, contract_name, address, network_name, 
+        contract_id, contract_name, address, network_name,
         chain_id, deployer_address, transaction_hash, constructor_params,
-        deployment_type, is_current
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'standalone', 0)
+        deployment_type, is_current, implementation_address, is_proxy
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
     `);
 
     const result = insert.run(
@@ -49,10 +54,13 @@ router.post('/', (req, res) => {
       chainId,
       deployerAddress,
       transactionHash || null,
-      constructorParams ? JSON.stringify(constructorParams) : null
+      constructorParams ? JSON.stringify(constructorParams) : null,
+      deploymentType,
+      implementationAddress || null,
+      isUUPS ? 1 : 0
     );
 
-    console.log(`✅ Saved deployment: ${contractName} at ${address} on ${networkName}`);
+    console.log(`✅ Saved deployment: ${contractName} at ${address} on ${networkName}${implementationAddress ? ` (impl: ${implementationAddress})` : ''}`);
 
     res.json({
       success: true,
