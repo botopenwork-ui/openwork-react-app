@@ -1,9 +1,21 @@
 import Web3 from "web3";
 import GenesisHelperABI from "../ABIs/genesis_helper_ABI.json";
+import { getNativeChain, isMainnet } from "../config/chainConfig";
 
-// Contract addresses
-const GENESIS_HELPER_ADDRESS = import.meta.env.VITE_GENESIS_HELPER_ADDRESS || "0xCcf7Fa75C6b31f58bd43847fA6602258ee46A715";
-const RPC_URL = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+// Get addresses dynamically based on network mode
+function getAddresses() {
+  const nativeChain = getNativeChain();
+  return {
+    GENESIS_HELPER_ADDRESS: nativeChain?.contracts?.genesisReaderHelper
+  };
+}
+
+// Get RPC URL dynamically
+function getArbitrumRpc() {
+  return isMainnet()
+    ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
+    : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+}
 
 // Cache configuration
 const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
@@ -16,10 +28,13 @@ let cacheTimestamp = 0;
  * Initialize Web3 and contracts
  */
 function initializeContracts() {
+  const RPC_URL = getArbitrumRpc();
   if (!RPC_URL) {
-    throw new Error("RPC URL not configured. Please set VITE_ARBITRUM_SEPOLIA_RPC_URL in .env");
+    const envVar = isMainnet() ? "VITE_ARBITRUM_MAINNET_RPC_URL" : "VITE_ARBITRUM_SEPOLIA_RPC_URL";
+    throw new Error(`RPC URL not configured. Please set ${envVar} in .env`);
   }
 
+  const { GENESIS_HELPER_ADDRESS } = getAddresses();
   const web3 = new Web3(RPC_URL);
   const helperContract = new web3.eth.Contract(GenesisHelperABI, GENESIS_HELPER_ADDRESS);
 

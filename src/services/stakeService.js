@@ -1,10 +1,24 @@
 import Web3 from "web3";
+import { getMainChain, isMainnet } from "../config/chainConfig";
 
-// Contract addresses (Base Sepolia)
-const MAIN_DAO_ADDRESS = "0xc3579BDC6eC1fAad8a67B1Dc5542EBcf28456465";
-const OW_TOKEN_ADDRESS = "0x5f24747d5e59F9CCe5a9815BC12E2fB5Ae713679";
-const BASE_SEPOLIA_RPC = import.meta.env.VITE_BASE_SEPOLIA_RPC_URL;
-const LAYERZERO_OPTIONS_VALUE = "0x000301001101000000000000000000000000000aae60";
+// Get addresses dynamically based on network mode
+function getAddresses() {
+  const mainChain = getMainChain();
+  return {
+    MAIN_DAO_ADDRESS: mainChain?.contracts?.mainDAO,
+    OW_TOKEN_ADDRESS: mainChain?.contracts?.openworkToken
+  };
+}
+
+// Get RPC URL dynamically (Ethereum mainnet / Base Sepolia testnet)
+function getMainChainRpc() {
+  return isMainnet()
+    ? import.meta.env.VITE_ETHEREUM_MAINNET_RPC_URL
+    : import.meta.env.VITE_BASE_SEPOLIA_RPC_URL;
+}
+
+// LayerZero options (from env with fallback)
+const LAYERZERO_OPTIONS_VALUE = import.meta.env.VITE_LAYERZERO_OPTIONS_VALUE || "0x000301001101000000000000000000000000000aae60";
 
 // Minimum stake: 100 OW tokens
 const MIN_STAKE = "100000000000000000000"; // 100 * 10^18
@@ -76,9 +90,11 @@ const MAIN_DAO_ABI = [
  */
 export async function getTokenBalance(userAddress) {
   try {
-    const web3 = new Web3(BASE_SEPOLIA_RPC);
+    const MAIN_CHAIN_RPC = getMainChainRpc();
+    const { OW_TOKEN_ADDRESS } = getAddresses();
+    const web3 = new Web3(MAIN_CHAIN_RPC);
     const tokenContract = new web3.eth.Contract(ERC20_ABI, OW_TOKEN_ADDRESS);
-    
+
     const balance = await tokenContract.methods.balanceOf(userAddress).call();
     return balance.toString();
   } catch (error) {
@@ -92,9 +108,11 @@ export async function getTokenBalance(userAddress) {
  */
 export async function checkAllowance(userAddress, amount) {
   try {
-    const web3 = new Web3(BASE_SEPOLIA_RPC);
+    const MAIN_CHAIN_RPC = getMainChainRpc();
+    const { OW_TOKEN_ADDRESS, MAIN_DAO_ADDRESS } = getAddresses();
+    const web3 = new Web3(MAIN_CHAIN_RPC);
     const tokenContract = new web3.eth.Contract(ERC20_ABI, OW_TOKEN_ADDRESS);
-    
+
     const allowance = await tokenContract.methods.allowance(userAddress, MAIN_DAO_ADDRESS).call();
     return BigInt(allowance) >= BigInt(amount);
   } catch (error) {
@@ -108,12 +126,13 @@ export async function checkAllowance(userAddress, amount) {
  */
 export async function approveTokens(amount, onTxHash, onReceipt) {
   try {
+    const { OW_TOKEN_ADDRESS, MAIN_DAO_ADDRESS } = getAddresses();
     const web3 = new Web3(window.ethereum);
     const accounts = await web3.eth.getAccounts();
     const fromAddress = accounts[0];
-    
+
     const tokenContract = new web3.eth.Contract(ERC20_ABI, OW_TOKEN_ADDRESS);
-    
+
     return new Promise((resolve, reject) => {
       tokenContract.methods
         .approve(MAIN_DAO_ADDRESS, amount)
@@ -143,14 +162,16 @@ export async function approveTokens(amount, onTxHash, onReceipt) {
  */
 export async function quoteLZFees(userAddress) {
   try {
-    const web3 = new Web3(BASE_SEPOLIA_RPC);
+    const MAIN_CHAIN_RPC = getMainChainRpc();
+    const { MAIN_DAO_ADDRESS } = getAddresses();
+    const web3 = new Web3(MAIN_CHAIN_RPC);
     const daoContract = new web3.eth.Contract(MAIN_DAO_ABI, MAIN_DAO_ADDRESS);
-    
+
     const fee = await daoContract.methods.quoteGovernanceNotification(
       userAddress,
       LAYERZERO_OPTIONS_VALUE
     ).call();
-    
+
     console.log("LayerZero fee quote:", fee);
     return fee.toString();
   } catch (error) {
@@ -165,22 +186,24 @@ export async function quoteLZFees(userAddress) {
  */
 export async function executeStake(amount, durationMinutes, lzFee, onTxHash, onReceipt) {
   try {
+    const { MAIN_DAO_ADDRESS } = getAddresses();
     const web3 = new Web3(window.ethereum);
     const accounts = await web3.eth.getAccounts();
     const fromAddress = accounts[0];
-    
+
     const daoContract = new web3.eth.Contract(MAIN_DAO_ABI, MAIN_DAO_ADDRESS);
-    
+
     // Convert BigInt to string to avoid Web3.js errors
     const feeValue = typeof lzFee === 'bigint' ? lzFee.toString() : lzFee;
-    
+
     // Get gas price and convert to string
     const gasPrice = await web3.eth.getGasPrice();
     const gasPriceString = typeof gasPrice === 'bigint' ? gasPrice.toString() : gasPrice;
-    
+
     // Log all transaction parameters
     console.log("=== STAKE TRANSACTION PARAMETERS ===");
     console.log("Contract:", MAIN_DAO_ADDRESS);
+    console.log("Network:", isMainnet() ? "Ethereum Mainnet" : "Base Sepolia");
     console.log("Amount (wei):", amount);
     console.log("Amount (OW tokens):", Web3.utils.fromWei(amount, 'ether'));
     console.log("Duration (minutes):", durationMinutes);
@@ -224,9 +247,11 @@ export async function executeStake(amount, durationMinutes, lzFee, onTxHash, onR
  */
 export async function getUserStakeInfo(userAddress) {
   try {
-    const web3 = new Web3(BASE_SEPOLIA_RPC);
+    const MAIN_CHAIN_RPC = getMainChainRpc();
+    const { MAIN_DAO_ADDRESS } = getAddresses();
+    const web3 = new Web3(MAIN_CHAIN_RPC);
     const daoContract = new web3.eth.Contract(MAIN_DAO_ABI, MAIN_DAO_ADDRESS);
-    
+
     const stakeInfo = await daoContract.methods.getStakerInfo(userAddress).call();
     
     return {

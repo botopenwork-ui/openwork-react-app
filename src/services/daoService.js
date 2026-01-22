@@ -2,18 +2,35 @@ import Web3 from "web3";
 import NativeDAOABI from "../ABIs/native-dao_ABI.json";
 import MainDAOABI from "../ABIs/main-dao_ABI.json";
 import GenesisABI from "../ABIs/genesis_ABI.json";
+import { getNativeChain, getMainChain, isMainnet } from "../config/chainConfig";
 
-// Contract addresses
-const NATIVE_DAO_ADDRESS = "0x21451dCE07Ad3Ab638Ec71299C1D2BD2064b90E5"; // Arbitrum Sepolia
-const MAIN_DAO_ADDRESS = "0xc3579BDC6eC1fAad8a67B1Dc5542EBcf28456465"; // Base Sepolia
-const GENESIS_ADDRESS = "0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C"; // Arbitrum Sepolia
+// Get addresses dynamically based on network mode
+function getAddresses() {
+  const nativeChain = getNativeChain();
+  const mainChain = getMainChain();
+  return {
+    NATIVE_DAO_ADDRESS: nativeChain?.contracts?.nativeDAO,
+    MAIN_DAO_ADDRESS: mainChain?.contracts?.mainDAO,
+    GENESIS_ADDRESS: nativeChain?.contracts?.genesis
+  };
+}
 
 // Backend API URL
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3001';
 
-// RPC URLs
-const ARBITRUM_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
-const BASE_RPC = import.meta.env.VITE_BASE_SEPOLIA_RPC_URL;
+// Get RPC URLs dynamically based on network mode
+function getRpcUrls() {
+  if (isMainnet()) {
+    return {
+      ARBITRUM_RPC: import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL,
+      MAIN_CHAIN_RPC: import.meta.env.VITE_ETHEREUM_MAINNET_RPC_URL // Ethereum on mainnet
+    };
+  }
+  return {
+    ARBITRUM_RPC: import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL,
+    MAIN_CHAIN_RPC: import.meta.env.VITE_BASE_SEPOLIA_RPC_URL // Base on testnet
+  };
+}
 
 // Cache configuration
 const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
@@ -34,15 +51,19 @@ export async function getDAOStats(userAddress, forceRefresh = false) {
   }
 
   try {
-    console.log("Fetching DAO stats from both chains...");
+    console.log("Fetching DAO stats from both chains...", isMainnet() ? "(mainnet)" : "(testnet)");
+
+    // Get dynamic addresses and RPC URLs
+    const { NATIVE_DAO_ADDRESS, MAIN_DAO_ADDRESS, GENESIS_ADDRESS } = getAddresses();
+    const { ARBITRUM_RPC, MAIN_CHAIN_RPC } = getRpcUrls();
 
     // Initialize contracts
     const arbWeb3 = new Web3(ARBITRUM_RPC);
-    const baseWeb3 = new Web3(BASE_RPC);
+    const mainChainWeb3 = new Web3(MAIN_CHAIN_RPC);
 
     const genesisContract = new arbWeb3.eth.Contract(GenesisABI, GENESIS_ADDRESS);
     const nativeDAOContract = new arbWeb3.eth.Contract(NativeDAOABI, NATIVE_DAO_ADDRESS);
-    const mainDAOContract = new baseWeb3.eth.Contract(MainDAOABI, MAIN_DAO_ADDRESS);
+    const mainDAOContract = new mainChainWeb3.eth.Contract(MainDAOABI, MAIN_DAO_ADDRESS);
 
     // Fetch data in parallel
     const [oracleCount, nativeStakers, mainStakers, userMainStake] = await Promise.all([
@@ -55,7 +76,7 @@ export async function getDAOStats(userAddress, forceRefresh = false) {
     // Combine member counts
     const totalMembers = new Set([...nativeStakers, ...mainStakers]).size;
 
-    // User's current stakings (from Main DAO on Base)
+    // User's current stakings (from Main DAO - Ethereum on mainnet, Base on testnet)
     const userStakeAmount = userMainStake.hasStake 
       ? Web3.utils.fromWei(userMainStake.amount, 'ether')
       : "0";
@@ -97,13 +118,20 @@ export async function getAllProposals(forceRefresh = false) {
   }
 
   try {
-    console.log("Fetching proposals from both chains and database...");
+    console.log("Fetching proposals from both chains and database...", isMainnet() ? "(mainnet)" : "(testnet)");
+
+    // Get dynamic addresses and RPC URLs
+    const { NATIVE_DAO_ADDRESS, MAIN_DAO_ADDRESS } = getAddresses();
+    const { ARBITRUM_RPC, MAIN_CHAIN_RPC } = getRpcUrls();
+
+    // Get main chain name for database lookup
+    const mainChainName = isMainnet() ? "Ethereum" : "Base";
 
     const arbWeb3 = new Web3(ARBITRUM_RPC);
-    const baseWeb3 = new Web3(BASE_RPC);
+    const mainChainWeb3 = new Web3(MAIN_CHAIN_RPC);
 
     const nativeDAOContract = new arbWeb3.eth.Contract(NativeDAOABI, NATIVE_DAO_ADDRESS);
-    const mainDAOContract = new baseWeb3.eth.Contract(MainDAOABI, MAIN_DAO_ADDRESS);
+    const mainDAOContract = new mainChainWeb3.eth.Contract(MainDAOABI, MAIN_DAO_ADDRESS);
 
     // Fetch from both blockchain and database in parallel
     const [nativeProposals, mainProposals, dbProposalsResponse] = await Promise.all([
@@ -234,12 +262,12 @@ export async function getAllProposals(forceRefresh = false) {
         }
         
         // Check if this proposal has database metadata
-        const dbKey = `${proposalId.toString()}-Base`;
+        const dbKey = `${proposalId.toString()}-${mainChainName}`;
         const dbData = dbProposalsMap.get(dbKey);
-        
+
         formattedProposals.push({
           id: proposalId.toString(),
-          chain: "Base",
+          chain: mainChainName,
           state: Number(mainProposals.states[i]),
           title: dbData?.title || `Proposal ${proposalId.toString().substring(0, 8)}...`,
           proposedBy: dbData?.proposer_address ? `${dbData.proposer_address.substring(0, 6)}...${dbData.proposer_address.substring(38)}` : "Main DAO",
@@ -247,7 +275,7 @@ export async function getAllProposals(forceRefresh = false) {
           type: dbData?.proposal_type || getProposalType(Number(mainProposals.states[i])),
           timeLeft: timeLeft,
           color: getStateColor(Number(mainProposals.states[i])),
-          viewUrl: `/proposal-view/${proposalId.toString()}/Base`,
+          viewUrl: `/proposal-view/${proposalId.toString()}/${mainChainName}`,
           hasMetadata: !!dbData
         });
       }
@@ -305,14 +333,18 @@ function getStateColor(state) {
  */
 export async function getAllDAOMembers(forceRefresh = false) {
   try {
-    console.log("Fetching DAO members from both chains...");
+    console.log("Fetching DAO members from both chains...", isMainnet() ? "(mainnet)" : "(testnet)");
+
+    // Get dynamic addresses and RPC URLs
+    const { NATIVE_DAO_ADDRESS, MAIN_DAO_ADDRESS, GENESIS_ADDRESS } = getAddresses();
+    const { ARBITRUM_RPC, MAIN_CHAIN_RPC } = getRpcUrls();
 
     const arbWeb3 = new Web3(ARBITRUM_RPC);
-    const baseWeb3 = new Web3(BASE_RPC);
+    const mainChainWeb3 = new Web3(MAIN_CHAIN_RPC);
 
     const genesisContract = new arbWeb3.eth.Contract(GenesisABI, GENESIS_ADDRESS);
     const nativeDAOContract = new arbWeb3.eth.Contract(NativeDAOABI, NATIVE_DAO_ADDRESS);
-    const mainDAOContract = new baseWeb3.eth.Contract(MainDAOABI, MAIN_DAO_ADDRESS);
+    const mainDAOContract = new mainChainWeb3.eth.Contract(MainDAOABI, MAIN_DAO_ADDRESS);
 
     // Get all member addresses from both DAOs
     const [nativeStakers, mainStakers] = await Promise.all([
@@ -412,11 +444,11 @@ function formatTimeSince(timestamp) {
 /**
  * Get detailed proposal information
  * @param {string} proposalId - The proposal ID
- * @param {string} chain - The chain name ("Arbitrum" or "Base")
+ * @param {string} chain - The chain name ("Arbitrum" for native, "Base"/"Ethereum" for main chain)
  */
 export async function getProposalDetails(proposalId, chain) {
   try {
-    console.log(`Fetching proposal ${proposalId} from ${chain}...`);
+    console.log(`Fetching proposal ${proposalId} from ${chain}...`, isMainnet() ? "(mainnet)" : "(testnet)");
 
     // Try to fetch from database first
     let dbProposal = null;
@@ -431,11 +463,17 @@ export async function getProposalDetails(proposalId, chain) {
       console.log('📡 Proposal not in database, fetching from blockchain only');
     }
 
+    // Get dynamic addresses and RPC URLs
+    const { NATIVE_DAO_ADDRESS, MAIN_DAO_ADDRESS } = getAddresses();
+    const { ARBITRUM_RPC, MAIN_CHAIN_RPC } = getRpcUrls();
+
     // Determine which contract and RPC to use
-    const isArbitrum = chain === "Arbitrum";
-    const web3 = new Web3(isArbitrum ? ARBITRUM_RPC : BASE_RPC);
-    const contractAddress = isArbitrum ? NATIVE_DAO_ADDRESS : MAIN_DAO_ADDRESS;
-    const contractABI = isArbitrum ? NativeDAOABI : MainDAOABI;
+    // On mainnet: Arbitrum is native, Ethereum is main
+    // On testnet: Arbitrum is native, Base is main
+    const isNativeChain = chain === "Arbitrum";
+    const web3 = new Web3(isNativeChain ? ARBITRUM_RPC : MAIN_CHAIN_RPC);
+    const contractAddress = isNativeChain ? NATIVE_DAO_ADDRESS : MAIN_DAO_ADDRESS;
+    const contractABI = isNativeChain ? NativeDAOABI : MainDAOABI;
     const daoContract = new web3.eth.Contract(contractABI, contractAddress);
 
     // Fetch proposal data in parallel

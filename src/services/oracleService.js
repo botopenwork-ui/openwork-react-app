@@ -3,13 +3,25 @@ import GenesisABI from "../ABIs/genesis_ABI.json";
 import NativeAthenaABI from "../ABIs/native-athena_ABI.json";
 import NativeDAOABI from "../ABIs/native-dao_ABI.json";
 import NativeRewardsABI from "../ABIs/native-rewards_ABI.json";
+import { getNativeChain, isMainnet } from "../config/chainConfig";
 
-// Contract addresses
-const GENESIS_ADDRESS = import.meta.env.VITE_GENESIS_CONTRACT_ADDRESS || "0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C";
-const ATHENA_ADDRESS = import.meta.env.VITE_NATIVE_ATHENA_ADDRESS || "0x098E52Aff44AEAd944AFf86F4A5b90dbAF5B86bd";
-const DAO_ADDRESS = import.meta.env.VITE_NATIVE_DAO_ADDRESS || "0x21451dCE07Ad3Ab638Ec71299C1D2BD2064b90E5";
-const REWARDS_ADDRESS = import.meta.env.VITE_NATIVE_REWARDS_ADDRESS || "0x947cAd64a26Eae5F82aF68b7Dbf8b457a8f492De";
-const RPC_URL = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+// Get addresses dynamically based on network mode
+function getAddresses() {
+  const nativeChain = getNativeChain();
+  return {
+    GENESIS_ADDRESS: nativeChain?.contracts?.genesis,
+    ATHENA_ADDRESS: nativeChain?.contracts?.nativeAthena,
+    DAO_ADDRESS: nativeChain?.contracts?.nativeDAO,
+    REWARDS_ADDRESS: nativeChain?.contracts?.nativeRewards
+  };
+}
+
+// Get RPC URL dynamically
+function getArbitrumRpc() {
+  return isMainnet()
+    ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
+    : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+}
 
 // Cache configuration
 const CACHE_DURATION = {
@@ -31,10 +43,13 @@ const cache = {
  * Initialize Web3 and contracts
  */
 function initializeContracts() {
+  const RPC_URL = getArbitrumRpc();
   if (!RPC_URL) {
-    throw new Error("RPC URL not configured. Please set VITE_ARBITRUM_SEPOLIA_RPC_URL in .env");
+    const envVar = isMainnet() ? "VITE_ARBITRUM_MAINNET_RPC_URL" : "VITE_ARBITRUM_SEPOLIA_RPC_URL";
+    throw new Error(`RPC URL not configured. Please set ${envVar} in .env`);
   }
 
+  const { GENESIS_ADDRESS, ATHENA_ADDRESS, DAO_ADDRESS, REWARDS_ADDRESS } = getAddresses();
   const web3 = new Web3(RPC_URL);
 
   const genesisContract = new web3.eth.Contract(GenesisABI, GENESIS_ADDRESS);

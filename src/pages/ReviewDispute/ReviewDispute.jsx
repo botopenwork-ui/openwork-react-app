@@ -9,9 +9,23 @@ import BlueButton from "../../components/BlueButton/BlueButton";
 import VoteBar from "../../components/VoteBar/VoteBar";
 import Warning from "../../components/Warning/Warning";
 import { formatAddress } from "../../utils/oracleHelpers";
+import { getNativeChain, isMainnet } from "../../config/chainConfig";
 
-// Native Athena contract address on Arbitrum Sepolia
-const NATIVE_ATHENA_ADDRESS = "0x098E52Aff44AEAd944AFf86F4A5b90dbAF5B86bd";
+// Get Native Athena address dynamically
+function getNativeAthenaAddress() {
+  const nativeChain = getNativeChain();
+  return nativeChain?.contracts?.nativeAthena;
+}
+
+// Get expected chain ID for native chain
+function getNativeChainId() {
+  return isMainnet() ? 42161 : 421614;
+}
+
+// Get native chain name
+function getNativeChainName() {
+  return isMainnet() ? "Arbitrum One" : "Arbitrum Sepolia";
+}
 
 function JobdetailItem ({title, icon , amount, token}) {
   return (
@@ -176,7 +190,7 @@ export default function ReviewDispute() {
         const feeAmount = (Number(disputeData.fees) / 1e6).toFixed(2);
 
         // Fetch voting period from contract
-        const nativeAthenaContract = new web3.eth.Contract(NativeAthenaABI, NATIVE_ATHENA_ADDRESS);
+        const nativeAthenaContract = new web3.eth.Contract(NativeAthenaABI, getNativeAthenaAddress());
         const votingPeriodMinutes = Number(await nativeAthenaContract.methods.votingPeriodMinutes().call());
         
         // Calculate time remaining
@@ -270,21 +284,22 @@ export default function ReviewDispute() {
       const web3 = new Web3(window.ethereum);
       await window.ethereum.request({ method: "eth_requestAccounts" });
       
-      // Check if user is on Arbitrum Sepolia
+      // Check if user is on the correct native chain
       const chainId = await web3.eth.getChainId();
-      const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
-      
-      if (Number(chainId) !== ARBITRUM_SEPOLIA_CHAIN_ID) {
-        setErrorMessage(`Please switch to Arbitrum Sepolia network. Current Chain ID: ${chainId}, Required: 421614`);
+      const expectedChainId = getNativeChainId();
+      const chainName = getNativeChainName();
+
+      if (Number(chainId) !== expectedChainId) {
+        setErrorMessage(`Please switch to ${chainName} network. Current Chain ID: ${chainId}, Required: ${expectedChainId}`);
         setLoadingT("");
         return;
       }
-      
+
       const accounts = await web3.eth.getAccounts();
       const fromAddress = accounts[0];
 
       // Create Native Athena contract instance
-      const nativeAthena = new web3.eth.Contract(NativeAthenaABI, NATIVE_ATHENA_ADDRESS);
+      const nativeAthena = new web3.eth.Contract(NativeAthenaABI, getNativeAthenaAddress());
 
       // Use Promise-based approach with proper event handling
       return new Promise((resolve, reject) => {
@@ -365,21 +380,22 @@ export default function ReviewDispute() {
       const web3 = new Web3(window.ethereum);
       await window.ethereum.request({ method: "eth_requestAccounts" });
       
-      // Check if user is on Arbitrum Sepolia
+      // Check if user is on the correct native chain
       const chainId = await web3.eth.getChainId();
-      const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
-      
-      if (Number(chainId) !== ARBITRUM_SEPOLIA_CHAIN_ID) {
-        setErrorMessage(`Please switch to Arbitrum Sepolia network. Current Chain ID: ${chainId}, Required: 421614`);
+      const expectedChainId = getNativeChainId();
+      const chainName = getNativeChainName();
+
+      if (Number(chainId) !== expectedChainId) {
+        setErrorMessage(`Please switch to ${chainName} network. Current Chain ID: ${chainId}, Required: ${expectedChainId}`);
         setLoadingT("");
         return;
       }
-      
+
       const accounts = await web3.eth.getAccounts();
       const fromAddress = accounts[0];
 
       // Create Native Athena contract instance
-      const nativeAthena = new web3.eth.Contract(NativeAthenaABI, NATIVE_ATHENA_ADDRESS);
+      const nativeAthena = new web3.eth.Contract(NativeAthenaABI, getNativeAthenaAddress());
 
       // Use Promise-based approach with proper event handling
       const receipt = await new Promise((resolve, reject) => {
@@ -603,8 +619,8 @@ export default function ReviewDispute() {
                   ✅ {successMessage}
                 </p>
                 {txHash && (
-                  <a 
-                    href={`https://sepolia.arbiscan.io/tx/${txHash}`}
+                  <a
+                    href={isMainnet() ? `https://arbiscan.io/tx/${txHash}` : `https://sepolia.arbiscan.io/tx/${txHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ fontSize: '12px', color: '#0047FF', textDecoration: 'underline' }}

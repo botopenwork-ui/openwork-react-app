@@ -1,11 +1,33 @@
 import Web3 from "web3";
 import GenesisHelperABI from "../ABIs/genesis_helper_ABI.json";
+import { getNativeChain, isMainnet } from "../config/chainConfig";
 
-// Contract addresses
-const GENESIS_HELPER_V3_ADDRESS = "0x7aE451A29BB3871F05C6C9951EC912EfCdE94a5a"; // Arbitrum Sepolia
-const GENESIS_HELPER_V4_ADDRESS = "0x9B16b4211a05912E312541513Ea847d4756f1589"; // Arbitrum Sepolia
-const GENESIS_ADDRESS = "0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C"; // Arbitrum Sepolia
-const ARBITRUM_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+// Get addresses dynamically based on network mode
+function getAddresses() {
+  const nativeChain = getNativeChain();
+  // Genesis Helper addresses - these are read-only helper contracts
+  // Note: GenesisReaderHelper is deployed on mainnet, use it for both V3/V4 purposes
+  if (isMainnet()) {
+    return {
+      GENESIS_HELPER_ADDRESS: nativeChain?.contracts?.genesisReaderHelper,
+      GENESIS_ADDRESS: nativeChain?.contracts?.genesis
+    };
+  }
+  // Testnet uses separate V3/V4 helpers
+  return {
+    GENESIS_HELPER_V3_ADDRESS: "0x7aE451A29BB3871F05C6C9951EC912EfCdE94a5a", // Arbitrum Sepolia
+    GENESIS_HELPER_V4_ADDRESS: "0x9B16b4211a05912E312541513Ea847d4756f1589", // Arbitrum Sepolia
+    GENESIS_HELPER_ADDRESS: "0x9B16b4211a05912E312541513Ea847d4756f1589", // Use V4 as default
+    GENESIS_ADDRESS: nativeChain?.contracts?.genesis
+  };
+}
+
+// Get RPC URL dynamically
+function getArbitrumRpc() {
+  return isMainnet()
+    ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
+    : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+}
 
 // Cache configuration
 const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
@@ -25,10 +47,12 @@ export async function getInProgressJobs(forceRefresh = false) {
   }
 
   try {
-    console.log("Fetching in-progress jobs from blockchain...");
-    
+    console.log("Fetching in-progress jobs from blockchain...", isMainnet() ? "(mainnet)" : "(testnet)");
+
+    const ARBITRUM_RPC = getArbitrumRpc();
+    const { GENESIS_HELPER_ADDRESS, GENESIS_HELPER_V3_ADDRESS } = getAddresses();
     const web3 = new Web3(ARBITRUM_RPC);
-    const helperContract = new web3.eth.Contract(GenesisHelperABI, GENESIS_HELPER_V3_ADDRESS);
+    const helperContract = new web3.eth.Contract(GenesisHelperABI, GENESIS_HELPER_ADDRESS || GENESIS_HELPER_V3_ADDRESS);
 
     // Get all in-progress jobs in one call
     const jobs = await helperContract.methods.getInProgressJobs().call();
@@ -137,10 +161,12 @@ export async function getUserJobs(userAddress) {
  */
 export async function getAllApplications(forceRefresh = false) {
   try {
-    console.log("Fetching all applications from blockchain...");
-    
+    console.log("Fetching all applications from blockchain...", isMainnet() ? "(mainnet)" : "(testnet)");
+
+    const ARBITRUM_RPC = getArbitrumRpc();
+    const { GENESIS_HELPER_ADDRESS, GENESIS_HELPER_V4_ADDRESS, GENESIS_ADDRESS } = getAddresses();
     const web3 = new Web3(ARBITRUM_RPC);
-    const helperV4 = new web3.eth.Contract(GenesisHelperABI, GENESIS_HELPER_V4_ADDRESS);
+    const helperV4 = new web3.eth.Contract(GenesisHelperABI, GENESIS_HELPER_ADDRESS || GENESIS_HELPER_V4_ADDRESS);
     const genesisABI = (await import("../ABIs/genesis_ABI.json")).default;
     const genesis = new web3.eth.Contract(genesisABI, GENESIS_ADDRESS);
 

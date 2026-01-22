@@ -1,19 +1,37 @@
 import Web3 from "web3";
+import { getNativeChain, getMainChain, isMainnet } from "../config/chainConfig";
 
-// Contract Addresses
-const MAIN_DAO_ADDRESS = "0xc3579BDC6eC1fAad8a67B1Dc5542EBcf28456465"; // Base Sepolia
-const NATIVE_DAO_ADDRESS = "0x21451dCE07Ad3Ab638Ec71299C1D2BD2064b90E5"; // Arbitrum Sepolia
-const MAIN_BRIDGE_ADDRESS = "0x70d30e5dAb5005b126C040f1D9b0bDDBc16679b0"; // Base Sepolia
+// Get addresses dynamically based on network mode
+function getAddresses() {
+  const nativeChain = getNativeChain();
+  const mainChain = getMainChain();
+  return {
+    MAIN_DAO_ADDRESS: mainChain?.contracts?.mainDAO,
+    NATIVE_DAO_ADDRESS: nativeChain?.contracts?.nativeDAO,
+    MAIN_BRIDGE_ADDRESS: mainChain?.contracts?.mainBridge,
+    NATIVE_ATHENA_ADDRESS: nativeChain?.contracts?.nativeAthena
+  };
+}
 
 // Backend API URL
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3001';
 
-// RPC URLs
-const BASE_SEPOLIA_RPC = import.meta.env.VITE_BASE_SEPOLIA_RPC_URL;
-const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+// Get RPC URLs dynamically based on network mode
+function getRpcUrls() {
+  if (isMainnet()) {
+    return {
+      MAIN_CHAIN_RPC: import.meta.env.VITE_ETHEREUM_MAINNET_RPC_URL, // Ethereum on mainnet
+      ARBITRUM_RPC: import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
+    };
+  }
+  return {
+    MAIN_CHAIN_RPC: import.meta.env.VITE_BASE_SEPOLIA_RPC_URL, // Base on testnet
+    ARBITRUM_RPC: import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL
+  };
+}
 
 // LayerZero options for Main DAO cross-chain messaging
-const LAYERZERO_OPTIONS = "0x000301001101000000000000000000000000000aae60";
+const LAYERZERO_OPTIONS = import.meta.env.VITE_LAYERZERO_OPTIONS_VALUE || "0x000301001101000000000000000000000000000aae60";
 
 /**
  * Calculate proposal ID deterministically (OpenZeppelin Governor formula)
@@ -210,25 +228,29 @@ const NATIVE_DAO_ABI = [
 ];
 
 /**
- * Initialize Web3 and Main DAO contract (Base Sepolia)
+ * Initialize Web3 and Main DAO contract (Ethereum mainnet / Base testnet)
  */
 function initializeMainDAO() {
-  const web3 = new Web3(BASE_SEPOLIA_RPC);
+  const { MAIN_CHAIN_RPC } = getRpcUrls();
+  const { MAIN_DAO_ADDRESS } = getAddresses();
+  const web3 = new Web3(MAIN_CHAIN_RPC);
   const mainDAOContract = new web3.eth.Contract(MAIN_DAO_ABI, MAIN_DAO_ADDRESS);
   return { web3, mainDAOContract };
 }
 
 /**
- * Initialize Web3 and Native DAO contract (Arbitrum Sepolia)
+ * Initialize Web3 and Native DAO contract (Arbitrum One mainnet / Arbitrum Sepolia testnet)
  */
 function initializeNativeDAO() {
-  const web3 = new Web3(ARBITRUM_SEPOLIA_RPC);
+  const { ARBITRUM_RPC } = getRpcUrls();
+  const { NATIVE_DAO_ADDRESS } = getAddresses();
+  const web3 = new Web3(ARBITRUM_RPC);
   const nativeDAOContract = new web3.eth.Contract(NATIVE_DAO_ABI, NATIVE_DAO_ADDRESS);
   return { web3, nativeDAOContract };
 }
 
 /**
- * Check if user is eligible to propose on Main DAO (Base Sepolia)
+ * Check if user is eligible to propose on Main DAO
  */
 export async function checkMainDAOEligibility(userAddress) {
   try {
@@ -311,12 +333,16 @@ export async function createMainDAOProposal({
       throw new Error("Connected wallet does not match user address");
     }
 
-    // Check user is on Base Sepolia
+    // Check user is on the correct main chain (Ethereum mainnet / Base Sepolia testnet)
     const chainId = await web3.eth.getChainId();
-    if (Number(chainId) !== 84532) { // Base Sepolia chain ID (handle BigInt)
-      throw new Error("Please switch to Base Sepolia network");
+    const expectedMainChainId = isMainnet() ? 1 : 84532; // Ethereum mainnet or Base Sepolia
+    const mainChainName = isMainnet() ? "Ethereum" : "Base Sepolia";
+    if (Number(chainId) !== expectedMainChainId) {
+      throw new Error(`Please switch to ${mainChainName} network`);
     }
 
+    // Get dynamic addresses
+    const { MAIN_DAO_ADDRESS } = getAddresses();
     const mainDAOContract = new web3.eth.Contract(MAIN_DAO_ABI, MAIN_DAO_ADDRESS);
 
     // Estimate LayerZero fee
@@ -452,12 +478,16 @@ export async function createNativeDAOProposal({
       throw new Error("Connected wallet does not match user address");
     }
 
-    // Check user is on Arbitrum Sepolia
+    // Check user is on the correct native chain (Arbitrum One mainnet / Arbitrum Sepolia testnet)
     const chainId = await web3.eth.getChainId();
-    if (Number(chainId) !== 421614) { // Arbitrum Sepolia chain ID (handle BigInt)
-      throw new Error("Please switch to Arbitrum Sepolia network");
+    const expectedNativeChainId = isMainnet() ? 42161 : 421614;
+    const nativeChainName = isMainnet() ? "Arbitrum One" : "Arbitrum Sepolia";
+    if (Number(chainId) !== expectedNativeChainId) {
+      throw new Error(`Please switch to ${nativeChainName} network`);
     }
 
+    // Get dynamic addresses
+    const { NATIVE_DAO_ADDRESS } = getAddresses();
     const nativeDAOContract = new web3.eth.Contract(NATIVE_DAO_ABI, NATIVE_DAO_ADDRESS);
 
     console.log("=== NATIVE DAO PROPOSAL PARAMETERS ===");
@@ -515,12 +545,16 @@ export async function createUpgradeProposal({
       throw new Error("Connected wallet does not match user address");
     }
 
-    // Check user is on Base Sepolia
+    // Check user is on the correct main chain (Ethereum mainnet / Base Sepolia testnet)
     const chainId = await web3.eth.getChainId();
-    if (Number(chainId) !== 84532) {
-      throw new Error("Please switch to Base Sepolia network");
+    const expectedMainChainId = isMainnet() ? 1 : 84532;
+    const mainChainName = isMainnet() ? "Ethereum" : "Base Sepolia";
+    if (Number(chainId) !== expectedMainChainId) {
+      throw new Error(`Please switch to ${mainChainName} network`);
     }
 
+    // Get dynamic addresses
+    const { MAIN_DAO_ADDRESS } = getAddresses();
     const mainDAOContract = new web3.eth.Contract(MAIN_DAO_ABI, MAIN_DAO_ADDRESS);
 
     // Estimate LayerZero fee
@@ -663,12 +697,16 @@ export async function createGenericMainDAOProposal({
       throw new Error("Connected wallet does not match user address");
     }
 
-    // Check user is on Base Sepolia
+    // Check user is on the correct main chain (Ethereum mainnet / Base Sepolia testnet)
     const chainId = await web3.eth.getChainId();
-    if (Number(chainId) !== 84532) {
-      throw new Error("Please switch to Base Sepolia network");
+    const expectedMainChainId = isMainnet() ? 1 : 84532;
+    const mainChainName = isMainnet() ? "Ethereum" : "Base Sepolia";
+    if (Number(chainId) !== expectedMainChainId) {
+      throw new Error(`Please switch to ${mainChainName} network`);
     }
 
+    // Get dynamic addresses
+    const { MAIN_DAO_ADDRESS } = getAddresses();
     const mainDAOContract = new web3.eth.Contract(MAIN_DAO_ABI, MAIN_DAO_ADDRESS);
 
     // Estimate LayerZero fee
@@ -745,11 +783,16 @@ export async function castMainDAOVote({ proposalId, support, userAddress }) {
       throw new Error("Connected wallet does not match user address");
     }
 
+    // Check user is on the correct main chain (Ethereum mainnet / Base Sepolia testnet)
     const chainId = await web3.eth.getChainId();
-    if (Number(chainId) !== 84532) {
-      throw new Error("Please switch to Base Sepolia network");
+    const expectedMainChainId = isMainnet() ? 1 : 84532;
+    const mainChainName = isMainnet() ? "Ethereum" : "Base Sepolia";
+    if (Number(chainId) !== expectedMainChainId) {
+      throw new Error(`Please switch to ${mainChainName} network`);
     }
 
+    // Get dynamic addresses
+    const { MAIN_DAO_ADDRESS } = getAddresses();
     const mainDAOContract = new web3.eth.Contract(MAIN_DAO_ABI, MAIN_DAO_ADDRESS);
     const fee = await mainDAOContract.methods.quoteGovernanceNotification(fromAddress, LAYERZERO_OPTIONS).call();
 
@@ -793,20 +836,30 @@ export async function executeProposal({
       throw new Error("Connected wallet does not match user address");
     }
 
-    const isBase = chain === 'Base';
-    const requiredChainId = isBase ? 84532 : 421614;
+    // Determine chain type and required chain ID
+    // On mainnet: Main chain is Ethereum (1), Native chain is Arbitrum (42161)
+    // On testnet: Main chain is Base (84532), Native chain is Arbitrum Sepolia (421614)
+    const isMainChain = chain === 'Base' || chain === 'Ethereum';
+    const requiredChainId = isMainChain
+      ? (isMainnet() ? 1 : 84532)
+      : (isMainnet() ? 42161 : 421614);
     const chainId = await web3.eth.getChainId();
-    
+    const expectedChainName = isMainChain
+      ? (isMainnet() ? "Ethereum" : "Base Sepolia")
+      : (isMainnet() ? "Arbitrum One" : "Arbitrum Sepolia");
+
     if (Number(chainId) !== requiredChainId) {
-      throw new Error(`Please switch to ${chain} Sepolia network`);
+      throw new Error(`Please switch to ${expectedChainName} network`);
     }
 
     // Hash the description
     const descriptionHash = web3.utils.keccak256(description);
-    
+
+    // Get dynamic addresses
+    const { MAIN_DAO_ADDRESS, NATIVE_DAO_ADDRESS } = getAddresses();
     const daoContract = new web3.eth.Contract(
-      isBase ? MAIN_DAO_ABI : NATIVE_DAO_ABI,
-      isBase ? MAIN_DAO_ADDRESS : NATIVE_DAO_ADDRESS
+      isMainChain ? MAIN_DAO_ABI : NATIVE_DAO_ABI,
+      isMainChain ? MAIN_DAO_ADDRESS : NATIVE_DAO_ADDRESS
     );
 
     console.log("=== EXECUTING PROPOSAL ===");
@@ -837,7 +890,7 @@ export async function executeProposal({
 }
 
 /**
- * Cast vote on Native DAO proposal (Arbitrum Sepolia)
+ * Cast vote on Native DAO proposal (Arbitrum One mainnet / Arbitrum Sepolia testnet)
  */
 export async function castNativeDAOVote({ proposalId, support, userAddress }) {
   try {
@@ -845,19 +898,24 @@ export async function castNativeDAOVote({ proposalId, support, userAddress }) {
 
     const web3 = new Web3(window.ethereum);
     await window.ethereum.request({ method: "eth_requestAccounts" });
-    
+
     const accounts = await web3.eth.getAccounts();
     const fromAddress = accounts[0];
-    
+
     if (fromAddress.toLowerCase() !== userAddress.toLowerCase()) {
       throw new Error("Connected wallet does not match user address");
     }
 
+    // Check user is on the correct native chain (Arbitrum One mainnet / Arbitrum Sepolia testnet)
     const chainId = await web3.eth.getChainId();
-    if (Number(chainId) !== 421614) {
-      throw new Error("Please switch to Arbitrum Sepolia network");
+    const expectedChainId = isMainnet() ? 42161 : 421614;
+    const networkName = isMainnet() ? "Arbitrum One" : "Arbitrum Sepolia";
+    if (Number(chainId) !== expectedChainId) {
+      throw new Error(`Please switch to ${networkName} network`);
     }
 
+    // Get dynamic addresses
+    const { NATIVE_DAO_ADDRESS } = getAddresses();
     const nativeDAOContract = new web3.eth.Contract(NATIVE_DAO_ABI, NATIVE_DAO_ADDRESS);
 
     return new Promise((resolve, reject) => {
@@ -903,16 +961,17 @@ export async function createOracleProposal({
       throw new Error("Connected wallet does not match user address");
     }
 
-    // Check user is on Arbitrum Sepolia
+    // Check user is on the correct native chain (Arbitrum One for mainnet, Arbitrum Sepolia for testnet)
     const chainId = await web3.eth.getChainId();
-    if (Number(chainId) !== 421614) {
-      throw new Error("Please switch to Arbitrum Sepolia network");
+    const expectedChainId = isMainnet() ? 42161 : 421614;
+    const networkName = isMainnet() ? "Arbitrum One" : "Arbitrum Sepolia";
+    if (Number(chainId) !== expectedChainId) {
+      throw new Error(`Please switch to ${networkName} network`);
     }
 
+    // Get dynamic addresses
+    const { NATIVE_DAO_ADDRESS, NATIVE_ATHENA_ADDRESS } = getAddresses();
     const nativeDAOContract = new web3.eth.Contract(NATIVE_DAO_ABI, NATIVE_DAO_ADDRESS);
-
-    // Native Athena address (target contract)
-    const NATIVE_ATHENA_ADDRESS = "0x098E52Aff44AEAd944AFf86F4A5b90dbAF5B86bd";
 
     // Encode the addSingleOracle function call
     const web3Instance = new Web3();
@@ -1057,16 +1116,17 @@ export async function createOracleMemberRecruitmentProposal({
       throw new Error("Connected wallet does not match user address");
     }
 
-    // Check user is on Arbitrum Sepolia
+    // Check user is on the correct native chain (Arbitrum One for mainnet, Arbitrum Sepolia for testnet)
     const chainId = await web3.eth.getChainId();
-    if (Number(chainId) !== 421614) {
-      throw new Error("Please switch to Arbitrum Sepolia network");
+    const expectedChainId = isMainnet() ? 42161 : 421614;
+    const networkName = isMainnet() ? "Arbitrum One" : "Arbitrum Sepolia";
+    if (Number(chainId) !== expectedChainId) {
+      throw new Error(`Please switch to ${networkName} network`);
     }
 
+    // Get dynamic addresses
+    const { NATIVE_DAO_ADDRESS, NATIVE_ATHENA_ADDRESS } = getAddresses();
     const nativeDAOContract = new web3.eth.Contract(NATIVE_DAO_ABI, NATIVE_DAO_ADDRESS);
-
-    // Native Athena address (target contract)
-    const NATIVE_ATHENA_ADDRESS = "0x098E52Aff44AEAd944AFf86F4A5b90dbAF5B86bd";
 
     // Encode the addMembers function call
     const web3Instance = new Web3();
@@ -1227,16 +1287,17 @@ export async function createOracleMemberRemovalProposal({
       throw new Error("Connected wallet does not match user address");
     }
 
-    // Check user is on Arbitrum Sepolia
+    // Check user is on the correct native chain (Arbitrum One for mainnet, Arbitrum Sepolia for testnet)
     const chainId = await web3.eth.getChainId();
-    if (Number(chainId) !== 421614) {
-      throw new Error("Please switch to Arbitrum Sepolia network");
+    const expectedChainId = isMainnet() ? 42161 : 421614;
+    const networkName = isMainnet() ? "Arbitrum One" : "Arbitrum Sepolia";
+    if (Number(chainId) !== expectedChainId) {
+      throw new Error(`Please switch to ${networkName} network`);
     }
 
+    // Get dynamic addresses
+    const { NATIVE_DAO_ADDRESS, NATIVE_ATHENA_ADDRESS } = getAddresses();
     const nativeDAOContract = new web3.eth.Contract(NATIVE_DAO_ABI, NATIVE_DAO_ADDRESS);
-
-    // Native Athena address (target contract)
-    const NATIVE_ATHENA_ADDRESS = "0x098E52Aff44AEAd944AFf86F4A5b90dbAF5B86bd";
 
     // Encode the removeMemberFromOracle function call
     const web3Instance = new Web3();
@@ -1365,6 +1426,5 @@ export default {
   castNativeDAOVote,
   executeProposal,
   encodeFunctionCall,
-  MAIN_DAO_ADDRESS,
-  NATIVE_DAO_ADDRESS
+  getAddresses // Export for consumers that need addresses dynamically
 };

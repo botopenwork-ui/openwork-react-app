@@ -1,23 +1,162 @@
 require('dotenv').config();
 
-module.exports = {
-  // RPC URLs
-  ETHEREUM_SEPOLIA_RPC: process.env.ETHEREUM_SEPOLIA_RPC_URL,
-  OP_SEPOLIA_RPC: process.env.OP_SEPOLIA_RPC_URL,
-  ARBITRUM_SEPOLIA_RPC: process.env.ARBITRUM_SEPOLIA_RPC_URL,
-  BASE_SEPOLIA_RPC: process.env.BASE_SEPOLIA_RPC_URL,
+/**
+ * OpenWork Backend Configuration
+ * Supports both testnet and mainnet via NETWORK_MODE env variable
+ */
 
-  // Contract Addresses
-  LOWJC_ADDRESS: process.env.LOWJC_CONTRACT_ADDRESS,
-  NOWJC_ADDRESS: process.env.NOWJC_CONTRACT_ADDRESS,
-  CCTP_TRANSCEIVER_ADDRESS: process.env.CCTP_TRANSCEIVER_ADDRESS,
-  MESSAGE_TRANSMITTER_ADDRESS: process.env.MESSAGE_TRANSMITTER_ADDRESS,
+// Get network mode from environment (default: testnet)
+const NETWORK_MODE = process.env.NETWORK_MODE === 'mainnet' ? 'mainnet' : 'testnet';
+const isMainnet = () => NETWORK_MODE === 'mainnet';
+
+// ============================================================
+// RPC URLs
+// ============================================================
+const RPC_URLS = {
+  testnet: {
+    ETHEREUM: process.env.ETHEREUM_SEPOLIA_RPC_URL,
+    OPTIMISM: process.env.OPTIMISM_SEPOLIA_RPC_URL,
+    ARBITRUM: process.env.ARBITRUM_SEPOLIA_RPC_URL,
+    BASE: process.env.BASE_SEPOLIA_RPC_URL
+  },
+  mainnet: {
+    ETHEREUM: process.env.ETHEREUM_MAINNET_RPC_URL,
+    OPTIMISM: process.env.OPTIMISM_MAINNET_RPC_URL,
+    ARBITRUM: process.env.ARBITRUM_MAINNET_RPC_URL
+  }
+};
+
+// ============================================================
+// Contract Addresses
+// ============================================================
+const CONTRACT_ADDRESSES = {
+  testnet: {
+    // Arbitrum Sepolia (Native Chain)
+    GENESIS: '0x00Fad82208A77232510cE16CBB63c475A914C95a',
+    NOWJC: '0x39158a9F92faB84561205B05223929eFF131455e',
+    NATIVE_ATHENA: '0x2d9C882C450B5e992C1F5bE5f0594654ae4B4f1f',
+    NATIVE_REWARDS: '0xaf2661D3430311b5372fda7ef60d099C1CdaFaf0',
+    NATIVE_BRIDGE: '0x4E8A3Cb25BbE74C44fD9b731e214e6A5c5CAF502',
+    CCTP_ARB: '0x959d0fc6dD8efCf764BD3B0bbaC191F2D7Dd03f1',
+    // OP Sepolia (Local Chain)
+    LOWJC_OP: '0x36aAEAbF2C04F1BecD520CF34Ef62783a9A446Db',
+    LOCAL_ATHENA_OP: '0xed81395eb69ac568f92188948C1CC1adfD595361',
+    LOCAL_BRIDGE_OP: '0xc0a7B2a893Be5Fd4E4Fee8485744bF7AA321F28b',
+    CCTP_OP: '0x3c820FE16F7B85BA193527E5ca64dd3193F6ABB3',
+    // ETH Sepolia (Local Chain)
+    LOWJC_ETH: '0x3b4cE6441aB77437e306F396c83779A2BC8E5134',
+    LOCAL_ATHENA_ETH: '0xA08a6E73397EaE0A3Df9eb528d9118ae4AF80fcf',
+    LOCAL_BRIDGE_ETH: '0xb9AD7758d2B5c80cAd30b471D07a8351653d24eb',
+    // USDC
+    USDC_ARB: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d',
+    USDC_OP: '0x5fd84259d66Cd46123540766Be93DFE6D43130D7',
+    USDC_ETH: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+    // Message Transmitters (CCTP)
+    MESSAGE_TRANSMITTER_ARB: '0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275',
+    MESSAGE_TRANSMITTER_OP: '0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275'
+  },
+  mainnet: {
+    // Arbitrum One (Native Chain)
+    GENESIS: '0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294',
+    NOWJC: '0x8EfbF240240613803B9c9e716d4b5AD1388aFd99',
+    NATIVE_ATHENA: '0xE6B9d996b56162cD7eDec3a83aE72943ee7C46Bf',
+    NATIVE_REWARDS: '0x5cF21bFb944B6851048F9ac18a8C84F6323a8ce7',
+    NATIVE_BRIDGE: '0xF78B688846673C3f6b93184BeC230d982c0db0c9',
+    CCTP_ARB: '0x765D70496Ef775F6ba1cB7465c2e0B296eB50d87',
+    // Optimism (Local Chain)
+    LOWJC_OP: '0x5cF21bFb944B6851048F9ac18a8C84F6323a8ce7',
+    LOCAL_ATHENA_OP: '0x4756294bE516f73e8D1984E7a94E4ABaffA94c4d',
+    LOCAL_BRIDGE_OP: '0x74566644782e98c87a12E8Fc6f7c4c72e2908a36',
+    CCTP_OP: '0x00c70838cA0de7F1Eb192Bd7a11A7F2e14407510',
+    // Ethereum Mainnet (Main Chain - governance only)
+    MAIN_DAO: '0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294',
+    MAIN_REWARDS: '0x4756294bE516f73e8D1984E7a94E4ABaffA94c4d',
+    MAIN_BRIDGE: '0x20Fa268106A3C532cF9F733005Ab48624105c42F',
+    OPENWORK_TOKEN: '0x765D70496Ef775F6ba1cB7465c2e0B296eB50d87',
+    // USDC
+    USDC_ARB: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+    USDC_OP: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',
+    // Message Transmitters (CCTP V2)
+    MESSAGE_TRANSMITTER_ARB: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
+    MESSAGE_TRANSMITTER_OP: '0x4D41f22c5a0e5c74090899E5a8Fb597a8842b3e8'
+  }
+};
+
+// ============================================================
+// CCTP Domains
+// ============================================================
+const CCTP_DOMAINS = {
+  testnet: {
+    ETHEREUM: 0,
+    OPTIMISM: 2,
+    ARBITRUM: 3,
+    BASE: 6
+  },
+  mainnet: {
+    ETHEREUM: 0,
+    OPTIMISM: 2,
+    ARBITRUM: 3
+  }
+};
+
+// ============================================================
+// Circle API URLs
+// ============================================================
+const CIRCLE_API_URLS = {
+  testnet: 'https://iris-api-sandbox.circle.com/v2/messages',
+  mainnet: 'https://iris-api.circle.com/v2/messages'
+};
+
+// ============================================================
+// Helper Functions
+// ============================================================
+function getRpcUrl(chain) {
+  return RPC_URLS[NETWORK_MODE][chain];
+}
+
+function getContractAddress(name) {
+  return CONTRACT_ADDRESSES[NETWORK_MODE][name];
+}
+
+function getCctpDomain(chain) {
+  return CCTP_DOMAINS[NETWORK_MODE][chain];
+}
+
+// ============================================================
+// Export Configuration
+// ============================================================
+module.exports = {
+  // Network Mode
+  NETWORK_MODE,
+  isMainnet,
+
+  // RPC URLs (dynamic based on mode)
+  ETHEREUM_RPC: getRpcUrl('ETHEREUM'),
+  OPTIMISM_RPC: getRpcUrl('OPTIMISM'),
+  ARBITRUM_RPC: getRpcUrl('ARBITRUM'),
+  BASE_RPC: getRpcUrl('BASE'),
+
+  // Legacy aliases for backward compatibility
+  ETHEREUM_SEPOLIA_RPC: RPC_URLS.testnet.ETHEREUM,
+  OP_SEPOLIA_RPC: RPC_URLS.testnet.OPTIMISM,
+  ARBITRUM_SEPOLIA_RPC: RPC_URLS.testnet.ARBITRUM,
+  BASE_SEPOLIA_RPC: RPC_URLS.testnet.BASE,
+
+  // Contract Addresses (dynamic)
+  GENESIS_ADDRESS: getContractAddress('GENESIS'),
+  NOWJC_ADDRESS: getContractAddress('NOWJC'),
+  NATIVE_ATHENA_ADDRESS: getContractAddress('NATIVE_ATHENA'),
+  LOWJC_OP_ADDRESS: getContractAddress('LOWJC_OP'),
+  CCTP_ARB_ADDRESS: getContractAddress('CCTP_ARB'),
+  CCTP_OP_ADDRESS: getContractAddress('CCTP_OP'),
+  MESSAGE_TRANSMITTER_ARB: getContractAddress('MESSAGE_TRANSMITTER_ARB'),
+  MESSAGE_TRANSMITTER_OP: getContractAddress('MESSAGE_TRANSMITTER_OP'),
 
   // Service Wallet
   WALL2_PRIVATE_KEY: process.env.WALL2_PRIVATE_KEY,
 
   // Circle API
-  CIRCLE_API_BASE_URL: process.env.CIRCLE_API_BASE_URL || 'https://iris-api-sandbox.circle.com/v2/messages',
+  CIRCLE_API_BASE_URL: CIRCLE_API_URLS[NETWORK_MODE],
 
   // Server Configuration
   PORT: process.env.PORT || 3001,
@@ -32,15 +171,15 @@ module.exports = {
   EVENT_DETECTION_TIMEOUT: parseInt(process.env.EVENT_DETECTION_TIMEOUT) || 300000,
   CCTP_ATTESTATION_TIMEOUT: parseInt(process.env.CCTP_ATTESTATION_TIMEOUT) || 300000,
 
-  // CCTP Domains (for reference - use chain-utils.js for dynamic detection)
-  DOMAINS: {
-    ETHEREUM_SEPOLIA: 0,
-    OP_SEPOLIA: 2,
-    ARBITRUM_SEPOLIA: 3,
-    BASE_SEPOLIA: 6
-  },
+  // CCTP Domains
+  DOMAINS: CCTP_DOMAINS[NETWORK_MODE],
 
-  // Contract ABIs (minimal required functions)
+  // Helper functions
+  getRpcUrl,
+  getContractAddress,
+  getCctpDomain,
+
+  // Contract ABIs (unchanged)
   ABIS: {
     CCTP_TRANSCEIVER: [
       {

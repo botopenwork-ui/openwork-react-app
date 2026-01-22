@@ -1,62 +1,94 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { isMainnet } from '../config/chainConfig';
 
 /**
  * Custom hook for reliable chain detection and switching
  * Single source of truth for all chain-related state and operations
+ * Supports both testnet and mainnet based on VITE_NETWORK_MODE
  */
 export function useChainDetection(walletAddress) {
   const [currentChainId, setCurrentChainId] = useState(null);
   const [isDetecting, setIsDetecting] = useState(true);
   const [isSwitching, setIsSwitching] = useState(false);
 
-  // Supported chains configuration
-  const SUPPORTED_CHAINS = {
-    421614: { name: 'Arbitrum', icon: '/arbitrum-chain.png', fullName: 'Arbitrum Sepolia' },
-    11155111: { name: 'Ethereum', icon: '/ethereum-chain.png', fullName: 'Ethereum Sepolia' },
-    80002: { name: 'Polygon', icon: '/polygon-chain.png', fullName: 'Polygon Amoy' },
-    11155420: { name: 'Optimism', icon: '/optimism-chain.png', fullName: 'OP Sepolia' },
-    84532: { name: 'Base', icon: '/base-chain.png', fullName: 'Base Sepolia' }
-  };
+  // Supported chains configuration - varies by network mode
+  const SUPPORTED_CHAINS = useMemo(() => {
+    if (isMainnet()) {
+      return {
+        42161: { name: 'Arbitrum', icon: '/arbitrum-chain.png', fullName: 'Arbitrum One' },
+        10: { name: 'Optimism', icon: '/optimism-chain.png', fullName: 'Optimism' },
+        1: { name: 'Ethereum', icon: '/ethereum-chain.png', fullName: 'Ethereum' }
+      };
+    }
+    // Testnet
+    return {
+      421614: { name: 'Arbitrum', icon: '/arbitrum-chain.png', fullName: 'Arbitrum Sepolia' },
+      11155111: { name: 'Ethereum', icon: '/ethereum-chain.png', fullName: 'Ethereum Sepolia' },
+      11155420: { name: 'Optimism', icon: '/optimism-chain.png', fullName: 'OP Sepolia' },
+      84532: { name: 'Base', icon: '/base-chain.png', fullName: 'Base Sepolia' }
+    };
+  }, []);
 
   // Get chain config for adding to MetaMask
   const getChainConfig = useCallback((chainId) => {
-    const configs = {
+    // Mainnet configs
+    const mainnetConfigs = {
+      42161: {
+        chainId: `0x${(42161).toString(16)}`,
+        chainName: 'Arbitrum One',
+        nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+        rpcUrls: ['https://arb1.arbitrum.io/rpc'],
+        blockExplorerUrls: ['https://arbiscan.io']
+      },
+      10: {
+        chainId: `0x${(10).toString(16)}`,
+        chainName: 'Optimism',
+        nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+        rpcUrls: ['https://mainnet.optimism.io'],
+        blockExplorerUrls: ['https://optimistic.etherscan.io']
+      },
+      1: {
+        chainId: `0x${(1).toString(16)}`,
+        chainName: 'Ethereum',
+        nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+        rpcUrls: ['https://eth.llamarpc.com'],
+        blockExplorerUrls: ['https://etherscan.io']
+      }
+    };
+
+    // Testnet configs
+    const testnetConfigs = {
       421614: {
-        chainId: `0x${chainId.toString(16)}`,
+        chainId: `0x${(421614).toString(16)}`,
         chainName: 'Arbitrum Sepolia',
         nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
         rpcUrls: ['https://sepolia-rollup.arbitrum.io/rpc'],
         blockExplorerUrls: ['https://sepolia.arbiscan.io']
       },
       11155111: {
-        chainId: `0x${chainId.toString(16)}`,
+        chainId: `0x${(11155111).toString(16)}`,
         chainName: 'Ethereum Sepolia',
         nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
         rpcUrls: ['https://rpc.sepolia.org'],
         blockExplorerUrls: ['https://sepolia.etherscan.io']
       },
-      80002: {
-        chainId: `0x${chainId.toString(16)}`,
-        chainName: 'Polygon Amoy',
-        nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
-        rpcUrls: ['https://rpc-amoy.polygon.technology'],
-        blockExplorerUrls: ['https://amoy.polygonscan.com']
-      },
       11155420: {
-        chainId: `0x${chainId.toString(16)}`,
+        chainId: `0x${(11155420).toString(16)}`,
         chainName: 'OP Sepolia',
         nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
         rpcUrls: ['https://sepolia.optimism.io'],
         blockExplorerUrls: ['https://sepolia-optimism.etherscan.io']
       },
       84532: {
-        chainId: `0x${chainId.toString(16)}`,
+        chainId: `0x${(84532).toString(16)}`,
         chainName: 'Base Sepolia',
         nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
         rpcUrls: ['https://sepolia.base.org'],
         blockExplorerUrls: ['https://sepolia.basescan.org']
       }
     };
+
+    const configs = isMainnet() ? mainnetConfigs : testnetConfigs;
     return configs[chainId];
   }, []);
 
@@ -81,9 +113,9 @@ export function useChainDetection(walletAddress) {
       // Step 2: Get current chain ID
       const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
       const chainId = parseInt(chainIdHex, 16);
-      
-      console.log('🔍 Detected Chain ID:', chainId);
-      
+
+      console.log('🔍 Detected Chain ID:', chainId, isMainnet() ? '(mainnet mode)' : '(testnet mode)');
+
       // Step 3: Update state
       setCurrentChainId(chainId);
       setIsDetecting(false);
@@ -97,8 +129,8 @@ export function useChainDetection(walletAddress) {
 
   // Switch to a different chain
   const switchToChain = useCallback(async (targetChainId) => {
-    console.trace('⚠️ switchToChain called with:', targetChainId, '- Call stack:');
-    
+    console.log('🔄 switchToChain called with:', targetChainId, isMainnet() ? '(mainnet)' : '(testnet)');
+
     if (!window.ethereum) {
       alert('Please install MetaMask');
       return false;
@@ -121,40 +153,45 @@ export function useChainDetection(walletAddress) {
 
     try {
       console.log('🔄 Switching to chain:', targetChainId);
-      
+
       // Try to switch
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: chainIdHex }]
       });
-      
+
       console.log('✅ Successfully switched to chain:', targetChainId);
       setIsSwitching(false);
       return true;
-      
+
     } catch (switchError) {
       // Chain not added to MetaMask
       if (switchError.code === 4902) {
         console.log('📝 Chain not found, adding...');
-        
+
         try {
           const config = getChainConfig(targetChainId);
+          if (!config) {
+            alert('Chain configuration not found');
+            setIsSwitching(false);
+            return false;
+          }
           await window.ethereum.request({
             method: 'wallet_addEthereumChain',
             params: [config]
           });
-          
+
           console.log('✅ Successfully added and switched to chain:', targetChainId);
           setIsSwitching(false);
           return true;
-          
+
         } catch (addError) {
           console.error('🔴 Error adding chain:', addError);
           alert(`Failed to add network. Please add it manually in MetaMask.`);
           setIsSwitching(false);
           return false;
         }
-      } 
+      }
       // User rejected
       else if (switchError.code === 4001) {
         console.log('❌ User rejected network switch');
@@ -176,12 +213,12 @@ export function useChainDetection(walletAddress) {
     if (walletAddress) {
       console.log('🚀 Wallet connected, detecting chain...');
       setIsDetecting(true);
-      
+
       // Small delay to ensure wallet state is settled
       const timer = setTimeout(() => {
         detectCurrentChain();
       }, 150);
-      
+
       return () => clearTimeout(timer);
     } else {
       console.log('⚠️ Wallet disconnected');
@@ -227,6 +264,7 @@ export function useChainDetection(walletAddress) {
     isDetecting,
     isSwitching,
     switchToChain,
-    supportedChains: SUPPORTED_CHAINS
+    supportedChains: SUPPORTED_CHAINS,
+    isMainnetMode: isMainnet()
   };
 }
