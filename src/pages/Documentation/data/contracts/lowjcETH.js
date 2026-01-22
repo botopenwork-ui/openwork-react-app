@@ -4,8 +4,8 @@ export const lowjcETH = {
   chain: 'eth',
   column: 'eth-main',
   order: 0,
-  status: 'testnet',
-  version: 'v1.0.0',
+  status: 'mainnet-ready',
+  version: 'v2.0.0',
   gas: '23K',
   mainnetNetwork: 'Ethereum Mainnet',
   testnetNetwork: 'Ethereum Sepolia',
@@ -1147,7 +1147,7 @@ await lowjc.releasePaymentCrossChain(
     'Event logging: Complete audit trail of all job activities'
   ],
   
-  code: `// Same implementation as lowjcOP - see: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/lowjc.sol
+  code: `// Same implementation as lowjcOP - see: contracts/mainnet-ready/local/local-openwork-job-contract.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 

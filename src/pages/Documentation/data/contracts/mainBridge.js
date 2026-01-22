@@ -4,8 +4,8 @@ export const mainBridge = {
   chain: 'base',
   column: 'base-main',
   order: 3,
-  status: 'testnet',
-  version: 'v1.0.0',
+  status: 'mainnet-ready',
+  version: 'v2.0.0',
   gas: '72K',
   mainnetNetwork: 'Ethereum Mainnet',
   testnetNetwork: 'Base Sepolia',
@@ -864,7 +864,7 @@ await mainBridge.sendToThreeChains(
     'Refund mechanism: Returns excess fees to prevent lock-up'
   ],
   
-  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/main-chain-bridge.sol
+  code: `// Full implementation: contracts/mainnet-ready/eth/eth-lz-openwork-bridge.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;

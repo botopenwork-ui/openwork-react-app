@@ -4,8 +4,8 @@ export const nativeBridge = {
   chain: 'l2',
   column: 'l2-left',
   order: 2,
-  status: 'testnet',
-  version: 'v1.0.0',
+  status: 'mainnet-ready',
+  version: 'v2.0.0',
   gas: '67K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
@@ -878,7 +878,7 @@ console.log("Authorized chains:", chains);`,
     'Revert on unknown: Rejects messages with unrecognized function names'
   ],
   
-  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/native-bridge.sol
+  code: `// Full implementation: contracts/mainnet-ready/native/native-lz-openwork-bridge.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;

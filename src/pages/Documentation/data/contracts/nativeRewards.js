@@ -4,8 +4,8 @@ export const nativeRewards = {
   chain: 'l2',
   column: 'l2-right',
   order: 1,
-  status: 'testnet',
-  version: 'v2.0.0',
+  status: 'mainnet-ready',
+  version: 'v3.0.0',
   gas: '34K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
@@ -26,6 +26,9 @@ export const nativeRewards = {
   },
   
   features: [
+    'SINGLE SOURCE OF TRUTH: getRewardBasedVotingPower() provides centralized voting power for NativeDAO',
+    'Team tokens pool: 150M team tokens with governance-unlocked claiming',
+    'syncVotingPower(): Cross-chain voting power sync to ETH DAO (moved from NOWJC)',
     '20 progressive reward bands: Each distributing 30M OW tokens (600M total)',
     'Decreasing rates: From 300 OW/USDT (early) to ~0.01 OW/USDT (late stage)',
     'Governance unlock mechanism: Earned tokens locked until user votes/proposes',
@@ -35,7 +38,8 @@ export const nativeRewards = {
     'NOWJC-only access: All state changes controlled by job contract',
     'Dual referrer sources: ProfileGenesis (primary) with Genesis fallback',
     'Platform growth tracking: Automatically advances through bands as volume grows',
-    'Anti-gaming design: No direct claims, governance-gated unlocks'
+    'Anti-gaming design: No direct claims, governance-gated unlocks',
+    'Team token security: Allocations can only be increased, never reduced'
   ],
   
   systemPosition: {
@@ -716,7 +720,7 @@ await nowjc.syncRewardsData(lzOptions, { value: lzFee });`,
     'ProfileGenesis integration: flexible referral system with fallback'
   ],
   
-  code: `// Full implementation: contracts/openwork-full-contract-suite-26-Dec-version/native-rewards.sol
+  code: `// Full implementation: contracts/mainnet-ready/native/native-rewards-contract.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;

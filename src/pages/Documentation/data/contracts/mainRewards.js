@@ -4,8 +4,8 @@ export const mainRewards = {
   chain: 'base',
   column: 'base-main',
   order: 2,
-  status: 'testnet',
-  version: 'v1.0.0',
+  status: 'mainnet-ready',
+  version: 'v2.0.0',
   gas: '180K',
   mainnetNetwork: 'Ethereum Mainnet',
   testnetNetwork: 'Base Sepolia',
@@ -805,7 +805,7 @@ if (referrer !== ethers.ZeroAddress) {
     'Owner powers: Can set bridge, DAO, token addresses'
   ],
   
-  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/main-rewards.sol
+  code: `// Full implementation: contracts/mainnet-ready/eth/eth-rewards-contract.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;

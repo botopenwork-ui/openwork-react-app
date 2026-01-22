@@ -4,8 +4,8 @@ export const cctpTransceiverL2 = {
   chain: 'l2',
   column: 'l2-right',
   order: 2,
-  status: 'testnet',
-  version: 'v2.0 Dynamic (Rewards)',
+  status: 'mainnet-ready',
+  version: 'v3.0 Dynamic (Rewards)',
   gas: '150K (with rewards)',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
@@ -850,7 +850,7 @@ const CCTP_DOMAINS = {
     'Reward pool monitoring: Owner must monitor balance and refill regularly'
   ],
   
-  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/cctp-v2-ft-transceiver-with-rewards-dynamic.sol
+  code: `// Full implementation: contracts/mainnet-ready/utilities/cctp-transceiver.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;

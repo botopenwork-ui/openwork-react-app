@@ -4,8 +4,8 @@ export const contractRegistry = {
   chain: 'l2',
   column: 'l2-center',
   order: 3,
-  status: 'testnet',
-  version: 'v1.0.0',
+  status: 'mainnet-ready',
+  version: 'v2.0.0',
   gas: '32K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
@@ -513,7 +513,7 @@ console.log("Total registered contracts:", count);`,
     'Trust model: Frontend trusts registry for correct addresses'
   ],
   
-  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/openwork-contract-registry.sol
+  code: `// Full implementation: contracts/mainnet-ready/native/native-contract-registry.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;

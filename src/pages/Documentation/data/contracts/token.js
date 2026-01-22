@@ -4,8 +4,8 @@ export const token = {
   chain: 'base',
   column: 'base-main',
   order: 0,
-  status: 'testnet',
-  version: 'v1.0.0',
+  status: 'mainnet-ready',
+  version: 'v2.0.0',
   gas: '2.1M',
   mainnetNetwork: 'Ethereum Mainnet',
   testnetNetwork: 'Base Sepolia',
@@ -29,15 +29,15 @@ export const token = {
     'Standard ERC20: Transfer, approve, transferFrom, balanceOf, totalSupply',
     'ERC20Permit: Gasless approvals via signatures (no approval transaction needed)',
     'ERC20Votes: Delegation, checkpoints, voting power tracking for governance',
-    'Minting: Owner can mint new tokens to increase supply',
+    'LEGAL COMPLIANCE: Constructor auto-distributes tokens (owner receives ZERO)',
+    '75% (750M) → Main Rewards: 600M earned + 150M team locked, governance-unlocked',
+    '25% (250M) → DAO Treasury: preseed + treasury + team free, controlled by DAO',
+    'DAO-only minting: Only mainDAO address can mint new tokens',
     'Burning: Token holders can burn their own tokens',
     'BurnFrom: Burn tokens from another account (requires allowance)',
     'Vote delegation: Users delegate voting power without transferring tokens',
     'Historical balances: Track voting power at specific block numbers',
-    'Nonces: Per-user nonces for permit signatures',
-    'Initial supply: 1 billion tokens minted to owner at deployment',
-    'Governor compatible: Works with OpenZeppelin Governor contracts',
-    'Ownable: Owner controls minting and administrative functions'
+    'Governor compatible: Works with OpenZeppelin Governor contracts'
   ],
   
   systemPosition: {

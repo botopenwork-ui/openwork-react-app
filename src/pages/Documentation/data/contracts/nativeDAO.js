@@ -4,8 +4,8 @@ export const nativeDAO = {
   chain: 'l2',
   column: 'l2-right',
   order: 0,
-  status: 'testnet',
-  version: 'v1.0.0',
+  status: 'mainnet-ready',
+  version: 'v2.0.0',
   gas: '45K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
@@ -26,9 +26,10 @@ export const nativeDAO = {
   },
   
   features: [
+    'VOTING-POWER-FIX: Uses NativeRewardsContract as single source of truth for reward-based voting power',
     'Main DAO mirror: Receives and stores stake data from Main DAO via LayerZero bridge',
     'No direct staking: Users stake on Main DAO (Ethereum), data synced to Native DAO automatically',
-    'Dual voting power: Combined power from staked tokens (time-weighted) and earned tokens',
+    'Dual voting power: Combined power from staked tokens (time-weighted) and earned tokens + team tokens',
     'Time-weighted calculation: Voting power = (stake amount × duration in minutes) + earned tokens',
     'Earned token integration: Automatic voting power from job payments and governance participation',
     'Local eligibility checks: Native Athena queries Native DAO to verify voter eligibility',
@@ -714,7 +715,8 @@ if (isUnlocked) {
     'Delegation is non-custodial - delegator retains token ownership'
   ],
   
-  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/native-dao.sol
+  code: `// Full implementation: contracts/mainnet-ready/native/native-openwork-dao.sol
+// VOTING-POWER-FIX: Now uses rewardsContract.getRewardBasedVotingPower() for centralized voting power
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;

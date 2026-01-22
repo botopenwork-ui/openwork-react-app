@@ -4,8 +4,8 @@ export const profileGenesis = {
   chain: 'l2',
   column: 'l2-center',
   order: 1,
-  status: 'testnet',
-  version: 'v1.0.0',
+  status: 'mainnet-ready',
+  version: 'v2.0.0',
   gas: '85K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
@@ -629,7 +629,7 @@ const batch = await profileGenesis.getProfileAddressesBatch(0, 100);`,
     'IPFS hashes: User responsible for maintaining IPFS content availability'
   ],
   
-  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/profile-genesis.sol
+  code: `// Full implementation: contracts/mainnet-ready/native/native-profile-genesis.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;

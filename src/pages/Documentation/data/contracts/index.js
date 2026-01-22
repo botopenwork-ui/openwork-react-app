@@ -23,6 +23,7 @@ import { athenaClientETH } from './athenaClientETH';
 import { localBridgeETH } from './localBridgeETH';
 import { cctpTransceiverETH } from './cctpTransceiverETH';
 import { genesisReaderHelper } from './genesisReaderHelper';
+import { activityTracker } from './activityTracker';
 
 // Export aggregated contracts data
 export const contractsData = {
@@ -49,5 +50,6 @@ export const contractsData = {
   athenaClientETH,
   localBridgeETH,
   cctpTransceiverETH,
-  genesisReaderHelper
+  genesisReaderHelper,
+  activityTracker
 };

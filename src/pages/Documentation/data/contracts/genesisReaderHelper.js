@@ -4,8 +4,8 @@ export const genesisReaderHelper = {
   chain: 'l2',
   column: 'l2-center',
   order: 1,
-  status: 'testnet',
-  version: 'v1.0.0',
+  status: 'mainnet-ready',
+  version: 'v2.0.0',
   gas: '50K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
@@ -565,7 +565,7 @@ console.log('Fetched batch:', skillBatch.length);`,
     'Pure queries: Cannot modify blockchain state'
   ],
   
-  code: `// See full implementation in contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/genesis-reader-helper.sol
+  code: `// See full implementation in contracts/mainnet-ready/native/native-genesis-reader.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;

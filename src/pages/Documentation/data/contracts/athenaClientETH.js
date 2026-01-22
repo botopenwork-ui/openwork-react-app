@@ -4,8 +4,8 @@ export const athenaClientETH = {
   chain: 'eth',
   column: 'eth-main',
   order: 1,
-  status: 'testnet',
-  version: 'v1.0.0',
+  status: 'mainnet-ready',
+  version: 'v2.0.0',
   gas: '45K',
   mainnetNetwork: 'Ethereum Mainnet',
   testnetNetwork: 'Ethereum Sepolia',
@@ -785,7 +785,7 @@ console.log("Is Finalized:", disputeInfo.isFinalized);`,
     'Event logging: Complete audit trail of disputes and oracle activity'
   ],
   
-  code: `// Same implementation as athenaClientOP - see: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/athena-client.sol
+  code: `// Same implementation as athenaClientOP - see: contracts/mainnet-ready/local/local-athena.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 

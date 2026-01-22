@@ -4,8 +4,8 @@ export const oracleManager = {
   chain: 'l2',
   column: 'l2-left',
   order: 3,
-  status: 'testnet',
-  version: 'v1.0.0',
+  status: 'mainnet-ready',
+  version: 'v2.0.0',
   gas: '45K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
@@ -630,7 +630,7 @@ await nativeAthena.removeOracleMember(
     'Oracle deletion: Sets to empty state, doesn\'t truly delete from storage'
   ],
   
-  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/native-athena-oracle-manager.sol
+  code: `// Full implementation: contracts/mainnet-ready/native/native-athena-oracle-manager.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;

@@ -4,8 +4,8 @@ export const nowjc = {
   chain: 'l2',
   column: 'l2-left',
   order: 0,
-  status: 'testnet',
-  version: 'v2.0.0',
+  status: 'mainnet-ready',
+  version: 'v3.0.0',
   gas: '56K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
@@ -815,7 +815,7 @@ console.log('Rewards synced to Main chain for claiming');`,
     'Accumulated commission tracking prevents double-withdrawal'
   ],
   
-  code: `// Full implementation available in: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/nowjc.sol
+  code: `// Full implementation available in: contracts/mainnet-ready/native/native-openwork-job-contract.sol
 // This is a truncated version showing key structure - see repository for complete code
 
 // SPDX-License-Identifier: MIT

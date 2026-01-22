@@ -4,8 +4,8 @@ export const openworkGenesis = {
   chain: 'l2',
   column: 'l2-center',
   order: 0,
-  status: 'testnet',
-  version: 'v1.0.0',
+  status: 'mainnet-ready',
+  version: 'v2.0.0',
   gas: '120K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
@@ -773,7 +773,7 @@ const allStakers = await genesis.getAllStakers();`,
     'Emergency recovery: Owner can revoke malicious contract authorization'
   ],
   
-  code: `// Full implementation: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/openwork-genesis.sol
+  code: `// Full implementation: contracts/mainnet-ready/native/native-openwork-genesis.sol
 // Truncated version showing key structure
 
 // SPDX-License-Identifier: MIT

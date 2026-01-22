@@ -4,8 +4,8 @@ export const localBridgeETH = {
   chain: 'eth',
   column: 'eth-main',
   order: 2,
-  status: 'testnet',
-  version: 'v1.0.0',
+  status: 'mainnet-ready',
+  version: 'v2.0.0',
   gas: '65K',
   mainnetNetwork: 'Ethereum Mainnet',
   testnetNetwork: 'Ethereum Sepolia',
@@ -680,7 +680,7 @@ await localBridge.sendToNativeChain(
     'Upgrade flow: Main DAO → Main Bridge → Local Bridge → Local Contract'
   ],
   
-  code: `// Same implementation as localBridgeOP - see: contracts/openwork-full-contract-suite-layerzero+CCTP 2 Dec/local-bridge.sol
+  code: `// Same implementation as localBridgeOP - see: contracts/mainnet-ready/local/local-lz-openwork-bridge.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 

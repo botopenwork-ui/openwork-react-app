@@ -4,8 +4,8 @@ export const mainDAO = {
   chain: 'base',
   column: 'base-main',
   order: 1,
-  status: 'testnet',
-  version: 'v1.0.0',
+  status: 'mainnet-ready',
+  version: 'v2.0.0',
   gas: '890K',
   mainnetNetwork: 'Ethereum Mainnet',
   testnetNetwork: 'Base Sepolia',
@@ -26,17 +26,19 @@ export const mainDAO = {
   },
   
   features: [
-    'OpenZeppelin Governor: Standard governance interface compatible with governance tools',
+    'OpenZeppelin Governor: Standard governance interface compatible with Tally and governance tools',
+    'handleSyncVotingPower(): Receives cross-chain voting power from NativeRewardsContract via bridge',
+    'getCombinedGovernancePower(): Unified power from stake + synced rewards + team tokens',
     'Stake-based voting: Users stake OW with 1-3 minute duration multipliers',
-    'Combined voting power: stake × duration + earned rewards from Native Chain',
-    'Cross-chain governance: Notifications sent to Native Chain via Main Bridge',
+    'Combined voting power: stake × duration + synced rewards from Native Chain',
+    'Cross-chain governance: Notifications sent to Native Chain via ETH Bridge',
     'Progressive unlock mechanism: Earned tokens unlock as users vote/propose',
     'Delegation system: Stake holders can delegate voting power to others',
     'Flexible thresholds: Proposal and voting thresholds adjustable via governance',
     'Unstake delay: 24-hour safety period after unlock before withdrawal',
-    'Cross-chain upgrades: Can upgrade contracts on Local and Native chains',
+    'Cross-chain upgrades: upgradeContract() can upgrade contracts on any chain via bridge',
     'Quorum requirement: 50 OW minimum for proposal passage',
-    'Main Rewards integration: Stake data synced to Main Rewards for claim eligibility'
+    'Tally compatible: _getVotes() includes synced reward data for accurate power display'
   ],
   
   systemPosition: {
