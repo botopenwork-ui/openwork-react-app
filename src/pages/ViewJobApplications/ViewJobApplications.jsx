@@ -8,10 +8,19 @@ import "./ViewJobApplications.css";
 import StatusButton from "../../components/StatusButton/StatusButton";
 import DetailButton from "../../components/DetailButton/DetailButton";
 
-// Contracts on Arbitrum Sepolia
-const CONTRACT_ADDRESS = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS || "0x9E39B37275854449782F1a2a4524405cE79d6C1e";
-const GENESIS_CONTRACT_ADDRESS = import.meta.env.VITE_GENESIS_CONTRACT_ADDRESS || "0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C";
-const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+// Mainnet mode detection
+const IS_MAINNET = import.meta.env.VITE_MAINNET_MODE === 'true';
+
+// Contracts on Arbitrum (mainnet vs testnet)
+const CONTRACT_ADDRESS = IS_MAINNET
+    ? "0x8EfbF240240613803B9c9e716d4b5AD1388aFd99"  // Arbitrum Mainnet NOWJC
+    : (import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS || "0x9E39B37275854449782F1a2a4524405cE79d6C1e");
+const GENESIS_CONTRACT_ADDRESS = IS_MAINNET
+    ? "0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294"  // Arbitrum Mainnet Genesis
+    : (import.meta.env.VITE_GENESIS_CONTRACT_ADDRESS || "0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C");
+const ARBITRUM_RPC = IS_MAINNET
+    ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
+    : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
 
 // Multi-gateway IPFS fetch function with timeout
 const fetchFromIPFS = async (hash, timeout = 5000) => {
@@ -97,7 +106,8 @@ export default function ViewJobApplications() {
 
             try {
                 setLoading(true);
-                const web3 = new Web3(ARBITRUM_SEPOLIA_RPC);
+                const web3 = new Web3(ARBITRUM_RPC);
+                console.log(`🔗 Using ${IS_MAINNET ? 'MAINNET' : 'TESTNET'} - NOWJC: ${CONTRACT_ADDRESS}, Genesis: ${GENESIS_CONTRACT_ADDRESS}`);
                 const nowjcContract = new web3.eth.Contract(contractABI, CONTRACT_ADDRESS);
                 const genesisContract = new web3.eth.Contract(genesisABI, GENESIS_CONTRACT_ADDRESS);
 

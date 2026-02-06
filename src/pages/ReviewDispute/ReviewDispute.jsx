@@ -166,9 +166,19 @@ export default function ReviewDispute() {
 
       try {
         console.log("Fetching dispute:", disputeId);
-        
-        const web3 = new Web3(import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL);
-        const genesisAddress = import.meta.env.VITE_GENESIS_CONTRACT_ADDRESS;
+
+        // Get native chain config (Arbitrum) dynamically based on network mode
+        const nativeChain = getNativeChain();
+        if (!nativeChain) {
+          console.error("Native chain not configured");
+          setLoading(false);
+          return;
+        }
+
+        console.log(`🔗 Using ${isMainnet() ? 'MAINNET' : 'TESTNET'} - Genesis: ${nativeChain.contracts.genesis}`);
+
+        const web3 = new Web3(nativeChain.rpcUrl);
+        const genesisAddress = nativeChain.contracts.genesis;
         const genesisContract = new web3.eth.Contract(GenesisABI, genesisAddress);
 
         // Fetch dispute data
@@ -299,13 +309,31 @@ export default function ReviewDispute() {
       const fromAddress = accounts[0];
 
       // Create Native Athena contract instance
-      const nativeAthena = new web3.eth.Contract(NativeAthenaABI, getNativeAthenaAddress());
+      const nativeAthenaAddress = getNativeAthenaAddress();
+      const nativeAthena = new web3.eth.Contract(NativeAthenaABI, nativeAthenaAddress);
+
+      // Log vote parameters for debugging
+      console.log("🗳️ Vote parameters:", {
+        contract: nativeAthenaAddress,
+        votingType: 0,
+        disputeId: disputeId,
+        voteFor: voteFor,
+        claimAddress: fromAddress
+      });
 
       // Use Promise-based approach with proper event handling
+      // Note: On Arbitrum, let MetaMask handle gas estimation
       return new Promise((resolve, reject) => {
         nativeAthena.methods
-          .vote(0, disputeId, voteFor, fromAddress)
-          .send({ from: fromAddress })
+          .vote(
+            0,                    // uint8 _votingType (0 = dispute)
+            String(disputeId),    // string _disputeId
+            Boolean(voteFor),     // bool _voteFor
+            fromAddress           // address _claimAddress
+          )
+          .send({
+            from: fromAddress
+          })
           .on('transactionHash', (hash) => {
             console.log("Vote transaction sent! Hash:", hash);
             setTxHash(hash);
@@ -395,13 +423,24 @@ export default function ReviewDispute() {
       const fromAddress = accounts[0];
 
       // Create Native Athena contract instance
-      const nativeAthena = new web3.eth.Contract(NativeAthenaABI, getNativeAthenaAddress());
+      const nativeAthenaAddress = getNativeAthenaAddress();
+      const nativeAthena = new web3.eth.Contract(NativeAthenaABI, nativeAthenaAddress);
+
+      // Log settle parameters for debugging
+      console.log("⚖️ Settle Dispute parameters:", {
+        contract: nativeAthenaAddress,
+        disputeId: disputeId,
+        from: fromAddress
+      });
 
       // Use Promise-based approach with proper event handling
+      // Note: On Arbitrum, let MetaMask handle gas estimation
       const receipt = await new Promise((resolve, reject) => {
         nativeAthena.methods
-          .settleDispute(disputeId)
-          .send({ from: fromAddress })
+          .settleDispute(String(disputeId))
+          .send({
+            from: fromAddress
+          })
           .on('transactionHash', (hash) => {
             console.log("Settle transaction sent! Hash:", hash);
             setLoadingT("Transaction submitted - waiting for confirmation...");

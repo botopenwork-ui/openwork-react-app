@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Web3 from "web3";
 import "./ApplyJob.css";
@@ -8,20 +8,34 @@ import RadioButton from "../../components/RadioButton/RadioButton";
 import Warning from "../../components/Warning/Warning";
 import FileUpload from "../../components/FileUpload/FileUpload";
 import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
-import { applyToJob, getLOWJCContract } from "../../services/localChainService";
-import { getChainConfig } from "../../config/chainConfig";
+import { getLOWJCContract } from "../../services/localChainService";
+import { buildLzOptions, DESTINATION_GAS_ESTIMATES, getNativeChain, isMainnet } from "../../config/chainConfig";
+import GenesisABI from "../../ABIs/genesis_ABI.json";
 
 // Backend URL for secure API calls
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
+// Dynamic network mode functions for cross-chain polling
+function getGenesisAddress() {
+  const nativeChain = getNativeChain();
+  return nativeChain?.contracts?.genesis;
+}
+
+function getArbitrumRpc() {
+  return isMainnet()
+    ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
+    : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+}
+
 export default function ApplyJob() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const jobId = searchParams.get('jobId');
   const [jobDescription, setJobDescription] = useState("");
   const [loadingT, setLoadingT] = useState("");
   const [transactionStatus, setTransactionStatus] = useState("");
   const [selectedOption, setSelectedOption] = useState('Single Milestone');
-  
+
   // Multi-chain hooks
   const { chainId, chainConfig, isAllowed, error: chainError } = useChainDetection();
   const { address: walletAddress, connect: connectWallet } = useWalletAddress();
@@ -32,6 +46,76 @@ export default function ApplyJob() {
   const [milestone1Content, setMilestone1Content] = useState("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.");
   const [milestone2Content, setMilestone2Content] = useState("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.");
   const [uploadedFiles, setUploadedFiles] = useState([]);
+
+  // Function to get application count on Arbitrum (Genesis contract)
+  const getApplicationCountOnArbitrum = async (jobId) => {
+    try {
+      const genesisAddress = getGenesisAddress();
+      const arbitrumRpc = getArbitrumRpc();
+      const networkMode = isMainnet() ? "mainnet" : "testnet";
+
+      console.log("🔍 Checking application count for job:", jobId);
+      console.log("📍 Genesis contract:", genesisAddress);
+      console.log("🌐 Using RPC:", arbitrumRpc, `(${networkMode})`);
+
+      const arbitrumWeb3 = new Web3(arbitrumRpc);
+      const genesisContract = new arbitrumWeb3.eth.Contract(GenesisABI, genesisAddress);
+
+      const count = await genesisContract.methods.getJobApplicationCount(jobId).call();
+      console.log("📊 Application count:", count);
+      return Number(count);
+    } catch (error) {
+      console.log("❌ Error getting application count:", error.message);
+      return 0;
+    }
+  };
+
+  // Function to poll for application sync completion
+  const pollForApplicationSync = async (jobId, expectedCount) => {
+    console.log("🚀 Starting cross-chain sync polling for application on job:", jobId);
+    console.log("📊 Expected application count:", expectedCount);
+    setTransactionStatus(`Application submitted! Syncing to Arbitrum (15-30 seconds)...`);
+
+    // Wait 15 seconds before starting to poll (LayerZero typically takes 10-20s)
+    console.log("⏳ Waiting 15 seconds for LayerZero to propagate...");
+    await new Promise(resolve => setTimeout(resolve, 15000));
+    setTransactionStatus(`Checking if application has synced to Arbitrum...`);
+
+    const maxAttempts = 12; // 12 attempts over 60 seconds (after initial 15s wait)
+    const pollInterval = 5000; // 5 seconds
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      console.log(`Polling attempt ${attempt}/${maxAttempts} for application sync`);
+
+      const currentCount = await getApplicationCountOnArbitrum(jobId);
+
+      if (currentCount >= expectedCount) {
+        setTransactionStatus("✅ Application synced! Redirecting...");
+        setLoadingT(false);
+        setTimeout(() => navigate(`/job-deep-view/${jobId}`), 1500);
+        return;
+      }
+
+      // Update status with estimated time remaining
+      const timeRemaining = Math.max(0, 75 - (15 + (attempt * 5)));
+      setTransactionStatus(`Syncing application across chains... (~${timeRemaining}s remaining)`);
+
+      // Wait before next attempt
+      if (attempt < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+      }
+    }
+
+    // If we get here, polling timed out
+    setTransactionStatus("Application submitted but sync taking longer than expected. Check the job page in a few minutes.");
+    setLoadingT(false);
+
+    // Redirect to job page after a delay
+    console.log("⏳ Sync timeout - redirecting to job page");
+    setTimeout(() => {
+      navigate(`/job-deep-view/${jobId}`);
+    }, 3000);
+  };
 
   // Upload milestone data to IPFS (following PostJob pattern)
   const pinMilestoneToIPFS = async (milestone, index) => {
@@ -174,12 +258,17 @@ export default function ApplyJob() {
       // Convert to USDC units (6 decimals)
       const amounts = milestones.map(m => Math.floor(m.amount * 1000000));
       
-      // Get LayerZero fee quote
-      setTransactionStatus("Estimating LayerZero fee...");
+      // Prepare LayerZero options and fee dynamically
+      setTransactionStatus("Getting LayerZero quote...");
       const web3 = new Web3(window.ethereum);
       const contract = await getLOWJCContract(chainId);
-      const lzOptions = chainConfig.layerzero.options;
-      
+
+      // Build LZ options with appropriate destination gas for this operation
+      const destGas = DESTINATION_GAS_ESTIMATES.APPLY_JOB;
+      const lzOptions = buildLzOptions(destGas);
+      console.log(`⛽ Destination gas (Arbitrum): ${destGas} for APPLY_JOB`);
+
+      // Get bridge contract for quoting
       const bridgeAddress = await contract.methods.bridge().call();
       const bridgeABI = [{
         "inputs": [
@@ -191,38 +280,64 @@ export default function ApplyJob() {
         "stateMutability": "view",
         "type": "function"
       }];
-      
       const bridgeContract = new web3.eth.Contract(bridgeABI, bridgeAddress);
+
+      // Encode payload for accurate quote
       const payload = web3.eth.abi.encodeParameters(
-        ['string', 'address', 'string', 'string', 'string[]', 'uint256[]', 'uint32'],
-        ['applyToJob', walletAddress, jobId, applicationHash, milestoneHashes, amounts, 3] // 3 = Arbitrum domain
+        ['string', 'string', 'address', 'string', 'string[]', 'uint256[]', 'uint32'],
+        ['applyToJob', jobId, walletAddress, applicationHash, milestoneHashes, amounts, chainConfig.cctpDomain]
       );
-      
+
+      // Get quote and add 20% buffer
       const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, lzOptions).call();
-      console.log(`💰 LayerZero fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH`);
-      
-      // Submit application via localChainService
+      const lzFee = BigInt(quotedFee) * BigInt(120) / BigInt(100); // +20% buffer
+      console.log(`💰 LayerZero quote: ${web3.utils.fromWei(quotedFee.toString(), 'ether')} ETH`);
+      console.log(`💰 With 20% buffer: ${web3.utils.fromWei(lzFee.toString(), 'ether')} ETH`);
+
+      // Get current application count before submitting (to detect when new one syncs)
+      setTransactionStatus(`Checking current application count...`);
+      const currentAppCount = await getApplicationCountOnArbitrum(jobId);
+      const expectedAppCount = currentAppCount + 1;
+      console.log(`📊 Current application count: ${currentAppCount}, expecting: ${expectedAppCount}`);
+
+      // Submit application
       setTransactionStatus(`Submitting application on ${chainConfig?.name}...`);
-      
+
+      // Log all transaction parameters for debugging
+      console.log('📋 ====== APPLY TO JOB TRANSACTION PARAMS ======');
+      console.log('1️⃣ jobId:', jobId);
+      console.log('2️⃣ applicationHash:', applicationHash);
+      console.log('3️⃣ milestoneHashes:', milestoneHashes);
+      console.log('4️⃣ amounts:', amounts, '→', amounts.map(a => `${a / 1000000} USDC`));
+      console.log('5️⃣ preferredChainDomain:', chainConfig.cctpDomain);
+      console.log('6️⃣ lzOptions:', lzOptions, `(${destGas} destination gas)`);
+      console.log('7️⃣ lzFee:', lzFee.toString(), `(${web3.utils.fromWei(lzFee.toString(), 'ether')} ETH)`);
+      console.log('📋 =============================================');
+
+      // Get current gas price from network (Optimism L2 is extremely cheap)
+      const gasPrice = await web3.eth.getGasPrice();
+      console.log(`⛽ Network gas price: ${web3.utils.fromWei(gasPrice, 'gwei')} gwei`);
+
       const tx = await contract.methods.applyToJob(
         jobId,
         applicationHash,
         milestoneHashes,
         amounts,
-        3, // Arbitrum domain (preferredChainDomain)
+        chainConfig.cctpDomain,
         lzOptions
       ).send({
         from: walletAddress,
-        value: quotedFee
+        value: lzFee.toString(),
+        gas: 500000,
+        maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
+        maxFeePerGas: gasPrice
       });
-      
+
       console.log("✅ Application submitted:", tx.transactionHash);
       setTransactionStatus(`Success! Application submitted on ${chainConfig?.name}. Syncing to Arbitrum Genesis...`);
-      
-      // Redirect to job details
-      setTimeout(() => {
-        window.location.href = `/job-deep-view/${jobId}`;
-      }, 2000);
+
+      // Poll for cross-chain sync before redirecting
+      await pollForApplicationSync(jobId, expectedAppCount);
       
     } catch (error) {
       console.error("Error applying to job:", error);
@@ -230,22 +345,6 @@ export default function ApplyJob() {
       setLoadingT(false);
     }
   };
-
-  if (loadingT) {
-    return (
-      <div className="loading-containerT">
-        <div className="loading-icon">
-          <img src="/OWIcon.svg" alt="Loading..." />
-        </div>
-        <div className="loading-message">
-          <h1 id="txText">Submitting Application...</h1>
-          <p id="txSubtext">
-            Please wait while we process your job application on the blockchain.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <>
@@ -367,10 +466,10 @@ export default function ApplyJob() {
             <div className="warning-form">
               <Warning content={"If the Job Giver accepts your application, Milestone 1 amount will be locked"} icon="/triangle_warning.svg"/>
             </div>
-            <BlueButton 
-              label="Submit Application" 
+            <BlueButton
+              label={loadingT ? "Submitting..." : "Submit Application"}
               onClick={handleApplyToJob}
-              disabled={!walletAddress || !isAllowed}
+              disabled={!walletAddress || !isAllowed || loadingT}
               style={{width: '100%', justifyContent: 'center', marginTop:'20px', marginBottom:'13px', padding:'10px 14px'}}
             />
           </div>

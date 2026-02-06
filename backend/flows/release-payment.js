@@ -47,9 +47,10 @@ async function processReleasePayment(jobId, statusMap) {
     const nowjcTxHash = await waitForNOWJCEvent('PaymentReleased', jobId);
     console.log(`✅ PaymentReleased detected: ${nowjcTxHash}`);
     
-    // Save to database
-    saveCCTPTransfer('releasePayment', jobId, nowjcTxHash, 'Arbitrum Sepolia', config.DOMAINS.ARBITRUM_SEPOLIA);
-    
+    // Save to database - use dynamic chain name based on network mode
+    const sourceChainName = config.isMainnet() ? 'Arbitrum One' : 'Arbitrum Sepolia';
+    saveCCTPTransfer('releasePayment', jobId, nowjcTxHash, sourceChainName, config.DOMAINS.ARBITRUM);
+
     // STEP 2: Poll Circle API for CCTP attestation
     updateCCTPStatus(jobId, 'releasePayment', { step: 'polling_attestation' });
 
@@ -63,12 +64,12 @@ async function processReleasePayment(jobId, statusMap) {
 
     console.log('\n📍 STEP 2/3: Polling Circle API for CCTP attestation...');
     console.log(`   Source TX Hash: ${nowjcTxHash}`);
-    console.log(`   Source Domain: ${config.DOMAINS.ARBITRUM_SEPOLIA} (Arbitrum Sepolia)`);
+    console.log(`   Source Domain: ${config.DOMAINS.ARBITRUM} (${sourceChainName})`);
     console.log(`   Destination Chain: ${destinationChain} (Domain ${destinationDomain})`);
 
     const attestation = await pollCCTPAttestation(
       nowjcTxHash,
-      config.DOMAINS.ARBITRUM_SEPOLIA // Domain 3
+      config.DOMAINS.ARBITRUM // Domain 3 for both testnet and mainnet
     );
     console.log('✅ Attestation received');
     console.log('   Attestation details:', {

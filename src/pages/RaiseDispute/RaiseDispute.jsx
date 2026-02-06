@@ -13,29 +13,44 @@ import DropDown from "../../components/DropDown/DropDown";
 import BlueButton from "../../components/BlueButton/BlueButton";
 import Warning from "../../components/Warning/Warning";
 import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
-import { getChainConfig } from "../../config/chainConfig";
+import { getChainConfig, getNativeChain } from "../../config/chainConfig";
 import { getAthenaClientContract } from "../../services/localChainService";
 
-const CONTRACT_ADDRESS = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS;
-const GENESIS_CONTRACT_ADDRESS = import.meta.env.VITE_GENESIS_CONTRACT_ADDRESS || "0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C";
-const NATIVE_ATHENA_ADDRESS = "0x098E52Aff44AEAd944AFf86F4A5b90dbAF5B86bd";
-const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
 const SKILLOPTIONS = [
   'UX/UI Skill Oracle','Full Stack development','UX/UI Skill Oracle',
 ]
 
-// Simple ERC20 ABI for USDC approval
+// USDC ERC20 ABI (minimal required functions)
 const ERC20_ABI = [
   {
-    "constant": false,
     "inputs": [
-      {"name": "_spender", "type": "address"},
-      {"name": "_value", "type": "uint256"}
+      {"internalType": "address", "name": "spender", "type": "address"},
+      {"internalType": "uint256", "name": "amount", "type": "uint256"}
     ],
     "name": "approve",
-    "outputs": [{"name": "", "type": "bool"}],
+    "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "address", "name": "owner", "type": "address"}
+    ],
+    "name": "balanceOf",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "address", "name": "owner", "type": "address"},
+      {"internalType": "address", "name": "spender", "type": "address"}
+    ],
+    "name": "allowance",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
     "type": "function"
   }
 ];
@@ -105,7 +120,7 @@ export default function RaiseDispute() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [loadingT, setLoadingT] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [transactionStatus, setTransactionStatus] = useState("Dispute submission requires blockchain transaction fees");
+  const [transactionStatus, setTransactionStatus] = useState("Raise dispute requires USDC approval and blockchain transaction fees");
   
   // Oracle selection state
   const [oracles, setOracles] = useState([]);
@@ -131,9 +146,18 @@ export default function RaiseDispute() {
     async function fetchOracles() {
       try {
         setOraclesLoading(true);
-        const web3 = new Web3(ARBITRUM_SEPOLIA_RPC);
-        const genesisContract = new web3.eth.Contract(genesisABI, GENESIS_CONTRACT_ADDRESS);
-        const nativeAthenaContract = new web3.eth.Contract(nativeAthenaABI, NATIVE_ATHENA_ADDRESS);
+
+        // Get native chain config (Arbitrum) dynamically based on network mode
+        const nativeChain = getNativeChain();
+        if (!nativeChain) {
+          console.error("Native chain not configured");
+          setOraclesLoading(false);
+          return;
+        }
+
+        const web3 = new Web3(nativeChain.rpcUrl);
+        const genesisContract = new web3.eth.Contract(genesisABI, nativeChain.contracts.genesis);
+        const nativeAthenaContract = new web3.eth.Contract(nativeAthenaABI, nativeChain.contracts.nativeAthena);
 
         // Get all oracle names
         const oracleNames = await genesisContract.methods.getAllOracleNames().call();
@@ -176,8 +200,17 @@ export default function RaiseDispute() {
     async function fetchJobDetails() {
       try {
         setLoading(true);
-        const web3 = new Web3(ARBITRUM_SEPOLIA_RPC);
-        const contract = new web3.eth.Contract(contractABI, CONTRACT_ADDRESS);
+
+        // Get native chain config (Arbitrum) dynamically
+        const nativeChain = getNativeChain();
+        if (!nativeChain) {
+          console.error("Native chain not configured");
+          setLoading(false);
+          return;
+        }
+
+        const web3 = new Web3(nativeChain.rpcUrl);
+        const contract = new web3.eth.Contract(contractABI, nativeChain.contracts.nowjc);
 
         const jobData = await contract.methods.getJob(jobId).call();
         console.log("Job data from contract:", jobData);
@@ -252,7 +285,7 @@ export default function RaiseDispute() {
           totalBudget: formattedTotalBudget,
           amountPaid: formattedAmountPaid,
           amountLocked: formattedLockedAmount,
-          contractId: CONTRACT_ADDRESS,
+          contractId: nativeChain.contracts.nowjc,
           ...jobDetails,
         });
 
@@ -334,22 +367,30 @@ export default function RaiseDispute() {
     }
   };
 
-  // Check if dispute exists on Arbitrum
+  // Check if dispute exists on Arbitrum (native chain)
   const checkDisputeExistsOnArbitrum = async (jobId) => {
     try {
       console.log("🔍 Checking for dispute:", jobId);
-      const arbitrumWeb3 = new Web3(ARBITRUM_SEPOLIA_RPC);
+
+      // Get native chain config dynamically
+      const nativeChain = getNativeChain();
+      if (!nativeChain) {
+        console.error("Native chain not configured");
+        return false;
+      }
+
+      const arbitrumWeb3 = new Web3(nativeChain.rpcUrl);
       const nativeAthenaContract = new arbitrumWeb3.eth.Contract(
         NATIVE_ATHENA_ABI,
-        NATIVE_ATHENA_ADDRESS
+        nativeChain.contracts.nativeAthena
       );
 
       const disputeInfo = await nativeAthenaContract.methods
         .getDisputeInfo(jobId)
         .call();
-      
+
       console.log("📋 Dispute info:", disputeInfo);
-      
+
       // Check if dispute exists (totalFees > 0 means dispute was registered)
       const disputeExists = disputeInfo && parseFloat(disputeInfo.totalFees) > 0;
       console.log("✅ Dispute exists:", disputeExists);
@@ -436,37 +477,75 @@ export default function RaiseDispute() {
 
     try {
       setLoadingT(true);
-      setTransactionStatus(`Preparing dispute on ${chainConfig?.name}...`);
+      setTransactionStatus(`🔄 Validating requirements on ${chainConfig?.name}...`);
+      console.log("🚀 Starting dispute flow:", { jobId, compensation, disputeAmount, oracle: selectedOracle, chain: chainConfig?.name });
 
       const web3 = new Web3(window.ethereum);
       const compensationAmount = Math.floor(parseFloat(compensation) * 1000000);
       const disputedAmountUnits = Math.floor(parseFloat(disputeAmount) * 1000000);
 
-      // Step 1: Approve USDC
-      setTransactionStatus("💰 Approving USDC for dispute fee - Please confirm in MetaMask");
+      // Get chain-specific contract addresses
       const usdcAddress = chainConfig.contracts.usdc;
       const athenaClientAddress = chainConfig.contracts.athenaClient;
-      
+
       if (!usdcAddress || !athenaClientAddress) {
         throw new Error(`Contracts not configured for ${chainConfig.name}`);
       }
-      
-      const usdcContract = new web3.eth.Contract(ERC20_ABI, usdcAddress);
-      await usdcContract.methods
-        .approve(athenaClientAddress, compensationAmount)
-        .send({ from: walletAddress });
-      
-      console.log("✅ USDC approved");
 
-      // Step 2: Upload dispute evidence to IPFS
-      setTransactionStatus("📤 Uploading dispute evidence to IPFS...");
+      // Initialize USDC contract
+      const usdcContract = new web3.eth.Contract(ERC20_ABI, usdcAddress);
+
+      // ============ CHECK USDC BALANCE ============
+      setTransactionStatus("🔍 Checking USDC balance...");
+      const userBalance = await usdcContract.methods.balanceOf(walletAddress).call();
+      const balanceInUSDC = parseFloat(userBalance) / 1000000;
+
+      if (parseFloat(userBalance) < compensationAmount) {
+        throw new Error(`Insufficient USDC balance. Required: ${compensation} USDC, Available: ${balanceInUSDC.toFixed(2)} USDC`);
+      }
+
+      console.log(`✅ USDC balance check passed: ${balanceInUSDC.toFixed(2)} USDC available`);
+
+      // ============ STEP 1: CHECK ALLOWANCE & APPROVE IF NEEDED ============
+      setTransactionStatus("🔍 Checking USDC allowance...");
+      const currentAllowance = await usdcContract.methods.allowance(walletAddress, athenaClientAddress).call();
+      console.log(`📊 Current allowance: ${parseFloat(currentAllowance) / 1000000} USDC, Required: ${compensation} USDC`);
+
+      if (BigInt(currentAllowance) < BigInt(compensationAmount)) {
+        setTransactionStatus(`💰 Step 1/3: Approving ${compensation} USDC spending - Please confirm in MetaMask`);
+
+        const approveTx = await usdcContract.methods.approve(
+          athenaClientAddress,
+          compensationAmount.toString()
+        ).send({ from: walletAddress });
+
+        if (!approveTx || !approveTx.transactionHash) {
+          throw new Error("Approval transaction failed");
+        }
+
+        console.log("✅ USDC approval confirmed:", approveTx.transactionHash);
+        setTransactionStatus(`✅ Step 1/3: USDC approval confirmed`);
+
+        // Wait for transaction to be properly mined
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } else {
+        console.log("✅ Sufficient allowance already exists, skipping approval");
+        setTransactionStatus(`✅ Step 1/3: USDC allowance already sufficient`);
+      }
+
+      // ============ STEP 2: UPLOAD DISPUTE EVIDENCE TO IPFS ============
+      setTransactionStatus("📤 Step 2/3: Uploading dispute evidence to IPFS...");
       const disputeHash = await uploadDisputeToIPFS();
       console.log("📦 Dispute IPFS hash:", disputeHash);
+      setTransactionStatus(`✅ Step 2/3: Evidence uploaded to IPFS`);
 
-      // Step 3: Raise dispute on current chain
-      setTransactionStatus(`📝 Raising dispute on ${chainConfig.name} - Please confirm in MetaMask`);
+      // ============ STEP 3: RAISE DISPUTE ON CHAIN ============
+      setTransactionStatus(`🔧 Step 3/3: Raising dispute on ${chainConfig.name} - Please confirm in MetaMask`);
       const athenaContract = await getAthenaClientContract(chainId);
       const lzOptions = chainConfig.layerzero.options;
+
+      // Get current gas price for EIP-1559
+      const gasPrice = await web3.eth.getGasPrice();
 
       const receipt = await athenaContract.methods
         .raiseDispute(
@@ -480,29 +559,37 @@ export default function RaiseDispute() {
         .send({
           from: walletAddress,
           value: web3.utils.toWei("0.001", "ether"),
-          gas: 5000000  // Explicit gas limit
+          gas: 800000,
+          maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
+          maxFeePerGas: gasPrice
         });
 
-      console.log(`✅ Dispute raised on ${chainConfig.name}!`, receipt.transactionHash);
-      setTransactionStatus(`✅ Dispute raised on ${chainConfig.name}! Syncing to Arbitrum...`);
-      setLoadingT(false);
-        
-        // Start polling for cross-chain sync
-        await pollForDisputeSync(jobId);
-
-      } catch (error) {
-        console.error("Error submitting dispute:", error);
-        
-        let errorMessage = error.message;
-        if (error.code === 4001) {
-          errorMessage = "Transaction cancelled by user";
-        } else if (error.message?.includes("insufficient funds")) {
-          errorMessage = "Insufficient funds for gas + dispute fee";
-        }
-        
-        setTransactionStatus(`❌ ${errorMessage}`);
-        setLoadingT(false);
+      if (!receipt || !receipt.transactionHash) {
+        throw new Error("Dispute transaction failed");
       }
+
+      console.log(`✅ Dispute raised on ${chainConfig.name}!`, receipt.transactionHash);
+      setTransactionStatus(`✅ Step 3/3: Dispute raised on ${chainConfig.name}! Syncing to Arbitrum...`);
+      setLoadingT(false);
+
+      // Start polling for cross-chain sync
+      await pollForDisputeSync(jobId);
+
+    } catch (error) {
+      console.error("❌ Dispute error:", error);
+
+      let errorMessage = error.message;
+      if (error.code === 4001) {
+        errorMessage = "Transaction cancelled by user";
+      } else if (error.message?.includes("insufficient funds")) {
+        errorMessage = "Insufficient ETH for gas fees";
+      } else if (error.message?.includes("execution reverted")) {
+        errorMessage = "Transaction failed - contract requirements not met";
+      }
+
+      setTransactionStatus(`❌ Error: ${errorMessage}`);
+      setLoadingT(false);
+    }
   };
 
   if (loadingT) {

@@ -10,7 +10,7 @@ import Warning from "../../components/Warning/Warning";
 import Milestone from "../../components/Milestone/Milestone";
 import BlueButton from "../../components/BlueButton/BlueButton";
 import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
-import { getChainConfig, extractChainIdFromJobId } from "../../config/chainConfig";
+import { getChainConfig, extractChainIdFromJobId, getNativeChain, isMainnet, buildLzOptions, DESTINATION_GAS_ESTIMATES } from "../../config/chainConfig";
 import { switchToChain } from "../../utils/switchNetwork";
 import { getLOWJCContract } from "../../services/localChainService";
 
@@ -96,13 +96,18 @@ export default function ReleasePayment() {
     async function fetchJobDetails() {
       try {
         console.log("🔍 Fetching job details for jobId:", jobId);
-        
-        // Use NOWJC contract on Arbitrum Sepolia
-        const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
-        const CONTRACT_ADDRESS = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS || "0x9E39B37275854449782F1a2a4524405cE79d6C1e";
-        
-        const web3 = new Web3(ARBITRUM_SEPOLIA_RPC);
-        const contract = new web3.eth.Contract(contractABI, CONTRACT_ADDRESS);
+
+        // Use NOWJC contract on Arbitrum (dynamic based on network mode)
+        const nativeChain = getNativeChain();
+        const rpcUrl = isMainnet()
+          ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
+          : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+        const contractAddress = nativeChain.contracts.nowjc;
+
+        console.log(`📡 Network mode: ${isMainnet() ? 'mainnet' : 'testnet'}, NOWJC: ${contractAddress}`);
+
+        const web3 = new Web3(rpcUrl);
+        const contract = new web3.eth.Contract(contractABI, contractAddress);
 
         // Fetch job details from NOWJC contract
         const jobData = await contract.methods.getJob(jobId).call();
@@ -168,10 +173,23 @@ export default function ReleasePayment() {
         // Calculate releasable amount - it's the currently locked amount
         const releasableAmount = (parseFloat(currentLockedAmount) / 1000000).toFixed(2);
 
+        // Fetch the selected applicant's preferred chain domain (for CCTP payment destination)
+        let applicantChainDomain = 2; // Default to Optimism
+        if (jobData.selectedApplicant && jobData.selectedApplicant !== '0x0000000000000000000000000000000000000000') {
+          try {
+            applicantChainDomain = await contract.methods.jobApplicantChainDomain(jobId, jobData.selectedApplicant).call();
+            applicantChainDomain = Number(applicantChainDomain);
+            console.log(`📍 Selected applicant's preferred chain domain: ${applicantChainDomain}`);
+          } catch (err) {
+            console.warn('Could not fetch applicant chain domain, defaulting to Optimism (2):', err.message);
+          }
+        }
+
         setJob({
           jobId,
           jobGiver: jobData.jobGiver,
           selectedApplicant: jobData.selectedApplicant,
+          applicantChainDomain, // Store the applicant's preferred chain domain
           jobStatus: Number(jobData.status), // Convert to number to match the status checks
           totalBudget: totalBudgetUSDC,
           currentMilestone,
@@ -250,8 +268,8 @@ export default function ReleasePayment() {
     const gateways = [
       `https://ipfs.io/ipfs/${hash}`,
       `https://gateway.pinata.cloud/ipfs/${hash}`,
-      `https://cloudflare-ipfs.com/ipfs/${hash}`,
-      `https://dweb.link/ipfs/${hash}`
+      `https://dweb.link/ipfs/${hash}`,
+      `https://w3s.link/ipfs/${hash}`
     ];
 
     const fetchWithTimeout = (url, timeout) => {
@@ -338,10 +356,18 @@ export default function ReleasePayment() {
         amount = job.milestonePayments[job.currentMilestone - 1].amount.toString();
       }
       
-      // Get LayerZero fee quote
-      setTransactionStatus("💰 Getting LayerZero fee quote...");
+      // Build LZ options with appropriate destination gas for RELEASE_PAYMENT
+      const destGas = DESTINATION_GAS_ESTIMATES.RELEASE_PAYMENT;
+      const nativeOptions = buildLzOptions(destGas);
+      console.log(`⛽ Destination gas (Arbitrum): ${destGas} for RELEASE_PAYMENT`);
+
+      // Get the applicant's preferred chain domain (fetched from NOWJC)
+      const destinationDomain = job.applicantChainDomain || 2; // Default to Optimism if not set
+      console.log(`📍 Destination CCTP domain: ${destinationDomain}`);
+
+      // Get bridge contract for quoting
+      setTransactionStatus("💰 Getting LayerZero quote...");
       const bridgeAddress = await lowjcContract.methods.bridge().call();
-      
       const bridgeABI = [{
         "inputs": [
           {"type": "bytes", "name": "_payload"},
@@ -352,30 +378,37 @@ export default function ReleasePayment() {
         "stateMutability": "view",
         "type": "function"
       }];
-      
       const bridgeContract = new web3.eth.Contract(bridgeABI, bridgeAddress);
-      const nativeOptions = jobChainConfig.layerzero.options;
-      
-      // Encode payload for releasePaymentCrossChain (must match LOWJC's encoding)
+
+      // Encode payload for accurate quote
       const payload = web3.eth.abi.encodeParameters(
-        ['string', 'address', 'string', 'uint256', 'uint32', 'address'],
-        ['releasePaymentCrossChain', walletAddress, jobId, amount, 2, job.selectedApplicant]
+        ['string', 'string', 'address', 'uint32', 'address'],
+        ['releasePaymentCrossChain', jobId, walletAddress, destinationDomain, job.selectedApplicant]
       );
-      
+
+      // Get quote and add 20% buffer
       const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, nativeOptions).call();
-      console.log(`💰 LayerZero quoted fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH`);
-      
+      const lzFee = BigInt(quotedFee) * BigInt(120) / BigInt(100); // +20% buffer
+      console.log(`💰 LayerZero quote: ${web3.utils.fromWei(quotedFee.toString(), 'ether')} ETH`);
+      console.log(`💰 With 20% buffer: ${web3.utils.fromWei(lzFee.toString(), 'ether')} ETH`);
+
       setTransactionStatus(`💰 Releasing payment on ${jobChainConfig.name} - Please confirm in MetaMask`);
-      
+
+      // Get current gas price from network (Optimism L2 is extremely cheap)
+      const gasPrice = await web3.eth.getGasPrice();
+      console.log(`⛽ Network gas price: ${web3.utils.fromWei(gasPrice, 'gwei')} gwei`);
+
       const releasePaymentTx = await lowjcContract.methods.releasePaymentCrossChain(
         jobId,
-        2,
+        destinationDomain,
         job.selectedApplicant,
         nativeOptions
       ).send({
         from: walletAddress,
-        value: quotedFee, // Use quoted fee
-        gas: 2000000 // Set reasonable gas limit (2M instead of 21M)
+        value: lzFee.toString(),
+        gas: 500000,
+        maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
+        maxFeePerGas: gasPrice
       });
 
       console.log(`✅ Payment release initiated on ${jobChainConfig.name}:`, releasePaymentTx.transactionHash);
@@ -436,36 +469,41 @@ export default function ReleasePayment() {
         const response = await fetch(`${backendUrl}/api/release-payment-status/${jobId}`);
         const status = await response.json();
         
-        if (status.success) {
-          if (status.status === 'completed') {
-            setTransactionStatus("🎉 Milestone payment released successfully to the applicant!");
-            setIsProcessing(false);
-            return;
-          } else if (status.status === 'failed') {
-            setTransactionStatus(`❌ Payment failed: ${status.error || status.message}`);
-            setIsProcessing(false);
-            return;
-          } else if (status.status === 'waiting_for_event') {
-            setTransactionStatus(`⏳ Waiting for LayerZero message to reach Arbitrum...`);
-            attempts++;
-            setTimeout(checkStatus, 5000);
-          } else if (status.status === 'polling_attestation') {
-            setTransactionStatus(`🔄 Polling Circle API for CCTP attestation...`);
-            attempts++;
-            setTimeout(checkStatus, 5000);
-          } else if (status.status === 'executing_receive') {
-            setTransactionStatus(`🔗 Executing CCTP transfer to recipient's chain...`);
-            attempts++;
-            setTimeout(checkStatus, 5000);
-          } else {
-            // Still processing
-            setTransactionStatus(`🔄 ${status.message || 'Processing...'}`);
-            attempts++;
-            setTimeout(checkStatus, 5000); // Check every 5 seconds
-          }
+        if (status.status === 'completed') {
+          setTransactionStatus("🎉 Milestone payment released successfully to the applicant!");
+          setIsProcessing(false);
+          return;
+        } else if (status.status === 'failed') {
+          setTransactionStatus(`❌ Payment failed: ${status.error || status.message || 'Unknown error'}`);
+          setIsProcessing(false);
+          return;
+        } else if (status.error) {
+          setTransactionStatus(`❌ Error: ${status.error}`);
+          setIsProcessing(false);
+          return;
+        } else if (status.status === 'waiting_for_event') {
+          setTransactionStatus(`⏳ Waiting for LayerZero message to reach Arbitrum...`);
+          attempts++;
+          setTimeout(checkStatus, 5000);
+        } else if (status.status === 'polling_attestation') {
+          setTransactionStatus(`🔄 Polling Circle API for CCTP attestation...`);
+          attempts++;
+          setTimeout(checkStatus, 5000);
+        } else if (status.status === 'executing_receive') {
+          setTransactionStatus(`🔗 Executing CCTP transfer to recipient's chain...`);
+          attempts++;
+          setTimeout(checkStatus, 5000);
+        } else {
+          // Still processing
+          setTransactionStatus(`🔄 ${status.message || 'Processing...'}`);
+          attempts++;
+          setTimeout(checkStatus, 5000);
         }
       } catch (error) {
         console.warn("Status check failed:", error);
+        if (attempts > 10) {
+          setTransactionStatus(`⚠️ Connection issue: ${error.message}`);
+        }
         attempts++;
         setTimeout(checkStatus, 5000);
       }
@@ -535,12 +573,18 @@ export default function ReleasePayment() {
 
       console.log("✅ USDC approval successful");
       
-      // Get LayerZero fee quote for lockNextMilestone
-      setTransactionStatus("🔒 Getting LayerZero fee quote...");
+      // Prepare LayerZero options and fee for lockNextMilestone
+      setTransactionStatus("🔒 Getting LayerZero quote...");
       const lowjcContract = await getLOWJCContract(jobChainId);
-      const bridgeAddress = await lowjcContract.methods.bridge().call();
-      
-      const bridgeABI = [{
+
+      // Build LZ options with appropriate destination gas for LOCK_MILESTONE
+      const destGasLock = DESTINATION_GAS_ESTIMATES.LOCK_MILESTONE;
+      const nativeOptions = buildLzOptions(destGasLock);
+      console.log(`⛽ Destination gas (Arbitrum): ${destGasLock} for LOCK_MILESTONE`);
+
+      // Get bridge contract for quoting
+      const bridgeAddressLock = await lowjcContract.methods.bridge().call();
+      const bridgeABILock = [{
         "inputs": [
           {"type": "bytes", "name": "_payload"},
           {"type": "bytes", "name": "_options"}
@@ -550,28 +594,35 @@ export default function ReleasePayment() {
         "stateMutability": "view",
         "type": "function"
       }];
-      
-      const bridgeContract = new web3.eth.Contract(bridgeABI, bridgeAddress);
-      const nativeOptions = jobChainConfig.layerzero.options;
-      
-      // Encode payload for lockNextMilestone
-      const payload = web3.eth.abi.encodeParameters(
-        ['string', 'address', 'string', 'uint256'],
-        ['lockNextMilestone', walletAddress, jobId, nextMilestoneAmount]
+      const bridgeContractLock = new web3.eth.Contract(bridgeABILock, bridgeAddressLock);
+
+      // Encode payload for accurate quote
+      const payloadLock = web3.eth.abi.encodeParameters(
+        ['string', 'string', 'address', 'uint256'],
+        ['lockNextMilestone', jobId, walletAddress, nextMilestoneAmount]
       );
-      
-      const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, nativeOptions).call();
-      console.log("💰 LayerZero quoted fee:", web3.utils.fromWei(quotedFee, 'ether'), "ETH");
-      
+
+      // Get quote and add 20% buffer
+      const quotedFeeLock = await bridgeContractLock.methods.quoteNativeChain(payloadLock, nativeOptions).call();
+      const lzFeeLock = BigInt(quotedFeeLock) * BigInt(120) / BigInt(100); // +20% buffer
+      console.log(`💰 LayerZero quote: ${web3.utils.fromWei(quotedFeeLock.toString(), 'ether')} ETH`);
+      console.log(`💰 With 20% buffer: ${web3.utils.fromWei(lzFeeLock.toString(), 'ether')} ETH`);
+
       setTransactionStatus("🔒 Locking milestone - Please confirm in MetaMask");
-      
+
+      // Get current gas price from network
+      const gasPriceLock = await web3.eth.getGasPrice();
+      console.log(`⛽ Network gas price: ${web3.utils.fromWei(gasPriceLock, 'gwei')} gwei`);
+
       const lockTx = await lowjcContract.methods.lockNextMilestone(
         jobId,
         nativeOptions
       ).send({
         from: walletAddress,
-        value: quotedFee, // Use quoted fee
-        gas: 2000000 // Set reasonable gas limit (2M instead of default)
+        value: lzFeeLock.toString(),
+        gas: 320000,
+        maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
+        maxFeePerGas: gasPriceLock
       });
 
       console.log("✅ Milestone locked:", lockTx.transactionHash);

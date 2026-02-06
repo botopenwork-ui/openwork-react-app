@@ -85,7 +85,7 @@ import ContractUpdateProposel from "./pages/ContractUpdateProposel/ContractUpdat
 import ContractUpdateProposelStep2 from "./pages/ContractUpdateProposelStep2/ContractUpdateProposelStep2";
 import ContractUpdateProposelStep3 from "./pages/ContractUpdateProposelStep3/ContractUpdateProposelStep3";
 import OpenWorkJobProposel from "./pages/OpenWorkJobProposel/OpenWorkJobProposel";
-import NewSkillOracleStep2 from "./pages/NewSkillOracleStep2/NewSkillOracleStep2";
+import NewGeneralOracleStep2 from "./pages/NewGeneralOracleStep2/NewGeneralOracleStep2";
 import DissolveSkillOracleStep2 from "./pages/DissolveSkillOracleStep2/DissolveSkillOracleStep2";
 import SkillOracleRecruitmentStep2 from "./pages/SkillOracleRecruitmentStep2/SkillOracleRecruitmentStep2";
 import SkillOracleMemberRemovalStep2 from "./pages/SkillOracleMemberRemovalStep2/SkillOracleMemberRemovalStep2";
@@ -342,7 +342,7 @@ export default function App() {
               <Route path="/dao-votes-update-form" element={<ContractUpdateProposelStep3/>} />
               <Route path="/dao-staking-update-form" element={<ContractUpdateProposelStep3/>} />
               <Route path="/openworkjobproposel" element={<OpenWorkJobProposel/>} />
-              <Route path="/newskilloraclestep2" element={<NewSkillOracleStep2/>} />
+              <Route path="/newgeneraloraclestep2" element={<NewGeneralOracleStep2/>} />
               <Route path="/dissolveskilloraclestep2" element={<DissolveSkillOracleStep2/>} />
               <Route path="/skilloraclerecruitmentstep2" element={<SkillOracleRecruitmentStep2/>} />
               <Route path="/skilloraclememberremovalstep2" element={<SkillOracleMemberRemovalStep2/>} />

@@ -6,10 +6,19 @@ import JobsTable from "../../components/JobsTable/JobsTable";
 import "./BrowseJobs.css";
 import SkillBox from "../../components/SkillBox/SkillBox";
 import DetailButton from "../../components/DetailButton/DetailButton";
-import { extractChainIdFromJobId, getChainLogo, getChainConfig } from "../../config/chainConfig";
+import { extractChainIdFromJobId, getChainLogo, getChainConfig, getNativeChain, isMainnet } from "../../config/chainConfig";
 
-const CONTRACT_ADDRESS = import.meta.env.VITE_GENESIS_CONTRACT_ADDRESS;
-const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+// Get contract address and RPC dynamically based on network mode
+function getGenesisAddress() {
+    const nativeChain = getNativeChain();
+    return nativeChain?.contracts?.genesis;
+}
+
+function getArbitrumRpc() {
+    return isMainnet()
+        ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
+        : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+}
 
 // IPFS cache with 1-hour TTL
 const ipfsCache = new Map();
@@ -27,8 +36,8 @@ const fetchFromIPFS = async (hash, timeout = 5000) => {
     const gateways = [
         `https://ipfs.io/ipfs/${hash}`,
         `https://gateway.pinata.cloud/ipfs/${hash}`,
-        `https://cloudflare-ipfs.com/ipfs/${hash}`,
-        `https://dweb.link/ipfs/${hash}`
+        `https://dweb.link/ipfs/${hash}`,
+        `https://w3s.link/ipfs/${hash}`
     ];
 
     const fetchWithTimeout = (url, timeout) => {
@@ -184,10 +193,14 @@ export default function BrowseJobs() {
     useEffect(() => {
         const initWeb3 = async () => {
             try {
-                const web3Instance = new Web3(ARBITRUM_SEPOLIA_RPC);
+                const rpcUrl = getArbitrumRpc();
+                const contractAddress = getGenesisAddress();
+                console.log("🔧 BrowseJobs Init - RPC:", rpcUrl, "Contract:", contractAddress, isMainnet() ? "(mainnet)" : "(testnet)");
+
+                const web3Instance = new Web3(rpcUrl);
                 const contractInstance = new web3Instance.eth.Contract(
                     contractABI,
-                    CONTRACT_ADDRESS,
+                    contractAddress,
                 );
 
                 setWeb3(web3Instance);
@@ -218,8 +231,8 @@ export default function BrowseJobs() {
                 // Get all job IDs
                 const jobIds = await contract.methods.getAllJobIds().call();
                 console.log("🔍 BrowseJobs Debug - Job IDs:", jobIds);
-                console.log("🔍 BrowseJobs Debug - Contract Address:", CONTRACT_ADDRESS);
-                console.log("🔍 BrowseJobs Debug - RPC:", ARBITRUM_SEPOLIA_RPC);
+                console.log("🔍 BrowseJobs Debug - Contract Address:", getGenesisAddress());
+                console.log("🔍 BrowseJobs Debug - RPC:", getArbitrumRpc(), isMainnet() ? "(mainnet)" : "(testnet)");
 
                 if (jobIds.length === 0) {
                     console.log("❌ No job IDs found");
@@ -318,9 +331,8 @@ export default function BrowseJobs() {
                 });
 
                 const resolvedJobs = await Promise.all(jobPromises);
-                const validJobs = resolvedJobs.filter((job) => 
-                    job !== null && job.title && job.title !== "Untitled Job"
-                );
+                // Show all jobs that loaded successfully, even if IPFS data is unavailable
+                const validJobs = resolvedJobs.filter((job) => job !== null);
 
                 // Sort by newest first (assuming job IDs are sequential)
                 validJobs.sort((a, b) => b.id.localeCompare(a.id));
@@ -383,9 +395,10 @@ export default function BrowseJobs() {
             const jobChainId = extractChainIdFromJobId(job.id);
             const chainLogo = getChainLogo(jobChainId);
             const chainName = getChainConfig(jobChainId)?.name || "Unknown";
-            
-            // Debug chain extraction
-            console.log(`Job ${job.id} → chainId: ${jobChainId}, logo: ${chainLogo}, name: ${chainName}`);
+
+            // Debug chain extraction - show full job ID format
+            console.log(`🔍 Job ID: "${job.id}" (type: ${typeof job.id}) → chainId: ${jobChainId}, logo: ${chainLogo}, name: ${chainName}`);
+            console.log(`   Raw jobData.id: "${job.rawJobData?.id}", contains dash: ${String(job.id).includes('-')}`);
 
             // Create all possible column data
             const allColumnData = {

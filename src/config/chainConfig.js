@@ -36,6 +36,42 @@ export function isMainnet() {
 }
 
 // ============================================================
+// LAYERZERO GAS ESTIMATION
+// ============================================================
+/**
+ * Estimated gas usage for NOWJC operations on Arbitrum (destination chain)
+ * Based on actual mainnet transaction analysis + 25% safety buffer
+ */
+export const DESTINATION_GAS_ESTIMATES = {
+  // Conservative estimates to avoid destination failures
+  // Tune down based on actual Arbiscan usage if fees are too high
+  APPLY_JOB: 800000,
+  POST_JOB: 800000,
+  RELEASE_PAYMENT: 800000,
+  LOCK_MILESTONE: 500000,
+  START_JOB: 800000,
+  DEFAULT: 800000
+};
+
+/**
+ * Build LayerZero V2 execution options with specific gas limit
+ * Format: 0x0003 + 01 + 0011 + 01 + [16 bytes gas in big-endian]
+ * @param {number} gasLimit - Destination chain gas limit
+ * @returns {string} Hex-encoded options bytes
+ */
+export function buildLzOptions(gasLimit) {
+  // LayerZero V2 Options format:
+  // 0x0003 - Options type 3 (execution options)
+  // 01 - Worker ID (executor)
+  // 0011 - Option data length (17 bytes)
+  // 01 - Option type (lzReceive gas)
+  // [16 bytes] - Gas limit in big-endian
+
+  const gasHex = gasLimit.toString(16).padStart(32, '0'); // 16 bytes = 32 hex chars
+  return `0x000301001101${gasHex}`;
+}
+
+// ============================================================
 // TESTNET CONFIGURATION
 // ============================================================
 export const TESTNET_CHAIN_CONFIG = {
@@ -62,7 +98,8 @@ export const TESTNET_CHAIN_CONFIG = {
     layerzero: {
       eid: 40232,
       options: "0x0003010011010000000000000000000000000007a120" // 500k gas
-    }
+    },
+    cctpDomain: 2 // OP Sepolia uses domain 2 (same as OP mainnet)
   },
 
   // Ethereum Sepolia - Local Chain (Job Posting Enabled)
@@ -88,7 +125,8 @@ export const TESTNET_CHAIN_CONFIG = {
     layerzero: {
       eid: 40161,
       options: "0x0003010011010000000000000000000000000007a120"
-    }
+    },
+    cctpDomain: 0 // Ethereum Sepolia uses domain 0 (same as ETH mainnet)
   },
 
   // Arbitrum Sepolia - Native Chain (Read-Only, Data Hub)
@@ -121,7 +159,8 @@ export const TESTNET_CHAIN_CONFIG = {
     },
     layerzero: {
       eid: 40231
-    }
+    },
+    cctpDomain: 3 // Arbitrum Sepolia uses domain 3 (same as Arb mainnet)
   },
 
   // Base Sepolia - Main Chain (Governance Only)
@@ -146,7 +185,8 @@ export const TESTNET_CHAIN_CONFIG = {
     },
     layerzero: {
       eid: 40245
-    }
+    },
+    cctpDomain: 6 // Base Sepolia uses domain 6 (same as Base mainnet)
   }
 };
 
@@ -168,16 +208,17 @@ export const MAINNET_CHAIN_CONFIG = {
     rpcUrl: import.meta.env.VITE_OPTIMISM_MAINNET_RPC_URL,
     blockExplorer: "https://optimistic.etherscan.io",
     contracts: {
-      lowjc: "0x5cF21bFb944B6851048F9ac18a8C84F6323a8ce7",
+      lowjc: "0x620205A4Ff0E652fF03a890d2A677de878a1dB63", // V4 Proxy with impl V3 (Jan 23)
       athenaClient: "0x4756294bE516f73e8D1984E7a94E4ABaffA94c4d",
       localBridge: "0x74566644782e98c87a12E8Fc6f7c4c72e2908a36",
-      cctp: "0x00c70838cA0de7F1Eb192Bd7a11A7F2e14407510",
+      cctp: "0x586C700ACFA1D129Ba2C6a6E673c55d586c32f15", // V2 (Jan 23) - CCTP V2
       usdc: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"
     },
     layerzero: {
       eid: 30111,
       options: "0x0003010011010000000000000000000000000007a120" // 500k gas
-    }
+    },
+    cctpDomain: 2 // Optimism mainnet CCTP domain
   },
 
   // Arbitrum One - Native Chain (Read-Only, Data Hub)
@@ -196,22 +237,24 @@ export const MAINNET_CHAIN_CONFIG = {
     blockExplorer: "https://arbiscan.io",
     contracts: {
       genesis: "0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294",
+      genesisReaderHelper: "0x72ee091C288512f0ee9eB42B8C152fbB127Dc782",
       profileGenesis: "0x794809471215cBa5cE56c7d9F402eDd85F9eBa2E",
       profileManager: "0x51285003A01319c2f46BB2954384BCb69AfB1b45",
       nowjc: "0x8EfbF240240613803B9c9e716d4b5AD1388aFd99",
       nativeAthena: "0xE6B9d996b56162cD7eDec3a83aE72943ee7C46Bf",
       nativeDAO: "0x24af98d763724362DC920507b351cC99170a5aa4",
-      nativeRewards: "0x5cF21bFb944B6851048F9ac18a8C84F6323a8ce7",
+      nativeRewards: "0x5E80B57E1C465498F3E0B4360397c79A64A67Ce9", // V2 (Jan 23) - Graceful referrer fix
       oracleManager: "0xEdF3Bcf87716bE05e35E12bA7C0Fc6e1879c0f15",
       activityTracker: "0x8C04840c3f5b5a8c44F9187F9205ca73509690EA",
       contractRegistry: "0x29D61B1a9E2837ABC0810925429Df641CBed58c3",
-      nativeBridge: "0xF78B688846673C3f6b93184BeC230d982c0db0c9",
+      nativeBridge: "0x1bC57d93eC9F9214EDe2e81281A26Ac0E01A9A5F", // V2 (Jan 24) - User refund address fix
       cctp: "0x765D70496Ef775F6ba1cB7465c2e0B296eB50d87",
       usdc: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"
     },
     layerzero: {
       eid: 30110
-    }
+    },
+    cctpDomain: 3 // Arbitrum One CCTP domain
   },
 
   // Ethereum Mainnet - Main Chain (Governance + Token)
@@ -236,7 +279,8 @@ export const MAINNET_CHAIN_CONFIG = {
     },
     layerzero: {
       eid: 30101
-    }
+    },
+    cctpDomain: 0 // Ethereum mainnet CCTP domain
   }
 };
 
@@ -384,17 +428,51 @@ const EID_TO_CHAIN_ID = {
   30109: 137        // Polygon
 };
 
+// CCTP Domain to Chain ID mapping (used in job IDs on mainnet)
+const CCTP_DOMAIN_TO_CHAIN_ID = {
+  0: 1,         // Ethereum Mainnet
+  2: 10,        // Optimism
+  3: 42161,     // Arbitrum One
+  6: 8453,      // Base
+  // Testnets use different domains
+  5: 11155420,  // OP Sepolia (testnet domain)
+  7: 84532      // Base Sepolia (testnet domain)
+};
+
 /**
- * Extract chain ID from job ID (format: "eid-jobNumber")
- * @param {string} jobId - Job ID (e.g., "40232-1", "30111-2")
- * @returns {number} Chain ID (actual chain ID, not EID)
+ * Extract chain ID from job ID
+ * Job ID formats:
+ * - "eid-jobNumber" (e.g., "40232-1") - uses LayerZero EID
+ * - "domain-jobNumber" (e.g., "2-5") - uses CCTP domain (mainnet)
+ * - "jobNumber" (e.g., "1") - native chain job
+ * @param {string} jobId - Job ID
+ * @returns {number} Chain ID
  */
 export function extractChainIdFromJobId(jobId) {
-  if (!jobId || typeof jobId !== 'string') return null;
-  const parts = jobId.split('-');
-  const eid = parts.length > 0 ? parseInt(parts[0]) : null;
-  // Convert EID to actual chain ID
-  return EID_TO_CHAIN_ID[eid] || eid;
+  if (!jobId) return null;
+
+  // Convert to string if needed (bigint or number)
+  const jobIdStr = jobId.toString();
+
+  // Check if job ID has prefix format (prefix-jobNumber)
+  if (jobIdStr.includes('-')) {
+    const parts = jobIdStr.split('-');
+    const prefix = parseInt(parts[0]);
+
+    // First check LayerZero EID (larger numbers like 30111, 40232)
+    if (EID_TO_CHAIN_ID[prefix]) {
+      return EID_TO_CHAIN_ID[prefix];
+    }
+
+    // Then check CCTP domain (smaller numbers like 0, 2, 3, 6)
+    if (CCTP_DOMAIN_TO_CHAIN_ID[prefix] !== undefined) {
+      return CCTP_DOMAIN_TO_CHAIN_ID[prefix];
+    }
+  }
+
+  // No prefix or unknown prefix - job was posted on native chain
+  // Return native chain ID based on network mode
+  return isMainnet() ? 42161 : 421614;  // Arbitrum One or Arbitrum Sepolia
 }
 
 /**
@@ -416,7 +494,7 @@ export function getChainLogo(chainId) {
     8453: '/base-chain.png',          // Base Mainnet
     137: '/polygon-chain.png'         // Polygon
   };
-  return logos[chainId] || '/question-mark.svg';
+  return logos[chainId] || '/OWIcon.svg';  // Fallback to OpenWork icon
 }
 
 /**

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Web3 from "web3";
-import JobContractABI from "../../ABIs/lowjc_ABI.json";
+import JobContractABI from "../../ABIs/lowjc-lite_ABI.json";
 import BrowseJobsABI from "../../ABIs/nowjc_ABI.json";
 import "./PostJob.css";
 import { useWalletConnection } from "../../functions/useWalletConnection";
@@ -19,11 +19,19 @@ import FileUpload from "../../components/FileUpload/FileUpload";
 // Multi-chain support
 import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
 import { postJob as postJobMultiChain } from "../../services/localChainService";
-import { getLocalChains } from "../../config/chainConfig";
+import { getLocalChains, getNativeChain, isMainnet } from "../../config/chainConfig";
 
-// Browse Jobs contract (NOWJC on Arbitrum Sepolia)
-const BROWSE_JOBS_CONTRACT = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS;
-const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+// Dynamic network mode functions for cross-chain polling
+function getGenesisAddress() {
+  const nativeChain = getNativeChain();
+  return nativeChain?.contracts?.genesis;
+}
+
+function getArbitrumRpc() {
+  return isMainnet()
+    ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
+    : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+}
 
 // Backend URL for secure API calls
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
@@ -124,16 +132,20 @@ export default function PostJob() {
     }
   };
 
-  // Function to check if job exists on Arbitrum Sepolia (browse jobs)
+  // Function to check if job exists on Arbitrum (Genesis contract - data hub)
   const checkJobExistsOnArbitrum = async (jobId) => {
     try {
+      const genesisAddress = getGenesisAddress();
+      const arbitrumRpc = getArbitrumRpc();
+      const networkMode = isMainnet() ? "mainnet" : "testnet";
+
       console.log("🔍 Polling for job ID:", jobId);
-      console.log("📍 Checking contract:", BROWSE_JOBS_CONTRACT);
-      console.log("🌐 Using RPC:", ARBITRUM_SEPOLIA_RPC);
+      console.log("📍 Checking contract:", genesisAddress);
+      console.log("🌐 Using RPC:", arbitrumRpc, `(${networkMode})`);
       console.log("⏰ Current time:", new Date().toISOString());
-      
-      const arbitrumWeb3 = new Web3(ARBITRUM_SEPOLIA_RPC);
-      const browseJobsContract = new arbitrumWeb3.eth.Contract(BrowseJobsABI, BROWSE_JOBS_CONTRACT);
+
+      const arbitrumWeb3 = new Web3(arbitrumRpc);
+      const browseJobsContract = new arbitrumWeb3.eth.Contract(BrowseJobsABI, genesisAddress);
       
       // Try to get the job data
       const jobData = await browseJobsContract.methods.getJob(jobId).call();
@@ -481,9 +493,11 @@ export default function PostJob() {
 
           // Step 5: Get LayerZero fee quote
           setTransactionStatus("Getting LayerZero fee quote...");
-          
+
           const bridgeAddress = await contract.methods.bridge().call();
-          
+          console.log("🌉 Bridge address from LOWJC:", bridgeAddress);
+          console.log("🔧 Expected bridge (from config):", chainConfig.contracts.localBridge);
+
           const bridgeABI = [{
             "inputs": [
               {"type": "bytes", "name": "_payload"},
@@ -538,11 +552,14 @@ export default function PostJob() {
               
               // First, try to extract job ID from JobPosted event
               let jobId = null;
-              
+
               // Look for JobPosted event in the receipt logs
+              // Note: jobId is an indexed string, so returnValues.jobId is the keccak256 hash, not the actual ID
+              // We use predictedJobId since we know what ID we're posting
               if (receipt.events && receipt.events.JobPosted) {
-                jobId = receipt.events.JobPosted.returnValues.jobId;
-                console.log("✅ Extracted Job ID from JobPosted event:", jobId);
+                console.log("✅ JobPosted event detected (indexed jobId hash:", receipt.events.JobPosted.returnValues.jobId, ")");
+                jobId = predictedJobId; // Use predicted since indexed strings are hashed
+                console.log("✅ Using predicted Job ID:", jobId);
               } else if (receipt.logs && receipt.logs.length > 0) {
                 // Try to find JobPosted event by topic signature
                 const jobPostedSignature = web3.utils.keccak256("JobPosted(string,address,string)");

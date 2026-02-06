@@ -9,8 +9,8 @@ import ProfileGenesisABI from '../ABIs/profile-genesis_ABI.json';
 const IPFS_GATEWAYS = [
   'https://gateway.pinata.cloud/ipfs/',
   'https://ipfs.io/ipfs/',
-  'https://cloudflare-ipfs.com/ipfs/',
-  'https://dweb.link/ipfs/'
+  'https://dweb.link/ipfs/',
+  'https://w3s.link/ipfs/'
 ];
 
 /**

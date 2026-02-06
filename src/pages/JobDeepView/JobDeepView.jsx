@@ -1,14 +1,24 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import Web3 from "web3";
-import contractABI from "../../ABIs/nowjc_ABI.json"; // Updated to use the correct ABI
+import contractABI from "../../ABIs/genesis_ABI.json"; // Use Genesis ABI for job data
 import "./JobDeepView.css";
 import SkillBox from "../../components/SkillBox/SkillBox";
 import Milestone from "../../components/Milestone/Milestone";
 import BlueButton from "../../components/BlueButton/BlueButton";
+import { getNativeChain, isMainnet } from "../../config/chainConfig";
 
-const CONTRACT_ADDRESS = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS;
-const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+// Dynamic network mode functions
+function getGenesisAddress() {
+  const nativeChain = getNativeChain();
+  return nativeChain?.contracts?.genesis;
+}
+
+function getArbitrumRpc() {
+  return isMainnet()
+    ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
+    : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+}
 
 // IPFS cache with 1-hour TTL
 const ipfsCache = new Map();
@@ -26,8 +36,8 @@ const fetchFromIPFS = async (hash, timeout = 5000) => {
     const gateways = [
         `https://ipfs.io/ipfs/${hash}`,
         `https://gateway.pinata.cloud/ipfs/${hash}`,
-        `https://cloudflare-ipfs.com/ipfs/${hash}`,
-        `https://dweb.link/ipfs/${hash}`
+        `https://dweb.link/ipfs/${hash}`,
+        `https://w3s.link/ipfs/${hash}`
     ];
 
     const fetchWithTimeout = (url, timeout) => {
@@ -185,8 +195,14 @@ export default function JobInfo() {
 
       try {
         setLoading(true);
-        const web3 = new Web3(ARBITRUM_SEPOLIA_RPC);
-        const contract = new web3.eth.Contract(contractABI, CONTRACT_ADDRESS);
+        const rpcUrl = getArbitrumRpc();
+        const genesisAddress = getGenesisAddress();
+        const networkMode = isMainnet() ? "mainnet" : "testnet";
+
+        console.log(`🔧 JobDeepView - RPC: ${rpcUrl} Contract: ${genesisAddress} (${networkMode})`);
+
+        const web3 = new Web3(rpcUrl);
+        const contract = new web3.eth.Contract(contractABI, genesisAddress);
 
         // Add delay to avoid rate limiting
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -355,7 +371,7 @@ export default function JobInfo() {
           totalBudget: formattedTotalBudget,
           jobGiverProfile,
           jobTakerProfile,
-          contractId: CONTRACT_ADDRESS,
+          contractId: genesisAddress,
           ...jobDetails,
         });
 

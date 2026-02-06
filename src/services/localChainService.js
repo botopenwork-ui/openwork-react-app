@@ -17,7 +17,7 @@
 
 import Web3 from "web3";
 import { getChainConfig, isChainAllowed } from "../config/chainConfig";
-import LOWJC_ABI from "../ABIs/lowjc_ABI.json";
+import LOWJC_ABI from "../ABIs/lowjc-lite_ABI.json";
 import ATHENA_CLIENT_ABI from "../ABIs/athena-client_ABI.json";
 
 /**

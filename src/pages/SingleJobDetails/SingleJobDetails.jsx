@@ -3,14 +3,24 @@ import { Tooltip } from "react-tooltip";
 import { useParams } from "react-router-dom";
 import { Link } from "react-router-dom";
 import Web3 from "web3";
-import contractABI from "../../ABIs/nowjc_ABI.json"; // Updated to use the correct ABI
+import contractABI from "../../ABIs/genesis_ABI.json"; // Use Genesis ABI for job data
 import "./SingleJobDetails.css";
 import MenuItem from "../../components/MenuItem";
 import ToolTipContent from "../../components/ToolTipContent/ToolTipContent";
 import ToolTipMilestone from "../../components/ToolTipMilestone/ToolTipMilestone";
+import { getNativeChain, isMainnet } from "../../config/chainConfig";
 
-const CONTRACT_ADDRESS = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS;
-const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+// Dynamic network mode functions
+function getGenesisAddress() {
+  const nativeChain = getNativeChain();
+  return nativeChain?.contracts?.genesis;
+}
+
+function getArbitrumRpc() {
+  return isMainnet()
+    ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
+    : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+}
 
 const MILESTONETOOLTIPITEMS = [
   {
@@ -137,8 +147,14 @@ export default function SingleJobDetails() {
     async function fetchJobDetails() {
       try {
         setLoading(true);
-        const web3 = new Web3(ARBITRUM_SEPOLIA_RPC);
-        const contract = new web3.eth.Contract(contractABI, CONTRACT_ADDRESS);
+        const rpcUrl = getArbitrumRpc();
+        const genesisAddress = getGenesisAddress();
+        const networkMode = isMainnet() ? "mainnet" : "testnet";
+
+        console.log(`🔧 SingleJobDetails - RPC: ${rpcUrl} Contract: ${genesisAddress} (${networkMode})`);
+
+        const web3 = new Web3(rpcUrl);
+        const contract = new web3.eth.Contract(contractABI, genesisAddress);
 
         // Fetch job details from the contract
         const jobData = await contract.methods.getJob(jobId).call();
@@ -153,8 +169,8 @@ export default function SingleJobDetails() {
             const gateways = [
               `https://ipfs.io/ipfs/${jobData.jobDetailHash}`,
               `https://gateway.pinata.cloud/ipfs/${jobData.jobDetailHash}`,
-              `https://cloudflare-ipfs.com/ipfs/${jobData.jobDetailHash}`,
-              `https://dweb.link/ipfs/${jobData.jobDetailHash}`
+              `https://dweb.link/ipfs/${jobData.jobDetailHash}`,
+              `https://w3s.link/ipfs/${jobData.jobDetailHash}`
             ];
             
             let ipfsResponse = null;
@@ -263,9 +279,11 @@ export default function SingleJobDetails() {
             });
           });
         }
+        // Calculate platform fee: 1% of total budget, minimum 1 USDC
+        const platformFee = Math.max(parseFloat(formattedTotalBudget) * 0.01, 1).toFixed(2);
         updatedTooltipItems.push({
           title: "PLATFORM FEES",
-          amount: "5", // You might want to calculate this based on actual platform fee
+          amount: platformFee,
         });
         updatedTooltipItems.push({
           title: "TOTAL COMPENSATION",
@@ -289,7 +307,7 @@ export default function SingleJobDetails() {
           totalMilestones: jobData.milestonePayments.length,
           jobGiverProfile,
           jobTakerProfile,
-          contractId: CONTRACT_ADDRESS,
+          contractId: genesisAddress,
           ...jobDetails,
         });
 

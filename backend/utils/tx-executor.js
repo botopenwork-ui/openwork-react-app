@@ -8,22 +8,27 @@ const config = require('../config');
  */
 async function executeReceiveOnArbitrum(attestationData) {
   console.log('🔗 Executing receive() on Arbitrum CCTP Transceiver...');
-  
-  const web3 = new Web3(config.ARBITRUM_SEPOLIA_RPC);
-  const privateKey = config.WALL2_PRIVATE_KEY.startsWith('0x') 
-    ? config.WALL2_PRIVATE_KEY 
+  console.log(`   Network Mode: ${config.NETWORK_MODE}`);
+
+  // Use dynamic RPC based on network mode
+  const web3 = new Web3(config.ARBITRUM_RPC);
+  const privateKey = config.WALL2_PRIVATE_KEY.startsWith('0x')
+    ? config.WALL2_PRIVATE_KEY
     : `0x${config.WALL2_PRIVATE_KEY}`;
-  
+
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   web3.eth.accounts.wallet.add(account);
-  
+
+  // Use dynamic CCTP address based on network mode
+  const cctpAddress = config.CCTP_ARB_ADDRESS;
+
   const cctpContract = new web3.eth.Contract(
     config.ABIS.CCTP_TRANSCEIVER,
-    config.CCTP_TRANSCEIVER_ADDRESS
+    cctpAddress
   );
-  
+
   console.log('📋 Transaction parameters:', {
-    contract: config.CCTP_TRANSCEIVER_ADDRESS,
+    contract: cctpAddress,
     serviceWallet: account.address,
     messageLength: attestationData.message?.length,
     attestationLength: attestationData.attestation?.length
@@ -75,24 +80,38 @@ async function executeReceiveOnArbitrum(attestationData) {
  * @param {string} destinationChain - Name of the destination chain (e.g. "OP Sepolia")
  * @returns {Promise<{transactionHash: string, alreadyCompleted: boolean}>}
  */
-async function executeReceiveMessage(attestationData, destinationChain = 'OP Sepolia') {
+async function executeReceiveMessage(attestationData, destinationChain = 'Optimism') {
   console.log(`\n🔗 ========== EXECUTING RECEIVE MESSAGE ==========`);
   console.log(`   Destination Chain: ${destinationChain}`);
+  console.log(`   Network Mode: ${config.NETWORK_MODE}`);
 
-  // Select RPC based on chain
+  // Select RPC and MessageTransmitter based on chain (supports both testnet and mainnet names)
   let rpcUrl;
-  if (destinationChain === 'OP Sepolia') {
-    rpcUrl = config.OP_SEPOLIA_RPC;
-  } else if (destinationChain === 'Base Sepolia') {
-    rpcUrl = config.BASE_SEPOLIA_RPC;
-  } else if (destinationChain === 'Ethereum Sepolia') {
-    rpcUrl = config.ETHEREUM_SEPOLIA_RPC;
+  let transmitterAddress;
+
+  // Normalize chain name for comparison
+  const chainLower = destinationChain.toLowerCase();
+
+  if (chainLower.includes('optimism') || chainLower.includes('op')) {
+    rpcUrl = config.OPTIMISM_RPC;
+    transmitterAddress = config.MESSAGE_TRANSMITTER_OP;
+  } else if (chainLower.includes('arbitrum') || chainLower.includes('arb')) {
+    rpcUrl = config.ARBITRUM_RPC;
+    transmitterAddress = config.MESSAGE_TRANSMITTER_ARB;
+  } else if (chainLower.includes('base')) {
+    rpcUrl = config.BASE_RPC;
+    transmitterAddress = config.MESSAGE_TRANSMITTER_OP; // Base uses same transmitter pattern
+  } else if (chainLower.includes('ethereum') || chainLower.includes('eth')) {
+    rpcUrl = config.ETHEREUM_RPC;
+    transmitterAddress = config.MESSAGE_TRANSMITTER_OP; // Eth uses same transmitter pattern
   } else {
-    console.warn(`⚠️ Unknown chain "${destinationChain}", defaulting to OP Sepolia`);
-    rpcUrl = config.OP_SEPOLIA_RPC;
+    console.warn(`⚠️ Unknown chain "${destinationChain}", defaulting to Optimism`);
+    rpcUrl = config.OPTIMISM_RPC;
+    transmitterAddress = config.MESSAGE_TRANSMITTER_OP;
   }
 
   console.log(`   RPC URL: ${rpcUrl ? rpcUrl.substring(0, 50) + '...' : 'NOT CONFIGURED!'}`);
+  console.log(`   MessageTransmitter: ${transmitterAddress || 'NOT CONFIGURED!'}`);
 
   if (!rpcUrl) {
     throw new Error(`RPC URL not configured for ${destinationChain}. Check .env file.`);
@@ -101,13 +120,10 @@ async function executeReceiveMessage(attestationData, destinationChain = 'OP Sep
   const web3 = new Web3(rpcUrl);
   const privateKey = config.WALL2_PRIVATE_KEY.startsWith('0x')
     ? config.WALL2_PRIVATE_KEY
-    : `0x${config.WALL2_PRIVATE_KEY}`;
+    : `0x${config.WALL2_PRIVATE_KEY}`
 
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   web3.eth.accounts.wallet.add(account);
-
-  // CCTP MessageTransmitter address (same across all testnets)
-  const transmitterAddress = config.MESSAGE_TRANSMITTER_ADDRESS;
 
   if (!transmitterAddress) {
     throw new Error('MESSAGE_TRANSMITTER_ADDRESS not configured in .env');

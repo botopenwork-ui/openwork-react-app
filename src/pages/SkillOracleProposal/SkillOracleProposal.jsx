@@ -11,7 +11,7 @@ export default function SkillOracleProposal() {
             id: 1,
             icon: "/create-skill-oracle-icon.svg",
             name: "Create a New Skill Oracle",
-            route: "/newskilloraclestep2"
+            route: "/newgeneraloraclestep2"
         },
         {
             id: 2,

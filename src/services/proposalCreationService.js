@@ -9,7 +9,8 @@ function getAddresses() {
     MAIN_DAO_ADDRESS: mainChain?.contracts?.mainDAO,
     NATIVE_DAO_ADDRESS: nativeChain?.contracts?.nativeDAO,
     MAIN_BRIDGE_ADDRESS: mainChain?.contracts?.mainBridge,
-    NATIVE_ATHENA_ADDRESS: nativeChain?.contracts?.nativeAthena
+    NATIVE_ATHENA_ADDRESS: nativeChain?.contracts?.nativeAthena,
+    ORACLE_MANAGER_ADDRESS: nativeChain?.contracts?.oracleManager
   };
 }
 
@@ -202,13 +203,14 @@ const NATIVE_DAO_ABI = [
     type: "function"
   },
   {
+    // Mainnet Native DAO uses getUserGovernancePower (not getGovernanceEligibility)
     inputs: [{ internalType: "address", name: "account", type: "address" }],
-    name: "getGovernanceEligibility",
+    name: "getUserGovernancePower",
     outputs: [
-      { internalType: "bool", name: "canProposeFlag", type: "bool" },
-      { internalType: "bool", name: "canVoteFlag", type: "bool" },
       { internalType: "uint256", name: "stakeAmount", type: "uint256" },
-      { internalType: "uint256", name: "rewardTokens", type: "uint256" }
+      { internalType: "uint256", name: "earnedTokens", type: "uint256" },
+      { internalType: "bool", name: "canProposeFlag", type: "bool" },
+      { internalType: "bool", name: "canVoteFlag", type: "bool" }
     ],
     stateMutability: "view",
     type: "function"
@@ -272,18 +274,20 @@ export async function checkMainDAOEligibility(userAddress) {
 }
 
 /**
- * Check if user is eligible to propose on Native DAO (Arbitrum Sepolia)
+ * Check if user is eligible to propose on Native DAO (Arbitrum One mainnet / Arbitrum Sepolia testnet)
+ * Note: Mainnet contract uses getUserGovernancePower function
  */
 export async function checkNativeDAOEligibility(userAddress) {
   try {
     const { nativeDAOContract } = initializeNativeDAO();
-    const eligibility = await nativeDAOContract.methods.getGovernanceEligibility(userAddress).call();
-    
+    // Mainnet uses getUserGovernancePower with return order: stakeAmount, earnedTokens, canProposeFlag, canVoteFlag
+    const eligibility = await nativeDAOContract.methods.getUserGovernancePower(userAddress).call();
+
     return {
       canPropose: eligibility.canProposeFlag,
       canVote: eligibility.canVoteFlag,
       stakeAmount: eligibility.stakeAmount,
-      rewardTokens: eligibility.rewardTokens
+      rewardTokens: eligibility.earnedTokens
     };
   } catch (error) {
     console.error("Error checking Native DAO eligibility:", error);
@@ -414,7 +418,7 @@ export async function createMainDAOProposal({
             // Save to database
             console.log("💾 Saving proposal to database...");
             await saveProposalToDatabase({
-              proposalId: proposalId.toString(),
+              proposalId: BigInt(proposalId).toString(), // Convert hex to decimal to match blockchain format
               chain: 'Base',
               proposalType: 'Treasury',
               title: `Treasury Transfer: ${web3.utils.fromWei(amount, 'ether')} OW`,
@@ -625,7 +629,7 @@ export async function createUpgradeProposal({
             // Save to database
             console.log("💾 Saving upgrade proposal to database...");
             const dbSaveResult = await saveProposalToDatabase({
-              proposalId: proposalId.toString(),
+              proposalId: BigInt(proposalId).toString(), // Convert hex to decimal to match blockchain format
               chain: 'Base',
               proposalType: 'Contract Upgrade',
               title: `Upgrade ${contractName}`,
@@ -797,14 +801,30 @@ export async function castMainDAOVote({ proposalId, support, userAddress }) {
     const fee = await mainDAOContract.methods.quoteGovernanceNotification(fromAddress, LAYERZERO_OPTIONS).call();
 
     return new Promise((resolve, reject) => {
+      let resolved = false;
+
+      const handleError = (error) => {
+        if (resolved) return;
+        resolved = true;
+        console.error("Main DAO vote error:", error);
+        if (error.code === 4001 || error.message?.includes('User denied') || error.message?.includes('rejected')) {
+          reject(new Error("Transaction rejected by user"));
+        } else {
+          reject(error);
+        }
+      };
+
       mainDAOContract.methods
         .castVote(proposalId, support, LAYERZERO_OPTIONS)
         .send({ from: fromAddress, value: fee, gas: 500000 })
         .on('receipt', (receipt) => {
+          if (resolved) return;
+          resolved = true;
           if (receipt.status == 1) resolve({ success: true, transactionHash: receipt.transactionHash });
           else reject(new Error("Transaction reverted"));
         })
-        .on('error', reject);
+        .on('error', handleError)
+        .catch(handleError);
     });
   } catch (error) {
     throw error;
@@ -869,11 +889,32 @@ export async function executeProposal({
     console.log("Calldatas:", calldatas);
     console.log("Description Hash:", descriptionHash);
 
+    // Estimate gas instead of using hardcoded value
+    const executeMethod = daoContract.methods.execute(targets, values, calldatas, descriptionHash);
+    const estimatedGas = await executeMethod.estimateGas({ from: fromAddress });
+    const gasLimit = Math.ceil(Number(estimatedGas) * 1.2); // Add 20% buffer
+    console.log("Estimated gas:", estimatedGas, "Using limit:", gasLimit);
+
     return new Promise((resolve, reject) => {
-      daoContract.methods
-        .execute(targets, values, calldatas, descriptionHash)
-        .send({ from: fromAddress, gas: 500000 })
+      let resolved = false;
+
+      const handleError = (error) => {
+        if (resolved) return;
+        resolved = true;
+        console.error("Execute transaction error:", error);
+        // Handle user rejection specifically
+        if (error.code === 4001 || error.message?.includes('User denied') || error.message?.includes('rejected')) {
+          reject(new Error("Transaction rejected by user"));
+        } else {
+          reject(error);
+        }
+      };
+
+      executeMethod
+        .send({ from: fromAddress, gas: gasLimit })
         .on('receipt', (receipt) => {
+          if (resolved) return;
+          resolved = true;
           if (receipt.status == 1) {
             console.log("✅ Proposal executed successfully");
             resolve({ success: true, transactionHash: receipt.transactionHash });
@@ -881,7 +922,8 @@ export async function executeProposal({
             reject(new Error("Transaction reverted"));
           }
         })
-        .on('error', reject);
+        .on('error', handleError)
+        .catch(handleError); // Catch rejections that don't go through .on('error')
     });
   } catch (error) {
     console.error("Error executing proposal:", error);
@@ -919,14 +961,30 @@ export async function castNativeDAOVote({ proposalId, support, userAddress }) {
     const nativeDAOContract = new web3.eth.Contract(NATIVE_DAO_ABI, NATIVE_DAO_ADDRESS);
 
     return new Promise((resolve, reject) => {
+      let resolved = false;
+
+      const handleError = (error) => {
+        if (resolved) return;
+        resolved = true;
+        console.error("Vote transaction error:", error);
+        if (error.code === 4001 || error.message?.includes('User denied') || error.message?.includes('rejected')) {
+          reject(new Error("Transaction rejected by user"));
+        } else {
+          reject(error);
+        }
+      };
+
       nativeDAOContract.methods
         .castVote(proposalId, support)
         .send({ from: fromAddress, gas: 500000 })
         .on('receipt', (receipt) => {
+          if (resolved) return;
+          resolved = true;
           if (receipt.status == 1) resolve({ success: true, transactionHash: receipt.transactionHash });
           else reject(new Error("Transaction reverted"));
         })
-        .on('error', reject);
+        .on('error', handleError)
+        .catch(handleError);
     });
   } catch (error) {
     throw error;
@@ -970,7 +1028,7 @@ export async function createOracleProposal({
     }
 
     // Get dynamic addresses
-    const { NATIVE_DAO_ADDRESS, NATIVE_ATHENA_ADDRESS } = getAddresses();
+    const { NATIVE_DAO_ADDRESS, ORACLE_MANAGER_ADDRESS } = getAddresses();
     const nativeDAOContract = new web3.eth.Contract(NATIVE_DAO_ABI, NATIVE_DAO_ADDRESS);
 
     // Encode the addSingleOracle function call
@@ -990,8 +1048,8 @@ export async function createOracleProposal({
       [oracleName, members, shortDescription, detailsHash, skillVerifiedAddresses]
     );
 
-    // Prepare proposal parameters
-    const targets = [NATIVE_ATHENA_ADDRESS];
+    // Prepare proposal parameters - target OracleManager (NOT NativeAthena)
+    const targets = [ORACLE_MANAGER_ADDRESS];
     const values = [0];
     const calldatas = [oracleCalldata];
 
@@ -1001,7 +1059,7 @@ export async function createOracleProposal({
     console.log("Details Hash:", detailsHash);
     console.log("Members:", members);
     console.log("Skill Verified:", skillVerifiedAddresses);
-    console.log("Native Athena:", NATIVE_ATHENA_ADDRESS);
+    console.log("Oracle Manager:", ORACLE_MANAGER_ADDRESS);
     console.log("Native DAO:", NATIVE_DAO_ADDRESS);
     console.log("Calldata:", oracleCalldata);
     console.log("Proposal Description:", proposalDescription);
@@ -1013,7 +1071,56 @@ export async function createOracleProposal({
     // Create proposal and wait for confirmation
     return new Promise((resolve, reject) => {
       console.log("[SERVICE TIMING] Creating oracle proposal:", new Date().toISOString());
-      
+
+      let txHash = null;
+      let resolved = false;
+
+      // Helper function to save and resolve
+      const saveAndResolve = async (transactionHash, blockNumber = null) => {
+        if (resolved) return;
+        resolved = true;
+
+        const result = {
+          success: true,
+          transactionHash,
+          proposalId
+        };
+
+        // Save to database
+        console.log("💾 Saving oracle proposal to database...");
+        const dbSaveResult = await saveProposalToDatabase({
+          proposalId: BigInt(proposalId).toString(), // Convert hex to decimal to match blockchain format
+          chain: 'Arbitrum',
+          proposalType: 'Oracle Creation',
+          title: `Create Oracle: ${oracleName}`,
+          description: proposalDescription,
+          proposerAddress: fromAddress,
+          recipientAddress: ORACLE_MANAGER_ADDRESS,
+          amount: null,
+          transactionHash,
+          blockNumber: blockNumber ? Number(blockNumber) : null,
+          metadata: {
+            oracleName,
+            shortDescription,
+            detailsHash,
+            members,
+            skillVerifiedAddresses,
+            targets,
+            values: values.map(v => typeof v === 'bigint' ? v.toString() : v),
+            calldatas
+          }
+        });
+
+        if (dbSaveResult.success) {
+          console.log("✅ DATABASE SAVE SUCCESSFUL for proposal:", proposalId);
+        } else {
+          console.error("❌ DATABASE SAVE FAILED:", dbSaveResult.error);
+        }
+
+        console.log("Oracle proposal created successfully:", result);
+        resolve(result);
+      };
+
       nativeDAOContract.methods
         .propose(targets, values, calldatas, proposalDescription)
         .send({
@@ -1023,63 +1130,33 @@ export async function createOracleProposal({
         .on('transactionHash', (hash) => {
           console.log("[SERVICE TIMING] transactionHash event fired:", new Date().toISOString());
           console.log("Transaction hash:", hash);
+          txHash = hash;
         })
         .on('receipt', async (receipt) => {
           console.log("[SERVICE TIMING] receipt event fired:", new Date().toISOString());
           console.log("Transaction receipt:", receipt);
           console.log("Receipt status:", receipt.status);
-          
+
           // Check if transaction was successful
           if (receipt.status == 1 || receipt.status == "1") {
             console.log("✅ Transaction successful! Using calculated proposal ID:", proposalId);
-            
-            const result = {
-              success: true,
-              transactionHash: receipt.transactionHash,
-              proposalId
-            };
-            
-            // Save to database
-            console.log("💾 Saving oracle proposal to database...");
-            const dbSaveResult = await saveProposalToDatabase({
-              proposalId: proposalId.toString(),
-              chain: 'Arbitrum',
-              proposalType: 'Oracle Creation',
-              title: `Create Oracle: ${oracleName}`,
-              description: proposalDescription,
-              proposerAddress: fromAddress,
-              recipientAddress: NATIVE_ATHENA_ADDRESS,
-              amount: null,
-              transactionHash: receipt.transactionHash,
-              blockNumber: Number(receipt.blockNumber),
-              metadata: {
-                oracleName,
-                shortDescription,
-                detailsHash,
-                members,
-                skillVerifiedAddresses,
-                targets,
-                values: values.map(v => typeof v === 'bigint' ? v.toString() : v),
-                calldatas
-              }
-            });
-            
-            if (dbSaveResult.success) {
-              console.log("✅ DATABASE SAVE SUCCESSFUL for proposal:", proposalId);
-            } else {
-              console.error("❌ DATABASE SAVE FAILED:", dbSaveResult.error);
-            }
-            
-            console.log("Oracle proposal created successfully:", result);
-            resolve(result);
+            await saveAndResolve(receipt.transactionHash, receipt.blockNumber);
           } else {
             console.log("Transaction reverted");
             reject(new Error("Transaction reverted by the blockchain"));
           }
         })
-        .on('error', (error) => {
+        .on('error', async (error) => {
           console.error("Transaction error:", error);
-          reject(error);
+
+          // Handle timeout errors - if we have a txHash, the transaction was sent
+          // and likely succeeded on-chain even if we timed out waiting for receipt
+          if (txHash && (error.message?.includes('timeout') || error.message?.includes('Timeout') || error.name === 'TransactionBlockTimeoutError')) {
+            console.log("⚠️ Transaction timed out but was sent. Assuming success since txHash exists:", txHash);
+            await saveAndResolve(txHash);
+          } else {
+            reject(error);
+          }
         });
     });
 
@@ -1125,7 +1202,7 @@ export async function createOracleMemberRecruitmentProposal({
     }
 
     // Get dynamic addresses
-    const { NATIVE_DAO_ADDRESS, NATIVE_ATHENA_ADDRESS } = getAddresses();
+    const { NATIVE_DAO_ADDRESS, ORACLE_MANAGER_ADDRESS } = getAddresses();
     const nativeDAOContract = new web3.eth.Contract(NATIVE_DAO_ABI, NATIVE_DAO_ADDRESS);
 
     // Encode the addMembers function call
@@ -1142,8 +1219,8 @@ export async function createOracleMemberRecruitmentProposal({
       [[memberAddress], oracleName]
     );
 
-    // Prepare proposal parameters
-    const targets = [NATIVE_ATHENA_ADDRESS];
+    // Prepare proposal parameters - target OracleManager (NOT NativeAthena)
+    const targets = [ORACLE_MANAGER_ADDRESS];
     const values = [0];
     const calldatas = [addMembersCalldata];
 
@@ -1155,7 +1232,7 @@ export async function createOracleMemberRecruitmentProposal({
     console.log("New Member:", memberAddress);
     console.log("Contact:", emailOrTelegram);
     console.log("Reason:", reason);
-    console.log("Native Athena:", NATIVE_ATHENA_ADDRESS);
+    console.log("Oracle Manager:", ORACLE_MANAGER_ADDRESS);
     console.log("Native DAO:", NATIVE_DAO_ADDRESS);
     console.log("Calldata:", addMembersCalldata);
     console.log("Proposal Description:", proposalDescription);
@@ -1185,13 +1262,13 @@ export async function createOracleMemberRecruitmentProposal({
         // Save to database
         console.log("💾 Saving member recruitment proposal to database...");
         const dbSaveResult = await saveProposalToDatabase({
-          proposalId: proposalId.toString(),
+          proposalId: BigInt(proposalId).toString(), // Convert hex to decimal to match blockchain format
           chain: 'Arbitrum',
           proposalType: 'Oracle Member Recruitment',
           title: `Recruit Member to ${oracleName}`,
           description: proposalDescription,
           proposerAddress: fromAddress,
-          recipientAddress: NATIVE_ATHENA_ADDRESS,
+          recipientAddress: ORACLE_MANAGER_ADDRESS,
           amount: null,
           transactionHash,
           blockNumber: blockNumber ? Number(blockNumber) : null,
@@ -1296,7 +1373,7 @@ export async function createOracleMemberRemovalProposal({
     }
 
     // Get dynamic addresses
-    const { NATIVE_DAO_ADDRESS, NATIVE_ATHENA_ADDRESS } = getAddresses();
+    const { NATIVE_DAO_ADDRESS, ORACLE_MANAGER_ADDRESS } = getAddresses();
     const nativeDAOContract = new web3.eth.Contract(NATIVE_DAO_ABI, NATIVE_DAO_ADDRESS);
 
     // Encode the removeMemberFromOracle function call
@@ -1313,8 +1390,8 @@ export async function createOracleMemberRemovalProposal({
       [oracleName, memberAddress]
     );
 
-    // Prepare proposal parameters
-    const targets = [NATIVE_ATHENA_ADDRESS];
+    // Prepare proposal parameters - target OracleManager (NOT NativeAthena)
+    const targets = [ORACLE_MANAGER_ADDRESS];
     const values = [0];
     const calldatas = [removeMemberCalldata];
 
@@ -1325,7 +1402,7 @@ export async function createOracleMemberRemovalProposal({
     console.log("Oracle Name:", oracleName);
     console.log("Member to Remove:", memberAddress);
     console.log("Reason:", reason);
-    console.log("Native Athena:", NATIVE_ATHENA_ADDRESS);
+    console.log("Oracle Manager:", ORACLE_MANAGER_ADDRESS);
     console.log("Native DAO:", NATIVE_DAO_ADDRESS);
     console.log("Calldata:", removeMemberCalldata);
     console.log("Proposal Description:", proposalDescription);
@@ -1366,13 +1443,13 @@ export async function createOracleMemberRemovalProposal({
             // Save to database
             console.log("💾 Saving member removal proposal to database...");
             const dbSaveResult = await saveProposalToDatabase({
-              proposalId: proposalId.toString(),
+              proposalId: BigInt(proposalId).toString(), // Convert hex to decimal to match blockchain format
               chain: 'Arbitrum',
               proposalType: 'Oracle Member Removal',
               title: `Remove Member from ${oracleName}`,
               description: proposalDescription,
               proposerAddress: fromAddress,
-              recipientAddress: NATIVE_ATHENA_ADDRESS,
+              recipientAddress: ORACLE_MANAGER_ADDRESS,
               amount: null,
               transactionHash: receipt.transactionHash,
               blockNumber: Number(receipt.blockNumber),

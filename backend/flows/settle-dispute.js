@@ -1,5 +1,5 @@
 const { pollCCTPAttestation } = require('../utils/cctp-poller');
-const { executeReceiveMessageOnOpSepolia } = require('../utils/tx-executor');
+const { executeReceiveMessage } = require('../utils/tx-executor');
 const { getDomainFromJobId, getChainNameFromJobId } = require('../utils/chain-utils');
 const { saveCCTPTransfer, updateCCTPStatus } = require('../utils/cctp-storage');
 const config = require('../config');
@@ -10,7 +10,7 @@ const config = require('../config');
  * Funds go to the chain where the job was posted
  * @param {string} disputeId - Dispute ID from the transaction
  * @param {string} jobId - Job ID to determine destination chain (format: "eid-jobNumber")
- * @param {string} sourceTxHash - Transaction hash from Arbitrum Sepolia
+ * @param {string} sourceTxHash - Transaction hash from Arbitrum (native chain)
  */
 async function processSettleDispute(disputeId, jobId, sourceTxHash) {
   console.log('\n⚖️ ========== SETTLE DISPUTE FLOW INITIATED ==========');
@@ -28,19 +28,21 @@ async function processSettleDispute(disputeId, jobId, sourceTxHash) {
     throw error;
   }
   
-  console.log(`Source TX (Arbitrum Sepolia): ${sourceTxHash}`);
-  
+  // Determine source chain name based on network mode
+  const sourceChainName = config.isMainnet() ? 'Arbitrum One' : 'Arbitrum Sepolia';
+  console.log(`Source TX (${sourceChainName}): ${sourceTxHash}`);
+
   try {
-    // Save to database
-    saveCCTPTransfer('settleDispute', jobId, sourceTxHash, 'Arbitrum Sepolia', config.DOMAINS.ARBITRUM_SEPOLIA, disputeId);
-    
+    // Save to database - use dynamic domain from config
+    saveCCTPTransfer('settleDispute', jobId, sourceTxHash, sourceChainName, config.DOMAINS.ARBITRUM, disputeId);
+
     // STEP 1: Poll Circle API for CCTP attestation
     updateCCTPStatus(jobId, 'settleDispute', { step: 'polling_attestation' });
-    
+
     console.log('\n📍 STEP 1/2: Polling Circle API for CCTP attestation...');
     const attestation = await pollCCTPAttestation(
-      sourceTxHash, 
-      config.DOMAINS.ARBITRUM_SEPOLIA // Domain 3
+      sourceTxHash,
+      config.DOMAINS.ARBITRUM // Domain 3 for both testnet and mainnet
     );
     console.log('✅ Attestation received');
     
@@ -51,9 +53,9 @@ async function processSettleDispute(disputeId, jobId, sourceTxHash) {
       attestationSignature: attestation.attestation
     });
     
-    // STEP 2: Execute receiveMessage() on destination chain
+    // STEP 2: Execute receiveMessage() on destination chain (dynamic based on job ID)
     console.log(`\n📍 STEP 2/2: Executing receiveMessage() on ${destinationChain}...`);
-    const result = await executeReceiveMessageOnOpSepolia(attestation);
+    const result = await executeReceiveMessage(attestation, destinationChain);
     
     if (result.alreadyCompleted) {
       console.log(`✅ USDC already transferred to winner on ${destinationChain} (completed by CCTP)`);

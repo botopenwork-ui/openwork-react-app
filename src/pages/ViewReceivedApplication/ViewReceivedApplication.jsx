@@ -13,7 +13,7 @@ import Warning from "../../components/Warning/Warning";
 import Collapse from "../../components/Collapse/Collapse";
 import SkillBox from "../../components/SkillBox/SkillBox";
 import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
-import { getChainConfig, extractChainIdFromJobId } from "../../config/chainConfig";
+import { getChainConfig, extractChainIdFromJobId, getNativeChain, isMainnet, buildLzOptions, DESTINATION_GAS_ESTIMATES } from "../../config/chainConfig";
 import { switchToChain } from "../../utils/switchNetwork";
 import { getLOWJCContract } from "../../services/localChainService";
 
@@ -43,6 +43,16 @@ const ERC20_ABI = [
     "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
     "stateMutability": "view",
     "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "address", "name": "owner", "type": "address"},
+      {"internalType": "address", "name": "spender", "type": "address"}
+    ],
+    "name": "allowance",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
   }
 ];
 
@@ -58,8 +68,8 @@ const fetchFromIPFS = async (hash, timeout = 5000) => {
   const gateways = [
     `https://ipfs.io/ipfs/${hash}`,
     `https://gateway.pinata.cloud/ipfs/${hash}`,
-    `https://cloudflare-ipfs.com/ipfs/${hash}`,
-    `https://dweb.link/ipfs/${hash}`
+    `https://dweb.link/ipfs/${hash}`,
+    `https://w3s.link/ipfs/${hash}`
   ];
 
   const fetchWithTimeout = (url, timeout) => {
@@ -144,6 +154,10 @@ export default function ViewReceivedApplication() {
   const jobChainId = jobId ? extractChainIdFromJobId(jobId) : null;
   const jobChainConfig = jobChainId ? getChainConfig(jobChainId) : null;
 
+  // Check if job is already started (selectedApplicant is non-zero address)
+  const isJobStarted = job?.selectedApplicant && job.selectedApplicant !== '0x0000000000000000000000000000000000000000';
+  const isThisApplicationSelected = isJobStarted && job?.selectedApplicationId?.toString() === applicationId;
+
   // Fetch application data
   useEffect(() => {
     async function fetchApplicationData() {
@@ -163,14 +177,15 @@ export default function ViewReceivedApplication() {
         setLoading(true);
         console.log("Fetching application data for:", { jobId, applicationId });
         
-        // Applications are stored on Arbitrum Genesis, not on local chain
-        const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
-        const GENESIS_CONTRACT = import.meta.env.VITE_GENESIS_CONTRACT_ADDRESS || "0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C";
-        
-        console.log("Using Genesis contract:", GENESIS_CONTRACT);
-        console.log("Using RPC:", ARBITRUM_SEPOLIA_RPC);
-        
-        const web3 = new Web3(ARBITRUM_SEPOLIA_RPC);
+        // Applications are stored on Arbitrum Genesis (native chain), not on local chain
+        const nativeChain = getNativeChain();
+        const ARBITRUM_RPC = nativeChain?.rpcUrl;
+        const GENESIS_CONTRACT = nativeChain?.contracts?.genesis;
+
+        console.log(`🔗 Using ${isMainnet() ? 'MAINNET' : 'TESTNET'} - Genesis: ${GENESIS_CONTRACT}`);
+        console.log("Using RPC:", ARBITRUM_RPC);
+
+        const web3 = new Web3(ARBITRUM_RPC);
         const genesisABI = [{
           "inputs": [
             {"name": "jobId", "type": "string"},
@@ -485,24 +500,33 @@ export default function ViewReceivedApplication() {
       }
       
       console.log(`✅ USDC balance check passed: ${balanceInUSDC.toFixed(2)} USDC available`);
-      
-      // ============ STEP 1: USDC APPROVAL ============
-      setTransactionStatus(`💰 Step 1/3: Approving ${firstMilestoneAmount} USDC spending - Please confirm in MetaMask`);
-      
-      const approveTx = await usdcContract.methods.approve(
-        lowjcAddress, 
-        amountInUSDCUnits.toString()
-      ).send({ from: walletAddress });
-      
-      if (!approveTx || !approveTx.transactionHash) {
-        throw new Error("Approval transaction failed");
+
+      // ============ STEP 1: CHECK ALLOWANCE & APPROVE IF NEEDED ============
+      setTransactionStatus("🔍 Checking USDC allowance...");
+      const currentAllowance = await usdcContract.methods.allowance(walletAddress, lowjcAddress).call();
+      console.log(`📊 Current allowance: ${parseFloat(currentAllowance) / 1000000} USDC, Required: ${firstMilestoneAmount} USDC`);
+
+      if (BigInt(currentAllowance) < BigInt(amountInUSDCUnits)) {
+        setTransactionStatus(`💰 Step 1/3: Approving ${firstMilestoneAmount} USDC spending - Please confirm in MetaMask`);
+
+        const approveTx = await usdcContract.methods.approve(
+          lowjcAddress,
+          amountInUSDCUnits.toString()
+        ).send({ from: walletAddress });
+
+        if (!approveTx || !approveTx.transactionHash) {
+          throw new Error("Approval transaction failed");
+        }
+
+        console.log("✅ USDC approval confirmed:", approveTx.transactionHash);
+        setTransactionStatus(`✅ Step 1/3: USDC approval confirmed`);
+
+        // Wait for transaction to be properly mined
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } else {
+        console.log("✅ Sufficient allowance already exists, skipping approval");
+        setTransactionStatus(`✅ Step 1/3: USDC allowance already sufficient`);
       }
-      
-      console.log("✅ USDC approval confirmed:", approveTx.transactionHash);
-      setTransactionStatus(`✅ Step 1/3: USDC approval confirmed`);
-      
-      // Wait for transaction to be properly mined
-      await new Promise(resolve => setTimeout(resolve, 2000));
       
       // ============ STEP 2: START JOB ON POSTING CHAIN ============
       setTransactionStatus(`🔧 Step 2/3: Getting LayerZero fee quote on ${jobChainConfig.name}...`);
@@ -524,31 +548,41 @@ export default function ViewReceivedApplication() {
       }];
       
       const bridgeContract = new web3.eth.Contract(bridgeABI, bridgeAddress);
-      
-      // LayerZero options from config
-      const nativeOptions = jobChainConfig.layerzero.options;
-      
+
+      // Build LZ options with appropriate destination gas for START_JOB
+      const destGas = DESTINATION_GAS_ESTIMATES.START_JOB;
+      const lzOptions = buildLzOptions(destGas);
+      console.log(`⛽ Destination gas (Arbitrum): ${destGas} for START_JOB`);
+
       // Encode payload matching LOWJC's internal encoding for startJob
       // LOWJC sends: abi.encode("startJob", msg.sender, _jobId, _applicationId, _useAppMilestones)
       const payload = web3.eth.abi.encodeParameters(
         ['string', 'address', 'string', 'uint256', 'bool'],
         ['startJob', walletAddress, jobId, parseInt(applicationId), useAppMilestones]
       );
-      
-      // Get quote from bridge
-      const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, nativeOptions).call();
-      console.log(`💰 LayerZero quoted fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH`);
-      
+
+      // Get quote from bridge and add 20% buffer
+      const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, lzOptions).call();
+      const lzFee = BigInt(quotedFee) * BigInt(120) / BigInt(100); // +20% buffer
+      console.log(`💰 LayerZero quote: ${web3.utils.fromWei(quotedFee.toString(), 'ether')} ETH`);
+      console.log(`💰 With 20% buffer: ${web3.utils.fromWei(lzFee.toString(), 'ether')} ETH`);
+
+      // Get current gas price for EIP-1559
+      const gasPrice = await web3.eth.getGasPrice();
+
       setTransactionStatus(`🔧 Step 2/3: Starting job on ${jobChainConfig.name} - Please confirm in MetaMask`);
-      
+
       const startJobTx = await lowjcContract.methods.startJob(
         jobId,
         parseInt(applicationId),
         useAppMilestones,
-        nativeOptions
+        lzOptions
       ).send({
         from: walletAddress,
-        value: quotedFee // Use the exact LayerZero quoted fee
+        value: lzFee.toString(),
+        gas: 800000, // Higher gas for USDC transfer + LZ + CCTP
+        maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
+        maxFeePerGas: gasPrice
       });
       
       if (!startJobTx || !startJobTx.transactionHash) {
@@ -804,59 +838,75 @@ export default function ViewReceivedApplication() {
               </div>
             </div>
             <div>
-               <div className="vote-button-section">
-                    <Button 
-                      label={isProcessing ? 'Processing Multi-Chain Transaction...' : 'Start Job (Cross-Chain Process)'} 
-                      buttonCss={'downvote-button upvote-button'}
-                      onClick={handleStartJob}
-                      style={{ 
-                        width: '100%',
-                        opacity: isProcessing ? 0.7 : 1,
-                        cursor: isProcessing ? 'not-allowed' : 'pointer'
-                      }}
-                      disabled={isProcessing}
-                    />
-               </div>
-               <div className="warning-form">
-                 <Warning content={transactionStatus} />
-               </div>
-               
-               {/* CCTP Status Warnings */}
-               {cctpStatus?.status === 'pending' && (
-                 <div className="warning-form">
-                   <Warning 
-                     content={`⏳ Cross-chain transfer processing: ${cctpStatus.step || 'polling attestation'}...`}
-                     icon="/info.svg"
-                   />
-                 </div>
-               )}
-               
-               {cctpStatus?.status === 'failed' && (
+               {/* Show different UI based on whether job is already started */}
+               {isJobStarted ? (
                  <>
                    <div className="warning-form">
-                     <Warning 
-                       content={`⚠️ Transfer incomplete: ${cctpStatus.lastError}. Retry attempts: ${cctpStatus.retryCount}`}
-                       icon="/orange-warning.svg"
-                     />
-                   </div>
-                   <div style={{marginTop: '12px'}}>
-                     <Button 
-                       label="Retry CCTP Transfer"
-                       buttonCss={'downvote-button upvote-button'}
-                       onClick={handleRetryCCTP}
-                       style={{ width: '100%' }}
+                     <Warning
+                       content={isThisApplicationSelected
+                         ? `✅ This application was selected - Job is in progress with ${job?.selectedApplicant?.slice(0, 6)}...${job?.selectedApplicant?.slice(-4)}`
+                         : '⚠️ Job already started with a different applicant'
+                       }
                      />
                    </div>
                  </>
-               )}
-               
-               {jobChainConfig && userChainId !== jobChainId && (
-                 <div className="warning-form">
-                   <Warning 
-                     content={`⚠️ StartJob requires ${jobChainConfig.name}. You are on ${userChainConfig?.name || 'unknown chain'}. Please switch networks.`} 
-                     icon="/triangle_warning.svg"
-                   />
-                 </div>
+               ) : (
+                 <>
+                   <div className="vote-button-section">
+                        <Button
+                          label={isProcessing ? 'Processing Multi-Chain Transaction...' : 'Start Job (Cross-Chain Process)'}
+                          buttonCss={'downvote-button upvote-button'}
+                          onClick={handleStartJob}
+                          style={{
+                            width: '100%',
+                            opacity: isProcessing ? 0.7 : 1,
+                            cursor: isProcessing ? 'not-allowed' : 'pointer'
+                          }}
+                          disabled={isProcessing}
+                        />
+                   </div>
+                   <div className="warning-form">
+                     <Warning content={transactionStatus} />
+                   </div>
+
+                   {/* CCTP Status Warnings */}
+                   {cctpStatus?.status === 'pending' && (
+                     <div className="warning-form">
+                       <Warning
+                         content={`⏳ Cross-chain transfer processing: ${cctpStatus.step || 'polling attestation'}...`}
+                         icon="/info.svg"
+                       />
+                     </div>
+                   )}
+
+                   {cctpStatus?.status === 'failed' && (
+                     <>
+                       <div className="warning-form">
+                         <Warning
+                           content={`⚠️ Transfer incomplete: ${cctpStatus.lastError}. Retry attempts: ${cctpStatus.retryCount}`}
+                           icon="/orange-warning.svg"
+                         />
+                       </div>
+                       <div style={{marginTop: '12px'}}>
+                         <Button
+                           label="Retry CCTP Transfer"
+                           buttonCss={'downvote-button upvote-button'}
+                           onClick={handleRetryCCTP}
+                           style={{ width: '100%' }}
+                         />
+                       </div>
+                     </>
+                   )}
+
+                   {jobChainConfig && userChainId !== jobChainId && (
+                     <div className="warning-form">
+                       <Warning
+                         content={`⚠️ StartJob requires ${jobChainConfig.name}. You are on ${userChainConfig?.name || 'unknown chain'}. Please switch networks.`}
+                         icon="/triangle_warning.svg"
+                       />
+                     </div>
+                   )}
+                 </>
                )}
             </div>
           </div>

@@ -10,8 +10,9 @@ const config = require('../config');
  */
 async function waitForNOWJCEvent(eventName, jobId, timeout = config.EVENT_DETECTION_TIMEOUT) {
   console.log(`🔍 Monitoring NOWJC contract for ${eventName} event (jobId: ${jobId})...`);
-  
-  const web3 = new Web3(config.ARBITRUM_SEPOLIA_RPC);
+  console.log(`   Network Mode: ${config.NETWORK_MODE}`);
+
+  const web3 = new Web3(config.ARBITRUM_RPC);
   const nowjcContract = new web3.eth.Contract(config.ABIS.NOWJC_EVENTS, config.NOWJC_ADDRESS);
   
   // Look back 100 blocks (~2-5 minutes on Arbitrum) to catch events that happened during delay
