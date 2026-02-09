@@ -5,13 +5,13 @@ export const mainRewards = {
   column: 'base-main',
   order: 2,
   status: 'mainnet-ready',
-  version: 'v2.0.0',
+  version: 'v2.1.0',
   gas: '180K',
   mainnetNetwork: 'Ethereum Mainnet',
   testnetNetwork: 'Base Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0x4756294bE516f73e8D1984E7a94E4ABaffA94c4d',
   testnetAddress: '0xd6bE0C187408155be99C4e9d6f860eDDa27b056B',
   isUUPS: true,
   implementationAddress: '0x58c1EA0d278252e8F48C46F470b601FcbF779346',
@@ -34,7 +34,7 @@ export const mainRewards = {
     'Cross-chain messaging: Notifies Native when users claim tokens',
     'Referrer tracking: Stores user referrer relationships from profiles',
     'Total claimed tracking: Records lifetime claimed amounts per user',
-    'Authorized chains: Manages which chains can interact (ETH, OP, Arbitrum)',
+    'Authorized chains: Manages which chains can interact (Ethereum Mainnet, Optimism, Arbitrum One) — v2.1.0: migrated from testnet to mainnet EIDs',
     'Emergency controls: Owner can update balances and withdraw tokens',
     'LayerZero fee quoting: Estimates cross-chain message costs',
     'Upgradeable by Main DAO: DAO can upgrade contract via upgradeFromDAO()'
@@ -423,10 +423,10 @@ if (referrer === ethers.ZeroAddress) {
           whatItDoes: 'Get list of authorized chain EIDs.',
           whyUse: 'Check which chains can interact with this contract.',
           howItWorks: [
-            'Returns array of common testnet chains',
-            'ETH Sepolia (40161)',
-            'OP Sepolia (40232)',
-            'Arbitrum Sepolia (40231)',
+            'Returns array of authorized mainnet chains',
+            'Ethereum Mainnet (30101)',
+            'Optimism Mainnet (30111)',
+            'Arbitrum One (30110)',
             'With authorization status and names'
           ],
           parameters: [],
@@ -721,7 +721,7 @@ if (referrer !== ethers.ZeroAddress) {
       'Always check claimable balance before claiming',
       'Total claimed tracks lifetime withdrawals',
       'Emergency functions for owner if sync fails',
-      'Authorized chains: ETH, OP, Arbitrum Sepolia',
+      'Authorized chains: Ethereum Mainnet (30101), Optimism (30111), Arbitrum One (30110)',
       'Main DAO can upgrade via upgradeFromDAO()',
       'Bridge can also upgrade via _authorizeUpgrade',
       'Contract holds OW tokens for distribution',
@@ -772,9 +772,9 @@ if (referrer !== ethers.ZeroAddress) {
         '   - Main Bridge address',
         '4. Set Main DAO address: setMainDAO(mainDAOAddress)',
         '5. Configure authorized chains:',
-        '   - updateAuthorizedChain(40161, true, "Ethereum Sepolia")',
-        '   - updateAuthorizedChain(40232, true, "OP Sepolia")',
-        '   - updateAuthorizedChain(40231, true, "Arbitrum Sepolia")',
+        '   - updateAuthorizedChain(30101, true, "Ethereum Mainnet")',
+        '   - updateAuthorizedChain(30111, true, "Optimism Mainnet")',
+        '   - updateAuthorizedChain(30110, true, "Arbitrum One")',
         '6. ⚠️ CRITICAL: Fund contract with OW tokens!',
         '   - Transfer OW tokens to contract address',
         '   - Without funding, ALL claims will FAIL',
@@ -797,7 +797,7 @@ if (referrer !== ethers.ZeroAddress) {
     'Emergency controls: Owner can update balances and withdraw',
     'Cross-chain dependency: Relies on Main Bridge for all messaging',
     'Token custody: Contract holds OW tokens for claims',
-    'Authorized chains: Only whitelisted chains can interact',
+    'Authorized chains: Only whitelisted mainnet chains can interact (v2.1.0: migrated from testnet to mainnet EIDs: 30101, 30111, 30110)',
     'LayerZero security: Inherits LayerZero V2 DVN security',
     'No direct user stake: Users stake in Main DAO, not here',
     'Referrer immutability: Once set, referrer cannot be changed',
@@ -805,7 +805,7 @@ if (referrer !== ethers.ZeroAddress) {
     'Owner powers: Can set bridge, DAO, token addresses'
   ],
   
-  code: `// Full implementation: contracts/mainnet-ready/eth/eth-rewards-contract.sol
+  code: `// Full implementation: contracts/current-mainnet/eth/eth-rewards-contract.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;

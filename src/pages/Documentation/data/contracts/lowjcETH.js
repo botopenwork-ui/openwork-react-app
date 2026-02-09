@@ -1147,7 +1147,7 @@ await lowjc.releasePaymentCrossChain(
     'Event logging: Complete audit trail of all job activities'
   ],
   
-  code: `// Same implementation as lowjcOP - see: contracts/mainnet-ready/local/local-openwork-job-contract.sol
+  code: `// Same implementation as lowjcOP - see: contracts/current-mainnet/local/local-openwork-job-contract-lite.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 

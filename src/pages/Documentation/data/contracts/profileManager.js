@@ -9,12 +9,12 @@ export const profileManager = {
   gas: '67K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0x51285003A01319c2f46BB2954384BCb69AfB1b45',
   testnetAddress: '0xFc4dA60Ea9D88B81a894CfbD5941b7d0E3fEe401',
   isUUPS: true,
-  implementationAddress: '0x30aAA1f297711d10dFeC015704320Cf823DA5130',
+  implementationAddress: '0xf82D59Cf9339D500C1b35C87D02dE422223812f6',
   tvl: 'N/A',
   docs: 'Profile Manager - Centralized profile and portfolio management system for the OpenWork multi-chain platform.',
   
@@ -784,7 +784,7 @@ console.log(\`Average rating: \${avgRating}/5 stars\`);`,
     'Zero address checks prevent invalid profile creation'
   ],
   
-  code: `// Full implementation: contracts/mainnet-ready/native/native-profile-manager.sol
+  code: `// Full implementation: contracts/current-mainnet/native/native-profile-manager.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;

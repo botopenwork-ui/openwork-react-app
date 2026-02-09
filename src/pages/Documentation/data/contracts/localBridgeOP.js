@@ -9,9 +9,9 @@ export const localBridgeOP = {
   gas: '65K',
   mainnetNetwork: 'OP Mainnet',
   testnetNetwork: 'OP Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0x74566644782e98c87a12E8Fc6f7c4c72e2908a36',
   testnetAddress: '0x6601cF4156160cf43fd024bac30851d3ee0F8668',
   tvl: 'N/A',
   docs: 'Local Bridge on OP Sepolia - LayerZero OApp connecting Local Chain contracts (LOWJC, Athena Client) to Native and Main Chains. Sends user operations to Native, receives dispute results, and handles upgrades from Main DAO.',
@@ -680,7 +680,7 @@ await localBridge.sendToNativeChain(
     'Upgrade flow: Main DAO → Main Bridge → Local Bridge → Local Contract'
   ]
   ,
-  code: `// Same implementation as other Local Bridges - see: contracts/mainnet-ready/local/local-lz-openwork-bridge.sol
+  code: `// Same implementation as other Local Bridges - see: contracts/current-mainnet/local/local-lz-openwork-bridge.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 

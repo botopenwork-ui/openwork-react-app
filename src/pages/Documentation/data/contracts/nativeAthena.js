@@ -5,16 +5,16 @@ export const nativeAthena = {
   column: 'l2-left',
   order: 1,
   status: 'mainnet-ready',
-  version: 'v2.0.0',
+  version: 'v2.1.0',
   gas: '78K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0xE6B9d996b56162cD7eDec3a83aE72943ee7C46Bf',
   testnetAddress: '0x098E52Aff44AEAd944AFf86F4A5b90dbAF5B86bd',
   isUUPS: true,
-  implementationAddress: '0xf360c9a73536a1016d1d35f80f2333a16fb2a4d2',
+  implementationAddress: '0x45747a4A5c78F8D480203d1E81b4c9c7AbaDE018',
   tvl: 'N/A',
   docs: 'Native Athena - Decentralized dispute resolution, skill verification, and oracle governance system with proportional fee distribution.',
   
@@ -38,7 +38,10 @@ export const nativeAthena = {
     'Automatic oracle status: NEW - Oracles marked inactive if too few active members',
     'Configurable voting periods: Owner can set voting duration (default 60 minutes)',
     'Cross-chain fund release: Integrates with NOWJC for dispute fund distribution via CCTP',
-    'Multi-dispute support: Jobs can have multiple disputes with counter tracking'
+    'Multi-dispute support: Jobs can have multiple disputes with counter tracking',
+    'Dynamic EID-to-CCTP domain mapping: Admin-managed mapEid/mapEids for flexible chain routing',
+    'Strict EID validation: Reverts on unmapped EIDs instead of silent defaults',
+    'Gas-optimized reverts: Shortened revert strings to reduce deployment and runtime gas costs'
   ],
   
   systemPosition: {
@@ -302,6 +305,69 @@ await nativeAthena.updateMemberActivityThreshold(180);
 
 // After update, next updateOracleActiveStatus() uses new threshold`,
           relatedFunctions: ['updateOracleActiveStatus', 'getOracleActiveMemberCount']
+        }
+      ]
+    },
+    {
+      category: 'EID-to-CCTP Domain Mapping',
+      description: 'NEW (v2.1.0): Admin functions for managing dynamic chain EID to CCTP domain mappings used in cross-chain payment routing',
+      items: [
+        {
+          name: 'mapEid',
+          signature: 'mapEid(uint256 _eid, uint32 _domain)',
+          whatItDoes: 'Maps a single LayerZero Endpoint ID (EID) to a CCTP domain for cross-chain payment routing.',
+          whyUse: 'Admin uses this to register new chains or update existing EID-to-CCTP domain mappings. Replaces hardcoded lookup table for flexible chain support.',
+          howItWorks: [
+            'Validates caller is owner',
+            'Sets eidToCctpDomain[_eid] = _domain',
+            'Sets eidMappingExists[_eid] = true',
+            'Emits EidMapped event'
+          ],
+          parameters: [
+            { name: '_eid', type: 'uint256', description: 'LayerZero Endpoint ID (e.g., 30101 for Ethereum Mainnet, 30111 for Optimism)' },
+            { name: '_domain', type: 'uint32', description: 'CCTP domain: 0=Ethereum, 2=Optimism, 3=Arbitrum, 6=Base' }
+          ],
+          accessControl: 'Owner only',
+          events: ['EidMapped(eid, domain)'],
+          gasEstimate: '~45K gas',
+          example: `// Map Ethereum mainnet EID to CCTP domain
+await nativeAthena.mapEid(30101, 0);  // Ethereum = domain 0
+
+// Map Optimism mainnet
+await nativeAthena.mapEid(30111, 2);  // Optimism = domain 2
+
+// Map Arbitrum One
+await nativeAthena.mapEid(30110, 3);  // Arbitrum = domain 3`,
+          relatedFunctions: ['mapEids', '_parseJobIdForChainDomain']
+        },
+        {
+          name: 'mapEids',
+          signature: 'mapEids(uint256[] calldata _eids, uint32[] calldata _domains)',
+          whatItDoes: 'Batch maps multiple EID-to-CCTP domain pairs in a single transaction.',
+          whyUse: 'Gas-efficient way to initialize or update multiple chain mappings at once. Useful during initial deployment or when adding several new chains.',
+          howItWorks: [
+            'Validates caller is owner',
+            'Validates arrays have matching lengths',
+            'Iterates through pairs',
+            'Sets eidToCctpDomain[_eids[i]] = _domains[i] for each',
+            'Sets eidMappingExists[_eids[i]] = true for each',
+            'Emits EidMapped event for each mapping'
+          ],
+          parameters: [
+            { name: '_eids', type: 'uint256[]', description: 'Array of LayerZero Endpoint IDs' },
+            { name: '_domains', type: 'uint32[]', description: 'Array of corresponding CCTP domains' }
+          ],
+          accessControl: 'Owner only',
+          events: ['EidMapped(eid, domain) [for each pair]'],
+          gasEstimate: '~45K + ~20K per mapping',
+          example: `// Initialize all supported chains at once
+await nativeAthena.mapEids(
+  [30101, 30111, 30110, 30184],  // ETH, OP, Arb, Base
+  [0, 2, 3, 6]                    // CCTP domains
+);
+
+// All chains now routable for dispute fund releases`,
+          relatedFunctions: ['mapEid', '_parseJobIdForChainDomain']
         }
       ]
     },
@@ -926,10 +992,12 @@ if (Date.now() / 1000 >= startTime + (votingPeriod * 60)) {
     'Weighted voting based on stake duration and earned tokens',
     'All data stored in Genesis for upgrade persistence',
     'Fund release only after settlement and validation',
-    'Fee refund mechanism if no community participation'
+    'Fee refund mechanism if no community participation',
+    'Strict EID validation: _parseJobIdForChainDomain reverts on unmapped EIDs instead of returning silent defaults',
+    'Gas-optimized revert strings: Shortened error messages reduce deployment and runtime gas overhead'
   ],
   
-  code: `// Full implementation: contracts/mainnet-ready/native/native-athena.sol
+  code: `// Full implementation: contracts/current-mainnet/native/native-athena.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
@@ -964,6 +1032,12 @@ contract NativeAthena is
     mapping(string => uint256) public jobDisputeCounters;
     mapping(string => uint256) public disputeStartTimes;
 
+    // v2.1.0: Dynamic EID-to-CCTP domain mapping
+    mapping(uint256 => uint32) public eidToCctpDomain;
+    mapping(uint256 => bool) public eidMappingExists;
+
+    uint256[48] private __gap; // Reduced from 50 to accommodate new state vars
+
     // ==================== INITIALIZATION ====================
     constructor() {
         _disableInitializers();
@@ -992,7 +1066,25 @@ contract NativeAthena is
     }
     
     function _authorizeUpgrade(address) internal view override {
-        require(owner() == _msgSender() || address(bridge) == _msgSender(), "Unauthorized");
+        require(owner() == _msgSender() || address(bridge) == _msgSender(), "Unauth");
+    }
+
+    // ==================== v2.1.0: EID MAPPING ====================
+    event EidMapped(uint256 indexed eid, uint32 domain);
+
+    function mapEid(uint256 _eid, uint32 _domain) external onlyOwner {
+        eidToCctpDomain[_eid] = _domain;
+        eidMappingExists[_eid] = true;
+        emit EidMapped(_eid, _domain);
+    }
+
+    function mapEids(uint256[] calldata _eids, uint32[] calldata _domains) external onlyOwner {
+        require(_eids.length == _domains.length, "Len");
+        for (uint256 i = 0; i < _eids.length; i++) {
+            eidToCctpDomain[_eids[i]] = _domains[i];
+            eidMappingExists[_eids[i]] = true;
+            emit EidMapped(_eids[i], _domains[i]);
+        }
     }
 
     // ==================== VOTING ELIGIBILITY ====================
@@ -1040,7 +1132,7 @@ contract NativeAthena is
         address disputeRaiser
     ) external {
         IOpenworkGenesis.Oracle memory oracle = genesis.getOracle(oracleName);
-        require(oracle.members.length >= minOracleMembers, "Oracle not active");
+        require(oracle.members.length >= minOracleMembers, "Inactive");
         
         jobDisputeCounters[jobId]++;
         string memory disputeId = string(abi.encodePacked(jobId, "-", uint2str(jobDisputeCounters[jobId])));
@@ -1056,8 +1148,8 @@ contract NativeAthena is
         bool _voteFor, 
         address _claimAddress
     ) external {
-        require(canVote(msg.sender), "Insufficient tokens");
-        require(_claimAddress != address(0), "Invalid claim address");
+        require(canVote(msg.sender), "!Tokens");
+        require(_claimAddress != address(0), "!Claim");
         
         uint256 voteWeight = getUserVotingPower(msg.sender);
         require(voteWeight > 0, "No voting power");

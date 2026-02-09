@@ -9,12 +9,12 @@ export const openworkGenesis = {
   gas: '120K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294',
   testnetAddress: '0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C',
   isUUPS: true,
-  implementationAddress: '0xC1b2CC467f9b4b7Be3484a3121Ad6a8453dfB584',
+  implementationAddress: '0x4756294bE516f73e8D1984E7a94E4ABaffA94c4d',
   tvl: 'N/A',
   docs: 'OpenworkGenesis - Central storage contract for ALL OpenWork platform data. Pure storage pattern with no business logic, just authorized setters and getters. Stores jobs, applications, oracles, disputes, voting, DAO data, and rewards tracking.',
   
@@ -773,7 +773,7 @@ const allStakers = await genesis.getAllStakers();`,
     'Emergency recovery: Owner can revoke malicious contract authorization'
   ],
   
-  code: `// Full implementation: contracts/mainnet-ready/native/native-openwork-genesis.sol
+  code: `// Full implementation: contracts/current-mainnet/native/native-openwork-genesis.sol
 // Truncated version showing key structure
 
 // SPDX-License-Identifier: MIT

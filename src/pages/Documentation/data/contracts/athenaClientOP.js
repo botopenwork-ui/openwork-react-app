@@ -9,10 +9,11 @@ export const athenaClientOP = {
   gas: '45K',
   mainnetNetwork: 'Optimism',
   testnetNetwork: 'OP Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0x4756294bE516f73e8D1984E7a94E4ABaffA94c4d',
   testnetAddress: '0x45E51B424c87Eb430E705CcE3EcD8e22baD267f7',
+  implementationAddress: '0xF78B688846673C3f6b93184BeC230d982c0db0c9',
   isUUPS: true,
   tvl: 'N/A',
   docs: 'Local dispute interface on OP Sepolia - Enables cross-chain dispute initiation, skill verification, and oracle queries. Routes all USDC fees to Native Athena on Arbitrum via CCTP while sending dispute data via LayerZero for unified dispute resolution.',
@@ -785,7 +786,7 @@ console.log("Is Finalized:", disputeInfo.isFinalized);`,
     'Event logging: Complete audit trail of disputes and oracle activity'
   ],
   
-  code: `// Same implementation as athenaClientETH - see: contracts/mainnet-ready/local/local-athena.sol
+  code: `// Same implementation as athenaClientETH - see: contracts/current-mainnet/local/local-athena.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 

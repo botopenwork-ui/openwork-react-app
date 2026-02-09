@@ -785,7 +785,7 @@ console.log("Is Finalized:", disputeInfo.isFinalized);`,
     'Event logging: Complete audit trail of disputes and oracle activity'
   ],
   
-  code: `// Same implementation as athenaClientOP - see: contracts/mainnet-ready/local/local-athena.sol
+  code: `// Same implementation as athenaClientOP - see: contracts/current-mainnet/local/local-athena.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 

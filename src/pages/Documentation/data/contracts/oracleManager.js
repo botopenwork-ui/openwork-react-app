@@ -9,12 +9,12 @@ export const oracleManager = {
   gas: '45K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0xEdF3Bcf87716bE05e35E12bA7C0Fc6e1879c0f15',
   testnetAddress: '0x70F6fa515120efeA3e404234C318b7745D23ADD4',
   isUUPS: true,
-  implementationAddress: '0xAdf1d61e5DeD34fAF507C8CEF24cdf46f46bF537',
+  implementationAddress: '0xE1e1Cc40897DDaeED44a3194B0e53DFb4171ef59',
   tvl: 'N/A',
   docs: 'Native Athena Oracle Manager - Internal helper contract that manages Skill Oracle lifecycle (create, add/remove members, delete). Created to solve Native Athena\'s 24KB contract size limit by extracting oracle management functions. ONLY callable by Native Athena, not user or bridge facing.',
   
@@ -630,7 +630,7 @@ await nativeAthena.removeOracleMember(
     'Oracle deletion: Sets to empty state, doesn\'t truly delete from storage'
   ],
   
-  code: `// Full implementation: contracts/mainnet-ready/native/native-athena-oracle-manager.sol
+  code: `// Full implementation: contracts/current-mainnet/native/native-athena-oracle-manager.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;

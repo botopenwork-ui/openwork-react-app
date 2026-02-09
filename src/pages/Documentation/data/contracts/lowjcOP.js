@@ -9,10 +9,11 @@ export const lowjcOP = {
   gas: '23K',
   mainnetNetwork: 'Optimism',
   testnetNetwork: 'OP Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0x620205A4Ff0E652fF03a890d2A677de878a1dB63',
   testnetAddress: '0x896a3Bc6ED01f549Fe20bD1F25067951913b793C',
+  implementationAddress: '0x8255A7fa5409194bbC0c85c2Eaa71Cf2f5763Fd3',
   isUUPS: true,
   tvl: 'N/A',
   docs: 'Local OpenWork Job Contract (LOWJC) on OP Sepolia - User-facing job management interface. Enables job posting, applications, work submission, and payments. Syncs all data to Native Chain (Arbitrum) via LayerZero + CCTP for unified state and USDC escrow.',
@@ -1147,7 +1148,7 @@ await lowjc.releasePaymentCrossChain(
     'Event logging: Complete audit trail of all job activities'
   ],
   
-  code: `// Same implementation as lowjcETH - see: contracts/mainnet-ready/local/local-openwork-job-contract.sol
+  code: `// Same implementation as lowjcETH - see: contracts/current-mainnet/local/local-openwork-job-contract-lite.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 

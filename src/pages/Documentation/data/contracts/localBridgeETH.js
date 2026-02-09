@@ -680,7 +680,7 @@ await localBridge.sendToNativeChain(
     'Upgrade flow: Main DAO → Main Bridge → Local Bridge → Local Contract'
   ],
   
-  code: `// Same implementation as localBridgeOP - see: contracts/mainnet-ready/local/local-lz-openwork-bridge.sol
+  code: `// Same implementation as localBridgeOP - see: contracts/current-mainnet/local/local-lz-openwork-bridge.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 

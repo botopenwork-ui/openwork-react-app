@@ -9,12 +9,12 @@ export const activityTracker = {
   gas: '35K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Not deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0x8C04840c3f5b5a8c44F9187F9205ca73509690EA',
   testnetAddress: null,
   isUUPS: true,
-  implementationAddress: null,
+  implementationAddress: '0x9588A78748a8bc82295bf44d87C4b9F924d11AE8',
   tvl: 'N/A',
   docs: 'Activity Tracker - Tracks oracle member activity and oracle active status. Separated from Genesis due to contract size limits (EIP-170: 24KB). Enables 90-day activity threshold for oracle eligibility.',
 
@@ -168,7 +168,7 @@ export const activityTracker = {
     'NativeDAO integration allows governance-based admin management'
   ],
 
-  code: `// Full implementation: contracts/mainnet-ready/native/native-athena-activity-tracker.sol
+  code: `// Full implementation: contracts/current-mainnet/native/native-athena-activity-tracker.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
@@ -225,6 +225,6 @@ contract NativeAthenaActivityTracker is Initializable, OwnableUpgradeable, UUPSU
         return timestamps;
     }
 
-    // See full implementation in contracts/mainnet-ready/native/native-athena-activity-tracker.sol
+    // See full implementation in contracts/current-mainnet/native/native-athena-activity-tracker.sol
 }`
 };

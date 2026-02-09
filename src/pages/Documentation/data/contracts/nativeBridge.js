@@ -5,13 +5,13 @@ export const nativeBridge = {
   column: 'l2-left',
   order: 2,
   status: 'mainnet-ready',
-  version: 'v2.0.0',
+  version: 'v2.1.0',
   gas: '67K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0x1bC57d93eC9F9214EDe2e81281A26Ac0E01A9A5F',
   testnetAddress: '0x3b2AC1d1281cA4a1188d9F09A5Af9a9E6a114D6c',
   tvl: 'N/A',
   docs: 'Native Bridge - LayerZero OApp serving as the central messaging hub on Arbitrum. Routes messages between Local Chains, Native contracts, and Main Chain for the entire OpenWork cross-chain architecture.',
@@ -35,6 +35,7 @@ export const nativeBridge = {
     'Authorization system: Only authorized contracts can use bridge functions',
     'Fee quoting: Accurate LayerZero fee estimation for all routes',
     'Refund handling: Returns excess native fees to callers',
+    'V2 refund fix: sendSyncVotingPower now refunds excess ETH to user instead of msg.sender (RewardsContract)',
     'Comprehensive events: Full audit trail of all cross-chain messages'
   ],
   
@@ -395,13 +396,15 @@ await nativeBridge.sendSyncRewardsData(
         {
           name: 'sendSyncVotingPower',
           signature: 'sendSyncVotingPower(address user, uint256 totalRewards, bytes _options) payable',
-          whatItDoes: 'Syncs user\'s total earned rewards to Main Chain for voting power calculation.',
-          whyUse: 'Users sync this before creating proposals or voting to ensure accurate voting power.',
+          whatItDoes: 'Syncs user\'s total earned rewards to Main Chain for voting power calculation. V2 fix: excess ETH refund now goes to the actual user, not msg.sender.',
+          whyUse: 'Users sync this before creating proposals or voting to ensure accurate voting power. The V2 fix ensures any excess ETH from the LayerZero fee is refunded to the user\'s wallet, not the calling contract (RewardsContract).',
           howItWorks: [
             'Encodes payload with "syncVotingPower"',
-            'Sends to Main Chain',
+            'Sends to Main Chain via LayerZero',
+            'V2 FIX: Refund address is payable(user) instead of payable(msg.sender)',
+            'This ensures excess ETH goes back to the user, not the Rewards Contract',
             'Main DAO updates user\'s voting power',
-            'Emits event'
+            'Emits CrossChainMessageSent event'
           ],
           parameters: [
             { name: 'user', type: 'address', description: 'User to sync' },
@@ -874,11 +877,12 @@ console.log("Authorized chains:", chains);`,
     'Fee handling: Requires sufficient msg.value, refunds excess',
     'Single point: All cross-chain communication flows through this bridge',
     'No token holding: Bridge never holds user funds (only passes messages)',
+    'V2 refund fix: sendSyncVotingPower refunds excess ETH to actual user address, not calling contract (prevents locked funds)',
     'Event logging: Complete audit trail of all messages',
     'Revert on unknown: Rejects messages with unrecognized function names'
   ],
   
-  code: `// Full implementation: contracts/mainnet-ready/native/native-lz-openwork-bridge.sol
+  code: `// Full implementation: contracts/current-mainnet/native/native-lz-openwork-bridge.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
@@ -888,7 +892,8 @@ import { OAppReceiver } from "@layerzerolabs/oapp-evm/contracts/oapp/OAppReceive
 import { OAppCore } from "@layerzerolabs/oapp-evm/contracts/oapp/OAppCore.sol";
 import { Origin } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 
-contract NativeChainBridge is OAppSender, OAppReceiver {
+/// @custom:fix V2-REFUND-FIX: sendSyncVotingPower now uses 'user' as refund address instead of msg.sender
+contract NativeLZOpenworkBridgeV2 is OAppSender, OAppReceiver {
     
     // ==================== STATE VARIABLES ====================
     mapping(address => bool) public authorizedContracts;
@@ -981,6 +986,7 @@ contract NativeChainBridge is OAppSender, OAppReceiver {
         emit CrossChainMessageSent("syncClaimableRewards", mainChainEid, payload);
     }
 
+    // V2-REFUND-FIX: Refund excess ETH to actual user, not msg.sender (which is RewardsContract)
     function sendSyncVotingPower(
         address user,
         uint256 totalRewards,
@@ -991,8 +997,8 @@ contract NativeChainBridge is OAppSender, OAppReceiver {
             user,
             totalRewards
         );
-        
-        _lzSend(mainChainEid, payload, _options, MessagingFee(msg.value, 0), payable(msg.sender));
+
+        _lzSend(mainChainEid, payload, _options, MessagingFee(msg.value, 0), payable(user)); // FIXED: was payable(msg.sender)
         emit CrossChainMessageSent("syncVotingPower", mainChainEid, payload);
     }
 

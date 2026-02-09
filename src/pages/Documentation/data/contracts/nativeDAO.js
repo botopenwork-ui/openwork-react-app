@@ -9,12 +9,12 @@ export const nativeDAO = {
   gas: '45K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0x24af98d763724362DC920507b351cC99170a5aa4',
   testnetAddress: '0x21451dCE07Ad3Ab638Ec71299C1D2BD2064b90E5',
   isUUPS: true,
-  implementationAddress: '0x18d2eC7459eFf0De9495be21525E0742890B5065',
+  implementationAddress: '0x20Fa268106A3C532cF9F733005Ab48624105c42F',
   tvl: 'N/A',
   docs: 'Native DAO - Governance contract mirroring Main DAO stake data with dual voting power from staked and earned tokens, featuring time-weighted staking and delegation support.',
   
@@ -715,7 +715,7 @@ if (isUnlocked) {
     'Delegation is non-custodial - delegator retains token ownership'
   ],
   
-  code: `// Full implementation: contracts/mainnet-ready/native/native-openwork-dao.sol
+  code: `// Full implementation: contracts/current-mainnet/native/native-openwork-dao.sol
 // VOTING-POWER-FIX: Now uses rewardsContract.getRewardBasedVotingPower() for centralized voting power
 
 // SPDX-License-Identifier: MIT

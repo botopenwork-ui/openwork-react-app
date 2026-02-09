@@ -9,12 +9,12 @@ export const profileGenesis = {
   gas: '85K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0x794809471215cBa5cE56c7d9F402eDd85F9eBa2E',
   testnetAddress: '0xC37A9dFbb57837F74725AAbEe068f07A1155c394',
   isUUPS: true,
-  implementationAddress: '0x16481537d0Bff65e591D3D44f6F4C38Fb8579d5d',
+  implementationAddress: '0xae31d7be760D92807B013a71bb51f2cBB132166b',
   tvl: 'N/A',
   docs: 'ProfileGenesis - Dedicated storage contract for user profiles, portfolios, ratings, and referral system. Separated from OpenworkGenesis for size optimization and focused access patterns. Pure storage with no business logic.',
   
@@ -629,7 +629,7 @@ const batch = await profileGenesis.getProfileAddressesBatch(0, 100);`,
     'IPFS hashes: User responsible for maintaining IPFS content availability'
   ],
   
-  code: `// Full implementation: contracts/mainnet-ready/native/native-profile-genesis.sol
+  code: `// Full implementation: contracts/current-mainnet/native/native-profile-genesis.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;

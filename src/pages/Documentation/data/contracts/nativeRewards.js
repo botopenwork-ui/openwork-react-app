@@ -5,13 +5,13 @@ export const nativeRewards = {
   column: 'l2-right',
   order: 1,
   status: 'mainnet-ready',
-  version: 'v3.0.0',
+  version: 'v3.1.0',
   gas: '34K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0x5E80B57E1C465498F3E0B4360397c79A64A67Ce9',
   testnetAddress: '0x947cAd64a26Eae5F82aF68b7Dbf8b457a8f492De',
   isUUPS: true,
   implementationAddress: '0x3cd75e13ef261fb59e4bA8b161F25d11a238c844',
@@ -36,6 +36,7 @@ export const nativeRewards = {
     'Band-specific tracking: Separate accounting per reward band for accuracy',
     'Cross-chain claims: Calculate on Arbitrum, claim tokens on Ethereum',
     'NOWJC-only access: All state changes controlled by job contract',
+    'Robust referrer lookups: try/catch for ProfileGenesis and Genesis referrer calls — gracefully handles missing profiles without reverting entire reward distribution',
     'Dual referrer sources: ProfileGenesis (primary) with Genesis fallback',
     'Platform growth tracking: Automatically advances through bands as volume grows',
     'Anti-gaming design: No direct claims, governance-gated unlocks',
@@ -136,8 +137,8 @@ Cross-Chain Claim Flow:
           whyUse: 'Called by NOWJC after every payment release to distribute token rewards to job giver and referrers.',
           howItWorks: [
             'Updates totalPlatformPayments to track platform growth',
-            'Gets job giver\'s referrer from ProfileGenesis (or Genesis fallback)',
-            'Gets job taker\'s referrer from ProfileGenesis (or Genesis fallback)',
+            'Gets job giver\'s referrer from ProfileGenesis via try/catch (graceful on missing profiles)',
+            'Gets job taker\'s referrer from ProfileGenesis via try/catch, falls back to Genesis',
             'Calculates distribution: jobGiver gets 80-100%, referrers get 10% each',
             'Calls _awardTokensInCurrentBand() for each recipient',
             'Determines current band based on platform total',
@@ -711,6 +712,7 @@ await nowjc.syncRewardsData(lzOptions, { value: lzFee });`,
     'No direct user claims - prevents gaming and manipulation',
     'Governance-gated unlocks: can\'t dump tokens without participation',
     'Band-specific tracking: prevents cross-band manipulation',
+    'v3.1.0: try/catch referrer lookups — reward distribution never reverts due to missing user profiles',
     'Referral validation: checks for self-referral and duplicate referrers',
     'Platform total tracking: accurate band progression',
     'FIFO claim ordering: fair distribution across bands',
@@ -720,7 +722,7 @@ await nowjc.syncRewardsData(lzOptions, { value: lzFee });`,
     'ProfileGenesis integration: flexible referral system with fallback'
   ],
   
-  code: `// Full implementation: contracts/mainnet-ready/native/native-rewards-contract.sol
+  code: `// Full implementation: contracts/current-mainnet/native/native-rewards-contract.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
@@ -883,12 +885,26 @@ contract OpenWorkRewardsContract is
         address jobGiverReferrer = address(0);
         address jobTakerReferrer = address(0);
 
+        // v3.1.0: try/catch prevents revert if participant has no profile
         if (address(profileGenesis) != address(0)) {
-            jobGiverReferrer = profileGenesis.getUserReferrer(jobGiver);
-            jobTakerReferrer = profileGenesis.getUserReferrer(jobTaker);
-        } else if (address(genesis) != address(0)) {
-            jobGiverReferrer = genesis.getUserReferrer(jobGiver);
-            jobTakerReferrer = genesis.getUserReferrer(jobTaker);
+            try profileGenesis.getUserReferrer(jobGiver) returns (address referrer) {
+                jobGiverReferrer = referrer;
+            } catch {}
+            try profileGenesis.getUserReferrer(jobTaker) returns (address referrer) {
+                jobTakerReferrer = referrer;
+            } catch {}
+        }
+
+        // Fallback to Genesis with same try/catch pattern
+        if (jobGiverReferrer == address(0) && address(genesis) != address(0)) {
+            try genesis.getUserReferrer(jobGiver) returns (address referrer) {
+                jobGiverReferrer = referrer;
+            } catch {}
+        }
+        if (jobTakerReferrer == address(0) && address(genesis) != address(0)) {
+            try genesis.getUserReferrer(jobTaker) returns (address referrer) {
+                jobTakerReferrer = referrer;
+            } catch {}
         }
 
         // Calculate reward distribution (job giver 80%, referrers 10% each)

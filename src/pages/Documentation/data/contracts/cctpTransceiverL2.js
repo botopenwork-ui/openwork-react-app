@@ -9,9 +9,9 @@ export const cctpTransceiverL2 = {
   gas: '150K (with rewards)',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0x765D70496Ef775F6ba1cB7465c2e0B296eB50d87',
   testnetAddress: '0xBB05779D4c48cAFe6a91ddA23D326933B4588f68',
   tvl: 'N/A',
   docs: 'Circle CCTP V2 Transceiver on Arbitrum Sepolia with Dynamic Gas-Based Confirmation Rewards - Enables native USDC cross-chain transfers using Circle\'s Cross-Chain Transfer Protocol. Automatically pays ETH rewards (2x gas cost, capped at 0.001 ETH) to incentivize rapid confirmations, reducing transfer times from 30+ minutes to 10-15 minutes. Handles USDC bridging for job payments from Local chains, refunds to Local chains, and dispute fee transfers. Supports fast finality transfers (≤1000 blocks) for instant USDC availability.',
@@ -850,7 +850,7 @@ const CCTP_DOMAINS = {
     'Reward pool monitoring: Owner must monitor balance and refill regularly'
   ],
   
-  code: `// Full implementation: contracts/mainnet-ready/utilities/cctp-transceiver.sol
+  code: `// Full implementation: contracts/current-mainnet/utilities/cctp-transceiver.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;

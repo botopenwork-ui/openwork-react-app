@@ -9,9 +9,9 @@ export const genesisReaderHelper = {
   gas: '50K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0x72ee091C288512f0ee9eB42B8C152fbB127Dc782',
   testnetAddress: '0x...',
   isUUPS: false,
   tvl: 'N/A',
@@ -565,7 +565,7 @@ console.log('Fetched batch:', skillBatch.length);`,
     'Pure queries: Cannot modify blockchain state'
   ],
   
-  code: `// See full implementation in contracts/mainnet-ready/native/native-genesis-reader.sol
+  code: `// See full implementation in contracts/current-mainnet/native/native-genesis-reader.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;

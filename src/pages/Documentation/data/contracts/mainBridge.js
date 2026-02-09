@@ -9,9 +9,9 @@ export const mainBridge = {
   gas: '72K',
   mainnetNetwork: 'Ethereum Mainnet',
   testnetNetwork: 'Base Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0x20Fa268106A3C532cF9F733005Ab48624105c42F',
   testnetAddress: '0x1234567890123456789012345678901234567890', // Placeholder
   tvl: 'N/A',
   docs: 'Main Chain Bridge - LayerZero OApp on Base/Ethereum serving as the governance and rewards hub. Receives sync data from Native Chain, routes to Main DAO and Main Rewards, and sends upgrade commands to all chains.',
@@ -864,7 +864,7 @@ await mainBridge.sendToThreeChains(
     'Refund mechanism: Returns excess fees to prevent lock-up'
   ],
   
-  code: `// Full implementation: contracts/mainnet-ready/eth/eth-lz-openwork-bridge.sol
+  code: `// Full implementation: contracts/current-mainnet/eth/eth-lz-openwork-bridge.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;

@@ -9,9 +9,9 @@ export const contractRegistry = {
   gas: '32K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0x29D61B1a9E2837ABC0810925429Df641CBed58c3',
   testnetAddress: '0x8AbC0E626A8fC723ec6f27FE8a4157A186D5767D',
   isUUPS: false,
   implementationAddress: null,
@@ -513,7 +513,7 @@ console.log("Total registered contracts:", count);`,
     'Trust model: Frontend trusts registry for correct addresses'
   ],
   
-  code: `// Full implementation: contracts/mainnet-ready/native/native-contract-registry.sol
+  code: `// Full implementation: contracts/current-mainnet/native/native-contract-registry.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;

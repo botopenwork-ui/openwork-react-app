@@ -850,7 +850,7 @@ const CCTP_DOMAINS = {
     'Reward pool monitoring: Owner must monitor balance and refill regularly'
   ],
   
-  code: `// Full implementation: contracts/mainnet-ready/utilities/cctp-transceiver.sol
+  code: `// Full implementation: contracts/current-mainnet/utilities/cctp-transceiver.sol
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;

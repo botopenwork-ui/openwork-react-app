@@ -5,16 +5,16 @@ export const nowjc = {
   column: 'l2-left',
   order: 0,
   status: 'mainnet-ready',
-  version: 'v3.0.0',
+  version: 'v3.1.0',
   gas: '56K',
   mainnetNetwork: 'Arbitrum One',
   testnetNetwork: 'Arbitrum Sepolia',
-  mainnetDeployed: 'Not deployed',
+  mainnetDeployed: 'Deployed',
   testnetDeployed: 'Deployed',
-  mainnetAddress: null,
+  mainnetAddress: '0x8EfbF240240613803B9c9e716d4b5AD1388aFd99',
   testnetAddress: '0x9E39B37275854449782F1a2a4524405cE79d6C1e',
   isUUPS: true,
-  implementationAddress: '0xAe55797B042169936f7816b85bf8387b739084c4',
+  implementationAddress: '0x8F7f3E9376963691CE568843afad7E1977730fBA',
   tvl: 'N/A',
   docs: 'Native OpenWork Job Contract - Central hub for job lifecycle management, cross-chain payment processing, and rewards distribution.',
   
@@ -28,7 +28,7 @@ export const nowjc = {
   features: [
     'Multi-chain job management: Receives jobs from any Local chain (Ethereum, OP, Base, Polygon)',
     'CCTP payment integration: Releases USDC payments to any supported chain via Circle\'s Cross-Chain Transfer Protocol',
-    'Automated commission: Deducts 1% platform fee (minimum $1 USDC) from all payments',
+    'Automated commission: Deducts 1% platform fee (minimum $1 USDC) per-job payment amount (v3.1.0: commission now calculated on individual _amount, not total balance)',
     'Rewards integration: Automatically calculates and awards OW tokens to job participants via Native Rewards',
     'Governance tracking: Records user actions for voting power calculations',
     'Direct contract support: Enables instant job start for pre-agreed freelancer engagements',
@@ -805,6 +805,8 @@ console.log('Rewards synced to Main chain for claiming');`,
     'UUPS upgradeable - owner and bridge can upgrade implementation',
     'Bridge-only functions prevent unauthorized cross-chain message execution',
     'Commission is always deducted before payments to ensure platform sustainability',
+    'v3.1.0 fix: Commission calculated on per-job _amount (not total contract balance), preventing overcharge in multi-job scenarios',
+    'v3.1.0 fix: Payment validation inlined for correctness — _finalizePayment receives per-job amount instead of aggregate balance',
     'Amount validation prevents overpayment or milestone amount mismatches',
     'CCTP approve pattern prevents stuck funds in transceiver',
     'Native Athena-only access for dispute fund releases',
@@ -815,7 +817,7 @@ console.log('Rewards synced to Main chain for claiming');`,
     'Accumulated commission tracking prevents double-withdrawal'
   ],
   
-  code: `// Full implementation available in: contracts/mainnet-ready/native/native-openwork-job-contract.sol
+  code: `// Full implementation available in: contracts/current-mainnet/native/native-openwork-job-contract.sol
 // This is a truncated version showing key structure - see repository for complete code
 
 // SPDX-License-Identifier: MIT
