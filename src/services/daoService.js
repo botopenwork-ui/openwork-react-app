@@ -11,12 +11,13 @@ function getAddresses() {
   return {
     NATIVE_DAO_ADDRESS: nativeChain?.contracts?.nativeDAO,
     MAIN_DAO_ADDRESS: mainChain?.contracts?.mainDAO,
-    GENESIS_ADDRESS: nativeChain?.contracts?.genesis
+    GENESIS_ADDRESS: nativeChain?.contracts?.genesis,
+    NATIVE_REWARDS_ADDRESS: nativeChain?.contracts?.nativeRewards
   };
 }
 
 // Backend API URL
-const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3001';
+const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || '';
 
 // Get RPC URLs dynamically based on network mode
 function getRpcUrls() {
@@ -54,7 +55,7 @@ export async function getDAOStats(userAddress, forceRefresh = false) {
     console.log("Fetching DAO stats from both chains...", isMainnet() ? "(mainnet)" : "(testnet)");
 
     // Get dynamic addresses and RPC URLs
-    const { NATIVE_DAO_ADDRESS, MAIN_DAO_ADDRESS, GENESIS_ADDRESS } = getAddresses();
+    const { NATIVE_DAO_ADDRESS, MAIN_DAO_ADDRESS, GENESIS_ADDRESS, NATIVE_REWARDS_ADDRESS } = getAddresses();
     const { ARBITRUM_RPC, MAIN_CHAIN_RPC } = getRpcUrls();
 
     // Initialize contracts
@@ -65,26 +66,89 @@ export async function getDAOStats(userAddress, forceRefresh = false) {
     const nativeDAOContract = new arbWeb3.eth.Contract(NativeDAOABI, NATIVE_DAO_ADDRESS);
     const mainDAOContract = new mainChainWeb3.eth.Contract(MainDAOABI, MAIN_DAO_ADDRESS);
 
+    // ERC20 balanceOf ABI for token balance
+    const ERC20_BALANCE_ABI = [{
+      inputs: [{ type: "address", name: "account" }],
+      name: "balanceOf",
+      outputs: [{ type: "uint256" }],
+      stateMutability: "view",
+      type: "function"
+    }];
+
+    // Native Rewards ABI for earned/claimed/team tokens
+    const NATIVE_REWARDS_ABI = [
+      {
+        inputs: [{ type: "address", name: "user" }],
+        name: "getUserTotalTokensEarned",
+        outputs: [{ type: "uint256" }],
+        stateMutability: "view",
+        type: "function"
+      },
+      {
+        inputs: [{ type: "address", name: "member" }],
+        name: "getTeamMemberInfo",
+        outputs: [
+          { type: "bool", name: "isMember" },
+          { type: "uint256", name: "allocated" },
+          { type: "uint256", name: "claimed" },
+          { type: "uint256", name: "claimable" },
+          { type: "uint256", name: "govActions" }
+        ],
+        stateMutability: "view",
+        type: "function"
+      }
+    ];
+
+    const nativeRewardsContract = NATIVE_REWARDS_ADDRESS
+      ? new arbWeb3.eth.Contract(NATIVE_REWARDS_ABI, NATIVE_REWARDS_ADDRESS)
+      : null;
+
+    // Get OW token address from main chain config
+    const mainChain = getMainChain();
+    const owTokenAddress = mainChain?.contracts?.openworkToken;
+
     // Fetch data in parallel
-    const [oracleCount, nativeStakers, mainStakers, userMainStake] = await Promise.all([
+    const [oracleCount, nativeStakers, mainStakers, userMainStake, userTokenBalance, userTokensEarned, teamMemberInfo] = await Promise.all([
       genesisContract.methods.getOracleCount().call(),
       nativeDAOContract.methods.getAllStakers().call(),
       mainDAOContract.methods.getAllStakers().call(),
-      userAddress ? mainDAOContract.methods.getStakerInfo(userAddress).call() : Promise.resolve({ amount: "0", hasStake: false })
+      userAddress ? mainDAOContract.methods.getStakerInfo(userAddress).call() : Promise.resolve({ amount: "0", hasStake: false }),
+      userAddress && owTokenAddress
+        ? new mainChainWeb3.eth.Contract(ERC20_BALANCE_ABI, owTokenAddress).methods.balanceOf(userAddress).call()
+        : Promise.resolve("0"),
+      userAddress && nativeRewardsContract
+        ? nativeRewardsContract.methods.getUserTotalTokensEarned(userAddress).call()
+        : Promise.resolve("0"),
+      userAddress && nativeRewardsContract
+        ? nativeRewardsContract.methods.getTeamMemberInfo(userAddress).call()
+        : Promise.resolve({ isMember: false, allocated: "0", claimed: "0", claimable: "0", govActions: "0" })
     ]);
 
     // Combine member counts
     const totalMembers = new Set([...nativeStakers, ...mainStakers]).size;
 
     // User's current stakings (from Main DAO - Ethereum on mainnet, Base on testnet)
-    const userStakeAmount = userMainStake.hasStake 
+    const userStakeAmount = userMainStake.hasStake
       ? Web3.utils.fromWei(userMainStake.amount, 'ether')
       : "0";
+
+    // User's OW token wallet balance
+    const userWalletBalance = Web3.utils.fromWei(userTokenBalance.toString(), 'ether');
+
+    // User's unclaimed tokens: earned from work + (team allocated - team claimed)
+    const earnedFromWork = BigInt(userTokensEarned.toString());
+    const teamAllocated = BigInt(teamMemberInfo.allocated.toString());
+    const teamClaimed = BigInt(teamMemberInfo.claimed.toString());
+    const teamUnclaimed = teamAllocated > teamClaimed ? teamAllocated - teamClaimed : 0n;
+    const totalUnclaimed = earnedFromWork + teamUnclaimed;
+    const unclaimedTokens = Web3.utils.fromWei(totalUnclaimed.toString(), 'ether');
 
     const stats = {
       skillOracleCount: Number(oracleCount),
       totalMembers,
       userStakings: parseFloat(userStakeAmount).toFixed(0),
+      userTokenBalance: parseFloat(userWalletBalance).toFixed(0),
+      unclaimedTokens: parseFloat(unclaimedTokens).toFixed(0),
       nativeMemberCount: nativeStakers.length,
       mainMemberCount: mainStakers.length
     };
@@ -102,6 +166,8 @@ export async function getDAOStats(userAddress, forceRefresh = false) {
       skillOracleCount: 0,
       totalMembers: 0,
       userStakings: "0",
+      userTokenBalance: "0",
+      unclaimedTokens: "0",
       nativeMemberCount: 0,
       mainMemberCount: 0
     };

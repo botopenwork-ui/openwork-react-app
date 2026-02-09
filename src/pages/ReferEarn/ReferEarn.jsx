@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Web3 from "web3";
 import "./ReferEarn.css";
@@ -7,20 +7,34 @@ import Warning from "../../components/Warning/Warning";
 import NativeRewardsABI from "../../ABIs/native-rewards_ABI.json";
 import MainRewardsABI from "../../ABIs/main-rewards_ABI.json";
 import NOWJCABI from "../../ABIs/nowjc_ABI.json";
+import { getNativeChain, getMainChain, toHexChainId } from "../../config/chainConfig";
 
-// Contract addresses
-const NATIVE_REWARDS_ADDRESS = import.meta.env.VITE_NATIVE_REWARDS_ADDRESS;
-const MAIN_REWARDS_ADDRESS = import.meta.env.VITE_MAIN_REWARDS_ADDRESS;
-const NOWJC_ADDRESS = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS;
-const ARBITRUM_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
-const BASE_RPC = import.meta.env.VITE_BASE_SEPOLIA_RPC_URL;
+// Get chain config based on current network mode (testnet/mainnet)
+const nativeChain = getNativeChain(); // Arbitrum Sepolia or Arbitrum One
+const mainChain = getMainChain();     // Base Sepolia or Ethereum Mainnet
+
+// Contract addresses from chain config
+const NATIVE_REWARDS_ADDRESS = nativeChain.contracts.nativeRewards;
+const MAIN_REWARDS_ADDRESS = mainChain.contracts.mainRewards;
+const NOWJC_ADDRESS = nativeChain.contracts.nowjc;
+const NATIVE_RPC = nativeChain.rpcUrl;
+const MAIN_RPC = mainChain.rpcUrl;
 
 // LayerZero options for cross-chain messaging
-const LZ_OPTIONS = import.meta.env.VITE_LAYERZERO_OPTIONS_VALUE || "0x000301001101000000000000000000000000000F4240";
+// Format: 0x0003 (type3) | 01 (worker1) | 0011 (17 bytes) | 01 (lzReceive gas) | <16-byte gas amount>
+const LZ_OPTIONS = import.meta.env.VITE_LAYERZERO_OPTIONS_VALUE || "0x000301001101000000000000000000000000000F4240"; // 1,000,000 dest gas — for sync (Arb→ETH)
 
-// Chain IDs
-const ARBITRUM_CHAIN_ID = '0x66eee'; // 421614
-const BASE_CHAIN_ID = '0x14a34'; // 84532
+// Lighter options for claim callback (ETH→Arb): updateUserClaimData is ~80-120k gas on Arbitrum
+// 250,000 dest gas is safe headroom without overpaying the LayerZero fee
+const CLAIM_LZ_OPTIONS = "0x0003010011010000000000000000000000000003D090"; // 250,000 dest gas
+
+// Chain IDs (hex) from config
+const NATIVE_CHAIN_ID = toHexChainId(nativeChain.chainId);
+const MAIN_CHAIN_ID = toHexChainId(mainChain.chainId);
+
+// Polling config for LayerZero delivery
+const POLL_INTERVAL_MS = 15000;
+const MAX_POLL_DURATION_MS = 300000;
 
 export default function ReferEarn() {
   const navigate = useNavigate();
@@ -34,22 +48,49 @@ export default function ReferEarn() {
   // Rewards state - Arbitrum (Native)
   const [earnedTokens, setEarnedTokens] = useState("0");
   const [claimableOnArbitrum, setClaimableOnArbitrum] = useState("0");
-  const [loadingArbitrumRewards, setLoadingArbitrumRewards] = useState(false);
+  const [claimedOnNative, setClaimedOnNative] = useState("0");
+  const [governanceActions, setGovernanceActions] = useState("0");
+  const [loadingNativeRewards, setLoadingNativeRewards] = useState(false);
 
-  // Rewards state - Base (Synced)
-  const [syncedTokensOnBase, setSyncedTokensOnBase] = useState("0");
-  const [loadingBaseRewards, setLoadingBaseRewards] = useState(false);
+  // Rewards state - Main Chain (Synced)
+  const [syncedTokensOnMain, setSyncedTokensOnMain] = useState("0");
+  const [totalClaimedOnMain, setTotalClaimedOnMain] = useState("0");
+  const [loadingMainRewards, setLoadingMainRewards] = useState(false);
+
+  // Fee state
+  const [claimFeeEstimate, setClaimFeeEstimate] = useState(null);
 
   // Transaction state
-  const [currentStep, setCurrentStep] = useState(null); // 'sync' or 'claim'
+  const [currentStep, setCurrentStep] = useState(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [lastTxHash, setLastTxHash] = useState(null);
 
-  // Generate referral link based on connected wallet
+  // Polling ref
+  const pollIntervalRef = useRef(null);
+  const pollStartTimeRef = useRef(null);
+
+  // Computed values
+  const earned = parseFloat(earnedTokens);
+  const claimable = parseFloat(claimableOnArbitrum);
+  const claimed = parseFloat(claimedOnNative);
+  const synced = parseFloat(syncedTokensOnMain);
+  const claimedOnEth = parseFloat(totalClaimedOnMain);
+  const totalClaimed = Math.max(claimed, claimedOnEth);
+  const locked = Math.max(0, earned - claimable - totalClaimed);
+  const loading = loadingNativeRewards || loadingMainRewards;
+
   const referralLink = walletAddress
     ? `${window.location.origin}/profile/${walletAddress}?ref=${walletAddress}`
     : "Connect wallet to generate your referral link";
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, []);
 
   // Connect wallet
   const connectWallet = async () => {
@@ -61,9 +102,7 @@ export default function ReferEarn() {
     setIsConnecting(true);
     try {
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      if (accounts.length > 0) {
-        setWalletAddress(accounts[0]);
-      }
+      if (accounts.length > 0) setWalletAddress(accounts[0]);
     } catch (error) {
       console.error("Error connecting wallet:", error);
       setErrorMessage("Failed to connect wallet");
@@ -78,9 +117,7 @@ export default function ReferEarn() {
       if (window.ethereum) {
         try {
           const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-          }
+          if (accounts.length > 0) setWalletAddress(accounts[0]);
         } catch (error) {
           console.error("Error checking wallet:", error);
         }
@@ -97,59 +134,78 @@ export default function ReferEarn() {
   }, []);
 
   // Fetch rewards from Arbitrum (Native Rewards)
-  useEffect(() => {
-    const fetchArbitrumRewards = async () => {
-      if (!walletAddress) return;
+  const fetchNativeRewards = useCallback(async () => {
+    if (!walletAddress) return;
 
-      setLoadingArbitrumRewards(true);
-      try {
-        const web3 = new Web3(ARBITRUM_RPC);
-        const rewardsContract = new web3.eth.Contract(NativeRewardsABI, NATIVE_REWARDS_ADDRESS);
+    setLoadingNativeRewards(true);
+    try {
+      const web3 = new Web3(NATIVE_RPC);
+      const rewardsContract = new web3.eth.Contract(NativeRewardsABI, NATIVE_REWARDS_ADDRESS);
 
-        const totalEarned = await rewardsContract.methods.getUserTotalTokensEarned(walletAddress).call();
-        const claimable = await rewardsContract.methods.getUserTotalClaimableTokens(walletAddress).call();
+      const [totalEarned, claimableRaw, totalClaimedRaw, govActions] = await Promise.all([
+        rewardsContract.methods.getUserTotalTokensEarned(walletAddress).call(),
+        rewardsContract.methods.getUserTotalClaimableTokens(walletAddress).call(),
+        rewardsContract.methods.getUserTotalTokensClaimed(walletAddress).call(),
+        rewardsContract.methods.getUserTotalGovernanceActions(walletAddress).call(),
+      ]);
 
-        const earnedFormatted = web3.utils.fromWei(totalEarned, 'ether');
-        const claimableFormatted = web3.utils.fromWei(claimable, 'ether');
-
-        setEarnedTokens(parseFloat(earnedFormatted).toFixed(2));
-        setClaimableOnArbitrum(parseFloat(claimableFormatted).toFixed(2));
-      } catch (error) {
-        console.error("Error fetching Arbitrum rewards:", error);
-        setEarnedTokens("0");
-        setClaimableOnArbitrum("0");
-      } finally {
-        setLoadingArbitrumRewards(false);
-      }
-    };
-
-    fetchArbitrumRewards();
+      setEarnedTokens(parseFloat(web3.utils.fromWei(totalEarned, 'ether')).toFixed(2));
+      setClaimableOnArbitrum(parseFloat(web3.utils.fromWei(claimableRaw, 'ether')).toFixed(2));
+      setClaimedOnNative(parseFloat(web3.utils.fromWei(totalClaimedRaw, 'ether')).toFixed(2));
+      setGovernanceActions(govActions.toString());
+    } catch (error) {
+      console.error("Error fetching Native rewards:", error);
+      setEarnedTokens("0");
+      setClaimableOnArbitrum("0");
+      setClaimedOnNative("0");
+      setGovernanceActions("0");
+    } finally {
+      setLoadingNativeRewards(false);
+    }
   }, [walletAddress]);
 
-  // Fetch synced rewards from Base (Main Rewards)
-  useEffect(() => {
-    const fetchBaseRewards = async () => {
-      if (!walletAddress) return;
+  // Fetch synced rewards from Main Chain (ETH Rewards)
+  const fetchMainRewards = useCallback(async () => {
+    if (!walletAddress) return;
 
-      setLoadingBaseRewards(true);
-      try {
-        const web3 = new Web3(BASE_RPC);
-        const mainRewardsContract = new web3.eth.Contract(MainRewardsABI, MAIN_REWARDS_ADDRESS);
+    setLoadingMainRewards(true);
+    try {
+      const web3 = new Web3(MAIN_RPC);
+      const mainRewardsContract = new web3.eth.Contract(MainRewardsABI, MAIN_REWARDS_ADDRESS);
 
-        const claimable = await mainRewardsContract.methods.getClaimableRewards(walletAddress).call();
-        const claimableFormatted = web3.utils.fromWei(claimable, 'ether');
+      const rewardInfo = await mainRewardsContract.methods.getUserRewardInfo(walletAddress).call();
+      const claimableRaw = rewardInfo.claimableAmount || rewardInfo[0];
+      const totalClaimedRaw = rewardInfo.totalClaimed || rewardInfo[1];
 
-        setSyncedTokensOnBase(parseFloat(claimableFormatted).toFixed(2));
-      } catch (error) {
-        console.error("Error fetching Base rewards:", error);
-        setSyncedTokensOnBase("0");
-      } finally {
-        setLoadingBaseRewards(false);
+      const claimableFormatted = parseFloat(web3.utils.fromWei(claimableRaw, 'ether')).toFixed(2);
+      const totalClaimedFormatted = parseFloat(web3.utils.fromWei(totalClaimedRaw, 'ether')).toFixed(2);
+
+      setSyncedTokensOnMain(claimableFormatted);
+      setTotalClaimedOnMain(totalClaimedFormatted);
+
+      // Get dynamic fee quote for claiming if tokens are available
+      if (parseFloat(claimableFormatted) > 0) {
+        try {
+          const fee = await mainRewardsContract.methods
+            .quoteClaimSync(walletAddress, claimableRaw, CLAIM_LZ_OPTIONS)
+            .call();
+          setClaimFeeEstimate(web3.utils.fromWei(fee, 'ether'));
+        } catch (feeError) {
+          console.error("Error quoting claim fee:", feeError);
+          setClaimFeeEstimate(null);
+        }
       }
-    };
-
-    fetchBaseRewards();
+    } catch (error) {
+      console.error("Error fetching Main rewards:", error);
+      setSyncedTokensOnMain("0");
+      setTotalClaimedOnMain("0");
+    } finally {
+      setLoadingMainRewards(false);
+    }
   }, [walletAddress]);
+
+  useEffect(() => { fetchNativeRewards(); }, [fetchNativeRewards]);
+  useEffect(() => { fetchMainRewards(); }, [fetchMainRewards]);
 
   // Switch to a specific chain
   const switchToChain = async (chainId, chainName, rpcUrl) => {
@@ -178,67 +234,82 @@ export default function ReferEarn() {
     }
   };
 
-  // Step 1: Sync rewards to main chain (Arbitrum → Base)
-  const handleSyncToMainChain = async () => {
-    if (!walletAddress) {
-      await connectWallet();
-      return;
-    }
+  // Start polling for LZ delivery on main chain after sync
+  const startPollingMainRewards = () => {
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    pollStartTimeRef.current = Date.now();
 
-    if (parseFloat(claimableOnArbitrum) <= 0) {
-      setErrorMessage("No claimable tokens on Arbitrum. Complete governance actions to unlock tokens.");
+    const previousSynced = parseFloat(syncedTokensOnMain);
+
+    pollIntervalRef.current = setInterval(async () => {
+      const elapsed = Date.now() - pollStartTimeRef.current;
+
+      if (elapsed > MAX_POLL_DURATION_MS) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+        setStatusMessage("Sync sent. LayerZero delivery may still be in progress — check back shortly.");
+        setCurrentStep(null);
+        setIsProcessing(false);
+        return;
+      }
+
+      try {
+        const web3 = new Web3(MAIN_RPC);
+        const mainRewardsContract = new web3.eth.Contract(MainRewardsABI, MAIN_REWARDS_ADDRESS);
+        const claimableRaw = await mainRewardsContract.methods.getClaimableRewards(walletAddress).call();
+        const claimableFormatted = parseFloat(web3.utils.fromWei(claimableRaw, 'ether')).toFixed(2);
+
+        if (parseFloat(claimableFormatted) > previousSynced) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
+          setSyncedTokensOnMain(claimableFormatted);
+          setStatusMessage(`Tokens synced to ${mainChain.name}. You can now claim them (Step 2).`);
+          setCurrentStep(null);
+          setIsProcessing(false);
+          fetchNativeRewards();
+          fetchMainRewards();
+        } else {
+          const secs = Math.round(elapsed / 1000);
+          setStatusMessage(`Waiting for LayerZero delivery to ${mainChain.name}... (${secs}s)`);
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+    }, POLL_INTERVAL_MS);
+  };
+
+  // Step 1: Sync rewards to main chain (Native -> Main via LayerZero)
+  const handleSyncToMainChain = async () => {
+    if (!walletAddress) { await connectWallet(); return; }
+
+    if (claimable <= 0) {
+      setErrorMessage(`No claimable tokens on ${nativeChain.name}. Participate in governance to unlock tokens.`);
       return;
     }
 
     setIsProcessing(true);
     setCurrentStep('sync');
     setErrorMessage("");
+    setLastTxHash(null);
 
     try {
-      // Step 1.1: Switch to Arbitrum
-      setStatusMessage("Step 1/3: Switching to Arbitrum Sepolia...");
-      await switchToChain(ARBITRUM_CHAIN_ID, 'Arbitrum Sepolia', ARBITRUM_RPC);
+      setStatusMessage(`Switching to ${nativeChain.name}...`);
+      await switchToChain(NATIVE_CHAIN_ID, nativeChain.name, NATIVE_RPC);
 
-      // Step 1.2: Get fee quote
-      setStatusMessage("Step 2/3: Getting LayerZero fee quote...");
+      setStatusMessage("Sending sync transaction via LayerZero...");
       const web3 = new Web3(window.ethereum);
       const nowjcContract = new web3.eth.Contract(NOWJCABI, NOWJC_ADDRESS);
 
-      // Use fallback fee
-      const quotedFee = web3.utils.toWei('0.001', 'ether');
-      console.log(`LayerZero fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH`);
+      // Hardcoded estimate — excess is refunded by LayerZero
+      const quotedFee = web3.utils.toWei('0.0005', 'ether');
 
-      // Step 1.3: Send sync transaction
-      setStatusMessage("Step 3/3: Syncing rewards via LayerZero...");
       const tx = await nowjcContract.methods
         .syncRewardsData(LZ_OPTIONS)
-        .send({
-          from: walletAddress,
-          value: quotedFee,
-          gas: 500000
-        });
+        .send({ from: walletAddress, value: quotedFee, gas: 500000 });
 
-      console.log("Sync transaction:", tx.transactionHash);
-      setStatusMessage("Sync complete! Waiting for LayerZero delivery (1-5 min)...");
-
-      // Wait a bit then refresh Base rewards
-      setTimeout(async () => {
-        setStatusMessage("Checking Base Sepolia for synced tokens...");
-        const web3Base = new Web3(BASE_RPC);
-        const mainRewardsContract = new web3Base.eth.Contract(MainRewardsABI, MAIN_REWARDS_ADDRESS);
-        const claimable = await mainRewardsContract.methods.getClaimableRewards(walletAddress).call();
-        const claimableFormatted = web3Base.utils.fromWei(claimable, 'ether');
-        setSyncedTokensOnBase(parseFloat(claimableFormatted).toFixed(2));
-
-        if (parseFloat(claimableFormatted) > 0) {
-          setStatusMessage("Tokens synced! You can now claim on Base Sepolia.");
-        } else {
-          setStatusMessage("Sync sent. Check back in a few minutes for tokens to appear.");
-        }
-        setCurrentStep(null);
-        setIsProcessing(false);
-      }, 10000);
-
+      setLastTxHash(tx.transactionHash);
+      setStatusMessage(`Sync sent. Waiting for LayerZero delivery to ${mainChain.name}...`);
+      startPollingMainRewards();
     } catch (error) {
       console.error("Error syncing rewards:", error);
       setErrorMessage(error.code === 4001 ? "Transaction cancelled" : error.message);
@@ -248,58 +319,57 @@ export default function ReferEarn() {
     }
   };
 
-  // Step 2: Claim tokens on Base Sepolia
-  const handleClaimOnBase = async () => {
-    if (!walletAddress) {
-      await connectWallet();
-      return;
-    }
+  // Step 2: Claim tokens on main chain
+  const handleClaimOnMain = async () => {
+    if (!walletAddress) { await connectWallet(); return; }
 
-    if (parseFloat(syncedTokensOnBase) <= 0) {
-      setErrorMessage("No tokens to claim on Base. Sync your rewards first.");
+    if (synced <= 0) {
+      setErrorMessage(`No tokens to claim on ${mainChain.name}. Sync your rewards first (Step 1).`);
       return;
     }
 
     setIsProcessing(true);
     setCurrentStep('claim');
     setErrorMessage("");
+    setLastTxHash(null);
 
     try {
-      // Step 2.1: Switch to Base Sepolia
-      setStatusMessage("Step 1/3: Switching to Base Sepolia...");
-      await switchToChain(BASE_CHAIN_ID, 'Base Sepolia', BASE_RPC);
+      setStatusMessage(`Switching to ${mainChain.name}...`);
+      await switchToChain(MAIN_CHAIN_ID, mainChain.name, MAIN_RPC);
 
-      // Step 2.2: Get fee quote
-      setStatusMessage("Step 2/3: Getting LayerZero fee quote...");
+      setStatusMessage("Claiming tokens...");
       const web3 = new Web3(window.ethereum);
       const mainRewardsContract = new web3.eth.Contract(MainRewardsABI, MAIN_REWARDS_ADDRESS);
 
-      // Use fallback fee for claim sync back to Arbitrum
-      const quotedFee = web3.utils.toWei('0.001', 'ether');
-      console.log(`Claim fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH`);
+      // Dynamic fee quote using lighter CLAIM_LZ_OPTIONS (250k dest gas instead of 1M)
+      let fee;
+      try {
+        const claimableRaw = await mainRewardsContract.methods.getClaimableRewards(walletAddress).call();
+        const quotedFee = await mainRewardsContract.methods
+          .quoteClaimSync(walletAddress, claimableRaw, CLAIM_LZ_OPTIONS)
+          .call();
+        // 20% buffer on the quoted fee for gas price fluctuation
+        fee = (BigInt(quotedFee) * 120n / 100n).toString();
+      } catch {
+        fee = web3.utils.toWei('0.0004', 'ether');
+      }
 
-      // Step 2.3: Claim tokens
-      setStatusMessage("Step 3/3: Claiming tokens...");
       const tx = await mainRewardsContract.methods
-        .claimRewards(LZ_OPTIONS)
-        .send({
-          from: walletAddress,
-          value: quotedFee,
-          gas: 500000
-        });
+        .claimRewards(CLAIM_LZ_OPTIONS)
+        .send({ from: walletAddress, value: fee, gas: 300000 });
 
-      console.log("Claim transaction:", tx.transactionHash);
-      setStatusMessage("Tokens claimed successfully! OpenWork tokens sent to your wallet.");
+      setLastTxHash(tx.transactionHash);
+      setStatusMessage("Tokens claimed! OpenWork tokens have been sent to your wallet.");
+      setSyncedTokensOnMain("0");
 
-      // Refresh balances
-      setSyncedTokensOnBase("0");
-
+      // Refresh both chains after a short delay
       setTimeout(() => {
+        fetchNativeRewards();
+        fetchMainRewards();
         setStatusMessage("");
         setCurrentStep(null);
         setIsProcessing(false);
       }, 5000);
-
     } catch (error) {
       console.error("Error claiming tokens:", error);
       setErrorMessage(error.code === 4001 ? "Transaction cancelled" : error.message);
@@ -310,34 +380,35 @@ export default function ReferEarn() {
   };
 
   const handleCopyLink = () => {
-    if (!walletAddress) {
-      setErrorMessage("Please connect your wallet first");
-      return;
-    }
+    if (!walletAddress) { setErrorMessage("Please connect your wallet first"); return; }
     navigator.clipboard.writeText(referralLink);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
   const handleCopyAddress = () => {
-    if (!walletAddress) {
-      setErrorMessage("Please connect your wallet first");
-      return;
-    }
+    if (!walletAddress) { setErrorMessage("Please connect your wallet first"); return; }
     navigator.clipboard.writeText(walletAddress);
     setCopiedAddress(true);
     setTimeout(() => setCopiedAddress(false), 2000);
   };
 
-  // Determine which action button to show
-  const canSync = parseFloat(claimableOnArbitrum) > 0;
-  const canClaim = parseFloat(syncedTokensOnBase) > 0;
+  // Token amount with icon — reuses .refer-earn-earnings-amount, .earnings-value, .openwork-token
+  const TokenAmount = ({ value, dimmed }) => (
+    <div className="refer-earn-earnings-amount">
+      <span className="earnings-value" style={dimmed ? { color: '#868686' } : undefined}>
+        {value}
+      </span>
+      <div className="openwork-token" style={dimmed ? { opacity: 0.4 } : undefined}>
+        <img src="/assets/openwork-token.svg" alt="OW" className="token-icon" />
+      </div>
+    </div>
+  );
 
   return (
     <div className="refer-earn-container">
       {/* Main Card */}
       <div className="refer-earn-card">
-        {/* Card Header */}
         <div className="refer-earn-card-header">
           <div className="refer-earn-header-content">
             <BackButtonProposal onClick={() => navigate(-1)} />
@@ -345,18 +416,11 @@ export default function ReferEarn() {
           </div>
         </div>
 
-        {/* Content */}
         <div className="refer-earn-content">
-          {/* Icon */}
           <div className="refer-earn-icon-wrapper">
-            <img
-              src="/assets/refer-earn-icon.svg"
-              alt="Refer & Earn"
-              className="refer-earn-icon"
-            />
+            <img src="/assets/refer-earn-icon.svg" alt="Refer & Earn" className="refer-earn-icon" />
           </div>
 
-          {/* Main Content */}
           <div className="refer-earn-main-content">
             {/* Message */}
             <div className="refer-earn-message-section">
@@ -368,123 +432,149 @@ export default function ReferEarn() {
               </p>
             </div>
 
-            {/* Wallet Connection Status */}
             {!walletAddress && (
-              <Warning
-                content="Connect your wallet to see your referral link and earnings"
-                icon="/orange-warning.svg"
-              />
+              <Warning content="Connect your wallet to see your referral link and earnings" icon="/orange-warning.svg" />
             )}
 
-            {/* Link Sections */}
+            {/* Referral Links */}
             <div className="refer-earn-links-section">
-              {/* Copy Link Section */}
               <div className="refer-earn-link-group">
                 <p className="refer-earn-link-label">COPY AND SHARE THIS LINK</p>
                 <div className="refer-earn-link-button" onClick={handleCopyLink}>
                   <span className="refer-earn-link-text">
-                    {walletAddress
-                      ? (copiedLink ? "Copied!" : referralLink)
-                      : "Connect wallet to generate link"
-                    }
+                    {walletAddress ? (copiedLink ? "Copied!" : referralLink) : "Connect wallet to generate link"}
                   </span>
-                  <img
-                    src="/assets/copy-icon.svg"
-                    alt="Copy"
-                    className="copy-icon"
-                    style={{ cursor: 'pointer', opacity: walletAddress ? 1 : 0.5 }}
-                  />
+                  <img src="/assets/copy-icon.svg" alt="Copy" className="copy-icon" style={{ opacity: walletAddress ? 1 : 0.5 }} />
                 </div>
               </div>
 
-              {/* Copy Address Section */}
               <div className="refer-earn-link-group">
                 <p className="refer-earn-link-label">OR THEY CAN ENTER YOUR ADDRESS ON THEIR PROFILE</p>
                 <div className="refer-earn-link-button" onClick={handleCopyAddress}>
                   <span className="refer-earn-link-text">
-                    {walletAddress
-                      ? (copiedAddress ? "Copied!" : walletAddress)
-                      : "Connect wallet to see address"
-                    }
+                    {walletAddress ? (copiedAddress ? "Copied!" : walletAddress) : "Connect wallet to see address"}
                   </span>
-                  <img
-                    src="/assets/copy-icon.svg"
-                    alt="Copy"
-                    className="copy-icon"
-                    style={{ cursor: 'pointer', opacity: walletAddress ? 1 : 0.5 }}
-                  />
+                  <img src="/assets/copy-icon.svg" alt="Copy" className="copy-icon" style={{ opacity: walletAddress ? 1 : 0.5 }} />
                 </div>
               </div>
             </div>
 
-            {/* Rewards Summary */}
-            <div className="refer-earn-earnings-card">
-              <div className="refer-earn-earnings-content">
-                <p className="refer-earn-earnings-label">TOTAL EARNED ON ARBITRUM</p>
-                <div className="refer-earn-earnings-amount">
-                  <span className="earnings-value">
-                    {loadingArbitrumRewards ? "..." : earnedTokens}
-                  </span>
-                  <div className="openwork-token">
-                    <img
-                      src="/assets/openwork-token.svg"
-                      alt="OpenWork Token"
-                      className="token-icon"
-                    />
+            {/* ═══════════ Rewards Overview ═══════════ */}
+            {walletAddress && (
+              <>
+                <p className="refer-earn-link-label" style={{ marginBottom: 0 }}>REWARDS OVERVIEW</p>
+
+                {/* Total Earned */}
+                <div className="refer-earn-earnings-card">
+                  <div className="refer-earn-earnings-content">
+                    <p className="refer-earn-earnings-label">TOTAL EARNED ON {nativeChain.name.toUpperCase()}</p>
+                    <TokenAmount value={loading ? "..." : earnedTokens} />
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Claimable on Arbitrum (needs sync) */}
-            {parseFloat(claimableOnArbitrum) > 0 && (
-              <div className="refer-earn-earnings-card">
-                <div className="refer-earn-earnings-content">
-                  <p className="refer-earn-earnings-label">READY TO SYNC TO BASE</p>
-                  <div className="refer-earn-earnings-amount">
-                    <span className="earnings-value">{claimableOnArbitrum}</span>
-                    <div className="openwork-token">
-                      <img
-                        src="/assets/openwork-token.svg"
-                        alt="OpenWork Token"
-                        className="token-icon"
-                      />
+                {/* Governance Actions + Already Claimed — two cards side by side */}
+                <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+                  <div className="refer-earn-earnings-card" style={{ flex: 1 }}>
+                    <div className="refer-earn-earnings-content" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                      <p className="refer-earn-earnings-label">GOVERNANCE ACTIONS</p>
+                      <span className="earnings-value">{loading ? "..." : governanceActions}</span>
+                    </div>
+                  </div>
+                  <div className="refer-earn-earnings-card" style={{ flex: 1 }}>
+                    <div className="refer-earn-earnings-content" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                      <p className="refer-earn-earnings-label">ALREADY CLAIMED</p>
+                      <TokenAmount value={loading ? "..." : totalClaimedOnMain} />
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
 
-            {/* Synced on Base (ready to claim) */}
-            {parseFloat(syncedTokensOnBase) > 0 && (
-              <div className="refer-earn-earnings-card">
-                <div className="refer-earn-earnings-content">
-                  <p className="refer-earn-earnings-label">READY TO CLAIM ON BASE</p>
-                  <div className="refer-earn-earnings-amount">
-                    <span className="earnings-value">{syncedTokensOnBase}</span>
-                    <div className="openwork-token">
-                      <img
-                        src="/assets/openwork-token.svg"
-                        alt="OpenWork Token"
-                        className="token-icon"
-                      />
+                {/* Locked tokens (needs more governance to unlock) */}
+                {locked > 0 && (
+                  <div className="refer-earn-earnings-card">
+                    <div className="refer-earn-earnings-content">
+                      <p className="refer-earn-earnings-label">LOCKED (NEEDS GOVERNANCE TO UNLOCK)</p>
+                      <TokenAmount value={locked.toFixed(2)} dimmed />
                     </div>
                   </div>
+                )}
+
+                {/* ═══════════ Claim Your Tokens ═══════════ */}
+                <p className="refer-earn-link-label" style={{ marginBottom: 0, marginTop: '8px' }}>CLAIM YOUR TOKENS</p>
+
+                {/* Step 1: Sync */}
+                <div className="refer-earn-earnings-card" style={{ borderLeft: claimable > 0 ? '3px solid #1246FF' : '3px solid #F7F7F7' }}>
+                  <div className="refer-earn-earnings-content" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+                    <p className="refer-earn-earnings-label">
+                      STEP 1 — SYNC TO {mainChain.name.toUpperCase()}
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                      <TokenAmount value={loading ? "..." : claimableOnArbitrum} />
+                      <button
+                        className="claim-tokens-button"
+                        onClick={handleSyncToMainChain}
+                        disabled={isProcessing || claimable <= 0}
+                        style={{
+                          opacity: isProcessing || claimable <= 0 ? 0.5 : 1,
+                          cursor: isProcessing || claimable <= 0 ? 'not-allowed' : 'pointer',
+                          fontSize: '12px',
+                          padding: '8px 16px',
+                        }}
+                      >
+                        {isProcessing && currentStep === 'sync' ? "Syncing..." : "Sync"}
+                      </button>
+                    </div>
+                    <span className="referrer-name">
+                      Sends unlocked tokens to {mainChain.name} via LayerZero (~0.0005 ETH fee, excess refunded)
+                    </span>
+                  </div>
                 </div>
-              </div>
+
+                {/* Step 2: Claim */}
+                <div className="refer-earn-earnings-card" style={{ borderLeft: synced > 0 ? '3px solid #1246FF' : '3px solid #F7F7F7' }}>
+                  <div className="refer-earn-earnings-content" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+                    <p className="refer-earn-earnings-label">
+                      STEP 2 — CLAIM ON {mainChain.name.toUpperCase()}
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                      <TokenAmount value={loading ? "..." : syncedTokensOnMain} />
+                      <button
+                        className="claim-tokens-button"
+                        onClick={handleClaimOnMain}
+                        disabled={isProcessing || synced <= 0}
+                        style={{
+                          opacity: isProcessing || synced <= 0 ? 0.5 : 1,
+                          cursor: isProcessing || synced <= 0 ? 'not-allowed' : 'pointer',
+                          fontSize: '12px',
+                          padding: '8px 16px',
+                        }}
+                      >
+                        {isProcessing && currentStep === 'claim' ? "Claiming..." : "Claim"}
+                      </button>
+                    </div>
+                    <span className="referrer-name">
+                      Transfers OW tokens to your wallet
+                      {claimFeeEstimate
+                        ? ` (~${parseFloat(claimFeeEstimate).toFixed(5)} ETH fee)`
+                        : " (~0.0004 ETH fee, excess refunded)"}
+                    </span>
+                  </div>
+                </div>
+              </>
             )}
 
-            {/* Status Messages */}
-            {statusMessage && (
-              <Warning content={statusMessage} icon="/orange-warning.svg" />
-            )}
-            {errorMessage && (
-              <Warning content={errorMessage} icon="/orange-warning.svg" />
+            {/* Status & Error Messages */}
+            {statusMessage && <Warning content={statusMessage} icon="/orange-warning.svg" />}
+            {errorMessage && <Warning content={errorMessage} icon="/orange-warning.svg" />}
+            {lastTxHash && (
+              <Warning
+                content={`Transaction: ${lastTxHash.slice(0, 10)}...${lastTxHash.slice(-8)}`}
+                icon="/info.svg"
+              />
             )}
 
-            {/* Action Buttons */}
-            <div className="refer-earn-actions">
-              {!walletAddress ? (
+            {/* Connect Wallet Button */}
+            {!walletAddress && (
+              <div className="refer-earn-actions">
                 <button
                   className="claim-tokens-button"
                   onClick={connectWallet}
@@ -493,39 +583,20 @@ export default function ReferEarn() {
                 >
                   {isConnecting ? "Connecting..." : "Connect Wallet"}
                 </button>
-              ) : canClaim ? (
-                <button
-                  className="claim-tokens-button"
-                  onClick={handleClaimOnBase}
-                  disabled={isProcessing}
-                  style={{ opacity: isProcessing ? 0.7 : 1, cursor: isProcessing ? 'wait' : 'pointer' }}
-                >
-                  {isProcessing && currentStep === 'claim' ? "Claiming..." : "Claim Tokens on Base"}
-                </button>
-              ) : canSync ? (
-                <button
-                  className="claim-tokens-button"
-                  onClick={handleSyncToMainChain}
-                  disabled={isProcessing}
-                  style={{ opacity: isProcessing ? 0.7 : 1, cursor: isProcessing ? 'wait' : 'pointer' }}
-                >
-                  {isProcessing && currentStep === 'sync' ? "Syncing..." : "Sync to Main Chain"}
-                </button>
-              ) : (
-                <button
-                  className="claim-tokens-button"
-                  disabled
-                  style={{ opacity: 0.5, cursor: 'not-allowed' }}
-                >
-                  No Tokens to Claim
-                </button>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* How it works info */}
-            {walletAddress && !canSync && !canClaim && (
+            {/* Contextual guidance */}
+            {walletAddress && earned > 0 && locked > 0 && claimable <= 0 && synced <= 0 && (
               <Warning
-                content="Earn tokens by completing jobs or governance actions. Tokens become claimable after participating in DAO voting."
+                content={`You have ${locked.toFixed(2)} locked tokens. Vote on disputes, skill verifications, or AskAthena questions to unlock them.`}
+                icon="/info.svg"
+              />
+            )}
+
+            {walletAddress && earned <= 0 && (
+              <Warning
+                content="Earn tokens by completing jobs, hiring through the platform, or receiving referral commissions. Tokens are unlocked by participating in governance (voting)."
                 icon="/info.svg"
               />
             )}
@@ -540,7 +611,7 @@ export default function ReferEarn() {
         </div>
 
         <div className="referral-history-content">
-          {parseFloat(earnedTokens) > 0 ? (
+          {earned > 0 ? (
             <div className="referral-history-item">
               <div className="referral-avatar">
                 <img src="/assets/avatar-placeholder.png" alt="User" />
@@ -550,11 +621,7 @@ export default function ReferEarn() {
                   <span className="history-text-normal">Total earned from referrals:</span>
                   <span className="history-amount">{earnedTokens}</span>
                   <div className="history-token-icon">
-                    <img
-                      src="/assets/openwork-token.svg"
-                      alt="Token"
-                      className="token-icon"
-                    />
+                    <img src="/assets/openwork-token.svg" alt="Token" className="token-icon" />
                   </div>
                 </div>
                 <div className="referral-history-meta">

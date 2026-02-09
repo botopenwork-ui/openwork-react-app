@@ -13,7 +13,7 @@ import { buildLzOptions, DESTINATION_GAS_ESTIMATES, getNativeChain, isMainnet } 
 import GenesisABI from "../../ABIs/genesis_ABI.json";
 
 // Backend URL for secure API calls
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 // Dynamic network mode functions for cross-chain polling
 function getGenesisAddress() {
@@ -376,9 +376,6 @@ export default function ApplyJob() {
                 <Warning content={transactionStatus} icon="/info.svg"/>
               </div>
             )}
-            <div className="form-groupDC warning-form">
-              <Warning content={"Please make sure your OpenWork Profile is up to date!"} icon="/triangle_warning.svg"/>
-            </div>
             <div className="form-groupDC form-platformFee">
               <div className="platform-fee">
                 <span>total compensation</span>
@@ -441,24 +438,28 @@ export default function ApplyJob() {
                     <span>MILESTONES</span>
                 </div>
                 <div className="milestone-section-body">
-                    <Milestone 
-                      amount={milestone1Amount} 
-                      title={milestone1Title} 
-                      content={milestone1Content} 
+                    <Milestone
+                      amount={milestone1Amount}
+                      title={milestone1Title}
+                      content={milestone1Content}
                       editable={true}
-                      onAmountChange={setMilestone1Amount}
-                      onTitleChange={setMilestone1Title}
-                      onContentChange={setMilestone1Content}
+                      onUpdate={(field, value) => {
+                        if (field === 'amount') setMilestone1Amount(value);
+                        if (field === 'title') setMilestone1Title(value);
+                        if (field === 'content') setMilestone1Content(value);
+                      }}
                     />
                     {selectedOption == 'Multiple Milestones' && (
-                      <Milestone 
-                        amount={milestone2Amount} 
-                        title={milestone2Title} 
-                        content={milestone2Content} 
+                      <Milestone
+                        amount={milestone2Amount}
+                        title={milestone2Title}
+                        content={milestone2Content}
                         editable={true}
-                        onAmountChange={setMilestone2Amount}
-                        onTitleChange={setMilestone2Title}
-                        onContentChange={setMilestone2Content}
+                        onUpdate={(field, value) => {
+                          if (field === 'amount') setMilestone2Amount(value);
+                          if (field === 'title') setMilestone2Title(value);
+                          if (field === 'content') setMilestone2Content(value);
+                        }}
                       />
                     )}
                 </div>

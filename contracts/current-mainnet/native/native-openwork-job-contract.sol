@@ -1,0 +1,1218 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+// Interface for OpenworkGenesis storage contract
+interface IOpenworkGenesis {
+    enum JobStatus { Open, InProgress, Completed, Cancelled }
+    
+    struct Profile {
+        address userAddress;
+        string ipfsHash;
+        address referrerAddress;
+        string[] portfolioHashes;
+    }
+    
+    struct MilestonePayment {
+        string descriptionHash;
+        uint256 amount;
+    }
+    
+    struct Application {
+        uint256 id;
+        string jobId;
+        address applicant;
+        string applicationHash;
+        MilestonePayment[] proposedMilestones;
+    }
+    
+    struct Job {
+        string id;
+        address jobGiver;
+        address[] applicants;
+        string jobDetailHash;
+        JobStatus status;
+        string[] workSubmissions;
+        MilestonePayment[] milestonePayments;
+        MilestonePayment[] finalMilestones;
+        uint256 totalPaid;
+        uint256 currentMilestone;
+        address selectedApplicant;
+        uint256 selectedApplicationId;
+    }
+
+    // Job and profile management
+    function setProfile(address user, string memory ipfsHash, address referrer) external;
+    function addPortfolio(address user, string memory portfolioHash) external;
+    function setJob(string memory jobId, address jobGiver, string memory jobDetailHash, string[] memory descriptions, uint256[] memory amounts) external;
+    function addJobApplicant(string memory jobId, address applicant) external;
+    function setJobApplication(string memory jobId, uint256 applicationId, address applicant, string memory applicationHash, string[] memory descriptions, uint256[] memory amounts, uint32 preferredPaymentChainDomain, address preferredPaymentAddress) external;
+    function updateJobStatus(string memory jobId, JobStatus status) external;
+    function setJobSelectedApplicant(string memory jobId, address applicant, uint256 applicationId) external;
+    function setJobCurrentMilestone(string memory jobId, uint256 milestone) external;
+    function addJobFinalMilestone(string memory jobId, string memory description, uint256 amount) external;
+    function addWorkSubmission(string memory jobId, string memory submissionHash) external;
+    function updateJobTotalPaid(string memory jobId, uint256 amount) external;
+    function setJobRating(string memory jobId, address user, uint256 rating) external;
+    
+    // Legacy reward functions (for backward compatibility)
+    function setUserTotalOWTokens(address user, uint256 tokens) external;
+    function incrementUserGovernanceActions(address user) external;
+    function setUserGovernanceActions(address user, uint256 actions) external;
+    function updateUserClaimData(address user, uint256 claimedTokens) external;    
+    // Getters
+    function getProfile(address user) external view returns (Profile memory);
+    function getJob(string memory jobId) external view returns (Job memory);
+    function getJobApplication(string memory jobId, uint256 applicationId) external view returns (Application memory);
+    function getJobCount() external view returns (uint256);
+    function getAllJobIds() external view returns (string[] memory);
+    function getJobsByPoster(address poster) external view returns (string[] memory);
+    function getJobApplicationCount(string memory jobId) external view returns (uint256);
+    function getUserRatings(address user) external view returns (uint256[] memory);
+    function jobExists(string memory jobId) external view returns (bool);
+    function hasProfile(address user) external view returns (bool);
+    function getUserReferrer(address user) external view returns (address);
+    function getUserEarnedTokens(address user) external view returns (uint256);
+    function getUserGovernanceActionsInBand(address user, uint256 band) external view returns (uint256);
+    function getUserGovernanceActions(address user) external view returns (uint256); // Change from getUserTotalGovernanceActions
+    function getUserRewardInfo(address user) external view returns (uint256 totalTokens, uint256 governanceActions);
+    function totalPlatformPayments() external view returns (uint256);
+}
+
+// Interface for the RewardsContract
+interface IOpenWorkRewards {
+    function processJobPayment(
+        address jobGiver,
+        address jobTaker, 
+        uint256 amount,
+        uint256 newPlatformTotal
+    ) external returns (uint256[] memory tokensAwarded);
+    
+    function recordGovernanceAction(address user) external;
+    function calculateUserClaimableTokens(address user) external view returns (uint256);
+    function claimTokens(address user, uint256 amount) external returns (bool);
+    function getUserTotalTokensEarned(address user) external view returns (uint256);
+    function getUserGovernanceActionsInBand(address user, uint256 band) external view returns (uint256);
+    function getUserTotalGovernanceActions(address user) external view returns (uint256);
+    function calculateTokensForRange(uint256 fromAmount, uint256 toAmount) external view returns (uint256);
+    function getCurrentBand() external view returns (uint256);
+    function getPlatformBandInfo() external view returns (
+        uint256 currentBand,
+        uint256 currentTotal,
+        uint256 bandMinAmount,
+        uint256 bandMaxAmount,
+        uint256 governanceRewardRate
+    );
+    
+    function getUserTotalClaimableTokens(address user) external view returns (uint256);
+    function getUserTotalUnlockedTokens(address user) external view returns (uint256); // SECURITY FIX
+    function markTokensClaimed(address user, uint256 amount) external returns (bool);
+    function teamTokensAllocated(address user) external view returns (uint256);
+}
+
+interface INativeLZOpenworkBridge {
+    function sendSyncRewardsData(
+        address user,
+        uint256 claimableAmount,
+        bytes calldata _options
+    ) external payable;
+
+    function sendSyncVotingPower(
+        address user,
+        uint256 totalRewards,
+        bytes calldata _options
+    ) external payable;
+}
+
+// CCTP Transceiver interface for cross-chain USDC transfers
+interface ICCTPTransceiver {
+    function sendFast(
+        uint256 amount,
+        uint32 destinationDomain,
+        bytes32 mintRecipient,
+        uint256 maxFee
+    ) external;
+    
+    function addressToBytes32(address addr) external pure returns (bytes32);
+}
+
+/// @title NativeOpenWorkJobContract
+/// @notice Main job management contract for the Openwork platform on Arbitrum
+/// @dev Handles job posting, applications, milestone payments, and cross-chain transfers via CCTP.
+///      All job state is stored in OpenworkGenesis. This contract coordinates workflow and payments.
+contract NativeOpenWorkJobContract is
+    Initializable,
+    OwnableUpgradeable,
+    UUPSUpgradeable
+{
+    using SafeERC20 for IERC20;
+
+    // NOTE: Structs (Job, Profile, Application, MilestonePayment) and JobStatus enum
+    // are defined in IOpenworkGenesis interface. Use IOpenworkGenesis.Job etc.
+
+    // ==================== STATE VARIABLES ====================
+    
+    // Genesis storage contract
+    IOpenworkGenesis public genesis;
+    
+    // RewardsContract reference
+    IOpenWorkRewards public rewardsContract;
+    
+    // Bridge reference
+    address public bridge;
+    address[] private allProfileUsers;
+    uint256 private profileCount;
+    mapping(address => bool) public authorizedContracts;
+    
+    // USDC token and CCTP receiver
+    IERC20 public usdcToken;
+    address public cctpReceiver;
+    
+    // CCTP transceiver for cross-chain payments
+    address public cctpTransceiver;
+    
+    // Native Athena authorization for dispute resolution
+    address public nativeAthena;
+
+    // Native DAO for governance override on dispute resolution
+    address public nativeDAO;
+
+    // Admin/Governance pattern
+    mapping(address => bool) public admins;
+
+    // Mapping to store applicant preferred chain domains for dispute resolution
+    mapping(string => mapping(address => uint32)) public jobApplicantChainDomain;
+    
+    // Commission tracking
+    address public treasury;
+    uint256 public accumulatedCommission;
+    uint256 public commissionPercentage = 100; // 1% in basis points (100/10000)
+    uint256 public minCommission = 1e6; // 1 USDC (6 decimals)
+
+    // Storage gap for upgrade safety
+    uint256[50] private __gap;
+
+    // ==================== EVENTS ====================
+    
+    event ProfileCreated(address indexed user, string ipfsHash, address referrer);
+    event JobPosted(string indexed jobId, address indexed jobGiver, string jobDetailHash);
+    event JobApplication(string indexed jobId, uint256 indexed applicationId, address indexed applicant, string applicationHash);
+    event JobStarted(string indexed jobId, uint256 indexed applicationId, address indexed selectedApplicant, bool useApplicantMilestones);
+    event WorkSubmitted(string indexed jobId, address indexed applicant, string submissionHash, uint256 milestone);
+    event PaymentReleased(string indexed jobId, address indexed jobGiver, address indexed applicant, uint256 amount, uint256 milestone);
+    event MilestoneLocked(string indexed jobId, uint256 newMilestone, uint256 lockedAmount);
+    event UserRated(string indexed jobId, address indexed rater, address indexed rated, uint256 rating);
+    event PortfolioAdded(address indexed user, string portfolioHash);
+    event JobStatusChanged(string indexed jobId, IOpenworkGenesis.JobStatus newStatus);
+    event PaymentReleasedAndNextMilestoneLocked(string indexed jobId, uint256 releasedAmount, uint256 lockedAmount, uint256 milestone);
+    event BridgeUpdated(address indexed oldBridge, address indexed newBridge);
+    event GenesisUpdated(address indexed oldGenesis, address indexed newGenesis);
+    event RewardsContractUpdated(address indexed oldRewards, address indexed newRewards);
+    event GovernanceActionIncremented(address indexed user, uint256 newGovernanceActionCount, uint256 indexed band);
+    event TokensEarned(address indexed user, uint256 tokensEarned, uint256 newPlatformTotal, uint256 newUserTotalTokens);
+    event ClaimDataUpdated(address indexed user, uint256 claimedJobTokens, uint256 claimedGovernanceTokens);
+    event RewardsDataSynced(address indexed user, uint256 syncType, uint256 claimableAmount, uint256 reserved);   
+    event AuthorizedContractAdded(address indexed contractAddress);
+    event AuthorizedContractRemoved(address indexed contractAddress);
+    event DisputedFundsReleased(string indexed jobId, address indexed winner, uint32 winnerChainDomain, uint256 amount);
+    event NativeAthenaUpdated(address indexed oldNativeAthena, address indexed newNativeAthena);
+    event NativeDAOUpdated(address indexed oldNativeDAO, address indexed newNativeDAO);
+    event CommissionDeducted(string indexed jobId, uint256 grossAmount, uint256 commission, uint256 netAmount);
+    event CommissionWithdrawn(address indexed treasury, uint256 amount);
+    event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
+    event CommissionPercentageUpdated(uint256 oldPercentage, uint256 newPercentage);
+    event MinCommissionUpdated(uint256 oldMin, uint256 newMin);
+    event AdminUpdated(address indexed admin, bool status);
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    /// @notice Initialize the contract with required dependencies
+    /// @param _owner Address of contract owner
+    /// @param _bridge Address of NativeLZOpenworkBridge for cross-chain messaging
+    /// @param _genesis Address of OpenworkGenesis storage contract
+    /// @param _rewardsContract Address of NativeRewardsContract
+    /// @param _usdcToken Address of USDC token contract
+    /// @param _cctpReceiver Address of CCTP receiver for USDC deposits
+    function initialize(
+        address _owner,
+        address _bridge,
+        address _genesis,
+        address _rewardsContract,
+        address _usdcToken,
+        address _cctpReceiver
+    ) public initializer {
+        __Ownable_init(_owner);
+        __UUPSUpgradeable_init();
+        
+        bridge = _bridge;
+        genesis = IOpenworkGenesis(_genesis);
+        rewardsContract = IOpenWorkRewards(_rewardsContract);
+        usdcToken = IERC20(_usdcToken);
+        cctpReceiver = _cctpReceiver;
+    }
+
+    /// @notice Add a contract to the authorized contracts list
+    /// @param contractAddress Address of contract to authorize
+    function addAuthorizedContract(address contractAddress) external {
+        require(admins[msg.sender], "Auth");
+        require(contractAddress != address(0), "Invalid address");
+        authorizedContracts[contractAddress] = true;
+        emit AuthorizedContractAdded(contractAddress);
+    }
+
+    /// @notice Remove a contract from the authorized contracts list
+    /// @param contractAddress Address of contract to remove authorization
+    function removeAuthorizedContract(address contractAddress) external {
+        require(admins[msg.sender], "Auth");
+        authorizedContracts[contractAddress] = false;
+        emit AuthorizedContractRemoved(contractAddress);
+    }
+
+    /// @notice Check if a contract is authorized
+    /// @param contractAddress Address to check
+    /// @return True if contract is authorized
+    function isAuthorizedContract(address contractAddress) external view returns (bool) {
+        return authorizedContracts[contractAddress];
+    }
+
+    /// @notice Set admin status for an address
+    /// @param _admin Address to modify
+    /// @param _status True to grant admin, false to revoke
+    function setAdmin(address _admin, bool _status) external {
+        require(msg.sender == owner() || msg.sender == nativeDAO, "Auth");
+        admins[_admin] = _status;
+        emit AdminUpdated(_admin, _status);
+    }
+
+    /// @dev Authorize upgrade to new implementation (owner or bridge only)
+    function _authorizeUpgrade(address /* newImplementation */) internal view override {
+        require(owner() == _msgSender() || address(bridge) == _msgSender(), "Unauthorized");
+    }
+
+    /// @notice Upgrade contract implementation via DAO governance
+    /// @param newImplementation Address of new implementation contract
+    function upgradeFromDAO(address newImplementation) external {
+        require(msg.sender == address(bridge), "Only bridge");
+        upgradeToAndCall(newImplementation, "");
+    }
+
+    // ==================== ADMIN FUNCTIONS ====================
+
+    /// @notice Set the bridge contract address
+    /// @param _bridge Address of NativeLZOpenworkBridge contract
+    function setBridge(address _bridge) external {
+        require(admins[msg.sender], "Auth");
+        address oldBridge = bridge;
+        bridge = _bridge;
+        emit BridgeUpdated(oldBridge, _bridge);
+    }
+
+    /// @notice Set the genesis storage contract address
+    /// @param _genesis Address of OpenworkGenesis contract
+    function setGenesis(address _genesis) external {
+        require(admins[msg.sender], "Auth");
+        address oldGenesis = address(genesis);
+        genesis = IOpenworkGenesis(_genesis);
+        emit GenesisUpdated(oldGenesis, _genesis);
+    }
+
+    /// @notice Set the rewards contract address
+    /// @param _rewardsContract Address of NativeRewardsContract
+    function setRewardsContract(address _rewardsContract) external {
+        require(admins[msg.sender], "Auth");
+        address oldRewards = address(rewardsContract);
+        rewardsContract = IOpenWorkRewards(_rewardsContract);
+        emit RewardsContractUpdated(oldRewards, _rewardsContract);
+    }
+
+    /// @notice Set the CCTP receiver contract address
+    /// @param _cctpReceiver Address of CCTP receiver for USDC deposits
+    function setCCTPReceiver(address _cctpReceiver) external {
+        require(admins[msg.sender], "Auth");
+        require(_cctpReceiver != address(0), "Invalid address");
+        cctpReceiver = _cctpReceiver;
+    }
+
+    /// @notice Set the CCTP transceiver contract for cross-chain transfers
+    /// @param _cctpTransceiver Address of CCTPTransceiver contract
+    function setCCTPTransceiver(address _cctpTransceiver) external {
+        require(admins[msg.sender], "Auth");
+        require(_cctpTransceiver != address(0), "Invalid address");
+        cctpTransceiver = _cctpTransceiver;
+    }
+
+    /// @notice Set the NativeAthena dispute resolution contract
+    /// @param _nativeAthena Address of NativeAthena contract
+    function setNativeAthena(address _nativeAthena) external {
+        require(admins[msg.sender], "Auth");
+        address oldNativeAthena = nativeAthena;
+        nativeAthena = _nativeAthena;
+        emit NativeAthenaUpdated(oldNativeAthena, _nativeAthena);
+    }
+
+    /// @notice Set the NativeDAO governance contract
+    /// @param _nativeDAO Address of NativeDAO contract
+    function setNativeDAO(address _nativeDAO) external {
+        require(admins[msg.sender], "Auth");
+        address oldNativeDAO = nativeDAO;
+        nativeDAO = _nativeDAO;
+        emit NativeDAOUpdated(oldNativeDAO, _nativeDAO);
+    }
+
+    /// @notice Set applicant's preferred payment chain domain for a job
+    /// @param _jobId Job identifier
+    /// @param _applicant Applicant address
+    /// @param _chainDomain CCTP domain ID (2=OP, 3=Arb, 0=Eth)
+    function setApplicantChainDomain(string memory _jobId, address _applicant, uint32 _chainDomain) external {
+        require(authorizedContracts[msg.sender], "Not authorized");
+        jobApplicantChainDomain[_jobId][_applicant] = _chainDomain;
+    }
+    
+    // ==================== COMMISSION MANAGEMENT ====================
+    
+    /**
+     * @dev Calculate commission for a given amount
+     * @param amount The payment amount
+     * @return The commission amount (1% or minCommission, whichever is higher)
+     */
+    function calculateCommission(uint256 amount) public view returns (uint256) {
+        uint256 percentCommission = (amount * commissionPercentage) / 10000;
+        return percentCommission > minCommission ? percentCommission : minCommission;
+    }
+    
+    /**
+     * @dev Set treasury address (owner only)
+     * @param _treasury The treasury wallet address
+     */
+    function setTreasury(address _treasury) external {
+        require(admins[msg.sender], "Auth");
+        require(_treasury != address(0), "Invalid treasury");
+        address oldTreasury = treasury;
+        treasury = _treasury;
+        emit TreasuryUpdated(oldTreasury, _treasury);
+    }
+
+    /// @notice Set the commission percentage in basis points
+    /// @param _percentage Commission in basis points (100 = 1%, max 1000 = 10%)
+    function setCommissionPercentage(uint256 _percentage) external {
+        require(admins[msg.sender], "Auth");
+        require(_percentage <= 1000, "Max 10%");
+        uint256 oldPercentage = commissionPercentage;
+        commissionPercentage = _percentage;
+        emit CommissionPercentageUpdated(oldPercentage, _percentage);
+    }
+
+    /// @notice Set the minimum commission amount
+    /// @param _minCommission Minimum commission in USDC (6 decimals)
+    function setMinCommission(uint256 _minCommission) external {
+        require(admins[msg.sender], "Auth");
+        uint256 oldMin = minCommission;
+        minCommission = _minCommission;
+        emit MinCommissionUpdated(oldMin, _minCommission);
+    }
+
+    /// @notice Withdraw a specific amount of accumulated commission to treasury
+    /// @param amount Amount of commission to withdraw
+    function withdrawCommission(uint256 amount) external {
+        require(admins[msg.sender], "Auth");
+        require(amount <= accumulatedCommission, "Insufficient commission");
+        require(amount > 0, "Invalid amount");
+
+        accumulatedCommission -= amount;
+        usdcToken.safeTransfer(treasury, amount);
+
+        emit CommissionWithdrawn(treasury, amount);
+    }
+
+    /// @notice Withdraw all accumulated commission to treasury
+    function withdrawAllCommission() external {
+        require(admins[msg.sender], "Auth");
+        require(accumulatedCommission > 0, "No commission");
+
+        uint256 amount = accumulatedCommission;
+        accumulatedCommission = 0;
+        usdcToken.safeTransfer(treasury, amount);
+
+        emit CommissionWithdrawn(treasury, amount);
+    }
+
+    /// @dev Internal function to withdraw funds via CCTP receiver
+    function withdrawFunds(address _to, uint256 _amount) internal {
+        require(cctpReceiver != address(0), "CCTP not set");
+        require(_to != address(0), "Invalid recipient");
+        require(_amount > 0, "Invalid amount");
+        
+        // Call CCTP receiver to withdraw funds (for same-chain withdrawals only)
+        // Note: Cross-chain payments use sendFast() directly via cctpTransceiver
+        (bool success, ) = cctpReceiver.call(abi.encodeWithSignature("withdrawFunds(address,uint256)", _to, _amount));
+        require(success, "Withdrawal failed");
+    }
+
+    // ==================== MESSAGE HANDLERS ====================
+
+    /// @notice Handle claim data update from cross-chain message
+    /// @param user Address of the user
+    /// @param claimedTokens Amount of tokens claimed
+    function handleUpdateUserClaimData(
+        address user,
+        uint256 claimedTokens
+    ) external {
+        require(authorizedContracts[msg.sender], "Auth");
+
+        // Update Genesis for backward compatibility
+        genesis.updateUserClaimData(user, claimedTokens);
+
+        // Update Native Rewards Contract to mark tokens as claimed
+        if (address(rewardsContract) != address(0)) {
+            rewardsContract.markTokensClaimed(user, claimedTokens);
+        }
+
+        emit ClaimDataUpdated(user, claimedTokens, 0);
+    }
+
+    /// @notice Handle cross-chain payment release request from bridge
+    /// @param _jobGiver Address of the job creator
+    /// @param _jobId Job identifier
+    /// @param _amount Payment amount
+    /// @param _targetChainDomain CCTP domain of destination chain
+    /// @param _targetRecipient Address to receive payment
+    function handleReleasePaymentCrossChain(
+        address _jobGiver,
+        string memory _jobId,
+        uint256 _amount,
+        uint32 _targetChainDomain,
+        address _targetRecipient
+    ) external {
+        require(authorizedContracts[msg.sender], "Auth");
+
+        releasePaymentCrossChain(_jobGiver, _jobId, _amount, _targetChainDomain, _targetRecipient);
+    }
+
+    // ==================== GOVERNANCE ACTION HANDLER ====================
+    
+    /**
+     * @dev Increment governance action for a user
+     * Called by bridge when user performs governance actions
+     */
+    function incrementGovernanceAction(address user) external {
+        require(authorizedContracts[msg.sender], "Only authorized");
+        // Update Genesis for backward compatibility
+        genesis.incrementUserGovernanceActions(user);
+        
+        // Delegate to RewardsContract for band-specific tracking
+        if (address(rewardsContract) != address(0)) {
+            rewardsContract.recordGovernanceAction(user);
+        }
+        
+        // Get current band from RewardsContract for event
+        uint256 currentBand = address(rewardsContract) != address(0) ? 
+            rewardsContract.getCurrentBand() : 0;
+        
+        uint256 newTotal = genesis.getUserGovernanceActions(user);
+        emit GovernanceActionIncremented(user, newTotal, currentBand);
+    }
+
+    // ==================== INTERNAL REWARD PROCESSING ====================
+    
+    /**
+     * @dev Process rewards for a payment by delegating to RewardsContract
+     */
+    function _processRewardsForPayment(address jobGiver, string memory jobId, uint256 amount) internal {
+        if (address(rewardsContract) == address(0)) return;
+        
+        IOpenworkGenesis.Job memory job = genesis.getJob(jobId);
+        address jobTaker = job.selectedApplicant;
+        
+        // Get current platform total and calculate NEW total after this payment
+        uint256 currentPlatformTotal = genesis.totalPlatformPayments();
+        uint256 newPlatformTotal = currentPlatformTotal + amount;
+        
+        // Delegate reward calculation to RewardsContract
+        rewardsContract.processJobPayment(
+            jobGiver,
+            jobTaker,
+            amount,
+            newPlatformTotal
+        );
+    }
+
+    // NOTE: syncVotingPower() has been REMOVED from this contract.
+    // Voting power sync is now handled by NativeRewardsContract.syncVotingPower()
+    // This centralizes all voting power logic in the Rewards Contract (single source of truth).
+
+    // ==================== REWARDS VIEW FUNCTIONS (DELEGATE TO REWARDS CONTRACT) ====================
+
+    /// @notice Get total tokens earned by a user
+    /// @param user Address to query
+    /// @return Total tokens earned
+    function getUserEarnedTokens(address user) external view returns (uint256) {
+        if (address(rewardsContract) != address(0)) {
+            return rewardsContract.getUserTotalTokensEarned(user);
+        }
+        return genesis.getUserEarnedTokens(user);
+    }
+
+    /// @notice Get user's reward information
+    /// @param user Address to query
+    /// @return totalTokens Total tokens earned
+    /// @return governanceActions Total governance actions performed
+    function getUserRewardInfo(address user) external view returns (
+        uint256 totalTokens,
+        uint256 governanceActions
+    ) {
+        if (address(rewardsContract) != address(0)) {
+            totalTokens = rewardsContract.getUserTotalTokensEarned(user);
+            governanceActions = rewardsContract.getUserTotalGovernanceActions(user);
+        } else {
+            return genesis.getUserRewardInfo(user);
+        }
+    }
+
+    /// @notice Get total governance actions for a user
+    /// @param user Address to query
+    /// @return Total governance actions
+    function getUserGovernanceActions(address user) external view returns (uint256) {
+        if (address(rewardsContract) != address(0)) {
+            return rewardsContract.getUserTotalGovernanceActions(user);
+        }
+        return genesis.getUserGovernanceActions(user);
+    }
+
+    /// @notice Get governance actions for a user in a specific band
+    /// @param user Address to query
+    /// @param band Band number to query
+    /// @return Governance actions in the band
+    function getUserGovernanceActionsInBand(address user, uint256 band) external view returns (uint256) {
+        if (address(rewardsContract) != address(0)) {
+            return rewardsContract.getUserGovernanceActionsInBand(user, band);
+        }
+        return genesis.getUserGovernanceActionsInBand(user, band);
+    }
+
+    /// @notice Get team tokens allocated to a user
+    /// @param user Address to query
+    /// @return Amount of team tokens allocated
+    function teamTokensAllocated(address user) external view returns (uint256) {
+        if (address(rewardsContract) != address(0)) {
+            return rewardsContract.teamTokensAllocated(user);
+        }
+        return 0;
+    }
+
+    /// @notice Calculate tokens that would be earned for a payment amount
+    /// @param additionalAmount Payment amount to simulate
+    /// @return Tokens that would be earned
+    function calculateTokensForAmount(address /* user */, uint256 additionalAmount) external view returns (uint256) {
+        if (address(rewardsContract) != address(0)) {
+            uint256 currentPlatformTotal = genesis.totalPlatformPayments();
+            uint256 newPlatformTotal = currentPlatformTotal + additionalAmount;
+            return rewardsContract.calculateTokensForRange(currentPlatformTotal, newPlatformTotal);
+        }
+        return 0; // Fallback if rewards contract not set
+    }
+
+  /*  function getUserTotalClaimableTokens(address user) external view returns (uint256) {
+        if (address(rewardsContract) != address(0)) {
+            return rewardsContract.getUserTotalClaimableTokens(user);
+        }
+        return 0;
+    }*/
+
+   /* function getCurrentBand() external view returns (uint256) {
+        if (address(rewardsContract) != address(0)) {
+            return rewardsContract.getCurrentBand();
+        }
+        return 0;
+    }*/
+
+  /*  function getPlatformBandInfo() external view returns (
+        uint256 currentBand,
+        uint256 currentTotal,
+        uint256 bandMinAmount,
+        uint256 bandMaxAmount,
+        uint256 governanceRewardRate
+    ) {
+        if (address(rewardsContract) != address(0)) {
+            return rewardsContract.getPlatformBandInfo();
+        }
+        return (0, genesis.totalPlatformPayments(), 0, 0, 0);
+    }*/
+
+    // ==================== JOB MANAGEMENT FUNCTIONS ====================
+
+    /* COMMENTED OUT TO SAVE CONTRACT SIZE - Use Genesis directly for profiles
+    function createProfile(address _user, string memory _ipfsHash, address _referrerAddress) external {
+        require(!genesis.hasProfile(_user), "Profile exists");
+
+        allProfileUsers.push(_user);
+        profileCount++;
+
+        genesis.setProfile(_user, _ipfsHash, _referrerAddress);
+        emit ProfileCreated(_user, _ipfsHash, _referrerAddress);
+    }
+    */
+
+   /* function getProfile(address _user) public view returns (Profile memory) {
+        IOpenworkGenesis.Profile memory genesisProfile = genesis.getProfile(_user);
+        return Profile({
+            userAddress: genesisProfile.userAddress,
+            ipfsHash: genesisProfile.ipfsHash,
+            referrerAddress: genesisProfile.referrerAddress,
+            portfolioHashes: genesisProfile.portfolioHashes
+        });
+    }*/
+
+    /// @notice Post a new job with milestone payments
+    /// @param _jobId Unique job identifier
+    /// @param _jobGiver Address of the job creator
+    /// @param _jobDetailHash IPFS hash of job details
+    /// @param _descriptions Array of milestone description hashes
+    /// @param _amounts Array of milestone payment amounts
+    function postJob(string memory _jobId, address _jobGiver, string memory _jobDetailHash, string[] memory _descriptions, uint256[] memory _amounts) external {
+        require(authorizedContracts[msg.sender], "Auth");
+        require(!genesis.jobExists(_jobId), "Job exists");
+        require(_descriptions.length == _amounts.length, "Length mismatch");
+
+        genesis.setJob(_jobId, _jobGiver, _jobDetailHash, _descriptions, _amounts);
+        emit JobPosted(_jobId, _jobGiver, _jobDetailHash);
+        emit JobStatusChanged(_jobId, IOpenworkGenesis.JobStatus.Open);
+    }
+
+    /// @notice Get job details by ID
+    /// @param _jobId Job identifier
+    /// @return Job struct with all details
+    function getJob(string memory _jobId) public view returns (IOpenworkGenesis.Job memory) {
+        return genesis.getJob(_jobId);
+    }
+
+    /// @notice Apply to a job with proposed milestones
+    /// @param _applicant Address of the applicant
+    /// @param _jobId Job identifier
+    /// @param _applicationHash IPFS hash of application details
+    /// @param _descriptions Array of proposed milestone descriptions
+    /// @param _amounts Array of proposed milestone amounts
+    /// @param _preferredChainDomain Applicant's preferred payment chain (CCTP domain)
+    function applyToJob(address _applicant, string memory _jobId, string memory _applicationHash, string[] memory _descriptions, uint256[] memory _amounts, uint32 _preferredChainDomain) external {
+        require(authorizedContracts[msg.sender], "Auth");
+        require(_descriptions.length == _amounts.length, "Length mismatch");
+
+        IOpenworkGenesis.Job memory job = genesis.getJob(_jobId);
+        require(_applicant != job.jobGiver, "Self");
+        for (uint i = 0; i < job.applicants.length; i++) {
+            require(job.applicants[i] != _applicant, "Already applied");
+        }
+
+        genesis.addJobApplicant(_jobId, _applicant);
+        uint256 applicationId = genesis.getJobApplicationCount(_jobId) + 1;
+        genesis.setJobApplication(_jobId, applicationId, _applicant, _applicationHash, _descriptions, _amounts, _preferredChainDomain, _applicant);
+
+        // Store applicant's preferred chain domain for dispute resolution
+        jobApplicantChainDomain[_jobId][_applicant] = _preferredChainDomain;
+
+        emit JobApplication(_jobId, applicationId, _applicant, _applicationHash);
+    }
+
+    /// @notice Handle direct contract creation (job post + auto-application + start)
+    /// @param _jobGiver Address of the job creator
+    /// @param _jobTaker Address of the job taker
+    /// @param _jobId Unique job identifier
+    /// @param _jobDetailHash IPFS hash of job details
+    /// @param _descriptions Array of milestone descriptions
+    /// @param _amounts Array of milestone amounts
+    /// @param _jobTakerChainDomain Job taker's preferred payment chain
+    function handleStartDirectContract(
+        address _jobGiver,
+        address _jobTaker,
+        string memory _jobId,
+        string memory _jobDetailHash,
+        string[] memory _descriptions,
+        uint256[] memory _amounts,
+        uint32 _jobTakerChainDomain
+    ) external {
+        require(authorizedContracts[msg.sender], "Auth");
+        require(!genesis.jobExists(_jobId), "Job already exists");
+        require(_descriptions.length == _amounts.length, "Length mismatch");
+        require(_descriptions.length > 0, "Must have milestones");
+        require(_jobGiver != _jobTaker, "Self");
+
+        // 1. Create job in Genesis
+        genesis.setJob(_jobId, _jobGiver, _jobDetailHash, _descriptions, _amounts);
+        
+        // 2. Create auto-application in Genesis
+      genesis.addJobApplicant(_jobId, _jobTaker);
+        
+       uint256 applicationId = 1;
+       genesis.setJobApplication(
+            _jobId,
+            applicationId,
+            _jobTaker,
+            "direct-contract-auto-application",
+            _descriptions,
+            _amounts,
+            _jobTakerChainDomain,
+            _jobTaker
+        );
+        
+        // Store applicant's preferred chain for dispute resolution
+        jobApplicantChainDomain[_jobId][_jobTaker] = _jobTakerChainDomain;
+        
+        // 3. Select applicant & start job
+        genesis.setJobSelectedApplicant(_jobId, _jobTaker, applicationId);
+        genesis.updateJobStatus(_jobId, IOpenworkGenesis.JobStatus.InProgress);
+        genesis.setJobCurrentMilestone(_jobId, 1);
+        
+         // 4. Set final milestones (use job giver's milestones)
+        for (uint i = 0; i < _descriptions.length; i++) {
+            genesis.addJobFinalMilestone(_jobId, _descriptions[i], _amounts[i]);
+        }
+        
+     // 5. Emit events
+        emit JobPosted(_jobId, _jobGiver, _jobDetailHash);
+        emit JobApplication(_jobId, applicationId, _jobTaker, "direct-contract-auto-application");
+        emit JobStarted(_jobId, applicationId, _jobTaker, false);
+        emit JobStatusChanged(_jobId, IOpenworkGenesis.JobStatus.InProgress);
+    }
+
+    /// @notice Start a job by selecting an applicant
+    /// @param _jobId Job identifier
+    /// @param _applicationId ID of the selected application
+    /// @param _useApplicantMilestones True to use applicant's proposed milestones
+    function startJob(address /* _jobGiver */, string memory _jobId, uint256 _applicationId, bool _useApplicantMilestones) external {
+        require(authorizedContracts[msg.sender], "Auth");
+        IOpenworkGenesis.Application memory application = genesis.getJobApplication(_jobId, _applicationId);
+        IOpenworkGenesis.Job memory job = genesis.getJob(_jobId);
+
+        genesis.setJobSelectedApplicant(_jobId, application.applicant, _applicationId);
+        genesis.updateJobStatus(_jobId, IOpenworkGenesis.JobStatus.InProgress);
+        genesis.setJobCurrentMilestone(_jobId, 1);
+
+        if (_useApplicantMilestones) {
+            for (uint i = 0; i < application.proposedMilestones.length; i++) {
+                genesis.addJobFinalMilestone(_jobId, application.proposedMilestones[i].descriptionHash, application.proposedMilestones[i].amount);
+            }
+        } else {
+            for (uint i = 0; i < job.milestonePayments.length; i++) {
+                genesis.addJobFinalMilestone(_jobId, job.milestonePayments[i].descriptionHash, job.milestonePayments[i].amount);
+            }
+        }
+
+        emit JobStarted(_jobId, _applicationId, application.applicant, _useApplicantMilestones);
+        emit JobStatusChanged(_jobId, IOpenworkGenesis.JobStatus.InProgress);
+    }
+
+  /*  function getApplication(string memory _jobId, uint256 _applicationId) public view returns (Application memory) {
+        require(genesis.getJobApplicationCount(_jobId) >= _applicationId, "App not exist");
+        IOpenworkGenesis.Application memory genesisApp = genesis.getJobApplication(_jobId, _applicationId);
+        return Application({
+            id: genesisApp.id,
+            jobId: genesisApp.jobId,
+            applicant: genesisApp.applicant,
+            applicationHash: genesisApp.applicationHash,
+            proposedMilestones: _convertMilestones(genesisApp.proposedMilestones)
+        });
+    }*/
+
+    /// @notice Submit work for the current milestone
+    /// @param _applicant Address of the worker submitting
+    /// @param _jobId Job identifier
+    /// @param _submissionHash IPFS hash of work submission
+    function submitWork(address _applicant, string memory _jobId, string memory _submissionHash) external {
+        require(authorizedContracts[msg.sender], "Auth");
+        genesis.addWorkSubmission(_jobId, _submissionHash);
+        IOpenworkGenesis.Job memory job = genesis.getJob(_jobId);
+        emit WorkSubmitted(_jobId, _applicant, _submissionHash, job.currentMilestone);
+    }
+
+    /**
+     * @dev Release payment for current milestone via CCTP cross-chain transfer
+     * @param _jobGiver Address of the job creator
+     * @param _jobId Unique identifier for the job
+     * @param _amount Expected milestone amount (for validation against expected milestone)
+     * @param _targetChainDomain CCTP domain of destination chain (2=OP, 3=Arb, 0=Eth)
+     * @param _targetRecipient Address to receive payment on destination chain
+     *
+     * 🎯 MILESTONE MENTAL MODEL (CRITICAL - READ BEFORE MODIFYING):
+     * ================================================================
+     * currentMilestone represents: "Which milestone is currently being worked on"
+     *
+     * Milestone Lifecycle:
+     * - Job created: currentMilestone = 0 (unassigned, no work started)
+     * - startJob(): currentMilestone = 1 (worker assigned, working on milestone 1)
+     * - releasePayment(): Pays for milestone 1, currentMilestone STAYS 1
+     * - lockNextMilestone(): currentMilestone = 2 (now working on milestone 2)
+     * - releasePayment(): Pays for milestone 2, currentMilestone STAYS 2
+     * - Job completed when: currentMilestone == finalMilestones.length (paid last milestone)
+     *
+     * ⚠️  THIS FUNCTION DOES NOT INCREMENT MILESTONE - Only lockNextMilestone() does
+     * ⚠️  Milestone increments represent "starting work on next milestone", not payment
+     *
+     * Example (Single Milestone):
+     *   currentMilestone = 0 → startJob() → 1 → releasePayment() → 1 → COMPLETED ✅
+     *
+     * Example (Two Milestones):
+     *   currentMilestone = 0 → startJob() → 1
+     *                        → releasePaymentAndLockNext() → 2 (increment happens here)
+     *                        → releasePayment() → 2 → COMPLETED ✅
+     *
+     * Access control: Enforced by handleReleasePaymentCrossChain (bridge only)
+     */
+    function releasePaymentCrossChain(
+        address _jobGiver,
+        string memory _jobId,
+        uint256 _amount,
+        uint32 _targetChainDomain,
+        address _targetRecipient
+    ) internal {
+        // Validate inputs
+        require(cctpTransceiver != address(0), "Transceiver not set");
+        require(_targetRecipient != address(0), "Invalid recipient");
+        require(_amount > 0, "Invalid amount");
+
+        // Validate job state
+        IOpenworkGenesis.Job memory job = genesis.getJob(_jobId);
+        require(job.selectedApplicant != address(0), "No applicant");
+        require(job.status == IOpenworkGenesis.JobStatus.InProgress, "Job not in progress");
+
+        // Verify we have sufficient funds (trust _amount from LOWJC's per-job tracking)
+        uint256 actualBalance = usdcToken.balanceOf(address(this));
+        require(actualBalance >= _amount, "Insufficient contract balance");
+
+        // Calculate commission on the per-job amount (not total balance)
+        uint256 commission = calculateCommission(_amount);
+        require(_amount > commission, "Amount insufficient for commission");
+        uint256 netAmount = _amount - commission;
+
+        // Accumulate commission
+        accumulatedCommission += commission;
+
+        // Execute CCTP cross-chain transfer
+        _executeCCTPTransfer(_targetRecipient, _targetChainDomain, netAmount);
+
+        // Update state and emit events
+        _finalizePayment(_jobGiver, _jobId, job, _amount, netAmount, commission, _targetRecipient);
+    }
+
+    /// @dev Validate job state and calculate payment amounts
+    /// @return job The job data
+    /// @return actualBalance Contract's USDC balance
+    /// @return netAmount Amount after commission
+    /// @return commission Commission amount
+    function _validateAndCalculatePayment(string memory _jobId) internal view returns (
+        IOpenworkGenesis.Job memory job,
+        uint256 actualBalance,
+        uint256 netAmount,
+        uint256 commission
+    ) {
+        // Load and validate job state
+        job = genesis.getJob(_jobId);
+        require(job.selectedApplicant != address(0), "No applicant");
+        require(job.status == IOpenworkGenesis.JobStatus.InProgress, "Job not in progress");
+
+        uint256 currentMilestoneNum = job.currentMilestone;
+        require(currentMilestoneNum > 0 && currentMilestoneNum <= job.finalMilestones.length, "Invalid milestone");
+
+        // Validate balance with CCTP fee tolerance (0.01%)
+        actualBalance = usdcToken.balanceOf(address(this));
+        uint256 expectedMilestone = job.finalMilestones[currentMilestoneNum - 1].amount;
+        uint256 minAcceptable = (expectedMilestone * 9999) / 10000;
+
+        require(actualBalance >= minAcceptable, "Insufficient balance after CCTP fees");
+        require(actualBalance <= expectedMilestone * 2, "Unexpected balance - possible concurrent job conflict");
+
+        // Calculate commission
+        commission = calculateCommission(actualBalance);
+        require(actualBalance > commission, "Balance insufficient for commission");
+        netAmount = actualBalance - commission;
+    }
+
+    /// @dev Execute CCTP cross-chain transfer
+    function _executeCCTPTransfer(
+        address _recipient,
+        uint32 _targetChainDomain,
+        uint256 _amount
+    ) internal {
+        bytes32 mintRecipient = bytes32(uint256(uint160(_recipient)));
+        usdcToken.approve(cctpTransceiver, _amount);
+        ICCTPTransceiver(cctpTransceiver).sendFast(
+            _amount,
+            _targetChainDomain,
+            mintRecipient,
+            1000  // maxFee
+        );
+    }
+
+    /// @dev Finalize payment: update state and emit events
+    function _finalizePayment(
+        address _jobGiver,
+        string memory _jobId,
+        IOpenworkGenesis.Job memory job,
+        uint256 actualBalance,
+        uint256 netAmount,
+        uint256 commission,
+        address _recipient
+    ) internal {
+        // Track commission
+        accumulatedCommission += commission;
+
+        // Process rewards
+        _processRewardsForPayment(_jobGiver, _jobId, netAmount);
+
+        // Update job total paid
+        genesis.updateJobTotalPaid(_jobId, netAmount);
+
+        // Complete job if last milestone
+        uint256 currentMilestoneNum = job.currentMilestone;
+        if (currentMilestoneNum >= job.finalMilestones.length) {
+            genesis.updateJobStatus(_jobId, IOpenworkGenesis.JobStatus.Completed);
+            emit JobStatusChanged(_jobId, IOpenworkGenesis.JobStatus.Completed);
+        }
+
+        // Emit events
+        emit CommissionDeducted(_jobId, actualBalance, commission, netAmount);
+        emit PaymentReleased(_jobId, _jobGiver, _recipient, netAmount, currentMilestoneNum);
+    }
+    
+    /// @notice Lock the next milestone for work
+    /// @param _jobId Job identifier
+    /// @param _lockedAmount Amount being locked for the milestone
+    function lockNextMilestone(address /* _caller */, string memory _jobId, uint256 _lockedAmount) external {
+        require(authorizedContracts[msg.sender], "Auth");
+        IOpenworkGenesis.Job memory job = genesis.getJob(_jobId);
+        require(job.currentMilestone < job.finalMilestones.length, "All completed");
+
+        genesis.setJobCurrentMilestone(_jobId, job.currentMilestone + 1);
+        emit MilestoneLocked(_jobId, job.currentMilestone + 1, _lockedAmount);
+    }
+
+    /// @notice Release payment for current milestone and lock the next
+    /// @param _jobGiver Address of the job creator
+    /// @param _jobId Job identifier
+    /// @param _releasedAmount Amount to release for current milestone
+    /// @param _lockedAmount Amount to lock for next milestone
+    function releasePaymentAndLockNext(address _jobGiver, string memory _jobId, uint256 _releasedAmount, uint256 _lockedAmount) external {
+        require(authorizedContracts[msg.sender], "Auth");
+        
+        IOpenworkGenesis.Job memory job = genesis.getJob(_jobId);
+        require(job.selectedApplicant != address(0), "No applicant");
+        
+        // Calculate and deduct commission
+        uint256 commission = calculateCommission(_releasedAmount);
+        uint256 netAmount = _releasedAmount - commission;
+        
+        // Accumulate commission
+        accumulatedCommission += commission;
+        
+        // Get applicant's preferred chain domain for cross-chain transfer
+        uint32 applicantTargetDomain = jobApplicantChainDomain[_jobId][job.selectedApplicant];
+        
+        if (applicantTargetDomain == 3) {
+            // Native chain (Arbitrum) - direct transfer (with net amount)
+            usdcToken.safeTransfer(job.selectedApplicant, netAmount);
+        } else {
+            // Cross-chain transfer via CCTP to applicant's preferred domain
+            require(cctpTransceiver != address(0), "CCTP Transceiver not set");
+            
+            // ✅ CRITICAL FIX: Use approve → sendFast pattern for cross-chain release
+            usdcToken.approve(cctpTransceiver, netAmount);
+            ICCTPTransceiver(cctpTransceiver).sendFast(
+                netAmount,
+                applicantTargetDomain,
+                bytes32(uint256(uint160(job.selectedApplicant))),
+                1000
+            );
+        }
+        
+        // Update job total paid in Genesis (with net amount)
+        genesis.updateJobTotalPaid(_jobId, netAmount);
+
+        // Delegate to RewardsContract for token calculation and distribution (with net amount)
+        _processRewardsForPayment(_jobGiver, _jobId, netAmount);
+        
+        genesis.setJobCurrentMilestone(_jobId, job.currentMilestone + 1);
+        
+        job = genesis.getJob(_jobId); // Re-fetch updated job
+        if (job.currentMilestone > job.finalMilestones.length) {
+            genesis.updateJobStatus(_jobId, IOpenworkGenesis.JobStatus.Completed);
+            emit JobStatusChanged(_jobId, IOpenworkGenesis.JobStatus.Completed);
+        }
+        
+        // Emit commission event
+        emit CommissionDeducted(_jobId, _releasedAmount, commission, netAmount);
+        
+        emit PaymentReleasedAndNextMilestoneLocked(_jobId, netAmount, _lockedAmount, job.currentMilestone);
+    }
+    
+    /* COMMENTED OUT TO SAVE CONTRACT SIZE - Use Genesis directly for ratings
+    function rate(address _rater, string memory _jobId, address _userToRate, uint256 _rating) external {
+        IOpenworkGenesis.Job memory job = genesis.getJob(_jobId);
+        bool isAuthorized = false;
+        
+        if (_rater == job.jobGiver && _userToRate == job.selectedApplicant) {
+            isAuthorized = true;
+        } else if (_rater == job.selectedApplicant && _userToRate == job.jobGiver) {
+            isAuthorized = true;
+        }
+        
+        require(isAuthorized, "Not authorized");
+        
+        genesis.setJobRating(_jobId, _userToRate, _rating);
+        emit UserRated(_jobId, _rater, _userToRate, _rating);
+    }
+    */
+
+    /* COMMENTED OUT TO SAVE CONTRACT SIZE - Use Genesis directly for portfolio
+    function addPortfolio(address _user, string memory _portfolioHash) external {
+        genesis.addPortfolio(_user, _portfolioHash);
+        emit PortfolioAdded(_user, _portfolioHash);
+    }
+    */
+
+    // ==================== BRIDGE INTEGRATION ====================
+
+    /// @notice Sync user's rewards data to main chain for token claiming
+    /// @param _options LayerZero messaging options
+    function syncRewardsData(bytes calldata _options) external payable {
+        require(bridge != address(0), "Bridge not set");
+
+        // SECURITY FIX: Get user's total UNLOCKED tokens (not claimable)
+        // Main chain subtracts totalClaimed to prevent double-claims when callbacks fail
+        uint256 totalUnlocked = address(rewardsContract) != address(0) ?
+            rewardsContract.getUserTotalUnlockedTokens(msg.sender) : 0;
+
+        require(totalUnlocked > 0, "No tokens");
+
+        // Send simple data to bridge
+        INativeLZOpenworkBridge(bridge).sendSyncRewardsData{value: msg.value}(
+            msg.sender,
+            totalUnlocked,
+            _options
+        );
+
+        emit RewardsDataSynced(msg.sender, 1, totalUnlocked, 0); // Simplified event
+    }
+    
+  /*  function getRating(address _user) public view returns (uint256) {
+        uint256[] memory ratings = genesis.getUserRatings(_user);
+        if (ratings.length == 0) {
+            return 0;
+        }
+        
+        uint256 totalRating = 0;
+        for (uint i = 0; i < ratings.length; i++) {
+            totalRating += ratings[i];
+        }
+        
+        return totalRating / ratings.length;
+    }*/
+    
+    // ==================== VIEW FUNCTIONS ====================
+    
+    // Add these to the VIEW FUNCTIONS section
+    
+    /* COMMENTED OUT TO SAVE CONTRACT SIZE - Profile view functions
+    function getProfileCount() external view returns (uint256) {
+            return profileCount;
+        }
+
+    function getProfileByIndex(uint256 _index) external view returns (Profile memory) {
+        require(_index < profileCount, "Index out of bounds");
+        address userAddress = allProfileUsers[_index];
+        IOpenworkGenesis.Profile memory genesisProfile = genesis.getProfile(userAddress);
+        return Profile({
+            userAddress: genesisProfile.userAddress,
+            ipfsHash: genesisProfile.ipfsHash,
+            referrerAddress: genesisProfile.referrerAddress,
+            portfolioHashes: genesisProfile.portfolioHashes
+        });
+    }
+
+    function getAllProfileUsers() external view returns (address[] memory) {
+        return allProfileUsers;
+    }
+    */
+  /*  function getJobCount() external view returns (uint256) {
+        return genesis.getJobCount();
+    }
+    
+    function getAllJobIds() external view returns (string[] memory) {
+        return genesis.getAllJobIds();
+    }
+    
+    function getJobsByPoster(address _poster) external view returns (string[] memory) {
+        return genesis.getJobsByPoster(_poster);
+    }
+    
+    function getJobApplicationCount(string memory _jobId) external view returns (uint256) {
+        return genesis.getJobApplicationCount(_jobId);
+    }
+    
+    function isJobOpen(string memory _jobId) external view returns (bool) {
+        IOpenworkGenesis.Job memory job = genesis.getJob(_jobId);
+        return job.status == IOpenworkGenesis.JobStatus.Open;
+    }*/
+
+    /// @notice Set the USDC token contract address
+    /// @param _newToken Address of USDC token contract
+    function setUsdcToken(address _newToken) external {
+        require(admins[msg.sender], "Auth");
+        require(_newToken != address(0), "Invalid address");
+        usdcToken = IERC20(_newToken);
+    }
+    
+    // ==================== DISPUTE RESOLUTION ====================
+    
+    /**
+     * @dev Release disputed funds to winner (called by Native Athena)
+     * @param _recipient Address to receive the funds
+     * @param _amount Amount to transfer
+     * @param _targetChainDomain Chain domain (3=Arbitrum native, 0=Ethereum, etc.)
+     */
+    function releaseDisputedFunds(
+        address _recipient,
+        uint256 _amount,
+        uint32 _targetChainDomain
+    ) external {
+        require(msg.sender == nativeAthena || msg.sender == nativeDAO, "Only Athena or DAO");
+        require(_recipient != address(0), "Invalid recipient");
+        require(_amount > 0, "Invalid amount");
+        
+        // Calculate and deduct commission
+        uint256 commission = calculateCommission(_amount);
+        uint256 netAmount = _amount - commission;
+        
+        // Accumulate commission
+        accumulatedCommission += commission;
+        
+        if (_targetChainDomain == 3) {
+            // Native chain (Arbitrum) - direct transfer (with net amount)
+            usdcToken.safeTransfer(_recipient, netAmount);
+        } else {
+            // Cross-chain transfer via CCTP - FIXED PATTERN
+            require(cctpTransceiver != address(0), "CCTP Transceiver not set");
+            
+            // ✅ CRITICAL FIX: Use approve → sendFast pattern (not safeTransfer)
+            usdcToken.approve(cctpTransceiver, netAmount);
+            ICCTPTransceiver(cctpTransceiver).sendFast(
+                netAmount,
+                _targetChainDomain,
+                bytes32(uint256(uint160(_recipient))),
+                1000
+            );
+        }
+        
+        // Emit commission event
+        emit CommissionDeducted("dispute", _amount, commission, netAmount);
+        
+        emit DisputedFundsReleased("dispute", _recipient, _targetChainDomain, netAmount);
+    }
+    
+
+}

@@ -34,10 +34,10 @@ async function processSettleDispute(disputeId, jobId, sourceTxHash) {
 
   try {
     // Save to database - use dynamic domain from config
-    saveCCTPTransfer('settleDispute', jobId, sourceTxHash, sourceChainName, config.DOMAINS.ARBITRUM, disputeId);
+    await saveCCTPTransfer('settleDispute', jobId, sourceTxHash, sourceChainName, config.DOMAINS.ARBITRUM, disputeId);
 
     // STEP 1: Poll Circle API for CCTP attestation
-    updateCCTPStatus(jobId, 'settleDispute', { step: 'polling_attestation' });
+    await updateCCTPStatus(jobId, 'settleDispute', { step: 'polling_attestation' });
 
     console.log('\n📍 STEP 1/2: Polling Circle API for CCTP attestation...');
     const attestation = await pollCCTPAttestation(
@@ -47,7 +47,7 @@ async function processSettleDispute(disputeId, jobId, sourceTxHash) {
     console.log('✅ Attestation received');
     
     // Update - attestation received
-    updateCCTPStatus(jobId, 'settleDispute', {
+    await updateCCTPStatus(jobId, 'settleDispute', {
       step: 'executing_receive',
       attestationMessage: attestation.message,
       attestationSignature: attestation.attestation
@@ -64,7 +64,7 @@ async function processSettleDispute(disputeId, jobId, sourceTxHash) {
     }
     
     // Mark as completed in DB
-    updateCCTPStatus(jobId, 'settleDispute', {
+    await updateCCTPStatus(jobId, 'settleDispute', {
       status: 'completed',
       completionTxHash: result.transactionHash || 'already_completed'
     });
@@ -85,7 +85,7 @@ async function processSettleDispute(disputeId, jobId, sourceTxHash) {
     console.error('====================================================\n');
     
     // Mark as failed in DB
-    updateCCTPStatus(jobId, 'settleDispute', {
+    await updateCCTPStatus(jobId, 'settleDispute', {
       status: 'failed',
       lastError: error.message
     });

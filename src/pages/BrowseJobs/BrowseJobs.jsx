@@ -351,23 +351,25 @@ export default function BrowseJobs() {
         }
     }, [contract]);
 
-    // Filter jobs by status OR chain
+    // Filter jobs by status OR chain (always exclude untitled jobs)
     const filteredJobs = useMemo(() => {
+        const titled = jobs.filter(job => job.title && job.title !== "Untitled Job");
+
         // No filter or "All" selected
         if (chainFilter === "All" || chainFilter === "All Chains") {
-            return jobs;
+            return titled;
         }
-        
+
         // Status filters
         if (chainFilter === "Active") {
-            return jobs.filter(job => job.status === 0 || job.status === 1); // Open or In Progress
+            return titled.filter(job => job.status === 0 || job.status === 1); // Open or In Progress
         }
         if (chainFilter === "Completed") {
-            return jobs.filter(job => job.status === 2); // Completed
+            return titled.filter(job => job.status === 2); // Completed
         }
-        
+
         // Chain filters (OP Sepolia, Ethereum Sepolia)
-        return jobs.filter(job => {
+        return titled.filter(job => {
             const jobChainId = extractChainIdFromJobId(job.id);
             const chainName = getChainConfig(jobChainId)?.name;
             return chainName === chainFilter;

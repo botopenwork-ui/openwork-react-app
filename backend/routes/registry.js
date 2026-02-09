@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db/init');
+const db = require('../db/db');
 
 // GET /api/registry - Get all deployments grouped by contract
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { network, search } = req.query;
 
     let query = `
-      SELECT 
+      SELECT
         id,
         contract_id,
         contract_name,
@@ -48,8 +48,7 @@ router.get('/', (req, res) => {
 
     query += ' ORDER BY contract_name, deployed_at DESC';
 
-    const stmt = db.prepare(query);
-    const deployments = stmt.all(...params);
+    const deployments = await db.all(query, ...params);
 
     // Group by contract_id
     const grouped = {};
@@ -73,18 +72,18 @@ router.get('/', (req, res) => {
     const contracts = Object.values(grouped);
 
     // Get network counts
-    const networkCounts = db.prepare(`
+    const networkCounts = await db.all(`
       SELECT network_name, COUNT(DISTINCT contract_id) as count
       FROM deployments
-      WHERE is_current = 1
+      WHERE is_current = true
       GROUP BY network_name
-    `).all();
+    `);
 
-    const totalCount = db.prepare(`
+    const totalCount = await db.get(`
       SELECT COUNT(DISTINCT contract_id) as count
       FROM deployments
-      WHERE is_current = 1
-    `).get();
+      WHERE is_current = true
+    `);
 
     res.json({
       success: true,
@@ -102,12 +101,12 @@ router.get('/', (req, res) => {
 });
 
 // GET /api/registry/:contractId/history - Get version history for a contract
-router.get('/:contractId/history', (req, res) => {
+router.get('/:contractId/history', async (req, res) => {
   try {
     const { contractId } = req.params;
 
-    const query = db.prepare(`
-      SELECT 
+    const history = await db.all(`
+      SELECT
         id,
         contract_id,
         contract_name,
@@ -129,9 +128,7 @@ router.get('/:contractId/history', (req, res) => {
       FROM deployments
       WHERE contract_id = ?
       ORDER BY deployed_at DESC
-    `);
-
-    const history = query.all(contractId);
+    `, contractId);
 
     if (history.length === 0) {
       return res.status(404).json({
@@ -156,7 +153,7 @@ router.get('/:contractId/history', (req, res) => {
 });
 
 // POST /api/registry/import - Manually add a deployment (for existing contracts)
-router.post('/import', (req, res) => {
+router.post('/import', async (req, res) => {
   try {
     const {
       contractId,
@@ -193,23 +190,21 @@ router.post('/import', (req, res) => {
     }
 
     // Mark other deployments of this contract as not current
-    db.prepare(`
-      UPDATE deployments 
-      SET is_current = 0 
+    await db.run(`
+      UPDATE deployments
+      SET is_current = false
       WHERE contract_id = ? AND network_name = ?
-    `).run(contractId, networkName);
+    `, contractId, networkName);
 
     // Insert new deployment
-    const insert = db.prepare(`
+    const result = await db.run(`
       INSERT INTO deployments (
-        contract_id, contract_name, address, network_name, 
+        contract_id, contract_name, address, network_name,
         chain_id, deployer_address, transaction_hash,
         deployment_type, is_proxy, implementation_address, proxy_address,
         version, is_current, notes, block_explorer_url, deployed_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
-    `);
-
-    const result = insert.run(
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true, ?, ?, ?)
+    `,
       contractId,
       contractName,
       address,
@@ -218,7 +213,7 @@ router.post('/import', (req, res) => {
       deployerAddress || null,
       transactionHash || null,
       deploymentType || 'standalone',
-      isProxy ? 1 : 0,
+      isProxy ? true : false,
       implementationAddress || null,
       proxyAddress || null,
       version || null,
@@ -244,7 +239,7 @@ router.post('/import', (req, res) => {
 });
 
 // POST /api/registry/bulk-import - Bulk import multiple deployments
-router.post('/bulk-import', (req, res) => {
+router.post('/bulk-import', async (req, res) => {
   try {
     const { deployments } = req.body;
 
@@ -261,25 +256,24 @@ router.post('/bulk-import', (req, res) => {
       errors: []
     };
 
-    const insert = db.prepare(`
-      INSERT INTO deployments (
-        contract_id, contract_name, address, network_name, 
-        chain_id, deployer_address, transaction_hash,
-        deployment_type, is_proxy, implementation_address, proxy_address,
-        version, is_current, notes, block_explorer_url, deployed_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    deployments.forEach((dep, index) => {
+    for (let index = 0; index < deployments.length; index++) {
+      const dep = deployments[index];
       try {
         // Mark other deployments as not current
-        db.prepare(`
-          UPDATE deployments 
-          SET is_current = 0 
+        await db.run(`
+          UPDATE deployments
+          SET is_current = false
           WHERE contract_id = ? AND network_name = ?
-        `).run(dep.contractId, dep.networkName);
+        `, dep.contractId, dep.networkName);
 
-        insert.run(
+        await db.run(`
+          INSERT INTO deployments (
+            contract_id, contract_name, address, network_name,
+            chain_id, deployer_address, transaction_hash,
+            deployment_type, is_proxy, implementation_address, proxy_address,
+            version, is_current, notes, block_explorer_url, deployed_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
           dep.contractId,
           dep.contractName,
           dep.address,
@@ -288,11 +282,11 @@ router.post('/bulk-import', (req, res) => {
           dep.deployerAddress || null,
           dep.transactionHash || null,
           dep.deploymentType || 'standalone',
-          dep.isProxy ? 1 : 0,
+          dep.isProxy ? true : false,
           dep.implementationAddress || null,
           dep.proxyAddress || null,
           dep.version || null,
-          1, // is_current
+          true, // is_current
           dep.notes || null,
           dep.blockExplorerUrl || null,
           dep.deployedAt || new Date().toISOString()
@@ -307,7 +301,7 @@ router.post('/bulk-import', (req, res) => {
           error: error.message
         });
       }
-    });
+    }
 
     console.log(`✅ Bulk import complete: ${results.success} succeeded, ${results.failed} failed`);
 
@@ -325,7 +319,7 @@ router.post('/bulk-import', (req, res) => {
 });
 
 // PUT /api/registry/:id - Update deployment info
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -349,7 +343,7 @@ router.put('/:id', (req, res) => {
 
     if (isCurrent !== undefined) {
       updates.push('is_current = ?');
-      params.push(isCurrent ? 1 : 0);
+      params.push(isCurrent ? true : false);
     }
 
     if (updates.length === 0) {
@@ -361,13 +355,11 @@ router.put('/:id', (req, res) => {
 
     params.push(id);
 
-    const stmt = db.prepare(`
-      UPDATE deployments 
+    const result = await db.run(`
+      UPDATE deployments
       SET ${updates.join(', ')}
       WHERE id = ?
-    `);
-
-    const result = stmt.run(...params);
+    `, ...params);
 
     if (result.changes === 0) {
       return res.status(404).json({

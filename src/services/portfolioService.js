@@ -54,7 +54,7 @@ export const uploadFileToIPFS = async (file) => {
     const formData = new FormData();
     formData.append('file', file);
 
-    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
     const response = await fetch(`${BACKEND_URL}/api/ipfs/upload-file`, {
       method: 'POST',
       body: formData
@@ -78,7 +78,7 @@ export const uploadFileToIPFS = async (file) => {
  */
 export const uploadJSONToIPFS = async (jsonData, filename = 'data.json') => {
   try {
-    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
     const response = await fetch(`${BACKEND_URL}/api/ipfs/upload-json`, {
       method: 'POST',
       headers: {

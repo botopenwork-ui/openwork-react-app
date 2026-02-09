@@ -10,7 +10,7 @@ import {
 import Web3 from 'web3';
 
 // Backend URL for IPFS pinning
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 const NewGeneralOracleStep2 = () => {
   const navigate = useNavigate();

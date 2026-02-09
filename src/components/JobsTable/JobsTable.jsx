@@ -25,9 +25,9 @@ const BOXITEMS = [
     }
 ]
 
-function Box({icon, title, number, showJoinButton, onJoinClick}) {
+function Box({icon, title, number, showJoinButton, onJoinClick, subtitle}) {
     const navigate = useNavigate();
-    
+
     return(
         <div className="box-component">
             <div className="box-title">
@@ -36,12 +36,17 @@ function Box({icon, title, number, showJoinButton, onJoinClick}) {
             </div>
             <div className="box-content">
                 <span>{number}</span>
-                {showJoinButton && number === '0' ? (
-                    <BlueButton label="Join DAO" onClick={() => navigate('/join-dao')} />
+                {showJoinButton ? (
+                    <BlueButton label={number === '0' ? "Join DAO" : "Manage Stake"} onClick={() => navigate('/join-dao')} />
                 ) : (
                     <DetailButton to={`/`} imgSrc="/view.svg" alt="detail" />
                 )}
             </div>
+            {subtitle && (
+                <div className="box-title">
+                    <span>{subtitle}</span>
+                </div>
+            )}
         </div>
     )
 }
@@ -69,13 +74,14 @@ export default function JobsTable({ title, tableData, currentPage, totalPages, o
                 <div className="box-section">
                     {
                         (customBoxItems || BOXITEMS).map((item, index) => (
-                            <Box 
-                                key={index} 
-                                icon={item.icon} 
-                                title={item.title} 
+                            <Box
+                                key={index}
+                                icon={item.icon}
+                                title={item.title}
                                 number={item.number}
-                                showJoinButton={customBoxItems ? true : false}
+                                showJoinButton={item.title === 'MY CURRENT STAKINGS'}
                                 onJoinClick={() => console.log('Join DAO clicked')}
+                                subtitle={item.subtitle}
                             />
                         ))
                     }

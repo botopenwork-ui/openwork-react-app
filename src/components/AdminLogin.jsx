@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './AdminLogin.css';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 const AdminLogin = ({ isOpen, onClose, onLoginSuccess }) => {
   const [username, setUsername] = useState('');

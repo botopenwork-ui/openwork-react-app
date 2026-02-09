@@ -163,7 +163,7 @@ export default function MembersSkillOracle() {
                 'Oracles',
                 'Members',
                 'Disputes',
-                // 'Proposals' // TODO: Re-enable when DAO proposals integration is ready
+                'Applications',
             ]
         }
     ]

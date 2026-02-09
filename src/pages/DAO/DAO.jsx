@@ -281,9 +281,17 @@ export default function DAO() {
             number: daoStats ? daoStats.totalMembers.toString() : '120'
         },
         {
+            icon: '/OWToken.svg',
+            title: 'MY OW BALANCE',
+            number: daoStats ? daoStats.userTokenBalance : '0'
+        },
+        {
             icon: '/stakings.svg',
             title: 'MY CURRENT STAKINGS',
-            number: daoStats ? daoStats.userStakings : '0'
+            number: daoStats ? daoStats.userStakings : '0',
+            subtitle: daoStats && daoStats.unclaimedTokens !== '0'
+                ? `+ ${Number(daoStats.unclaimedTokens).toLocaleString()} UNCLAIMED`
+                : null
         }
     ];
 

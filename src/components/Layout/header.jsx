@@ -122,13 +122,15 @@ const Header = () => {
                     </div>
                   </div>
                   <span className="dropdownButton-bottom"></span>
-                  {/* <div className="dropdownMenuItem-home" onClick={handleNavigation}>
+                  <div className="dropdownMenuItem-home" onClick={() => location.pathname = '/refer-earn'}>
                     <span className="dropdownMenuItemText-home" style={{ color: "#868686" }}>
                       Refer & Earn
                     </span>
-                    <img src="/refer.svg" alt="Refer Icon" className="dropdownMenuItemIcon-home" />
+                    <div className="dropdownMenuItem-icon">
+                      <img src="/refer.svg" alt="Refer Icon" className="dropdownMenuItemIcon-home" />
+                    </div>
                   </div>
-                  <span className="dropdownButton-bottom"></span> */}
+                  <span className="dropdownButton-bottom"></span>
                   <div className="dropdownMenuItem-home" onClick={disconnectWallet}>
                     <span className="dropdownMenuItemText-home" style={{ color: "firebrick" }}>
                       Disconnect Wallet

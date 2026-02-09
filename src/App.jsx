@@ -48,13 +48,13 @@ import Payments from "./pages/Payments/Payments";
 import PaymentHistory from "./pages/PaymentHistory/PaymentHistory";
 import PaymentRefund from "./pages/PaymentRefund/PaymentRefund";
 import ProfileOwnerView from "./pages/ProfileOwnerView/ProfileOwnerView";
-import GetSkillsVerified from "./pages/GetSkillsVerified/GetSkillsVerified";
 import ApplyNow from "./pages/ApplyNow/ApplyNow";
 import JoinNow from "./pages/JoinNow/JoinNow";
 import SkillOracle from "./pages/SkillOracle/SkillOracle";
 import MembersSkillOracle from "./pages/MembersSkillOracle/MembersSkillOracle";
 import SkillOracleProposals from "./pages/SkillOracleProposals/SkillOracleProposals";
 import SkillOracleDisputes from "./pages/SkillOracleDisputes/SkillOracleDisputes";
+import SkillOracleApplications from "./pages/SkillOracleApplications/SkillOracleApplications";
 import DAOMembers from "./pages/DAOMembers/DAOMembers";
 import MembersGovernance from "./pages/MembersGovernance/MembersGovernance";
 import RemoveMember from "./pages/RemoveMember/RemoveMember";
@@ -253,6 +253,42 @@ function MainPage() {
 }
 
 export default function App() {
+  const isMobile = useMobileDetection();
+
+  if (isMobile) {
+    return (
+      <div className="mobile-warning">
+        <div
+          style={{
+            height: "64px",
+            width: "100%",
+            borderBottom: "2px solid whitesmoke",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <img
+            style={{ height: "25px", width: "180px" }}
+            src="/Logo.jpg"
+            alt="Openwork Logo"
+          />
+        </div>
+        <div id="warning-body">
+          <img
+            style={{ height: "80px", width: "80px" }}
+            src="/screen.svg"
+            alt="Desktop icon"
+          />
+          <h1 id="mobile-heading">Desktop Only</h1>
+          <p id="mobile-sub">
+            OpenWork is not yet available on mobile. Please open this site on a desktop browser.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
       <Routes>
@@ -302,11 +338,12 @@ export default function App() {
               <Route path="/payments/:jobId" element={<Payments/>} />
               <Route path="/payment-history/:jobId" element={<PaymentHistory/>} />
               <Route path="/payment-refund/:jobId" element={<PaymentRefund/>} />
-              <Route path="/skill-verification/:jobId" element={<GetSkillsVerified/>}/>
+              <Route path="/skill-verification/:address" element={<SkillVerification/>}/>
               <Route path="/skill-oracles" element={<SkillOracle/>} />
               <Route path="/members-skill-oracles" element={<MembersSkillOracle/>} />
               <Route path="/skill-oracle-proposals" element={<SkillOracleProposals/>} />
               <Route path="/skill-oracle-disputes" element={<SkillOracleDisputes/>} />
+              <Route path="/skill-oracle-applications" element={<SkillOracleApplications/>} />
               <Route path="/dao-members" element={<DAOMembers/>} />
               <Route path="/members-governance/:jobId" element={<MembersGovernance/>} />
               <Route path="/remove-member/:jobId" element={<RemoveMember/>} />

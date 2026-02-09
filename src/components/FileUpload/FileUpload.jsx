@@ -13,7 +13,7 @@ const ALLOWED_TYPES = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ];
 const ACCEPT_STRING = "image/*, .pdf, .doc, .docx";
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 export default function FileUpload({ onFilesUploaded, uploadedFiles = [] }) {
   const [selectedFiles, setSelectedFiles] = useState([]);

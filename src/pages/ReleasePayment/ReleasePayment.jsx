@@ -224,7 +224,7 @@ export default function ReleasePayment() {
 
     const pollCCTPStatus = async () => {
       try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
         const response = await fetch(`${backendUrl}/api/cctp-status/releasePayment/${jobId}`);
         const data = await response.json();
         
@@ -246,7 +246,7 @@ export default function ReleasePayment() {
   const handleRetryCCTP = async () => {
     try {
       setTransactionStatus('🔄 Retrying CCTP transfer...');
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const response = await fetch(`${backendUrl}/api/cctp-retry/releasePayment/${jobId}`, {
         method: 'POST'
       });
@@ -416,7 +416,7 @@ export default function ReleasePayment() {
       // Step 2: Send to backend for CCTP processing
       setTransactionStatus(`🔄 Step 2/3: Waiting for LayerZero message to reach Arbitrum (30-60 seconds)...`);
       
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const response = await fetch(`${backendUrl}/api/release-payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

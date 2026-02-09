@@ -14,7 +14,7 @@ import { getChainConfig, extractChainIdFromJobId } from "../../config/chainConfi
 import { switchToChain } from "../../utils/switchNetwork";
 import { getLOWJCContract } from "../../services/localChainService";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 export default function AddUpdate() {
   const { jobId } = useParams();

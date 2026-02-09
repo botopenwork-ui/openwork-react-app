@@ -49,10 +49,10 @@ async function processReleasePayment(jobId, statusMap) {
     
     // Save to database - use dynamic chain name based on network mode
     const sourceChainName = config.isMainnet() ? 'Arbitrum One' : 'Arbitrum Sepolia';
-    saveCCTPTransfer('releasePayment', jobId, nowjcTxHash, sourceChainName, config.DOMAINS.ARBITRUM);
+    await saveCCTPTransfer('releasePayment', jobId, nowjcTxHash, sourceChainName, config.DOMAINS.ARBITRUM);
 
     // STEP 2: Poll Circle API for CCTP attestation
-    updateCCTPStatus(jobId, 'releasePayment', { step: 'polling_attestation' });
+    await updateCCTPStatus(jobId, 'releasePayment', { step: 'polling_attestation' });
 
     // Update status if statusMap provided
     if (statusMap) {
@@ -80,7 +80,7 @@ async function processReleasePayment(jobId, statusMap) {
     });
     
     // Update - attestation received
-    updateCCTPStatus(jobId, 'releasePayment', {
+    await updateCCTPStatus(jobId, 'releasePayment', {
       step: 'executing_receive',
       attestationMessage: attestation.message,
       attestationSignature: attestation.attestation
@@ -105,7 +105,7 @@ async function processReleasePayment(jobId, statusMap) {
     }
     
     // Mark as completed in DB
-    updateCCTPStatus(jobId, 'releasePayment', {
+    await updateCCTPStatus(jobId, 'releasePayment', {
       status: 'completed',
       completionTxHash: result.transactionHash || 'already_completed'
     });
@@ -126,7 +126,7 @@ async function processReleasePayment(jobId, statusMap) {
     console.error('====================================================\n');
     
     // Mark as failed in DB
-    updateCCTPStatus(jobId, 'releasePayment', {
+    await updateCCTPStatus(jobId, 'releasePayment', {
       status: 'failed',
       lastError: error.message
     });

@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db/init');
+const db = require('../db/db');
 
 // POST /api/deployments - Save a new deployment
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const {
       contractId,
@@ -38,15 +38,13 @@ router.post('/', (req, res) => {
     const deploymentType = isUUPS ? 'uups_proxy' : 'standalone';
 
     // Insert deployment (NOT marked as current by default - admin must set it)
-    const insert = db.prepare(`
+    const result = await db.run(`
       INSERT INTO deployments (
         contract_id, contract_name, address, network_name,
         chain_id, deployer_address, transaction_hash, constructor_params,
         deployment_type, is_current, implementation_address, is_proxy
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
-    `);
-
-    const result = insert.run(
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, false, ?, ?)
+    `,
       contractId,
       contractName,
       address,
@@ -57,7 +55,7 @@ router.post('/', (req, res) => {
       constructorParams ? JSON.stringify(constructorParams) : null,
       deploymentType,
       implementationAddress || null,
-      isUUPS ? 1 : 0
+      isUUPS ? true : false
     );
 
     console.log(`✅ Saved deployment: ${contractName} at ${address} on ${networkName}${implementationAddress ? ` (impl: ${implementationAddress})` : ''}`);
@@ -77,12 +75,12 @@ router.post('/', (req, res) => {
 });
 
 // GET /api/deployments/:contractId - Get deployment history for a contract
-router.get('/:contractId', (req, res) => {
+router.get('/:contractId', async (req, res) => {
   try {
     const { contractId } = req.params;
 
-    const query = db.prepare(`
-      SELECT 
+    const deployments = await db.all(`
+      SELECT
         id,
         contract_id,
         contract_name,
@@ -98,9 +96,7 @@ router.get('/:contractId', (req, res) => {
       WHERE contract_id = ?
       ORDER BY deployed_at DESC
       LIMIT 50
-    `);
-
-    const deployments = query.all(contractId);
+    `, contractId);
 
     // Parse constructor params
     const parsed = deployments.map(d => ({
@@ -124,12 +120,12 @@ router.get('/:contractId', (req, res) => {
 });
 
 // GET /api/deployments/:contractId/current - Get most recent deployment
-router.get('/:contractId/current', (req, res) => {
+router.get('/:contractId/current', async (req, res) => {
   try {
     const { contractId } = req.params;
 
-    const query = db.prepare(`
-      SELECT 
+    const deployment = await db.get(`
+      SELECT
         id,
         contract_id,
         contract_name,
@@ -145,9 +141,7 @@ router.get('/:contractId/current', (req, res) => {
       WHERE contract_id = ?
       ORDER BY deployed_at DESC
       LIMIT 1
-    `);
-
-    const deployment = query.get(contractId);
+    `, contractId);
 
     if (!deployment) {
       return res.status(404).json({
@@ -175,12 +169,11 @@ router.get('/:contractId/current', (req, res) => {
 });
 
 // DELETE /api/deployments/:id - Delete a deployment (optional cleanup feature)
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deleteStmt = db.prepare('DELETE FROM deployments WHERE id = ?');
-    const result = deleteStmt.run(id);
+    const result = await db.run('DELETE FROM deployments WHERE id = ?', id);
 
     if (result.changes === 0) {
       return res.status(404).json({

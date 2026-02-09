@@ -125,7 +125,7 @@ export default function SkillOracle() {
                 'Oracles',
                 'Members',
                 'Disputes',
-                // 'Proposals' // TODO: Re-enable when DAO proposals integration is ready
+                'Applications',
             ]
         }
     ];

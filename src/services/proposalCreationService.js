@@ -15,7 +15,7 @@ function getAddresses() {
 }
 
 // Backend API URL
-const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3001';
+const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL || '';
 
 // Get RPC URLs dynamically based on network mode
 function getRpcUrls() {

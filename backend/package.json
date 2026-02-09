@@ -16,7 +16,6 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "better-sqlite3": "^12.4.1",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.18.2",
@@ -24,6 +23,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.0.2",
     "node-fetch": "^2.7.0",
+    "pg": "^8.18.0",
     "web3": "^4.3.0"
   },
   "devDependencies": {

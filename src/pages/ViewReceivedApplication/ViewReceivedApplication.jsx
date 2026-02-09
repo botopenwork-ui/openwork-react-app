@@ -17,7 +17,7 @@ import { getChainConfig, extractChainIdFromJobId, getNativeChain, isMainnet, bui
 import { switchToChain } from "../../utils/switchNetwork";
 import { getLOWJCContract } from "../../services/localChainService";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 // IPFS cache with 1-hour TTL
 const ipfsCache = new Map();

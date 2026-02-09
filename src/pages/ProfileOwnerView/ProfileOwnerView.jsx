@@ -11,7 +11,7 @@ import ProfileGenesisABI from "../../ABIs/profile-genesis_ABI.json";
 import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
 import { getLOWJCContract } from "../../services/localChainService";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 const COUNTRYITEMS = [
     {

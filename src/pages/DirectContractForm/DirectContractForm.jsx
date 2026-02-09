@@ -27,7 +27,7 @@ const BROWSE_JOBS_CONTRACT = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS;
 const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
 
 // Backend URL for secure API calls
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 function FileUpload({ onFilesUploaded, uploadedFiles }) {
   const [selectedFiles, setSelectedFiles] = useState([]);

@@ -16,7 +16,7 @@ import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetecti
 import { getChainConfig, getNativeChain } from "../../config/chainConfig";
 import { getAthenaClientContract } from "../../services/localChainService";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 const SKILLOPTIONS = [
   'UX/UI Skill Oracle','Full Stack development','UX/UI Skill Oracle',

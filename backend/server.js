@@ -427,11 +427,11 @@ app.post('/api/stop-listener', (req, res) => {
 });
 
 // CCTP Status endpoint - Check transfer status from database
-app.get('/api/cctp-status/:operation/:jobId', (req, res) => {
+app.get('/api/cctp-status/:operation/:jobId', async (req, res) => {
   const { operation, jobId } = req.params;
-  
+
   const { getCCTPStatus } = require('./utils/cctp-storage');
-  const status = getCCTPStatus(jobId, operation);
+  const status = await getCCTPStatus(jobId, operation);
   
   if (!status) {
     return res.json({ 
@@ -463,8 +463,8 @@ app.post('/api/cctp-retry/:operation/:jobId', async (req, res) => {
   const { operation, jobId } = req.params;
   
   const { getCCTPStatus, updateCCTPStatus } = require('./utils/cctp-storage');
-  const status = getCCTPStatus(jobId, operation);
-  
+  const status = await getCCTPStatus(jobId, operation);
+
   if (!status) {
     return res.status(404).json({
       success: false,
@@ -483,7 +483,7 @@ app.post('/api/cctp-retry/:operation/:jobId', async (req, res) => {
   console.log(`\n🔄 CCTP Retry requested for ${operation}/${jobId}`);
   
   // Increment retry count
-  updateCCTPStatus(jobId, operation, { 
+  await updateCCTPStatus(jobId, operation, {
     incrementRetry: true,
     status: 'pending',
     step: 'retry_initiated'
@@ -579,7 +579,7 @@ async function processStartJobDirect(jobId, sourceTxHash) {
     }
     
     // Save to database
-    saveCCTPTransfer('startJob', jobId, sourceTxHash, sourceChain, sourceDomain);
+    await saveCCTPTransfer('startJob', jobId, sourceTxHash, sourceChain, sourceDomain);
     
     // Update in-memory status
     jobStatuses.set(jobId, {
@@ -589,7 +589,7 @@ async function processStartJobDirect(jobId, sourceTxHash) {
     });
     
     // Update DB
-    updateCCTPStatus(jobId, 'startJob', { step: 'polling_attestation' });
+    await updateCCTPStatus(jobId, 'startJob', { step: 'polling_attestation' });
     
     // Import CCTP utilities
     const { pollCCTPAttestation } = require('./utils/cctp-poller');
@@ -604,7 +604,7 @@ async function processStartJobDirect(jobId, sourceTxHash) {
     console.log(`✅ Attestation received from ${sourceChain}`);
     
     // Update status - attestation received
-    updateCCTPStatus(jobId, 'startJob', {
+    await updateCCTPStatus(jobId, 'startJob', {
       step: 'executing_receive',
       attestationMessage: attestation.message,
       attestationSignature: attestation.attestation
@@ -627,7 +627,7 @@ async function processStartJobDirect(jobId, sourceTxHash) {
     }
     
     // Mark as completed in DB
-    updateCCTPStatus(jobId, 'startJob', {
+    await updateCCTPStatus(jobId, 'startJob', {
       status: 'completed',
       completionTxHash: result.transactionHash || 'already_completed'
     });
@@ -651,7 +651,7 @@ async function processStartJobDirect(jobId, sourceTxHash) {
     
     // Mark as failed in DB
     const { updateCCTPStatus } = require('./utils/cctp-storage');
-    updateCCTPStatus(jobId, 'startJob', {
+    await updateCCTPStatus(jobId, 'startJob', {
       status: 'failed',
       lastError: error.message
     });
@@ -822,30 +822,45 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../dist/index.html"));
 });
 
-// Start the server
+// Start the server with async database initialization
 const PORT = config.PORT;
-app.listen(PORT, () => {
-  console.log(`🌐 OpenWork Backend Server running on http://localhost:${PORT}`);
-  console.log(`   - Health: http://localhost:${PORT}/health`);
-  console.log(`   - Stats:  http://localhost:${PORT}/stats`);
-  console.log(`   - API: http://localhost:${PORT}/api/*\n`);
-  console.log('✅ Server ready to accept requests');
-  console.log('ℹ️  Event listener is OFF by default (start via /api/start-listener when needed)\n');
+const { initDatabase } = require('./db/init');
+
+async function startServer() {
+  await initDatabase();
+
+  app.listen(PORT, () => {
+    console.log(`🌐 OpenWork Backend Server running on http://localhost:${PORT}`);
+    console.log(`   - Health: http://localhost:${PORT}/health`);
+    console.log(`   - Stats:  http://localhost:${PORT}/stats`);
+    console.log(`   - API: http://localhost:${PORT}/api/*\n`);
+    console.log('✅ Server ready to accept requests');
+    console.log('ℹ️  Event listener is OFF by default (start via /api/start-listener when needed)\n');
+  });
+}
+
+startServer().catch(err => {
+  console.error('❌ Failed to start server:', err);
+  process.exit(1);
 });
 
 // Graceful shutdown
-process.on('SIGINT', () => {
+const pool = require('./db/pg');
+
+process.on('SIGINT', async () => {
   console.log('\n\n👋 Shutting down gracefully...');
   if (eventListenerInterval) {
     clearInterval(eventListenerInterval);
   }
+  await pool.end();
   process.exit(0);
 });
 
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('\n\n👋 Shutting down gracefully...');
   if (eventListenerInterval) {
     clearInterval(eventListenerInterval);
   }
+  await pool.end();
   process.exit(0);
 });

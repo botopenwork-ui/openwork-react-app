@@ -48,6 +48,16 @@ const DropDown = ({ label, options, customCSS, width, onOptionSelect }) => {
         navigate('/dao');
         return;
       }
+
+      // Handle Skill Oracle context for Applications
+      if (option === 'Applications' && (
+        window.location.pathname.includes('/skill-oracle') ||
+        window.location.pathname.includes('/members-skill-oracle') ||
+        window.location.pathname.includes('/skill-oracles')
+      )) {
+        navigate('/skill-oracle-applications');
+        return;
+      }
       
       if (routeMap[option]) {
         navigate(routeMap[option]);

@@ -34,7 +34,7 @@ function getArbitrumRpc() {
 }
 
 // Backend URL for secure API calls
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 export default function PostJob() {
   // Multi-chain support - detect user's network

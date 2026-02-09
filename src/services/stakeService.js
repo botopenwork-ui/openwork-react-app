@@ -48,7 +48,10 @@ const ERC20_ABI = [
   }
 ];
 
-// Main DAO ABI (stake function)
+// Lighter LZ options for unstake cross-chain sync (250k dest gas)
+const UNSTAKE_LZ_OPTIONS = "0x0003010011010000000000000000000000000003D090";
+
+// Main DAO ABI (stake + unstake functions)
 const MAIN_DAO_ABI = [
   {
     "inputs": [
@@ -57,6 +60,13 @@ const MAIN_DAO_ABI = [
       {"type": "bytes", "name": "_options"}
     ],
     "name": "stake",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"type": "bytes", "name": "_options"}],
+    "name": "unstake",
     "outputs": [],
     "stateMutability": "payable",
     "type": "function"
@@ -72,6 +82,17 @@ const MAIN_DAO_ABI = [
     "type": "function"
   },
   {
+    "inputs": [
+      {"type": "address", "name": "staker"},
+      {"type": "bool", "name": "isActive"},
+      {"type": "bytes", "name": "_options"}
+    ],
+    "name": "quoteStakeUpdate",
+    "outputs": [{"type": "uint256", "name": "fee"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [{"type": "address", "name": "staker"}],
     "name": "getStakerInfo",
     "outputs": [
@@ -80,6 +101,13 @@ const MAIN_DAO_ABI = [
       {"type": "uint256", "name": "durationMinutes"},
       {"type": "bool", "name": "hasStake"}
     ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"type": "address", "name": "staker"}],
+    "name": "getUnstakeAvailableTime",
+    "outputs": [{"type": "uint256"}],
     "stateMutability": "view",
     "type": "function"
   }
@@ -268,6 +296,91 @@ export async function getUserStakeInfo(userAddress) {
       durationMinutes: 0,
       hasStake: false
     };
+  }
+}
+
+/**
+ * Get unstake availability info
+ */
+export async function getUnstakeInfo(userAddress) {
+  try {
+    const MAIN_CHAIN_RPC = getMainChainRpc();
+    const { MAIN_DAO_ADDRESS } = getAddresses();
+    const web3 = new Web3(MAIN_CHAIN_RPC);
+    const daoContract = new web3.eth.Contract(MAIN_DAO_ABI, MAIN_DAO_ADDRESS);
+
+    const availableTime = await daoContract.methods.getUnstakeAvailableTime(userAddress).call();
+    return {
+      requested: Number(availableTime) > 0,
+      availableTime: Number(availableTime)
+    };
+  } catch (error) {
+    console.error("Error fetching unstake info:", error);
+    return { requested: false, availableTime: 0 };
+  }
+}
+
+/**
+ * Quote LayerZero fee for unstake cross-chain sync
+ */
+export async function quoteUnstakeFee(userAddress) {
+  try {
+    const MAIN_CHAIN_RPC = getMainChainRpc();
+    const { MAIN_DAO_ADDRESS } = getAddresses();
+    const web3 = new Web3(MAIN_CHAIN_RPC);
+    const daoContract = new web3.eth.Contract(MAIN_DAO_ABI, MAIN_DAO_ADDRESS);
+
+    const fee = await daoContract.methods.quoteStakeUpdate(
+      userAddress,
+      false,
+      UNSTAKE_LZ_OPTIONS
+    ).call();
+
+    return fee.toString();
+  } catch (error) {
+    console.error("Error quoting unstake fee:", error);
+    return Web3.utils.toWei("0.0004", "ether");
+  }
+}
+
+/**
+ * Execute unstake transaction (two-step: first call requests, second call completes)
+ */
+export async function executeUnstake(lzFee, onTxHash, onReceipt) {
+  try {
+    const { MAIN_DAO_ADDRESS } = getAddresses();
+    const web3 = new Web3(window.ethereum);
+    const accounts = await web3.eth.getAccounts();
+    const fromAddress = accounts[0];
+
+    const daoContract = new web3.eth.Contract(MAIN_DAO_ABI, MAIN_DAO_ADDRESS);
+
+    const feeValue = typeof lzFee === 'bigint' ? lzFee.toString() : lzFee;
+
+    return new Promise((resolve, reject) => {
+      daoContract.methods
+        .unstake(UNSTAKE_LZ_OPTIONS)
+        .send({
+          from: fromAddress,
+          value: feeValue
+        })
+        .on("transactionHash", (hash) => {
+          console.log("Unstake tx hash:", hash);
+          if (onTxHash) onTxHash(hash);
+        })
+        .on("receipt", (receipt) => {
+          console.log("Unstake confirmed:", receipt);
+          if (onReceipt) onReceipt(receipt);
+          resolve(receipt);
+        })
+        .on("error", (error) => {
+          console.error("Unstake failed:", error);
+          reject(error);
+        });
+    });
+  } catch (error) {
+    console.error("Error executing unstake:", error);
+    throw new Error(`Unstake transaction failed: ${error.message}`);
   }
 }
 

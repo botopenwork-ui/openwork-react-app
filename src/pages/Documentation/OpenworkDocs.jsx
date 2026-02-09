@@ -14,7 +14,7 @@ import AdminLogin from '../../components/AdminLogin';
 import Web3 from 'web3';
 
 // Backend API Configuration
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 const OpenworkDocs = () => {
   const [selectedContract, setSelectedContract] = useState(null);
