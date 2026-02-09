@@ -387,6 +387,12 @@ const OpenworkDocs = () => {
       // Build intelligent context based on user query
       const systemContext = buildOppyContext(userMsg);
 
+      // Build history from existing chat (exclude thinking messages and initial greeting)
+      const history = oppyChat
+        .filter(msg => !msg.isThinking)
+        .slice(1)
+        .map(msg => ({ role: msg.role === 'oppy' ? 'oppy' : 'user', text: msg.text }));
+
       // Call backend chat API (secure - API key on server)
       const response = await fetch(`${BACKEND_URL}/api/chat`, {
         method: 'POST',
@@ -395,7 +401,8 @@ const OpenworkDocs = () => {
         },
         body: JSON.stringify({
           message: userMsg,
-          context: systemContext
+          context: systemContext,
+          history
         })
       });
 

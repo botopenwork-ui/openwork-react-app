@@ -450,7 +450,6 @@ export default function JoinDAO() {
                             <button
                                 className="join-dao-button"
                                 onClick={switchToMainChain}
-                                style={{ background: 'linear-gradient(180deg, #868686 0%, #4D4D4D 100%)', borderColor: '#4D4D4D' }}
                             >
                                 <span>Switch to {mainChain.name}</span>
                             </button>
@@ -489,8 +488,6 @@ export default function JoinDAO() {
                                         onClick={handleUnstake}
                                         disabled={isProcessing}
                                         style={{
-                                            background: 'linear-gradient(180deg, #868686 0%, #4D4D4D 100%)',
-                                            borderColor: '#4D4D4D',
                                             opacity: isProcessing ? 0.6 : 1,
                                             cursor: isProcessing ? 'not-allowed' : 'pointer'
                                         }}
@@ -504,8 +501,6 @@ export default function JoinDAO() {
                                         className="join-dao-button"
                                         disabled
                                         style={{
-                                            background: 'linear-gradient(180deg, #868686 0%, #4D4D4D 100%)',
-                                            borderColor: '#4D4D4D',
                                             opacity: 0.6,
                                             cursor: 'not-allowed'
                                         }}

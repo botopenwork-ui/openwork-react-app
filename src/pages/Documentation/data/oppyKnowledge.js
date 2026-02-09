@@ -1,5 +1,6 @@
 // Agent Oppy's OpenWork Knowledge Base
-// This file contains comprehensive system knowledge for intelligent responses
+// Auto-generates contract knowledge from contractsData for always-fresh info
+import { contractsData } from './contracts';
 
 export const BASE_SYSTEM_KNOWLEDGE = `You are Agent Oppy, the expert AI assistant for OpenWork - a sophisticated multi-chain decentralized freelancing platform.
 
@@ -22,7 +23,7 @@ A dedicated blockchain (L2 on Ethereum) that underpins the entire OpenWork ecosy
 - Serves as the backend for all Local chains
 - Stores all job data in OpenworkGenesis
 - Could be an existing L2 like Arbitrum (currently) or Base, or a custom self-hosted L2 in the future
-Currently: Arbitrum Sepolia (testnet)
+Currently: Arbitrum (mainnet), Arbitrum Sepolia (testnet)
 
 ### Layer 3: Local OpenWork Contracts (Any Blockchain)
 Enables users to use OpenWork on **any preferred blockchain** (referred to as "local chains"). These contracts:
@@ -34,35 +35,6 @@ Enables users to use OpenWork on **any preferred blockchain** (referred to as "l
 - Future expansion to non-EVM chains like Solana
 
 **Example:** A user on Polygon can post jobs, make payments, and resolve disputes entirely on Polygon, while the OpenWork Chain (Arbitrum) securely records all data and executes core logic like Athena's decentralized dispute resolution.
-
-## CURRENT TESTNET DEPLOYMENT (4 networks):
-
-1. **Base Sepolia (Main Chain)** - EID: 40245
-   - Main DAO (governance)
-   - Main Rewards (token distribution)
-   - Main Bridge (cross-chain coordination)
-   - OpenWork Token (ERC-20 governance token)
-
-2. **Arbitrum Sepolia (OpenWork Chain / Native Chain)** - EID: 40231, CCTP Domain: 3
-   - NOWJC (Native OpenWork Job Contract - central hub)
-   - Native Athena (dispute resolution with skill oracles)
-   - Native DAO (local governance)
-   - Native Rewards (token calculations)
-   - Native Bridge (message routing)
-   - OpenworkGenesis (immutable data storage)
-   - ProfileManager (user profiles)
-
-3. **OP Sepolia (Local Chain)** - EID: 40232, CCTP Domain: 2
-   - LOWJC (user-facing job interface)
-   - Athena Client (dispute interface)
-   - Local Bridge (LayerZero messaging)
-   - CCTP Transceiver (USDC transfers)
-
-4. **Ethereum Sepolia (Local Chain)** - EID: 40161, CCTP Domain: 0
-   - LOWJC (user-facing job interface)
-   - Athena Client (dispute interface)
-   - Local Bridge (LayerZero messaging)
-   - CCTP Transceiver (USDC transfers)
 
 ## KEY TECHNOLOGIES
 
@@ -88,78 +60,113 @@ Enables users to use OpenWork on **any preferred blockchain** (referred to as "l
 - Deducted on Native chain by NOWJC
 - Accumulates in treasury for platform sustainability`;
 
+// Auto-generate deployment knowledge from contract data
+const generateDeploymentKnowledge = () => {
+  const chainMap = {
+    base: { name: 'Base', mainnet: 'Base Mainnet', testnet: 'Base Sepolia', eid: '40245' },
+    l2: { name: 'Arbitrum', mainnet: 'Arbitrum One', testnet: 'Arbitrum Sepolia', eid: '40231', cctpDomain: '3' },
+    op: { name: 'OP', mainnet: 'OP Mainnet', testnet: 'OP Sepolia', eid: '40232', cctpDomain: '2' },
+    eth: { name: 'Ethereum', mainnet: 'Ethereum Mainnet', testnet: 'Ethereum Sepolia', eid: '40161', cctpDomain: '0' }
+  };
+
+  let knowledge = `## DEPLOYMENT STATUS
+
+### MAINNET DEPLOYMENT (Live Production)\n`;
+
+  const chains = ['base', 'l2', 'op', 'eth'];
+  for (const chain of chains) {
+    const info = chainMap[chain];
+    const contracts = Object.values(contractsData).filter(c => c.chain === chain);
+    const deployed = contracts.filter(c => c.mainnetAddress && c.mainnetDeployed === 'Deployed');
+
+    if (deployed.length > 0) {
+      knowledge += `\n**${info.mainnet}** (EID: ${info.eid}${info.cctpDomain ? `, CCTP Domain: ${info.cctpDomain}` : ''}):\n`;
+      for (const c of deployed) {
+        knowledge += `- ${c.name} (${c.version}): ${c.mainnetAddress}\n`;
+      }
+    }
+  }
+
+  knowledge += `\n### TESTNET DEPLOYMENT (4 networks):\n`;
+  for (const chain of chains) {
+    const info = chainMap[chain];
+    const contracts = Object.values(contractsData).filter(c => c.chain === chain);
+    const deployed = contracts.filter(c => c.testnetAddress && c.testnetDeployed === 'Deployed');
+
+    if (deployed.length > 0) {
+      knowledge += `\n**${info.testnet}** (EID: ${info.eid}${info.cctpDomain ? `, CCTP Domain: ${info.cctpDomain}` : ''}):\n`;
+      for (const c of deployed) {
+        knowledge += `- ${c.name} (${c.version}): ${c.testnetAddress}\n`;
+      }
+    }
+  }
+
+  knowledge += `\n### Networks:\n- OP Sepolia: Chain ID 11155420\n- Arbitrum Sepolia: Chain ID 421614\n- Ethereum Sepolia: Chain ID 11155111\n- Base Sepolia: Chain ID 84532\n- Arbitrum One: Chain ID 42161\n- OP Mainnet: Chain ID 10\n- Base Mainnet: Chain ID 8453\n- Ethereum Mainnet: Chain ID 1`;
+
+  return knowledge;
+};
+
+// Auto-generate per-contract knowledge from the rich contract data files
+const generateContractKnowledge = (contract) => {
+  let knowledge = `## ${contract.name} (${contract.id})
+
+**Chain**: ${contract.mainnetNetwork || contract.testnetNetwork}
+**Status**: ${contract.status} | **Version**: ${contract.version}
+**Type**: ${contract.isUUPS ? 'UUPS Upgradeable' : 'Standard'}`;
+
+  if (contract.mainnetAddress) {
+    knowledge += `\n**Mainnet Address**: ${contract.mainnetAddress}`;
+  }
+  if (contract.testnetAddress) {
+    knowledge += `\n**Testnet Address**: ${contract.testnetAddress}`;
+  }
+
+  if (contract.overview?.purpose) {
+    knowledge += `\n\n### Purpose:\n${contract.overview.purpose}`;
+  }
+
+  if (contract.features && contract.features.length > 0) {
+    knowledge += `\n\n### Key Features:`;
+    for (const f of contract.features) {
+      knowledge += `\n- ${f}`;
+    }
+  }
+
+  if (contract.systemPosition?.description) {
+    knowledge += `\n\n### System Position:\n${contract.systemPosition.description}`;
+  }
+
+  if (contract.dependencies?.dependsOn && contract.dependencies.dependsOn.length > 0) {
+    knowledge += `\n\n### Dependencies:`;
+    for (const dep of contract.dependencies.dependsOn) {
+      knowledge += `\n- ${dep.name}: ${dep.reason}`;
+    }
+  }
+
+  if (contract.functions && contract.functions.length > 0) {
+    knowledge += `\n\n### Functions:`;
+    for (const category of contract.functions) {
+      knowledge += `\n**${category.category}**:`;
+      if (category.items) {
+        for (const fn of category.items) {
+          knowledge += `\n- ${fn.signature || fn.name}${fn.whatItDoes ? ' - ' + fn.whatItDoes : ''}`;
+        }
+      }
+    }
+  }
+
+  return knowledge;
+};
+
+// Pre-generate all contract knowledge
+const ALL_CONTRACT_KNOWLEDGE = {};
+for (const [key, contract] of Object.entries(contractsData)) {
+  ALL_CONTRACT_KNOWLEDGE[key] = generateContractKnowledge(contract);
+}
+
+// Static knowledge sections (kept from original)
 export const CONTRACTS_KNOWLEDGE = {
-  nowjc: `
-## NOWJC (Native OpenWork Job Contract)
-
-**Location**: Arbitrum Sepolia (Native Chain)
-**Role**: Central hub for all job operations
-**Type**: UUPS Upgradeable
-
-### Key Functions:
-- postJob() - Creates job in Genesis
-- applyToJob() - Stores applications with payment preferences
-- startJob() - Selects winner and starts work
-- submitWork() - Freelancer submits deliverables
-- releasePaymentCrossChain() - Pays freelancer on any chain via CCTP
-- calculateCommission() - Returns 1% or $1 minimum
-
-### Data Flow:
-Local Chain → Native Bridge → NOWJC → Genesis (storage)
-NOWJC → CCTP → Freelancer (any chain)
-
-### Commission:
-- 1% of payment or $1 minimum (whichever is higher)
-- Example: $100 job = $1 commission, $1000 job = $10 commission`,
-
-  lowjc: `
-## LOWJC (Local OpenWork Job Contract)
-
-**Locations**: OP Sepolia, Ethereum Sepolia
-**Role**: User-facing job interface
-**Type**: UUPS Upgradeable
-
-### Key Functions:
-- createProfile() - Creates user profile, syncs to Native
-- postJob() - Posts job, sends to Native via LayerZero
-- applyToJob() - Applies with custom milestones, preferred payment chain
-- startJob() - Locks first milestone via CCTP
-- submitWork() - Submits milestone deliverables
-- releasePaymentCrossChain() - Releases payment via Native chain
-
-### Payment Flow:
-1. Job posted on OP with USDC
-2. LOWJC splits operation:
-   - Job data → LayerZero → Native Bridge → NOWJC
-   - USDC → CCTP → Arbitrum → NOWJC escrow
-3. On payment release:
-   - LOWJC → Native → NOWJC
-   - NOWJC deducts commission
-   - CCTP sends to freelancer's preferred chain`,
-
-  athena: `
-## Native Athena (Dispute Resolution)
-
-**Location**: Arbitrum Sepolia
-**Role**: Decentralized dispute resolution system
-**Type**: UUPS Upgradeable
-
-### How It Works:
-1. Dispute raised on any Local chain (minimum $50 USDC fee)
-2. Fee routed to Native Athena via CCTP immediately
-3. Oracle members vote on outcome (stake + earned tokens = voting power)
-4. Winning side determined by vote weight
-5. Fees distributed proportionally to winning voters via CCTP
-6. Result sent back to origin chain
-7. Funds released automatically
-
-### Oracle System:
-- Skill-based oracles (e.g., "Frontend Development", "Solidity")
-- Members stake tokens to participate
-- Vote on disputes in their expertise area
-- Earn fees for correct votes
-- Build reputation score`,
-
+  ...ALL_CONTRACT_KNOWLEDGE,
   ipfs: `
 ## IPFS Integration
 
@@ -181,26 +188,7 @@ NOWJC → CCTP → Freelancer (any chain)
 - All timestamps in ISO 8601 format
 - Only store public data (no sensitive info)`,
 
-  deployment: `
-## Contract Deployment
-
-### Testnet Addresses:
-- NOWJC (Arbitrum Sepolia): 0x9E39B37275854449782F1a2a4524405cE79d6C1e
-- LOWJC (OP Sepolia): 0x896a3Bc6ED01f549Fe20bD1F25067951913b793C
-- Genesis (Arbitrum): 0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C
-- Profile Genesis: 0xB3db1eFBd0180921Fb4d93B8BdaC7d55ee49175C
-
-### UUPS Contracts:
-Most contracts use UUPS proxy pattern:
-1. Deploy implementation (no constructor params)
-2. Deploy proxy with (implementation address, initialize call data)
-3. Interact with proxy address
-
-### Networks:
-- OP Sepolia: Chain ID 11155420
-- Arbitrum Sepolia: Chain ID 421614
-- Ethereum Sepolia: Chain ID 11155111
-- Base Sepolia: Chain ID 84532`,
+  deployment: generateDeploymentKnowledge(),
 
   cctp: `
 ## CCTP Confirmation Rewards System
@@ -214,18 +202,6 @@ Most contracts use UUPS proxy pattern:
 - **Multiplier**: 2x actual gas cost (configurable 1-10x)
 - **Platform-Funded**: Zero cost to end users
 - **Automatic**: Paid instantly upon successful confirmation
-
-### Economics:
-- **Low gas (1 gwei)**: ~0.0004 ETH reward
-- **Medium gas (5 gwei)**: ~0.001 ETH (capped)
-- **High gas (50 gwei)**: ~0.001 ETH (capped)
-- **Monthly cost (100 confirmations)**: ~0.05-0.1 ETH ($190-$380)
-
-### Benefits:
-- **Speed**: 2-3x faster confirmations (30+ min → 10-15 min)
-- **Reliability**: ~100% confirmation rate (incentivized)
-- **User Experience**: Near-instant USDC transfers
-- **Cost-Efficient**: Self-adjusting to gas prices
 
 ### How Confirmers Get Paid:
 1. Backend monitors CCTP transfers
@@ -241,10 +217,6 @@ Most contracts use UUPS proxy pattern:
 - **Reentrancy protected**: Safe reward transfers
 - **Owner controlled**: Can adjust cap, multiplier, estimated gas
 - **Pool funded**: Owner funds ETH pool via fundRewardPool()
-- **24h refunds**: Depositors can reclaim unclaimed specific rewards
-
-### Version:
-v2.0 Dynamic (Rewards) - Deployed on Arbitrum, OP, and Ethereum Sepolia
 
 This rewards system dramatically improves OpenWork's UX by making cross-chain USDC transfers nearly instant!`
 };
@@ -295,7 +267,7 @@ export const FAQ_KNOWLEDGE = `
 ## FREQUENTLY ASKED QUESTIONS
 
 **Q: What chains does OpenWork support?**
-A: Base Sepolia (governance), Arbitrum Sepolia (job hub), OP Sepolia (user interface), Ethereum Sepolia (user interface). More chains coming soon.
+A: Mainnet: Arbitrum One (native hub), OP Mainnet (user interface), Base Mainnet (governance). Testnet: Base Sepolia, Arbitrum Sepolia, OP Sepolia, Ethereum Sepolia. More chains coming soon.
 
 **Q: How do cross-chain payments work?**
 A: We use Circle's CCTP (Cross-Chain Transfer Protocol) to burn USDC on one chain and mint on another. Native USDC, not wrapped tokens.
@@ -321,75 +293,166 @@ A: Job descriptions, milestones, profiles, portfolios, applications, work submis
 **Q: Are contracts upgradeable?**
 A: Yes, most contracts use UUPS proxy pattern. Only Main DAO can authorize upgrades for security.
 
-**Q: How do I deploy contracts?**
-A: Use the Deploy tab in documentation. Connect wallet, enter constructor params, deploy. UUPS contracts deploy in 2 steps (implementation + proxy).`;
+**Q: Is OpenWork on mainnet?**
+A: Yes! Most contracts are deployed on mainnet across Arbitrum One, OP Mainnet, and Base. The platform supports both testnet and mainnet.`;
 
-// Build context based on user query keywords
+// Keyword-to-contract mapping for intelligent context building
+const CONTRACT_KEYWORDS = {
+  token: ['token', 'ow token', 'erc20', 'governance token', 'openwork token'],
+  mainDAO: ['main dao', 'maindao', 'governance', 'voting', 'proposal', 'stake', 'unstake', 'delegate'],
+  mainRewards: ['main reward', 'mainreward', 'token distribution', 'reward distribution'],
+  mainBridge: ['main bridge', 'mainbridge', 'base bridge'],
+  nowjc: ['nowjc', 'native job', 'job contract', 'job hub', 'escrow', 'central hub'],
+  nativeAthena: ['athena', 'dispute', 'dispute resolution', 'native athena'],
+  nativeDAO: ['native dao', 'nativedao', 'arbitrum dao', 'native governance'],
+  nativeRewards: ['native reward', 'nativereward', 'token calculation'],
+  nativeBridge: ['native bridge', 'nativebridge', 'arbitrum bridge'],
+  cctpTransceiverL2: ['cctp transceiver', 'cctp l2', 'usdc transfer', 'cross-chain usdc', 'cctp arbitrum'],
+  oracleManager: ['oracle manager', 'oraclemanager', 'skill oracle', 'oracle member', 'oracle management'],
+  openworkGenesis: ['genesis', 'openwork genesis', 'openworkgenesis', 'immutable storage', 'data storage', 'job storage'],
+  profileGenesis: ['profile genesis', 'profilegenesis', 'profile storage'],
+  profileManager: ['profile manager', 'profilemanager', 'profile', 'create profile', 'user profile', 'portfolio', 'rating'],
+  contractRegistry: ['contract registry', 'contractregistry', 'registry'],
+  genesisReaderHelper: ['genesis reader', 'reader helper', 'genesisreaderhelper', 'data retrieval'],
+  activityTracker: ['activity tracker', 'activitytracker', 'activity', 'member activity', '90-day'],
+  lowjcOP: ['lowjc op', 'lowjc', 'local job', 'post job', 'apply job', 'op sepolia job'],
+  athenaClientOP: ['athena client op', 'athena op', 'dispute op'],
+  localBridgeOP: ['local bridge op', 'bridge op', 'op bridge', 'layerzero op'],
+  cctpTransceiverOP: ['cctp op', 'transceiver op', 'usdc op'],
+  lowjcETH: ['lowjc eth', 'ethereum job', 'eth job'],
+  athenaClientETH: ['athena client eth', 'athena eth', 'dispute eth'],
+  localBridgeETH: ['local bridge eth', 'bridge eth', 'eth bridge', 'layerzero eth'],
+  cctpTransceiverETH: ['cctp eth', 'transceiver eth', 'usdc eth']
+};
+
+// Build context based on user query keywords - expanded to cover ALL contracts
 export const buildOppyContext = (userQuery) => {
   const query = userQuery.toLowerCase();
   let context = BASE_SYSTEM_KNOWLEDGE;
-  
-  // Add relevant contract knowledge
-  if (query.includes('nowjc') || query.includes('job') || query.includes('escrow')) {
-    context += '\n\n' + CONTRACTS_KNOWLEDGE.nowjc;
+  let matchedContracts = new Set();
+
+  // Match specific contracts by keywords
+  for (const [contractKey, keywords] of Object.entries(CONTRACT_KEYWORDS)) {
+    for (const keyword of keywords) {
+      if (query.includes(keyword)) {
+        matchedContracts.add(contractKey);
+        break;
+      }
+    }
   }
-  
-  if (query.includes('lowjc') || query.includes('local') || query.includes('post job') || query.includes('apply')) {
-    context += '\n\n' + CONTRACTS_KNOWLEDGE.lowjc;
+
+  // Broad topic matching - add related contracts for general topics
+  if (query.includes('job') || query.includes('work') || query.includes('freelanc')) {
+    matchedContracts.add('nowjc');
+    matchedContracts.add('lowjcOP');
   }
-  
-  if (query.includes('athena') || query.includes('dispute') || query.includes('oracle')) {
-    context += '\n\n' + CONTRACTS_KNOWLEDGE.athena;
+
+  if (query.includes('dispute') || query.includes('oracle')) {
+    matchedContracts.add('nativeAthena');
+    matchedContracts.add('oracleManager');
+    matchedContracts.add('activityTracker');
   }
-  
-  if (query.includes('ipfs') || query.includes('upload') || query.includes('hash') || query.includes('storage')) {
-    context += '\n\n' + CONTRACTS_KNOWLEDGE.ipfs;
+
+  if (query.includes('profile') || query.includes('portfolio') || query.includes('rating')) {
+    matchedContracts.add('profileManager');
+    matchedContracts.add('profileGenesis');
   }
-  
-  if (query.includes('deploy') || query.includes('contract address') || query.includes('testnet')) {
-    context += '\n\n' + CONTRACTS_KNOWLEDGE.deployment;
+
+  if (query.includes('govern') || query.includes('dao') || query.includes('vot') || query.includes('propos') || query.includes('stak')) {
+    matchedContracts.add('mainDAO');
+    matchedContracts.add('nativeDAO');
+    matchedContracts.add('token');
   }
-  
-  if (query.includes('cctp') || query.includes('confirm') || query.includes('reward') || query.includes('transceiver') || query.includes('usdc transfer') || query.includes('cross-chain')) {
+
+  if (query.includes('bridge') || query.includes('layerzero') || query.includes('cross-chain') || query.includes('cross chain')) {
+    matchedContracts.add('mainBridge');
+    matchedContracts.add('nativeBridge');
+    matchedContracts.add('localBridgeOP');
+  }
+
+  if (query.includes('cctp') || query.includes('usdc') || query.includes('transfer') || query.includes('payment')) {
+    matchedContracts.add('cctpTransceiverL2');
     context += '\n\n' + CONTRACTS_KNOWLEDGE.cctp;
   }
-  
+
+  if (query.includes('token') || query.includes('ow ') || query.includes('erc20') || query.includes('reward')) {
+    matchedContracts.add('token');
+    matchedContracts.add('mainRewards');
+    matchedContracts.add('nativeRewards');
+  }
+
+  if (query.includes('genesis') || query.includes('storage') || query.includes('data')) {
+    matchedContracts.add('openworkGenesis');
+    matchedContracts.add('profileGenesis');
+  }
+
+  // Add matched contract knowledge (limit to 5 most relevant to keep context manageable)
+  const contractsToAdd = Array.from(matchedContracts).slice(0, 5);
+  for (const key of contractsToAdd) {
+    if (CONTRACTS_KNOWLEDGE[key]) {
+      context += '\n\n' + CONTRACTS_KNOWLEDGE[key];
+    }
+  }
+
+  // IPFS
+  if (query.includes('ipfs') || query.includes('upload') || query.includes('hash') || query.includes('pinata')) {
+    context += '\n\n' + CONTRACTS_KNOWLEDGE.ipfs;
+  }
+
+  // Deployment / address questions
+  if (query.includes('deploy') || query.includes('address') || query.includes('testnet') || query.includes('mainnet') || query.includes('contract address') || query.includes('where is') || query.includes('chain id')) {
+    context += '\n\n' + CONTRACTS_KNOWLEDGE.deployment;
+  }
+
+  // List all contracts when asked about "all contracts" or "how many"
+  if (query.includes('all contract') || query.includes('how many contract') || query.includes('list contract') || query.includes('every contract')) {
+    let contractList = '\n\n## ALL OPENWORK CONTRACTS (' + Object.keys(contractsData).length + ' total):\n';
+    for (const [key, c] of Object.entries(contractsData)) {
+      contractList += `- **${c.name}** (${c.chain}) - ${c.status} - ${c.version}${c.mainnetAddress ? ' [MAINNET]' : ''}${c.testnetAddress ? ' [TESTNET]' : ''}\n`;
+    }
+    context += contractList;
+  }
+
   // Add workflow knowledge for how-to questions
-  if (query.includes('how') || query.includes('tutorial') || query.includes('guide') || query.includes('step')) {
+  if (query.includes('how') || query.includes('tutorial') || query.includes('guide') || query.includes('step') || query.includes('workflow')) {
     context += '\n\n' + WORKFLOW_KNOWLEDGE;
   }
-  
+
   // Add FAQ knowledge for common questions
-  if (query.includes('what') || query.includes('why') || query.includes('fee') || query.includes('commission')) {
+  if (query.includes('what') || query.includes('why') || query.includes('fee') || query.includes('commission') || query.includes('faq')) {
     context += '\n\n' + FAQ_KNOWLEDGE;
   }
-  
+
   return context;
 };
 
 // Fallback responses for when API is unavailable
 export const FALLBACK_RESPONSES = {
-  athena: 'Athena is our decentralized dispute resolution system. Disputes are raised with a minimum $50 USDC fee, voted on by skill oracle members, and resolved automatically. The winning side gets funds, and voters who chose correctly earn fees proportionally.',
-  
-  job: 'Jobs in OpenWork flow through multiple chains: Posted on Local chains (OP/Ethereum) → Synced to Native chain (Arbitrum) via LayerZero → Stored in Genesis. Payments are escrowed via CCTP and released cross-chain after work approval with 1% commission.',
-  
-  bridge: 'OpenWork uses two bridge types: (1) LayerZero for instant message passing between chains (job data, governance), and (2) Circle\'s CCTP for secure USDC transfers between chains (payments, fees).',
-  
+  athena: 'Athena is our decentralized dispute resolution system on Arbitrum. Disputes are raised with a minimum $50 USDC fee, voted on by skill oracle members, and resolved automatically. The winning side gets funds, and voters who chose correctly earn fees proportionally.',
+
+  job: 'Jobs in OpenWork flow through multiple chains: Posted on Local chains (OP/Ethereum) → Synced to Native chain (Arbitrum) via LayerZero → Stored in Genesis. Payments are escrowed via CCTP and released cross-chain after work approval with 1% commission. NOWJC on Arbitrum is the central job hub.',
+
+  bridge: 'OpenWork uses two bridge types: (1) LayerZero for instant message passing between chains (job data, governance), and (2) Circle\'s CCTP for secure USDC transfers between chains (payments, fees). Bridges connect all 4 chains.',
+
   ipfs: 'All OpenWork data is stored on IPFS for decentralization: job descriptions, profiles, applications, work submissions, dispute evidence. Only content hashes are stored on-chain. Use Pinata gateway: https://gateway.pinata.cloud/ipfs/',
-  
-  deploy: 'To deploy: (1) Select contract from sidebar, (2) Go to Deploy tab, (3) Connect wallet, (4) Enter constructor params, (5) Click Deploy. UUPS contracts deploy in 2 steps (implementation + proxy).',
-  
-  token: 'The OW token is our ERC-20 governance token on Base Sepolia. Earned by completing jobs and participating in governance. Used for voting on Main DAO and Native DAO proposals. Staking increases voting power.',
-  
+
+  deploy: 'OpenWork contracts are deployed on mainnet (Arbitrum One, OP Mainnet, Base) and testnet (Arbitrum Sepolia, OP Sepolia, Ethereum Sepolia, Base Sepolia). Most contracts use UUPS proxy pattern for upgradeability.',
+
+  token: 'The OW token is our ERC-20 governance token on Base. Earned by completing jobs and participating in governance. Used for voting on Main DAO and Native DAO proposals. Staking increases voting power.',
+
   payment: 'Payments use USDC via Circle\'s CCTP: (1) Escrowed on Arbitrum when job starts, (2) Released via CCTP to freelancer\'s preferred chain, (3) 1% platform commission deducted, (4) OW tokens awarded automatically.',
-  
+
   commission: 'Platform commission is 1% of each payment with a $1 USDC minimum. Examples: $50 job = $1 fee (2%), $100 job = $1 fee (1%), $1000 job = $10 fee (1%). Funds go to treasury for protocol operations.',
-  
+
   cctp: 'YES! CCTP confirmers receive 0.0004-0.001 ETH rewards per confirmation (2x actual gas cost, capped at 0.001 ETH). Platform-funded, making transfers 2-3x faster (10-15 min vs 30+ min). Automatic payment upon confirmation.',
-  
-  confirm: 'YES! Confirming CCTP transactions earns you 0.0004-0.001 ETH per confirmation. Rewards are dynamic (2x gas cost) and platform-funded, making cross-chain USDC transfers nearly instant.',
-  
-  reward: 'OpenWork has two reward systems: (1) OW tokens for job completion and governance, (2) ETH rewards (0.0004-0.001 ETH) for confirming CCTP transactions. Both are automatic and platform-funded.',
-  
-  default: '⚠️ API temporarily unavailable. I can help with: contract functions, deployment, cross-chain flows, IPFS structures, dispute resolution, payment processing, CCTP rewards, and common workflows. What would you like to know?'
+
+  profile: 'User profiles in OpenWork are managed by ProfileManager on Arbitrum, with data stored in ProfileGenesis and IPFS. Profiles include skills, bio, portfolio, ratings, and are synced cross-chain.',
+
+  governance: 'OpenWork governance operates on two levels: Main DAO (Base) for protocol-wide decisions, and Native DAO (Arbitrum) for operational decisions. Voting power comes from staked OW tokens with duration multipliers.',
+
+  oracle: 'Skill Oracles are groups of verified experts who resolve disputes in their domain. Managed by OracleManager, members must maintain 90-day activity (tracked by ActivityTracker) and stake tokens to participate.',
+
+  mainnet: 'Yes! OpenWork has mainnet deployments across Arbitrum One, OP Mainnet, and Base. Most core contracts including NOWJC, Native Athena, ProfileManager, and bridges are deployed and operational.',
+
+  default: 'I can help with: contract details (all 24 contracts), deployment addresses (mainnet & testnet), cross-chain flows, IPFS structures, dispute resolution, payment processing, governance, profiles, CCTP rewards, and workflows. What would you like to know?'
 };

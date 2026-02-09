@@ -105,6 +105,7 @@ import SkillVerification from "./pages/SkillVerification/SkillVerification";
 import LandingPage from "./pages/LandingPage/LandingPage";
 import Timeline from "./dev-tools/Timeline/Timeline";
 import OpenworkDocs from "./pages/Documentation/OpenworkDocs";
+import AgentOppy from "./pages/AgentOppy/AgentOppy";
 
 function MainPage() {
   // Using the useWalletConnection hook to handle wallet-related state and logic
@@ -255,7 +256,10 @@ function MainPage() {
 export default function App() {
   const isMobile = useMobileDetection();
 
-  if (isMobile) {
+  // Allow /oppy route on mobile - it's the only mobile-compatible page
+  const isOppyRoute = window.location.pathname === '/oppy';
+
+  if (isMobile && !isOppyRoute) {
     return (
       <div className="mobile-warning">
         <div
@@ -294,7 +298,10 @@ export default function App() {
       <Routes>
         {/* Landing page without Layout (no header/chain selector) */}
         <Route path="/landing" element={<LandingPage />} />
-        
+
+        {/* Agent Oppy standalone page - mobile compatible, no Layout */}
+        <Route path="/oppy" element={<AgentOppy />} />
+
         {/* All other routes with Layout */}
         <Route path="/*" element={
           <Layout>
