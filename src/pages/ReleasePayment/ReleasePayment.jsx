@@ -394,9 +394,7 @@ export default function ReleasePayment() {
 
       setTransactionStatus(`💰 Releasing payment on ${jobChainConfig.name} - Please confirm in MetaMask`);
 
-      // Get current gas price from network (Optimism L2 is extremely cheap)
       const gasPrice = await web3.eth.getGasPrice();
-      console.log(`⛽ Network gas price: ${web3.utils.fromWei(gasPrice, 'gwei')} gwei`);
 
       const releasePaymentTx = await lowjcContract.methods.releasePaymentCrossChain(
         jobId,
@@ -427,12 +425,13 @@ export default function ReleasePayment() {
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         setTransactionStatus("🔄 Step 3/3: Backend processing CCTP transfer to recipient's chain...");
-        
-        // Poll for status updates
-        pollPaymentStatus(jobId, backendUrl);
+
+        // Poll using statusKey (unique per release tx) instead of jobId
+        const statusKey = result.statusKey || jobId;
+        pollPaymentStatus(statusKey, backendUrl);
       } else {
         throw new Error(result.error || 'Backend failed to start processing');
       }
@@ -454,19 +453,19 @@ export default function ReleasePayment() {
     }
   };
 
-  // Optional: Poll backend for status updates
-  const pollPaymentStatus = async (jobId, backendUrl, maxAttempts = 60) => {
+  // Poll backend for status updates using unique statusKey per release
+  const pollPaymentStatus = async (statusKey, backendUrl, maxAttempts = 60) => {
     let attempts = 0;
-    
+
     const checkStatus = async () => {
       if (attempts >= maxAttempts) {
         setTransactionStatus("⏱️ Still processing... Check back later");
         setIsProcessing(false);
         return;
       }
-      
+
       try {
-        const response = await fetch(`${backendUrl}/api/release-payment-status/${jobId}`);
+        const response = await fetch(`${backendUrl}/api/release-payment-status/${statusKey}`);
         const status = await response.json();
         
         if (status.status === 'completed') {
@@ -510,6 +509,54 @@ export default function ReleasePayment() {
     };
     
     setTimeout(checkStatus, 5000); // Start checking after 5 seconds
+  };
+
+  // Poll backend for lock milestone CCTP relay status
+  const pollLockMilestoneStatus = async (statusKey, sourceTxHash, backendUrl) => {
+    const maxAttempts = 60; // 60 x 5s = 5 minutes
+    let attempts = 0;
+
+    return new Promise((resolve) => {
+      const checkStatus = async () => {
+        if (attempts >= maxAttempts) {
+          setTransactionStatus(`⏱️ CCTP relay still processing. Lock TX: ${sourceTxHash}. Check back later or retry.`);
+          resolve();
+          return;
+        }
+
+        try {
+          const response = await fetch(`${backendUrl}/api/lock-milestone-status/${statusKey}`);
+          const status = await response.json();
+
+          if (status.status === 'completed') {
+            const completionHash = status.completionTxHash && status.completionTxHash !== 'already_completed'
+              ? ` CCTP TX: ${status.completionTxHash.substring(0, 10)}...`
+              : '';
+            setTransactionStatus(`✅ Milestone ${job.currentMilestone + 1} locked and USDC delivered to NOWJC!${completionHash} Reloading...`);
+            setTimeout(() => window.location.reload(), 2500);
+            resolve();
+            return;
+          } else if (status.status === 'failed') {
+            setTransactionStatus(`⚠️ Milestone locked but CCTP relay failed: ${status.error || 'Unknown error'}. Lock TX: ${sourceTxHash}. USDC may need manual relay.`);
+            resolve();
+            return;
+          } else if (status.status === 'polling_attestation') {
+            setTransactionStatus(`🔄 Milestone locked. Polling Circle API for CCTP attestation...`);
+          } else if (status.status === 'executing_receive') {
+            setTransactionStatus(`🔗 Attestation received. Executing CCTP receive on Arbitrum...`);
+          } else {
+            setTransactionStatus(`🔄 ${status.message || 'CCTP relay processing...'}`);
+          }
+        } catch (error) {
+          console.warn("Lock milestone status check failed:", error.message);
+        }
+
+        attempts++;
+        setTimeout(checkStatus, 5000);
+      };
+
+      setTimeout(checkStatus, 3000); // Start after 3 seconds
+    });
   };
 
   // Lock next milestone function
@@ -612,7 +659,6 @@ export default function ReleasePayment() {
 
       // Get current gas price from network
       const gasPriceLock = await web3.eth.getGasPrice();
-      console.log(`⛽ Network gas price: ${web3.utils.fromWei(gasPriceLock, 'gwei')} gwei`);
 
       const lockTx = await lowjcContract.methods.lockNextMilestone(
         jobId,
@@ -620,19 +666,44 @@ export default function ReleasePayment() {
       ).send({
         from: walletAddress,
         value: lzFeeLock.toString(),
-        gas: 320000,
+        gas: 600000,
         maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
         maxFeePerGas: gasPriceLock
       });
 
       console.log("✅ Milestone locked:", lockTx.transactionHash);
-      
-      setTransactionStatus(`✅ Milestone ${job.currentMilestone + 1} locked successfully! You can now release it.`);
-      
-      // Refresh job data to get updated state
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
+
+      // Trigger backend CCTP relay so USDC reaches NOWJC on Arbitrum
+      setTransactionStatus(`🔒 Lock TX confirmed: ${lockTx.transactionHash.substring(0, 10)}... Starting CCTP relay to deliver USDC to Arbitrum...`);
+
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      let lockStatusKey = null;
+
+      try {
+        const relayRes = await fetch(`${backendUrl}/api/lock-milestone`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobId, txHash: lockTx.transactionHash })
+        });
+        const relayResult = await relayRes.json();
+        console.log("📡 Backend CCTP relay started:", relayResult);
+        lockStatusKey = relayResult.statusKey;
+      } catch (err) {
+        console.warn("⚠️ Backend CCTP relay request failed:", err.message);
+        setTransactionStatus(`⚠️ Lock TX confirmed (${lockTx.transactionHash.substring(0, 10)}...) but CCTP relay request failed: ${err.message}. USDC may not reach NOWJC. Save this TX hash for manual relay.`);
+        setIsLocking(false);
+        return;
+      }
+
+      if (!lockStatusKey) {
+        setTransactionStatus(`⚠️ Lock confirmed but could not get CCTP status key. TX: ${lockTx.transactionHash}`);
+        setIsLocking(false);
+        setTimeout(() => window.location.reload(), 3000);
+        return;
+      }
+
+      // Poll for CCTP relay completion
+      await pollLockMilestoneStatus(lockStatusKey, lockTx.transactionHash, backendUrl);
       setIsLocking(false);
       
     } catch (error) {

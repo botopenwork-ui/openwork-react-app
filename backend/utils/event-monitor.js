@@ -1,6 +1,10 @@
 const { Web3 } = require('web3');
 const config = require('../config');
 
+// Track event tx hashes already returned, so multi-milestone jobs
+// don't accidentally re-use a previous milestone's event
+const processedEventTxHashes = new Set();
+
 /**
  * Monitor NOWJC contract for specific events
  * @param {string} eventName - Event name ('JobStarted' or 'PaymentReleased')
@@ -76,15 +80,23 @@ async function waitForNOWJCEvent(eventName, jobId, timeout = config.EVENT_DETECT
       });
       
       if (events.length > 0) {
-        const event = events[0]; // Get the first matching event
-        console.log(`✅ Found MATCHING ${eventName} event for Job ${jobId}:`, {
-          transactionHash: event.transactionHash,
-          blockNumber: event.blockNumber.toString(),
-          jobId: event.returnValues.jobId,
-          timeElapsed: `${((Date.now() - startTime) / 1000).toFixed(1)}s`
-        });
-        
-        return event.transactionHash;
+        // Filter out events we've already processed (from previous milestone releases)
+        const newEvents = events.filter(e => !processedEventTxHashes.has(e.transactionHash));
+
+        if (newEvents.length > 0) {
+          const event = newEvents[0];
+          processedEventTxHashes.add(event.transactionHash);
+          console.log(`✅ Found MATCHING ${eventName} event for Job ${jobId}:`, {
+            transactionHash: event.transactionHash,
+            blockNumber: event.blockNumber.toString(),
+            jobId: event.returnValues.jobId,
+            timeElapsed: `${((Date.now() - startTime) / 1000).toFixed(1)}s`
+          });
+
+          return event.transactionHash;
+        } else {
+          console.log(`⏩ Found ${events.length} ${eventName} event(s) for Job ${jobId} but all already processed, continuing...`);
+        }
       }
       
       // Move forward to next chunk

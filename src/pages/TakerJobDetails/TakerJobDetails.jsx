@@ -114,7 +114,7 @@ export default function TakerJobDetails() {
         setJob({
           jobId,
           employer: jobDetails.employer,
-          escrowAmount: web3.utils.fromWei(jobDetails.escrowAmount, "ether"),
+          escrowAmount: web3.utils.fromWei(jobDetails.escrowAmount, "mwei"),
           isJobOpen: jobDetails.isOpen,
           taker: jobTaker,
           ...ipfsData,

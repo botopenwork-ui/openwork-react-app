@@ -4,77 +4,100 @@ import Web3 from 'web3';
 import './ContractUpgradeProposalStep2.css';
 import BackButtonProposal from '../../components/BackButtonProposal/BackButtonProposal';
 import Warning from '../../components/Warning/Warning';
-import { 
-  createUpgradeProposal, 
+import {
+  createUpgradeProposal,
   checkMainDAOEligibility,
-  estimateMainDAOFee 
+  estimateMainDAOFee
 } from '../../services/proposalCreationService';
+import { isMainnet, getNativeChain, getMainChain, getLocalChains } from '../../config/chainConfig';
 
-// Contract proxy addresses and chain mappings
-const CONTRACT_INFO = {
-  "Main DAO": {
-    chainId: 40245,
-    proxies: [{ address: "0xc3579BDC6eC1fAad8a67B1Dc5542EBcf28456465", label: "Base Sepolia" }]
-  },
-  "Native DAO": {
-    chainId: 40231,
-    proxies: [{ address: "0x21451dCE07Ad3Ab638Ec71299C1D2BD2064b90E5", label: "Arbitrum Sepolia" }]
-  },
-  "OpenWork Token": {
-    chainId: 40245,
-    proxies: [{ address: "0x5f24747d5e59F9CCe5a9815BC12E2fB5Ae713679", label: "Base Sepolia" }]
-  },
-  "Native OpenWork Job Contract": {
-    chainId: 40231,
-    proxies: [{ address: "0x9E39B37275854449782F1a2a4524405cE79d6C1e", label: "Arbitrum Sepolia" }]
-  },
-  "Local OpenWork Job Contract": {
-    chainId: 40232,
-    proxies: [
-      { address: "0x896a3Bc6ED01f549Fe20bD1F25067951913b793C", label: "OP Sepolia" },
-      { address: "0x3b4cE6441aB77437e306F396c83779A2BC8E5134", label: "Ethereum Sepolia" }
-    ]
-  },
-  "Native Athena": {
-    chainId: 40231,
-    proxies: [{ address: "0x098E52Aff44AEAd944AFf86F4A5b90dbAF5B86bd", label: "Arbitrum Sepolia" }]
-  },
-  "Native Athena Oracle Manager": {
-    chainId: 40231,
-    proxies: [{ address: "0x70F6fa515120efeA3e404234C318b7745D23ADD4", label: "Arbitrum Sepolia" }]
-  },
-  "Athena Client": {
-    chainId: 40232,
-    proxies: [
-      { address: "0x45E51B424c87Eb430E705CcE3EcD8e22baD267f7", label: "OP Sepolia" },
-      { address: "0xA08a6E73397EaE0A3Df9eb528d9118ae4AF80fcf", label: "Ethereum Sepolia" }
-    ]
-  },
-  "Main Rewards": {
-    chainId: 40245,
-    proxies: [{ address: "0xd6bE0C187408155be99C4e9d6f860eDDa27b056B", label: "Base Sepolia" }]
-  },
-  "Native Rewards": {
-    chainId: 40231,
-    proxies: [{ address: "0x947cAd64a26Eae5F82aF68b7Dbf8b457a8f492De", label: "Arbitrum Sepolia" }]
-  },
-  "OpenWork Genesis": {
-    chainId: 40231,
-    proxies: [{ address: "0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C", label: "Arbitrum Sepolia" }]
-  },
-  "Profile Genesis": {
-    chainId: 40231,
-    proxies: [{ address: "0xC37A9dFbb57837F74725AAbEe068f07A1155c394", label: "Arbitrum Sepolia" }]
-  },
-  "Profile Manager": {
-    chainId: 40231,
-    proxies: [{ address: "0xFc4dA60Ea9D88B81a894CfbD5941b7d0E3fEe401", label: "Arbitrum Sepolia" }]
-  },
-  "Contract Registry": {
-    chainId: 40231,
-    proxies: [{ address: "0x8AbC0E626A8fC723ec6f27FE8a4157A186D5767D", label: "Arbitrum Sepolia" }]
-  }
-};
+// Dynamically build contract info from chainConfig based on network mode
+function buildContractInfo() {
+  const nativeChain = getNativeChain();
+  const mainChain = getMainChain();
+  const localChains = getLocalChains();
+
+  const nc = nativeChain?.contracts || {};
+  const mc = mainChain?.contracts || {};
+  const nativeEid = nativeChain?.layerzero?.eid;
+  const mainEid = mainChain?.layerzero?.eid;
+  const nativeLabel = nativeChain?.name || "";
+  const mainLabel = mainChain?.name || "";
+
+  // Build local chain proxies for contracts deployed on all local chains
+  const localLowjcProxies = localChains.map(c => ({
+    address: c.contracts?.lowjc || "",
+    label: c.name
+  })).filter(p => p.address);
+
+  const localAthenaProxies = localChains.map(c => ({
+    address: c.contracts?.athenaClient || "",
+    label: c.name
+  })).filter(p => p.address);
+
+  const firstLocalEid = localChains[0]?.layerzero?.eid;
+
+  return {
+    "Main DAO": {
+      chainId: mainEid,
+      proxies: [{ address: mc.mainDAO || "", label: mainLabel }]
+    },
+    "Native DAO": {
+      chainId: nativeEid,
+      proxies: [{ address: nc.nativeDAO || "", label: nativeLabel }]
+    },
+    "OpenWork Token": {
+      chainId: mainEid,
+      proxies: [{ address: mc.openworkToken || "", label: mainLabel }]
+    },
+    "Native OpenWork Job Contract": {
+      chainId: nativeEid,
+      proxies: [{ address: nc.nowjc || "", label: nativeLabel }]
+    },
+    "Local OpenWork Job Contract": {
+      chainId: firstLocalEid,
+      proxies: localLowjcProxies
+    },
+    "Native Athena": {
+      chainId: nativeEid,
+      proxies: [{ address: nc.nativeAthena || "", label: nativeLabel }]
+    },
+    "Native Athena Oracle Manager": {
+      chainId: nativeEid,
+      proxies: [{ address: nc.oracleManager || "", label: nativeLabel }]
+    },
+    "Athena Client": {
+      chainId: firstLocalEid,
+      proxies: localAthenaProxies
+    },
+    "Main Rewards": {
+      chainId: mainEid,
+      proxies: [{ address: mc.mainRewards || "", label: mainLabel }]
+    },
+    "Native Rewards": {
+      chainId: nativeEid,
+      proxies: [{ address: nc.nativeRewards || "", label: nativeLabel }]
+    },
+    "OpenWork Genesis": {
+      chainId: nativeEid,
+      proxies: [{ address: nc.genesis || "", label: nativeLabel }]
+    },
+    "Profile Genesis": {
+      chainId: nativeEid,
+      proxies: [{ address: nc.profileGenesis || "", label: nativeLabel }]
+    },
+    "Profile Manager": {
+      chainId: nativeEid,
+      proxies: [{ address: nc.profileManager || "", label: nativeLabel }]
+    },
+    "Contract Registry": {
+      chainId: nativeEid,
+      proxies: [{ address: nc.contractRegistry || "", label: nativeLabel }]
+    }
+  };
+}
+
+const CONTRACT_INFO = buildContractInfo();
 
 const ContractUpgradeProposalStep2 = () => {
   const navigate = useNavigate();
@@ -128,19 +151,22 @@ const ContractUpgradeProposalStep2 = () => {
     }
   }, [contractName]);
 
-  // Get block scanner URL based on chain
+  // Get block scanner URL based on chain - uses blockExplorer from chainConfig
   const getBlockScannerUrl = (proxyAddress) => {
     const proxy = availableProxies.find(p => p.address === proxyAddress);
     if (!proxy) return '#';
-    
-    const scanners = {
-      'Base Sepolia': `https://sepolia.basescan.org/address/${proxyAddress}`,
-      'Arbitrum Sepolia': `https://sepolia.arbiscan.io/address/${proxyAddress}`,
-      'OP Sepolia': `https://sepolia-optimism.etherscan.io/address/${proxyAddress}`,
-      'Ethereum Sepolia': `https://sepolia.etherscan.io/address/${proxyAddress}`
-    };
-    
-    return scanners[proxy.label] || '#';
+
+    // Find matching chain config by name
+    const nativeChain = getNativeChain();
+    const mainChain = getMainChain();
+    const localChains = getLocalChains();
+    const allChains = [nativeChain, mainChain, ...localChains].filter(Boolean);
+    const matchedChain = allChains.find(c => c.name === proxy.label);
+
+    if (matchedChain?.blockExplorer) {
+      return `${matchedChain.blockExplorer}/address/${proxyAddress}`;
+    }
+    return '#';
   };
 
   const handleSubmit = async () => {

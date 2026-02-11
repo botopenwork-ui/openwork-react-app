@@ -56,19 +56,17 @@ async function executeReceiveOnArbitrum(attestationData) {
     
   } catch (error) {
     console.log('⚠️ Receive execution failed:', error.message);
-    
-    // Check if already completed (this is actually success)
-    if (error.message.includes('reverted') || error.message.includes('revert')) {
-      console.log('✅ USDC transfer was already completed by CCTP!');
-      console.log('ℹ️ NOWJC contract on Arbitrum already received funds.');
-      
+
+    // Only treat "Nonce already used" as already completed — that specifically means
+    // the CCTP message was already relayed. Other reverts are real failures.
+    if (error.message.includes('Nonce already used')) {
+      console.log('✅ USDC transfer was already completed by CCTP (nonce already used).');
       return {
         transactionHash: null,
         alreadyCompleted: true
       };
     }
-    
-    // For other errors, throw
+
     throw new Error(`Arbitrum receive() failed: ${error.message}`);
   }
 }
@@ -188,18 +186,17 @@ async function executeReceiveMessage(attestationData, destinationChain = 'Optimi
       console.log(`   Error Code: ${error.code}`);
     }
 
-    // Check if already completed (nonce already used - this is actually success)
-    if (error.message.includes('reverted') || error.message.includes('revert') || error.message.includes('Nonce already used')) {
-      console.log('✅ Payment was already completed by CCTP! Applicant has received USDC.');
-      console.log('ℹ️ The NOWJC contract successfully transferred USDC via CCTP.');
-
+    // Only treat "Nonce already used" as already completed — that specifically means
+    // the CCTP message was already relayed. Other reverts are real failures.
+    if (error.message.includes('Nonce already used')) {
+      console.log('✅ Payment was already completed by CCTP (nonce already used). Applicant has received USDC.');
       return {
         transactionHash: null,
         alreadyCompleted: true
       };
     }
 
-    // For other errors, throw with full details
+    // All other errors are real failures
     console.log('================================================\n');
     throw new Error(`${destinationChain} receiveMessage() failed: ${error.message}`);
   }

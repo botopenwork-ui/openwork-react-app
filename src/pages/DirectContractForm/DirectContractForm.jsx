@@ -14,17 +14,25 @@ import BlueButton from "../../components/BlueButton/BlueButton";
 import Milestone from "../../components/Milestone/Milestone";
 import RadioButton from "../../components/RadioButton/RadioButton";
 import Warning from "../../components/Warning/Warning";
+import { getLocalChains, getChainConfig, getNativeChain, isMainnet } from "../../config/chainConfig";
 
 const SKILLOPTIONS = [
   'UX/UI Skill Oracle','Full Stack development','UX/UI Skill Oracle',
 ]
 
-const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
 const LAYERZERO_OPTIONS_VALUE = import.meta.env.VITE_LAYERZERO_OPTIONS_VALUE;
 
-// Browse Jobs contract (NOWJC on Arbitrum Sepolia)
-const BROWSE_JOBS_CONTRACT = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS;
-const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+// Dynamic network-aware functions for cross-chain polling
+function getGenesisAddress() {
+  const nativeChain = getNativeChain();
+  return nativeChain?.contracts?.genesis;
+}
+
+function getArbitrumRpc() {
+  return isMainnet()
+    ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
+    : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+}
 
 // Backend URL for secure API calls
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
@@ -247,6 +255,7 @@ export default function DirectContractForm() {
   const [skillInput, setSkillInput] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [transactionStatus, setTransactionStatus] = useState("Direct contract creation requires blockchain transaction fees");
+  const [platformFee, setPlatformFee] = useState(null);
   const [milestones, setMilestones] = useState([
     {
       title: "Milestone 1",
@@ -282,6 +291,30 @@ export default function DirectContractForm() {
       ]);
     }
   }, [selectedOption]);
+
+  // Fetch platform fee from NOWJC contract on Arbitrum
+  useEffect(() => {
+    async function fetchCommission() {
+      try {
+        const nativeChain = getNativeChain();
+        if (!nativeChain) return;
+        const web3 = new Web3(nativeChain.rpcUrl);
+        const nowjcABI = [{
+          "inputs": [],
+          "name": "commissionPercentage",
+          "outputs": [{"type": "uint256", "name": ""}],
+          "stateMutability": "view",
+          "type": "function"
+        }];
+        const nowjcContract = new web3.eth.Contract(nowjcABI, nativeChain.contracts.nowjc);
+        const basisPoints = await nowjcContract.methods.commissionPercentage().call();
+        setPlatformFee(Number(basisPoints) / 100); // basis points to percentage
+      } catch (err) {
+        console.warn("Could not fetch commission rate:", err.message);
+      }
+    }
+    fetchCommission();
+  }, []);
 
   // Calculate total compensation
   const totalCompensation = milestones.reduce((sum, milestone) => sum + milestone.amount, 0);
@@ -371,16 +404,20 @@ export default function DirectContractForm() {
     }
   };
 
-  // Function to check if job exists on Arbitrum Sepolia
+  // Function to check if job exists on Arbitrum (Genesis contract)
   const checkJobExistsOnArbitrum = async (jobId) => {
     try {
+      const genesisAddress = getGenesisAddress();
+      const arbitrumRpc = getArbitrumRpc();
+      const networkMode = isMainnet() ? "mainnet" : "testnet";
+
       console.log("\n🔍 ========== POLLING ATTEMPT ==========");
       console.log("  Job ID:", jobId);
-      console.log("  Contract:", BROWSE_JOBS_CONTRACT);
-      console.log("  RPC:", ARBITRUM_SEPOLIA_RPC);
-      
-      const arbitrumWeb3 = new Web3(ARBITRUM_SEPOLIA_RPC);
-      
+      console.log("  Contract:", genesisAddress);
+      console.log("  RPC:", arbitrumRpc, `(${networkMode})`);
+
+      const arbitrumWeb3 = new Web3(arbitrumRpc);
+
       // Test RPC connection
       try {
         const blockNumber = await arbitrumWeb3.eth.getBlockNumber();
@@ -389,12 +426,12 @@ export default function DirectContractForm() {
         console.error("  ❌ RPC connection failed:", rpcError);
         return false;
       }
-      
+
       const browseJobsContract = new arbitrumWeb3.eth.Contract(
-        BrowseJobsABI, 
-        BROWSE_JOBS_CONTRACT
+        BrowseJobsABI,
+        genesisAddress
       );
-      
+
       // Try to call getJob
       console.log("  📞 Calling getJob('" + jobId + "')...");
       const jobData = await browseJobsContract.methods.getJob(jobId).call();
@@ -402,11 +439,11 @@ export default function DirectContractForm() {
       console.log("  📝 Job ID from data:", jobData.id);
       console.log("  📝 Job Giver:", jobData.jobGiver);
       console.log("  📝 Status:", jobData.status);
-      
+
       const jobExists = jobData && jobData.id && jobData.id === jobId;
       console.log("  " + (jobExists ? "✅" : "❌") + " Job exists:", jobExists);
       console.log("=========================================\n");
-      
+
       return jobExists;
     } catch (error) {
       console.error("\n❌ ========== POLLING ERROR ==========");
@@ -421,34 +458,86 @@ export default function DirectContractForm() {
 
   // Function to poll for job sync completion
   const pollForJobSync = async (jobId) => {
-    setTransactionStatus("Direct contract created! Cross-chain sync will take 15-30 seconds...");
-    
-    await new Promise(resolve => setTimeout(resolve, 10000));
-    setTransactionStatus("Checking for cross-chain sync...");
-    
-    const maxAttempts = 8;
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+    const maxAttempts = 40; // 40 x 5s = ~3.5 minutes max
     const pollInterval = 5000;
-    
+    let jobSynced = false;
+    let cctpCompleted = false;
+
+    setTransactionStatus("Step 1/2: Waiting for LayerZero message to sync job on Arbitrum...");
+    await new Promise(resolve => setTimeout(resolve, 10000));
+
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      console.log(`Polling attempt ${attempt}/${maxAttempts} for job ${jobId}`);
-      
-      const jobExists = await checkJobExistsOnArbitrum(jobId);
-      
-      if (jobExists) {
-        setTransactionStatus("Contract synced! Redirecting...");
+      console.log(`Poll attempt ${attempt}/${maxAttempts} for job ${jobId}`);
+
+      // Check LZ sync (job exists on Arbitrum)
+      if (!jobSynced) {
+        const jobExists = await checkJobExistsOnArbitrum(jobId);
+        if (jobExists) {
+          jobSynced = true;
+          console.log("✅ Job synced on Arbitrum via LayerZero");
+        }
+      }
+
+      // Check CCTP relay status from backend
+      if (!cctpCompleted) {
+        try {
+          const res = await fetch(`${backendUrl}/api/start-job-status/${jobId}`);
+          if (res.ok) {
+            const status = await res.json();
+            console.log("📡 CCTP status:", status.status, status.message);
+
+            if (status.status === 'completed') {
+              cctpCompleted = true;
+              console.log("✅ CCTP relay completed — USDC received by NOWJC");
+            } else if (status.status === 'failed') {
+              setTransactionStatus(`Step 2/2: CCTP relay failed: ${status.error || status.message}. USDC may need manual relay.`);
+              // Still redirect if job is synced — user can see the job but release won't work until CCTP is fixed
+              if (jobSynced) {
+                setTimeout(() => navigate(`/job-details/${jobId}`), 3000);
+              }
+              return;
+            } else if (status.status === 'polling_attestation') {
+              if (jobSynced) {
+                setTransactionStatus("Step 2/2: Job synced! Polling Circle API for CCTP attestation...");
+              }
+            } else if (status.status === 'executing_receive') {
+              setTransactionStatus("Step 2/2: Executing CCTP receive on Arbitrum...");
+            }
+          }
+        } catch (err) {
+          console.warn("CCTP status check failed:", err.message);
+        }
+      }
+
+      // Both done — redirect
+      if (jobSynced && cctpCompleted) {
+        setTransactionStatus("Contract synced and USDC received! Redirecting...");
         setTimeout(() => navigate(`/job-details/${jobId}`), 1500);
         return;
       }
-      
-      const timeRemaining = Math.max(0, 45 - (10 + (attempt * 5)));
-      setTransactionStatus(`Syncing contract across chains... (~${timeRemaining}s remaining)`);
-      
+
+      // Update status message based on what's still pending
+      if (!jobSynced && !cctpCompleted) {
+        setTransactionStatus("Step 1/2: Waiting for LayerZero sync and CCTP relay...");
+      } else if (jobSynced && !cctpCompleted) {
+        setTransactionStatus("Step 2/2: Job synced! Waiting for CCTP relay to deliver USDC to Arbitrum...");
+      } else if (!jobSynced && cctpCompleted) {
+        setTransactionStatus("Step 1/2: CCTP complete! Waiting for LayerZero sync...");
+      }
+
       if (attempt < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, pollInterval));
       }
     }
-    
-    setTransactionStatus("Contract created but sync taking longer than expected. Check browse jobs in a few minutes.");
+
+    // Timeout — redirect if job at least synced
+    if (jobSynced) {
+      setTransactionStatus("Contract synced but CCTP relay still processing. Redirecting...");
+      setTimeout(() => navigate(`/job-details/${jobId}`), 2000);
+    } else {
+      setTransactionStatus("Contract created but sync taking longer than expected. Check browse jobs in a few minutes.");
+    }
   };
 
   // Function to pin individual milestone to IPFS
@@ -517,16 +606,21 @@ export default function DirectContractForm() {
         const web3 = new Web3(window.ethereum);
         await window.ethereum.request({ method: "eth_requestAccounts" });
         
-        // Check if user is connected to OP Sepolia
+        // Check if user is connected to a supported local chain
         const chainId = await web3.eth.getChainId();
-        const OP_SEPOLIA_CHAIN_ID = 11155420;
-        
-        if (Number(chainId) !== OP_SEPOLIA_CHAIN_ID) {
-          alert(`Please switch to OP Sepolia network. Current chain ID: ${chainId}, Required: ${OP_SEPOLIA_CHAIN_ID}`);
+        const localChains = getLocalChains();
+        const allowedChainIds = localChains.map(c => c.chainId);
+
+        if (!allowedChainIds.includes(Number(chainId))) {
+          const chainNames = localChains.map(c => c.name).join(' or ');
+          alert(`Please switch to ${chainNames}. Current chain ID: ${chainId}`);
           setLoadingT(false);
           return;
         }
-        
+
+        const currentChainConfig = getChainConfig(Number(chainId));
+        const contractAddress = currentChainConfig.contracts.lowjc;
+
         const accounts = await web3.eth.getAccounts();
         const fromAddress = accounts[0];
 
@@ -584,16 +678,17 @@ export default function DirectContractForm() {
             contractAddress,
           );
 
-          // Job taker chain domain (OP Sepolia = 11155420)
-          const jobTakerChainDomain = 11155420;
+          // Job taker chain domain - use CCTP domain (not chain ID)
+          // CCTP domains: 0=Ethereum, 2=Optimism, 3=Arbitrum, 6=Base
+          const jobTakerChainDomain = currentChainConfig.cctpDomain;
 
           // Step 5: Approve USDC spending (total of all milestones)
           setTransactionStatus("💰 Approving USDC spending - Please confirm in MetaMask");
           
-          const USDC_ADDRESS = "0x5fd84259d66Cd46123540766Be93DFE6d43130D7"; // OP Sepolia USDC
-          const totalUSDC = milestones.reduce((sum, milestone) => sum + milestone.amount, 0) * 1000000; // Convert to USDC units (6 decimals)
-          
-          console.log("💰 Approving USDC amount:", totalUSDC, "units (", totalUSDC / 1000000, "USDC)");
+          const USDC_ADDRESS = currentChainConfig.contracts.usdc;
+          const firstMilestoneUSDC = milestones[0].amount * 1000000; // Only first milestone - contract locks one at a time
+
+          console.log("💰 Approving USDC amount:", firstMilestoneUSDC, "units (", firstMilestoneUSDC / 1000000, "USDC) - first milestone only");
           
           const usdcABI = [{
             "inputs": [
@@ -611,7 +706,7 @@ export default function DirectContractForm() {
           try {
             await usdcContract.methods.approve(
               contractAddress,
-              totalUSDC.toString()
+              firstMilestoneUSDC.toString()
             ).send({ from: fromAddress });
             
             console.log("✅ USDC approval successful");
@@ -622,16 +717,45 @@ export default function DirectContractForm() {
             return;
           }
 
-          // Step 6: Use higher gas limit for DirectContract (1.6M gas for destination)
-          setTransactionStatus("Preparing LayerZero transaction...");
-          
+          // Step 6: Get dynamic LayerZero quote
+          setTransactionStatus("Getting LayerZero quote...");
+
           // DirectContract needs more destination gas than PostJob due to extra parameters
           const DIRECT_CONTRACT_OPTIONS = '0x00030100110100000000000000000000000000186A00';
-          
-          // FIXED FEE: Use 0.001 ETH
-          const fixedFee = web3.utils.toWei('0.001', 'ether');
-          const feeToUse = fixedFee;
-          console.log("💰 Using fixed LayerZero fee:", web3.utils.fromWei(feeToUse, 'ether'), "ETH");
+
+          // Get bridge contract for quoting
+          const bridgeAddress = await contract.methods.bridge().call();
+          const bridgeABI = [{
+            "inputs": [
+              {"type": "bytes", "name": "_payload"},
+              {"type": "bytes", "name": "_options"}
+            ],
+            "name": "quoteNativeChain",
+            "outputs": [{"type": "uint256", "name": "fee"}],
+            "stateMutability": "view",
+            "type": "function"
+          }];
+          const bridgeContract = new web3.eth.Contract(bridgeABI, bridgeAddress);
+
+          // Encode payload matching the contract's abi.encode for startDirectContract
+          const quotePayload = web3.eth.abi.encodeParameters(
+            ['string', 'address', 'address', 'string', 'string', 'string[]', 'uint256[]', 'uint32'],
+            ['startDirectContract', fromAddress, jobTaker, 'quote-placeholder', jobDetailHash, milestoneHashes, milestoneAmounts, jobTakerChainDomain]
+          );
+
+          // Get quote and add 20% buffer
+          const quotedFee = await bridgeContract.methods.quoteNativeChain(quotePayload, DIRECT_CONTRACT_OPTIONS).call();
+          const feeToUse = (BigInt(quotedFee) * BigInt(120) / BigInt(100)).toString();
+          console.log("💰 LayerZero quote:", web3.utils.fromWei(quotedFee.toString(), 'ether'), "ETH");
+          console.log("💰 With 20% buffer:", web3.utils.fromWei(feeToUse, 'ether'), "ETH");
+
+          // Get current job count to predict next jobId
+          const jobCounter = await contract.methods.getJobCount().call();
+          const layerZeroEid = currentChainConfig.layerzero.eid;
+          const predictedJobId = `${layerZeroEid}-${Number(jobCounter) + 1}`;
+          console.log("📊 Current job count:", jobCounter);
+          console.log("🔮 Predicted next jobId:", predictedJobId);
+          console.log("🔢 Using LayerZero EID:", layerZeroEid, "for chain:", chainId);
 
           console.log("\n=== TRANSACTION PARAMETERS ===");
           console.log("Job Taker:", jobTaker);
@@ -644,7 +768,7 @@ export default function DirectContractForm() {
 
           // Step 6: Call startDirectContract with higher gas options
           setTransactionStatus("Sending transaction to blockchain...");
-          
+
           contract.methods
             .startDirectContract(
               jobTaker,
@@ -661,19 +785,37 @@ export default function DirectContractForm() {
             })
             .on("receipt", function (receipt) {
               console.log("📄 Transaction receipt:", receipt);
-              
-              // Extract job ID from LayerZero logs
-              const jobId = extractJobIdFromLayerZeroLogs(receipt);
-              
+
+              // Try to extract job ID from LayerZero logs first
+              let jobId = extractJobIdFromLayerZeroLogs(receipt);
+
+              // Fallback: use predicted job ID
+              if (!jobId) {
+                console.log("⚠️ Could not extract from logs, using predicted ID:", predictedJobId);
+                jobId = predictedJobId;
+              }
+
               if (jobId) {
-                console.log("✅ Extracted Job ID from LayerZero logs:", jobId);
-                setTransactionStatus("✅ Contract created successfully!");
+                console.log("✅ Job ID:", jobId);
+                setTransactionStatus("✅ Contract created! Starting CCTP relay...");
                 setLoadingT(false);
-                
+
+                // Trigger backend CCTP relay (OP→ARB) so NOWJC receives the USDC
+                const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+                fetch(`${backendUrl}/api/start-job`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ jobId, txHash: receipt.transactionHash })
+                }).then(res => res.json()).then(result => {
+                  console.log("📡 Backend CCTP relay started:", result);
+                }).catch(err => {
+                  console.warn("⚠️ Backend CCTP relay request failed:", err.message);
+                });
+
                 // Start polling for cross-chain sync
                 pollForJobSync(jobId);
               } else {
-                console.log("❌ Could not extract job ID from LayerZero logs");
+                console.log("❌ Could not determine job ID");
                 setTransactionStatus("✅ Transaction confirmed but job ID extraction failed. Check browse jobs manually.");
                 setLoadingT(false);
               }
@@ -946,7 +1088,7 @@ export default function DirectContractForm() {
                 <span>platform fees</span>
                 <img src="/fee.svg" alt="" />
               </div>
-              <span>5%</span>
+              <span>{platformFee !== null ? `${platformFee}%` : '...'}</span>
             </div>
             <BlueButton 
               label="Enter Contract" 

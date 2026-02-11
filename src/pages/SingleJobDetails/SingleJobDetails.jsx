@@ -250,17 +250,12 @@ export default function SingleJobDetails() {
 
         console.log("📊 Milestone status:", { currentMilestone, jobStatus, completedMilestones, total: jobData.finalMilestones?.length });
 
-        // Calculate locked amount (remaining milestones)
+        // Calculate locked amount (only current milestone is locked on-chain, one at a time)
         let lockedAmount = 0;
-        if (currentMilestone <= jobData.finalMilestones.length) {
-          for (
-            let i = currentMilestone - 1;
-            i < jobData.finalMilestones.length;
-            i++
-          ) {
-            if (jobData.finalMilestones[i]) {
-              lockedAmount += parseFloat(jobData.finalMilestones[i].amount);
-            }
+        if (jobStatus !== 2 && currentMilestone >= 1 && currentMilestone <= jobData.finalMilestones.length) {
+          const currentMilestoneData = jobData.finalMilestones[currentMilestone - 1];
+          if (currentMilestoneData) {
+            lockedAmount = parseFloat(currentMilestoneData.amount);
           }
         }
 

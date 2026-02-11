@@ -494,7 +494,7 @@ const OpenworkDocs = () => {
           </div>
 
           <div className="docs-sidebar-section">
-            <h3 className="docs-sidebar-section-title">Base Sepolia (Main Chain)</h3>
+            <h3 className="docs-sidebar-section-title">Base (Main Chain)</h3>
             {contractsByChain.base.contracts.map(c => (
               <div 
                 key={c.id}
@@ -510,7 +510,7 @@ const OpenworkDocs = () => {
           </div>
 
           <div className="docs-sidebar-section">
-            <h3 className="docs-sidebar-section-title">Arbitrum Sepolia (Native Chain)</h3>
+            <h3 className="docs-sidebar-section-title">Arbitrum (Native Chain)</h3>
             {contractsByChain.l2.contracts.map(c => (
               <div 
                 key={c.id}
@@ -526,7 +526,7 @@ const OpenworkDocs = () => {
           </div>
 
           <div className="docs-sidebar-section">
-            <h3 className="docs-sidebar-section-title">OP Sepolia</h3>
+            <h3 className="docs-sidebar-section-title">OP (Local Chain)</h3>
             {contractsByChain.op.contracts.map(c => (
               <div 
                 key={c.id}
@@ -542,7 +542,7 @@ const OpenworkDocs = () => {
           </div>
 
           <div className="docs-sidebar-section">
-            <h3 className="docs-sidebar-section-title">Ethereum Sepolia</h3>
+            <h3 className="docs-sidebar-section-title">Ethereum (Local Chain)</h3>
             {contractsByChain.eth.contracts.map(c => (
               <div 
                 key={c.id}
@@ -676,7 +676,7 @@ const OpenworkDocs = () => {
               className="docs-network-label" 
               style={{ left: contractsByChain.base.bounds.minX + 10, top: contractsByChain.base.bounds.minY - 25 }}
             >
-              Base Sepolia (Main Chain)
+              Base (Main Chain)
             </div>
           </>
         )}
@@ -696,7 +696,7 @@ const OpenworkDocs = () => {
               className="docs-network-label" 
               style={{ left: contractsByChain.l2.bounds.minX + 10, top: contractsByChain.l2.bounds.minY - 25 }}
             >
-              Arbitrum Sepolia (Native Chain)
+              Arbitrum (Native Chain)
             </div>
           </>
         )}
@@ -716,27 +716,27 @@ const OpenworkDocs = () => {
               className="docs-network-label" 
               style={{ left: contractsByChain.op.bounds.minX + 10, top: contractsByChain.op.bounds.minY - 25 }}
             >
-              OP Sepolia
+              OP (Local Chain)
             </div>
           </>
         )}
 
         {contractsByChain.eth.bounds.width > 0 && (
           <>
-            <div 
-              className="docs-network-zone docs-network-zone-user" 
-              style={{ 
-                left: contractsByChain.eth.bounds.minX, 
-                top: contractsByChain.eth.bounds.minY, 
-                width: contractsByChain.eth.bounds.width, 
-                height: contractsByChain.eth.bounds.height 
+            <div
+              className="docs-network-zone docs-network-zone-user"
+              style={{
+                left: contractsByChain.eth.bounds.minX,
+                top: contractsByChain.eth.bounds.minY,
+                width: contractsByChain.eth.bounds.width,
+                height: contractsByChain.eth.bounds.height
               }}
             ></div>
-            <div 
-              className="docs-network-label" 
+            <div
+              className="docs-network-label"
               style={{ left: contractsByChain.eth.bounds.minX + 10, top: contractsByChain.eth.bounds.minY - 25 }}
             >
-              Ethereum Sepolia
+              Ethereum (Local Chain)
             </div>
           </>
         )}

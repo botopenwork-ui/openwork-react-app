@@ -8,7 +8,7 @@ import genesisABI from "../../ABIs/genesis_ABI.json";
 import { getNativeChain } from "../../config/chainConfig";
 import { useWalletConnection } from "../../functions/useWalletConnection";
 
-export default function SkillOracleApplications() {
+export default function AskAthenaApplications() {
     const { walletAddress } = useWalletConnection();
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -16,7 +16,6 @@ export default function SkillOracleApplications() {
     const [currentPage, setCurrentPage] = useState(1);
     const appsPerPage = 5;
 
-    // Column configuration - reuse dispute table structure
     const allColumns = [
         { id: "title", label: "Oracle / Applicant", required: true },
         { id: "proposedBy", label: "Applicant", required: false },
@@ -51,7 +50,7 @@ export default function SkillOracleApplications() {
         });
     };
 
-    // Fetch skill verification applications from Genesis on Arbitrum
+    // Fetch AskAthena applications from Genesis on Arbitrum
     useEffect(() => {
         async function loadApplications() {
             try {
@@ -64,7 +63,7 @@ export default function SkillOracleApplications() {
                 const web3 = new Web3(nativeChain.rpcUrl);
                 const genesisContract = new web3.eth.Contract(genesisABI, nativeChain.contracts.genesis);
 
-                const appCounter = await genesisContract.methods.applicationCounter().call();
+                const appCounter = await genesisContract.methods.askAthenaCounter().call();
                 const counter = parseInt(appCounter);
                 const apps = [];
 
@@ -72,7 +71,7 @@ export default function SkillOracleApplications() {
                 const scanStart = Math.max(0, counter - 100);
                 for (let i = counter; i >= scanStart; i--) {
                     try {
-                        const app = await genesisContract.methods.getSkillApplication(i).call();
+                        const app = await genesisContract.methods.getAskAthenaApplication(i).call();
                         if (app.applicant && app.applicant !== "0x0000000000000000000000000000000000000000") {
                             const totalVotes = parseInt(app.votesFor) + parseInt(app.votesAgainst);
                             const votePercent = totalVotes > 0
@@ -81,20 +80,24 @@ export default function SkillOracleApplications() {
 
                             let color = "#FFA500"; // orange = pending
                             if (app.isFinalized) {
-                                color = app.result ? "#00C853" : "#F44336"; // green/red
+                                color = app.result ? "#00C853" : "#F44336";
                             } else if (app.isVotingActive) {
                                 color = votePercent >= 75 ? "#00C853" : votePercent >= 50 ? "#FFA500" : "#F44336";
                             }
 
+                            // fees is a STRING in AskAthena, not uint256
+                            const feeAmount = app.fees ? (parseInt(app.fees) / 1000000).toFixed(2) : "0.00";
+
                             apps.push({
                                 id: String(i),
-                                title: app.targetOracleName || "Unknown Oracle",
+                                title: app.targetOracle || "Unknown Oracle",
+                                description: app.description || "",
                                 proposedBy: app.applicant,
                                 status: app.isFinalized
                                     ? (app.result ? "Approved" : "Rejected")
                                     : (app.isVotingActive ? "Voting" : "Pending"),
                                 voteSubmissions: votePercent,
-                                amount: (parseInt(app.feeAmount) / 1000000).toFixed(2),
+                                amount: feeAmount,
                                 color,
                             });
                         }
@@ -105,7 +108,7 @@ export default function SkillOracleApplications() {
 
                 setApplications(apps);
             } catch (err) {
-                console.error("Error loading skill verification applications:", err);
+                console.error("Error loading AskAthena applications:", err);
                 setError(err.message);
             } finally {
                 setLoading(false);
@@ -126,7 +129,7 @@ export default function SkillOracleApplications() {
             ]
         },
         {
-            title: 'Applications',
+            title: 'Ask Athena',
             items: [
                 'Oracles',
                 'Members',
@@ -206,7 +209,7 @@ export default function SkillOracleApplications() {
                 ),
                 actions: (
                     <div className="view-detail">
-                        <DetailButton to={`/skill-verification-application/${app.id}`} title={'View'} imgSrc="/view.svg" alt="view"/>
+                        <DetailButton to={`/ask-athena-application/${app.id}`} title={'View'} imgSrc="/view.svg" alt="view"/>
                     </div>
                 ),
             };
@@ -236,7 +239,7 @@ export default function SkillOracleApplications() {
                     titleOptions={titleOptions}
                     filterOptions={filterOptions}
                     applyNow={true}
-                    applyNowUrl={walletAddress ? `/skill-verification/${walletAddress}` : '/connect-wallet'}
+                    applyNowUrl={walletAddress ? `/ask-athena/${walletAddress}` : '/connect-wallet'}
                     selectedColumns={selectedColumns}
                     onColumnToggle={handleColumnToggle}
                     allColumns={allColumns}

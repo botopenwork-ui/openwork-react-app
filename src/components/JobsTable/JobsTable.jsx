@@ -51,7 +51,7 @@ function Box({icon, title, number, showJoinButton, onJoinClick, subtitle}) {
     )
 }
 
-export default function JobsTable({ title, tableData, currentPage, totalPages, onPageChange, headers, titleOptions, filterOptions, applyNow, addMember, backUrl='/work', boxSection, customBoxItems, customButtonLabel, customButtonIcon, onCustomButtonClick, ledgerTitle, onReferEarnClick, hideBackButton, hidePostJob, selectedColumns, onColumnToggle, allColumns, selectedFilter, onFilterChange }) {
+export default function JobsTable({ title, tableData, currentPage, totalPages, onPageChange, headers, titleOptions, filterOptions, applyNow, applyNowUrl, addMember, backUrl='/work', boxSection, customBoxItems, customButtonLabel, customButtonIcon, onCustomButtonClick, ledgerTitle, onReferEarnClick, hideBackButton, hidePostJob, selectedColumns, onColumnToggle, allColumns, selectedFilter, onFilterChange }) {
     const truncateAddress = (address) => {
         if (!address) return "";
         const start = address.substring(0, 6);
@@ -129,7 +129,7 @@ export default function JobsTable({ title, tableData, currentPage, totalPages, o
                      <BlueButton label={customButtonLabel} icon={customButtonIcon} onClick={onCustomButtonClick || (() => {})} />
                     : applyNow?
                      <BlueButton label="Apply Now" onClick={() => {
-                        location.pathname = '/apply-now'
+                        location.pathname = applyNowUrl || '/apply-now'
                     }}/>
                     :
                      !addMember && !hidePostJob && <BlueButton label="Post a Job" icon={'/plus.svg'} onClick={() => {

@@ -92,8 +92,8 @@ export default function ViewJobs() {
             // Log the raw wei value
             console.log("Proposed Amount (raw wei):", proposedAmountWei);
 
-            // Convert proposed amount from wei to ether
-            const escrowAmount = web3.utils.fromWei(proposedAmountWei, "ether");
+            // Convert proposed amount from USDC units (6 decimals)
+            const escrowAmount = web3.utils.fromWei(proposedAmountWei, "mwei");
 
             return {
               jobId,

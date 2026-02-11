@@ -126,6 +126,7 @@ export default function SkillOracle() {
                 'Members',
                 'Disputes',
                 'Applications',
+                'Ask Athena',
             ]
         }
     ];

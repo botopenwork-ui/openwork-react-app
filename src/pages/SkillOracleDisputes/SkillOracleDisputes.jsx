@@ -164,6 +164,7 @@ export default function SkillOracleDisputes() {
                 'Members',
                 'Disputes',
                 'Applications',
+                'Ask Athena',
             ]
         }
     ]

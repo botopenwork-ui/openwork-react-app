@@ -2,7 +2,7 @@
  * Local Chain Service
  * 
  * Handles write operations (transactions) to LOWJC and Athena Client contracts
- * on any supported local chain (OP Sepolia, Ethereum Sepolia, future chains).
+ * on any supported local chain (Optimism on mainnet, OP Sepolia/Ethereum Sepolia on testnet).
  * 
  * Architecture:
  * - Detects user's connected chain
@@ -16,7 +16,7 @@
  */
 
 import Web3 from "web3";
-import { getChainConfig, isChainAllowed } from "../config/chainConfig";
+import { getChainConfig, isChainAllowed, getLocalChains } from "../config/chainConfig";
 import LOWJC_ABI from "../ABIs/lowjc-lite_ABI.json";
 import ATHENA_CLIENT_ABI from "../ABIs/athena-client_ABI.json";
 
@@ -404,9 +404,11 @@ export function validateChain(chainId) {
   const config = getChainConfig(chainId);
   
   if (!config) {
+    const localChains = getLocalChains();
+    const chainNames = localChains.map(c => c.name).join(' or ');
     return {
       isSupported: false,
-      message: "This network is not supported. Please switch to OP Sepolia or Ethereum Sepolia."
+      message: `This network is not supported. Please switch to ${chainNames || 'a supported network'}.`
     };
   }
   

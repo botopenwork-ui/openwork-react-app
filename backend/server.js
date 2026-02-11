@@ -177,63 +177,68 @@ app.get('/api/start-job-status/:jobId', (req, res) => {
 // Release payment endpoint - accepts jobId from frontend
 app.post('/api/release-payment', async (req, res) => {
   const { jobId, opSepoliaTxHash } = req.body;
-  
+
   if (!jobId) {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'Missing jobId' 
+    return res.status(400).json({
+      success: false,
+      error: 'Missing jobId'
     });
   }
-  
+
   // Auto-start event listener if not active (for PaymentReleased monitoring)
   if (!eventListenerActive) {
     console.log('🎧 Auto-starting event listener for release payment flow...');
     startEventListener();
   }
-  
-  const key = `payment-${jobId}`;
-  
+
+  // Use tx hash in key to distinguish multiple milestone releases for same job
+  const key = opSepoliaTxHash ? `payment-${jobId}-${opSepoliaTxHash}` : `payment-${jobId}`;
+  // Status key also uses tx hash so each release is tracked independently
+  const statusKey = opSepoliaTxHash ? `${jobId}-${opSepoliaTxHash}` : jobId;
+
   if (processingJobs.has(key)) {
-    return res.json({ 
-      success: true, 
-      jobId, 
+    return res.json({
+      success: true,
+      jobId,
+      statusKey,
       status: 'already_processing',
       message: 'Payment is already being processed'
     });
   }
-  
+
   if (completedJobs.has(key)) {
-    return res.json({ 
-      success: true, 
-      jobId, 
+    return res.json({
+      success: true,
+      jobId,
+      statusKey,
       status: 'already_completed',
       message: 'Payment has already been completed'
     });
   }
-  
+
   // Mark as processing
   processingJobs.add(key);
-  jobStatuses.set(jobId, {
+  jobStatuses.set(statusKey, {
     status: 'waiting_for_event',
     message: 'Waiting for PaymentReleased event on Arbitrum...',
     opSepoliaTxHash
   });
-  
+
   console.log(`\n📥 API: Received release-payment request for Job ${jobId}`);
   if (opSepoliaTxHash) {
-    console.log(`   OP Sepolia TX: ${opSepoliaTxHash}`);
+    console.log(`   OP TX: ${opSepoliaTxHash}`);
   }
-  
-  // Process in background
-  processReleasePaymentFlow(jobId, jobStatuses)
+
+  // Process in background — pass statusKey so internal updates use the right key
+  processReleasePaymentFlow(jobId, jobStatuses, statusKey)
     .then(() => {
-      jobStatuses.set(jobId, {
+      jobStatuses.set(statusKey, {
         status: 'completed',
         message: 'Payment released successfully to applicant'
       });
     })
     .catch((error) => {
-      jobStatuses.set(jobId, {
+      jobStatuses.set(statusKey, {
         status: 'failed',
         message: 'Payment release failed',
         error: error.message
@@ -242,43 +247,151 @@ app.post('/api/release-payment', async (req, res) => {
     .finally(() => {
       processingJobs.delete(key);
       completedJobs.set(key, Date.now());
-      
+
       // Clean up old completed jobs (keep last 100)
       if (completedJobs.size > 100) {
         const firstKey = completedJobs.keys().next().value;
         completedJobs.delete(firstKey);
       }
-      
+
       // Clean up old statuses after 1 hour
       setTimeout(() => {
-        jobStatuses.delete(jobId);
+        jobStatuses.delete(statusKey);
       }, 60 * 60 * 1000);
     });
-  
-  // Return immediately
-  res.json({ 
-    success: true, 
-    jobId, 
+
+  // Return immediately with statusKey so frontend can poll the correct status
+  res.json({
+    success: true,
+    jobId,
+    statusKey,
     status: 'processing',
     message: 'Payment release processing started'
   });
 });
 
+// Lock milestone CCTP relay endpoint - triggers OP→ARB receive after lockNextMilestone
+app.post('/api/lock-milestone', async (req, res) => {
+  const { jobId, txHash } = req.body;
+
+  if (!jobId || !txHash) {
+    return res.status(400).json({
+      success: false,
+      error: 'Missing jobId or txHash'
+    });
+  }
+
+  // Use txHash in dedup key so each lock can be processed independently
+  const key = `lock-${jobId}-${txHash}`;
+  const statusKey = `lock-${jobId}-${txHash}`;
+
+  if (processingJobs.has(key)) {
+    return res.json({
+      success: true,
+      jobId,
+      statusKey,
+      status: 'already_processing',
+      message: 'Lock milestone CCTP relay is already being processed'
+    });
+  }
+
+  if (completedJobs.has(key)) {
+    return res.json({
+      success: true,
+      jobId,
+      statusKey,
+      status: 'already_completed',
+      message: 'Lock milestone CCTP relay has already been completed'
+    });
+  }
+
+  // Mark as processing
+  processingJobs.add(key);
+  jobStatuses.set(statusKey, {
+    status: 'received',
+    message: 'Backend received lock milestone CCTP relay request...',
+    txHash
+  });
+
+  console.log(`\n📥 API: Received lock-milestone CCTP relay request for Job ${jobId}`);
+  console.log(`   Source TX: ${txHash}`);
+
+  // Process in background — same CCTP relay as start-job (OP→ARB via Transceiver)
+  processLockMilestoneCCTP(jobId, txHash, statusKey)
+    .then((result) => {
+      jobStatuses.set(statusKey, {
+        status: 'completed',
+        message: 'CCTP relay completed — USDC received by NOWJC on Arbitrum',
+        txHash,
+        completionTxHash: result.completionTxHash || 'already_completed'
+      });
+    })
+    .catch((error) => {
+      jobStatuses.set(statusKey, {
+        status: 'failed',
+        message: 'CCTP relay failed — USDC may not have reached NOWJC',
+        error: error.message,
+        txHash
+      });
+    })
+    .finally(() => {
+      processingJobs.delete(key);
+      completedJobs.set(key, Date.now());
+
+      if (completedJobs.size > 100) {
+        const firstKey = completedJobs.keys().next().value;
+        completedJobs.delete(firstKey);
+      }
+
+      setTimeout(() => {
+        jobStatuses.delete(statusKey);
+      }, 60 * 60 * 1000);
+    });
+
+  res.json({
+    success: true,
+    jobId,
+    statusKey,
+    status: 'processing',
+    message: 'Lock milestone CCTP relay started'
+  });
+});
+
+// Get lock milestone CCTP relay status
+app.get('/api/lock-milestone-status/:statusKey', (req, res) => {
+  const { statusKey } = req.params;
+  const status = jobStatuses.get(statusKey);
+
+  if (!status) {
+    return res.status(404).json({
+      success: false,
+      error: 'Lock milestone status not found'
+    });
+  }
+
+  res.json({
+    success: true,
+    statusKey,
+    ...status
+  });
+});
+
 // Get release payment status endpoint
-app.get('/api/release-payment-status/:jobId', (req, res) => {
-  const { jobId } = req.params;
-  const status = jobStatuses.get(jobId);
-  
+// Supports both /api/release-payment-status/:statusKey and legacy /api/release-payment-status/:jobId
+app.get('/api/release-payment-status/:statusKey', (req, res) => {
+  const { statusKey } = req.params;
+  const status = jobStatuses.get(statusKey);
+
   if (!status) {
     return res.status(404).json({
       success: false,
       error: 'Payment status not found'
     });
   }
-  
+
   res.json({
     success: true,
-    jobId,
+    statusKey,
     ...status
   });
 });
@@ -661,6 +774,100 @@ async function processStartJobDirect(jobId, sourceTxHash) {
 }
 
 /**
+ * Process Lock Milestone CCTP relay: OP → Arbitrum
+ * Same CCTP flow as startJob (source chain → Arbitrum via Transceiver receive())
+ * but with separate status tracking per lock tx
+ */
+async function processLockMilestoneCCTP(jobId, sourceTxHash, statusKey) {
+  try {
+    console.log('\n🔒 ========== LOCK MILESTONE CCTP RELAY ==========');
+    console.log(`Job ID: ${jobId}`);
+    console.log(`Source TX: ${sourceTxHash}`);
+    console.log(`Status Key: ${statusKey}`);
+
+    const { getDomainFromJobId, getChainNameFromJobId } = require('./utils/chain-utils');
+    const { saveCCTPTransfer, updateCCTPStatus } = require('./utils/cctp-storage');
+    const { pollCCTPAttestation } = require('./utils/cctp-poller');
+    const { executeReceiveOnArbitrum } = require('./utils/tx-executor');
+
+    // Detect source chain from job ID
+    const sourceChain = getChainNameFromJobId(jobId);
+    const sourceDomain = getDomainFromJobId(jobId);
+    console.log(`Source Chain: ${sourceChain} (Domain ${sourceDomain})`);
+
+    // Save to database
+    await saveCCTPTransfer('lockMilestone', jobId, sourceTxHash, sourceChain, sourceDomain);
+
+    // Update in-memory status
+    jobStatuses.set(statusKey, {
+      status: 'polling_attestation',
+      message: `Polling Circle API for CCTP attestation from ${sourceChain}...`,
+      txHash: sourceTxHash
+    });
+
+    await updateCCTPStatus(jobId, 'lockMilestone', { step: 'polling_attestation' });
+
+    // STEP 1: Poll Circle API for CCTP attestation
+    console.log(`\n📍 STEP 1/2: Polling Circle API for CCTP attestation (Domain ${sourceDomain})...`);
+    const attestation = await pollCCTPAttestation(sourceTxHash, sourceDomain);
+    console.log(`✅ Attestation received from ${sourceChain}`);
+
+    // Update status
+    await updateCCTPStatus(jobId, 'lockMilestone', {
+      step: 'executing_receive',
+      attestationMessage: attestation.message,
+      attestationSignature: attestation.attestation
+    });
+
+    jobStatuses.set(statusKey, {
+      status: 'executing_receive',
+      message: 'Executing receive() on Arbitrum CCTP Transceiver...',
+      txHash: sourceTxHash
+    });
+
+    // STEP 2: Execute receive() on Arbitrum
+    console.log('\n📍 STEP 2/2: Executing receive() on Arbitrum...');
+    const result = await executeReceiveOnArbitrum(attestation);
+
+    if (result.alreadyCompleted) {
+      console.log('✅ USDC already transferred to NOWJC (completed by CCTP)');
+    } else {
+      console.log(`✅ USDC transferred to NOWJC: ${result.transactionHash}`);
+    }
+
+    await updateCCTPStatus(jobId, 'lockMilestone', {
+      status: 'completed',
+      completionTxHash: result.transactionHash || 'already_completed'
+    });
+
+    console.log('\n🎉 ========== LOCK MILESTONE CCTP RELAY COMPLETED ==========\n');
+
+    return {
+      success: true,
+      jobId,
+      sourceTxHash,
+      sourceChain,
+      completionTxHash: result.transactionHash,
+      alreadyCompleted: result.alreadyCompleted
+    };
+
+  } catch (error) {
+    console.error('\n❌ ========== LOCK MILESTONE CCTP RELAY FAILED ==========');
+    console.error(`Job ID: ${jobId}`);
+    console.error(`Error: ${error.message}`);
+    console.error('=======================================================\n');
+
+    const { updateCCTPStatus } = require('./utils/cctp-storage');
+    await updateCCTPStatus(jobId, 'lockMilestone', {
+      status: 'failed',
+      lastError: error.message
+    });
+
+    throw error;
+  }
+}
+
+/**
  * Monitor NOWJC contract for events (used for release payment)
  */
 async function startEventListener() {
@@ -742,9 +949,9 @@ async function startEventListener() {
 /**
  * Process Release Payment flow with error handling
  */
-async function processReleasePaymentFlow(jobId, statusMap) {
+async function processReleasePaymentFlow(jobId, statusMap, statusKey) {
   try {
-    await processReleasePayment(jobId, statusMap);
+    await processReleasePayment(jobId, statusMap, statusKey);
   } catch (error) {
     console.error(`Failed to process Release Payment for ${jobId}:`, error.message);
   }

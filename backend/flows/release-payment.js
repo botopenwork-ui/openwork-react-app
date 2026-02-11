@@ -11,8 +11,10 @@ const config = require('../config');
  * Payment goes to the chain where the job was posted
  * @param {string} jobId - Job ID from the transaction (format: "eid-jobNumber")
  * @param {Map} statusMap - Optional status map to update progress
+ * @param {string} statusKey - Key for status updates (defaults to jobId for backward compat)
  */
-async function processReleasePayment(jobId, statusMap) {
+async function processReleasePayment(jobId, statusMap, statusKey) {
+  const sKey = statusKey || jobId;
   console.log('\n💰 ========== RELEASE PAYMENT FLOW INITIATED ==========');
   console.log(`Job ID: ${jobId}`);
   
@@ -34,7 +36,7 @@ async function processReleasePayment(jobId, statusMap) {
     
     // Update status if statusMap provided
     if (statusMap) {
-      statusMap.set(jobId, {
+      statusMap.set(sKey, {
         status: 'waiting_for_event',
         message: 'Waiting for LayerZero message to reach Arbitrum...'
       });
@@ -56,7 +58,7 @@ async function processReleasePayment(jobId, statusMap) {
 
     // Update status if statusMap provided
     if (statusMap) {
-      statusMap.set(jobId, {
+      statusMap.set(sKey, {
         status: 'polling_attestation',
         message: 'Polling Circle API for CCTP attestation...'
       });
@@ -88,7 +90,7 @@ async function processReleasePayment(jobId, statusMap) {
     
     // Update status if statusMap provided
     if (statusMap) {
-      statusMap.set(jobId, {
+      statusMap.set(sKey, {
         status: 'executing_receive',
         message: `Executing CCTP transfer to ${destinationChain}...`
       });

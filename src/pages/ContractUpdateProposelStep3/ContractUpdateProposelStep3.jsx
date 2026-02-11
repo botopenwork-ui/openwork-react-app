@@ -3,13 +3,14 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Web3 from 'web3';
 import BackButtonProposal from '../../components/BackButtonProposal/BackButtonProposal';
 import Warning from '../../components/Warning/Warning';
-import { 
+import {
   createGenericMainDAOProposal,
   createNativeDAOProposal,
   checkMainDAOEligibility,
   checkNativeDAOEligibility,
   encodeFunctionCall
 } from '../../services/proposalCreationService';
+import { isMainnet, getNativeChain, getMainChain, getLocalChains } from '../../config/chainConfig';
 import './ContractUpdateProposelStep3.css';
 
 // Function parameter definitions
@@ -182,99 +183,127 @@ const FUNCTION_PARAMETERS = {
   }
 };
 
-// Map contracts to their addresses and which DAO governs them
-const CONTRACT_CONFIG = {
-  "Main DAO": { 
-    address: "0xc3579BDC6eC1fAad8a67B1Dc5542EBcf28456465", 
-    chain: "Base Sepolia",
-    chainId: 84532,
-    dao: "Main"
-  },
-  "Native DAO": { 
-    address: "0x21451dCE07Ad3Ab638Ec71299C1D2BD2064b90E5", 
-    chain: "Arbitrum Sepolia",
-    chainId: 421614,
-    dao: "Native"
-  },
-  "Native Athena": { 
-    address: "0x098E52Aff44AEAd944AFf86F4A5b90dbAF5B86bd", 
-    chain: "Arbitrum Sepolia",
-    chainId: 421614,
-    dao: "Native"
-  },
-  "Native Athena Oracle Manager": { 
-    address: "0x70F6fa515120efeA3e404234C318b7745D23ADD4", 
-    chain: "Arbitrum Sepolia",
-    chainId: 421614,
-    dao: "Native"
-  },
-  "Native OpenWork Job Contract": { 
-    address: "0x9E39B37275854449782F1a2a4524405cE79d6C1e", 
-    chain: "Arbitrum Sepolia",
-    chainId: 421614,
-    dao: "Native"
-  },
-  "Main Rewards": { 
-    address: "0xd6bE0C187408155be99C4e9d6f860eDDa27b056B", 
-    chain: "Base Sepolia",
-    chainId: 84532,
-    dao: "Main"
-  },
-  "Native Rewards": { 
-    address: "0x947cAd64a26Eae5F82aF68b7Dbf8b457a8f492De", 
-    chain: "Arbitrum Sepolia",
-    chainId: 421614,
-    dao: "Native"
-  },
-  "Local OpenWork Job Contract": { 
-    address: "0x896a3Bc6ED01f549Fe20bD1F25067951913b793C", 
-    chain: "OP Sepolia",
-    chainId: 11155420,
-    dao: "Native"
-  },
-  "Athena Client": { 
-    address: "0x45E51B424c87Eb430E705CcE3EcD8e22baD267f7", 
-    chain: "OP Sepolia",
-    chainId: 11155420,
-    dao: "Native"
-  },
-  "Main Chain Bridge": { 
-    address: "0x70d30e5dAb5005b126C040f1D9b0bDDBc16679b0", 
-    chain: "Base Sepolia",
-    chainId: 84532,
-    dao: "Main"
-  },
-  "Native Bridge": { 
-    address: "0x3b2AC1d1281cA4a1188d9F09A5Af9a9E6a114D6c", 
-    chain: "Arbitrum Sepolia",
-    chainId: 421614,
-    dao: "Native"
-  },
-  "Local Bridge": { 
-    address: "0x6601cF4156160cf43fd024bac30851d3ee0F8668", 
-    chain: "OP Sepolia",
-    chainId: 11155420,
-    dao: "Native"
-  },
-  "Profile Manager": { 
-    address: "0xFc4dA60Ea9D88B81a894CfbD5941b7d0E3fEe401", 
-    chain: "Arbitrum Sepolia",
-    chainId: 421614,
-    dao: "Native"
-  },
-  "OpenWork Genesis": { 
-    address: "0x1f23683C748fA1AF99B7263dea121eCc5Fe7564C", 
-    chain: "Arbitrum Sepolia",
-    chainId: 421614,
-    dao: "Native"
-  },
-  "Profile Genesis": { 
-    address: "0xC37A9dFbb57837F74725AAbEe068f07A1155c394", 
-    chain: "Arbitrum Sepolia",
-    chainId: 421614,
-    dao: "Native"
-  }
-};
+// Dynamically build contract config from chainConfig based on network mode
+function buildContractConfig() {
+  const nativeChain = getNativeChain();
+  const mainChain = getMainChain();
+  const localChains = getLocalChains();
+  const firstLocal = localChains[0]; // Primary local chain (OP)
+
+  const nc = nativeChain?.contracts || {};
+  const mc = mainChain?.contracts || {};
+  const lc = firstLocal?.contracts || {};
+
+  return {
+    "Main DAO": {
+      address: mc.mainDAO || "",
+      chain: mainChain?.name || "",
+      chainId: mainChain?.chainId || 0,
+      blockExplorer: mainChain?.blockExplorer || "",
+      dao: "Main"
+    },
+    "Native DAO": {
+      address: nc.nativeDAO || "",
+      chain: nativeChain?.name || "",
+      chainId: nativeChain?.chainId || 0,
+      blockExplorer: nativeChain?.blockExplorer || "",
+      dao: "Native"
+    },
+    "Native Athena": {
+      address: nc.nativeAthena || "",
+      chain: nativeChain?.name || "",
+      chainId: nativeChain?.chainId || 0,
+      blockExplorer: nativeChain?.blockExplorer || "",
+      dao: "Native"
+    },
+    "Native Athena Oracle Manager": {
+      address: nc.oracleManager || "",
+      chain: nativeChain?.name || "",
+      chainId: nativeChain?.chainId || 0,
+      blockExplorer: nativeChain?.blockExplorer || "",
+      dao: "Native"
+    },
+    "Native OpenWork Job Contract": {
+      address: nc.nowjc || "",
+      chain: nativeChain?.name || "",
+      chainId: nativeChain?.chainId || 0,
+      blockExplorer: nativeChain?.blockExplorer || "",
+      dao: "Native"
+    },
+    "Main Rewards": {
+      address: mc.mainRewards || "",
+      chain: mainChain?.name || "",
+      chainId: mainChain?.chainId || 0,
+      blockExplorer: mainChain?.blockExplorer || "",
+      dao: "Main"
+    },
+    "Native Rewards": {
+      address: nc.nativeRewards || "",
+      chain: nativeChain?.name || "",
+      chainId: nativeChain?.chainId || 0,
+      blockExplorer: nativeChain?.blockExplorer || "",
+      dao: "Native"
+    },
+    "Local OpenWork Job Contract": {
+      address: lc.lowjc || "",
+      chain: firstLocal?.name || "",
+      chainId: firstLocal?.chainId || 0,
+      blockExplorer: firstLocal?.blockExplorer || "",
+      dao: "Native"
+    },
+    "Athena Client": {
+      address: lc.athenaClient || "",
+      chain: firstLocal?.name || "",
+      chainId: firstLocal?.chainId || 0,
+      blockExplorer: firstLocal?.blockExplorer || "",
+      dao: "Native"
+    },
+    "Main Chain Bridge": {
+      address: mc.mainBridge || "",
+      chain: mainChain?.name || "",
+      chainId: mainChain?.chainId || 0,
+      blockExplorer: mainChain?.blockExplorer || "",
+      dao: "Main"
+    },
+    "Native Bridge": {
+      address: nc.nativeBridge || "",
+      chain: nativeChain?.name || "",
+      chainId: nativeChain?.chainId || 0,
+      blockExplorer: nativeChain?.blockExplorer || "",
+      dao: "Native"
+    },
+    "Local Bridge": {
+      address: lc.localBridge || "",
+      chain: firstLocal?.name || "",
+      chainId: firstLocal?.chainId || 0,
+      blockExplorer: firstLocal?.blockExplorer || "",
+      dao: "Native"
+    },
+    "Profile Manager": {
+      address: nc.profileManager || "",
+      chain: nativeChain?.name || "",
+      chainId: nativeChain?.chainId || 0,
+      blockExplorer: nativeChain?.blockExplorer || "",
+      dao: "Native"
+    },
+    "OpenWork Genesis": {
+      address: nc.genesis || "",
+      chain: nativeChain?.name || "",
+      chainId: nativeChain?.chainId || 0,
+      blockExplorer: nativeChain?.blockExplorer || "",
+      dao: "Native"
+    },
+    "Profile Genesis": {
+      address: nc.profileGenesis || "",
+      chain: nativeChain?.name || "",
+      chainId: nativeChain?.chainId || 0,
+      blockExplorer: nativeChain?.blockExplorer || "",
+      dao: "Native"
+    }
+  };
+}
+
+const CONTRACT_CONFIG = buildContractConfig();
 
 const ContractUpdateProposelStep3 = () => {
   const navigate = useNavigate();
@@ -472,7 +501,7 @@ const ContractUpdateProposelStep3 = () => {
 
       {/* View Contract Link */}
       {CONTRACT_CONFIG[contractName] && (
-        <div className="viewContractLink" onClick={() => window.open(`https://sepolia.${CONTRACT_CONFIG[contractName].chain.includes('Base') ? 'basescan.org' : CONTRACT_CONFIG[contractName].chain.includes('Arbitrum') ? 'arbiscan.io' : 'optimism.etherscan.io'}/address/${CONTRACT_CONFIG[contractName].address}`, '_blank')}>
+        <div className="viewContractLink" onClick={() => window.open(`${CONTRACT_CONFIG[contractName].blockExplorer}/address/${CONTRACT_CONFIG[contractName].address}`, '_blank')}>
           <span>View contract</span>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M5 11L11 5M11 5H7M11 5V9" stroke="#1246FF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>

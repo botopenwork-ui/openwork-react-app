@@ -55,6 +55,9 @@ import MembersSkillOracle from "./pages/MembersSkillOracle/MembersSkillOracle";
 import SkillOracleProposals from "./pages/SkillOracleProposals/SkillOracleProposals";
 import SkillOracleDisputes from "./pages/SkillOracleDisputes/SkillOracleDisputes";
 import SkillOracleApplications from "./pages/SkillOracleApplications/SkillOracleApplications";
+import AskAthena from "./pages/AskAthena/AskAthena";
+import AskAthenaApplications from "./pages/AskAthenaApplications/AskAthenaApplications";
+import AskAthenaApplication from "./pages/AskAthenaApplication/AskAthenaApplication";
 import DAOMembers from "./pages/DAOMembers/DAOMembers";
 import MembersGovernance from "./pages/MembersGovernance/MembersGovernance";
 import RemoveMember from "./pages/RemoveMember/RemoveMember";
@@ -351,6 +354,9 @@ export default function App() {
               <Route path="/skill-oracle-proposals" element={<SkillOracleProposals/>} />
               <Route path="/skill-oracle-disputes" element={<SkillOracleDisputes/>} />
               <Route path="/skill-oracle-applications" element={<SkillOracleApplications/>} />
+              <Route path="/ask-athena/:address" element={<AskAthena/>} />
+              <Route path="/ask-athena-applications" element={<AskAthenaApplications/>} />
+              <Route path="/ask-athena-application/:jobId" element={<AskAthenaApplication/>} />
               <Route path="/dao-members" element={<DAOMembers/>} />
               <Route path="/members-governance/:jobId" element={<MembersGovernance/>} />
               <Route path="/remove-member/:jobId" element={<RemoveMember/>} />

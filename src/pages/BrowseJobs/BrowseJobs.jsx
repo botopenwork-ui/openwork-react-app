@@ -6,7 +6,7 @@ import JobsTable from "../../components/JobsTable/JobsTable";
 import "./BrowseJobs.css";
 import SkillBox from "../../components/SkillBox/SkillBox";
 import DetailButton from "../../components/DetailButton/DetailButton";
-import { extractChainIdFromJobId, getChainLogo, getChainConfig, getNativeChain, isMainnet } from "../../config/chainConfig";
+import { extractChainIdFromJobId, getChainLogo, getChainConfig, getNativeChain, getLocalChains, isMainnet } from "../../config/chainConfig";
 
 // Get contract address and RPC dynamically based on network mode
 function getGenesisAddress() {
@@ -160,6 +160,9 @@ export default function BrowseJobs() {
         });
     };
 
+    // Build chain filter names dynamically from chainConfig
+    const localChainNames = getLocalChains().map(c => c.name);
+
     const filterOptions = [
         {
             title: "Table Columns",
@@ -177,8 +180,7 @@ export default function BrowseJobs() {
                 "All",
                 "Active",
                 "Completed",
-                "OP Sepolia",
-                "Ethereum Sepolia"
+                ...localChainNames
             ],
         },
     ];

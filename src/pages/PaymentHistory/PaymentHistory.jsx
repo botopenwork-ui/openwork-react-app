@@ -111,9 +111,9 @@ export default function PaymentHistory() {
           .getJobEscrowAmount(jobId)
           .call();
 
-        // Convert amounts from wei to ether
-        const proposedAmount = web3.utils.fromWei(proposedAmountWei, "ether");
-        const currentEscrowAmount = web3.utils.fromWei(escrowAmountWei, "ether");
+        // Convert amounts from USDC units (6 decimals)
+        const proposedAmount = web3.utils.fromWei(proposedAmountWei, "mwei");
+        const currentEscrowAmount = web3.utils.fromWei(escrowAmountWei, "mwei");
 
         const amountReleased = proposedAmount - currentEscrowAmount;
 

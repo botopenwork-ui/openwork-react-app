@@ -53,9 +53,21 @@ const DropDown = ({ label, options, customCSS, width, onOptionSelect }) => {
       if (option === 'Applications' && (
         window.location.pathname.includes('/skill-oracle') ||
         window.location.pathname.includes('/members-skill-oracle') ||
-        window.location.pathname.includes('/skill-oracles')
+        window.location.pathname.includes('/skill-oracles') ||
+        window.location.pathname.includes('/ask-athena')
       )) {
         navigate('/skill-oracle-applications');
+        return;
+      }
+
+      // Handle Ask Athena context
+      if (option === 'Ask Athena' && (
+        window.location.pathname.includes('/skill-oracle') ||
+        window.location.pathname.includes('/members-skill-oracle') ||
+        window.location.pathname.includes('/skill-oracles') ||
+        window.location.pathname.includes('/ask-athena')
+      )) {
+        navigate('/ask-athena-applications');
         return;
       }
       

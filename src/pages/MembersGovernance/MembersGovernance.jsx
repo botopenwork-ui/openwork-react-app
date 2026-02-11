@@ -128,11 +128,11 @@ export default function MembersGovernance() {
         console.log("Proposed Amount (raw wei):", proposedAmountWei);
         console.log("Escrow Amount (raw wei):", escrowAmountWei);
 
-        // Convert amounts from wei to ether
-        const proposedAmount = web3.utils.fromWei(proposedAmountWei, "ether");
+        // Convert amounts from USDC units (6 decimals)
+        const proposedAmount = web3.utils.fromWei(proposedAmountWei, "mwei");
         const currentEscrowAmount = web3.utils.fromWei(
           escrowAmountWei,
-          "ether"
+          "mwei"
         );
 
         const receivedAmount = proposedAmount - currentEscrowAmount;
