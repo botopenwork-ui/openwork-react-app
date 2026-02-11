@@ -8,6 +8,7 @@ import { arrowConnections } from './data/arrowConnections';
 import { buildOppyContext, FALLBACK_RESPONSES } from './data/oppyKnowledge';
 import flowsData from './data/flowsData';
 import multiChainIntegrationGuide from './data/multiChainIntegrationGuide';
+import openclawGuide from './data/openclawGuide';
 import FlowVisualizer from '../../components/FlowVisualizer';
 import UserFlowsOverview from '../../components/UserFlowsOverview';
 import AdminLogin from '../../components/AdminLogin';
@@ -493,6 +494,21 @@ const OpenworkDocs = () => {
             </div>
           </div>
 
+          <div>
+            <div
+              onClick={() => {
+                setSelectedContract('openclaw');
+                setActiveTab('docs');
+              }}
+              className={`docs-sidebar-item docs-sidebar-item-flows ${selectedContract === 'openclaw' ? 'docs-sidebar-item-flows-active' : ''}`}
+            >
+              <div className="docs-sidebar-item-content">
+                <Code className="docs-sidebar-item-icon" />
+                <span className="docs-sidebar-item-text">OpenClaw Skill Guide</span>
+              </div>
+            </div>
+          </div>
+
           <div className="docs-sidebar-section">
             <h3 className="docs-sidebar-section-title">Base (Main Chain)</h3>
             {contractsByChain.base.contracts.map(c => (
@@ -761,7 +777,7 @@ const OpenworkDocs = () => {
         ))}
       </div>
 
-      {(selected || selectedContract === 'ipfs' || selectedContract === 'oppy' || selectedContract === 'flows' || selectedContract === 'multichain') && (
+      {(selected || selectedContract === 'ipfs' || selectedContract === 'oppy' || selectedContract === 'flows' || selectedContract === 'multichain' || selectedContract === 'openclaw') && (
         <div className="docs-details-panel">
           <button
             onClick={() => {
@@ -800,6 +816,16 @@ const OpenworkDocs = () => {
                   <h2 className="docs-details-title">Multi-Chain Integration</h2>
                 </div>
                 <p className="docs-details-subtitle">Complete guide for developers to add new blockchains</p>
+              </>
+            )}
+
+            {selectedContract === 'openclaw' && (
+              <>
+                <div className="docs-details-header-flows">
+                  <Code className="docs-details-header-icon" />
+                  <h2 className="docs-details-title">OpenClaw Skill Guide</h2>
+                </div>
+                <p className="docs-details-subtitle">Integrate OpenWork with OpenClaw AI agents</p>
               </>
             )}
 
@@ -1279,6 +1305,192 @@ const OpenworkDocs = () => {
                         </div>
                       </>
                     )}
+                  </div>
+                )}
+
+                {activeTab === 'docs' && selectedContract === 'openclaw' && (
+                  <div>
+                    {/* Description */}
+                    <div className="docs-prose">
+                      <p>{openclawGuide.description}</p>
+                    </div>
+
+                    {/* Repository Links */}
+                    <div className="docs-section">
+                      <h3 className="docs-section-title">📦 Repositories</h3>
+                      {openclawGuide.repos.map((repo, idx) => (
+                        <div key={idx} className="docs-dependency-card" style={{ marginBottom: '12px' }}>
+                          <div className="docs-dependency-header">
+                            <a
+                              href={repo.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="docs-dependency-name"
+                              style={{ color: '#3b82f6', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            >
+                              {repo.name} <ExternalLink size={14} />
+                            </a>
+                          </div>
+                          <p className="docs-dependency-reason">{repo.description}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Prerequisites */}
+                    <div className="docs-section">
+                      <h3 className="docs-section-title">📋 Prerequisites</h3>
+                      <ul className="docs-feature-list">
+                        {openclawGuide.prerequisites.map((prereq, idx) => (
+                          <li key={idx} className="docs-feature-item">{prereq}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Installation */}
+                    <div className="docs-section">
+                      <h3 className="docs-section-title">🚀 {openclawGuide.installation.title}</h3>
+                      {openclawGuide.installation.steps.map((step, idx) => (
+                        <div key={idx} className="docs-dependency-card" style={{ marginBottom: '12px' }}>
+                          <div className="docs-dependency-header">
+                            <span className="docs-dependency-name">{step.method}</span>
+                          </div>
+                          <p className="docs-dependency-reason" style={{ marginBottom: '8px' }}>{step.description}</p>
+                          <pre className="docs-code-block" style={{ margin: 0, fontSize: '12px' }}>
+                            <code>{step.command}</code>
+                          </pre>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Skill Package Structure */}
+                    <div className="docs-section">
+                      <h3 className="docs-section-title">📁 {openclawGuide.skillStructure.title}</h3>
+                      {openclawGuide.skillStructure.files.map((file, idx) => (
+                        <div key={idx} className="docs-function-item" style={{ marginBottom: '8px' }}>
+                          <button
+                            onClick={() => toggleSection(`openclaw-file-${idx}`)}
+                            className="docs-function-toggle"
+                          >
+                            <span className="docs-function-name" style={{ fontFamily: 'monospace', fontSize: '13px' }}>
+                              {file.path}
+                            </span>
+                            {expandedSections[`openclaw-file-${idx}`] ?
+                              <ChevronDown className="docs-function-icon" /> :
+                              <ChevronRight className="docs-function-icon" />
+                            }
+                          </button>
+                          {expandedSections[`openclaw-file-${idx}`] && (
+                            <div className="docs-function-content">
+                              <p className="docs-function-text">{file.description}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Agent Capabilities */}
+                    <div className="docs-section">
+                      <h3 className="docs-section-title">⚡ Agent Capabilities</h3>
+                      {openclawGuide.capabilities.map((cap, idx) => (
+                        <div key={idx} className="docs-function-item" style={{ marginBottom: '12px' }}>
+                          <button
+                            onClick={() => toggleSection(`openclaw-cap-${idx}`)}
+                            className="docs-function-toggle"
+                          >
+                            <span className="docs-function-name">
+                              {cap.icon} {cap.name}
+                            </span>
+                            {expandedSections[`openclaw-cap-${idx}`] ?
+                              <ChevronDown className="docs-function-icon" /> :
+                              <ChevronRight className="docs-function-icon" />
+                            }
+                          </button>
+                          {expandedSections[`openclaw-cap-${idx}`] && (
+                            <div className="docs-function-content">
+                              <p className="docs-function-text" style={{ marginBottom: '10px' }}>{cap.description}</p>
+                              <div className="docs-function-section">
+                                <h5 className="docs-function-section-title">Contract Functions:</h5>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                  {cap.actions.map((action, actionIdx) => (
+                                    <span
+                                      key={actionIdx}
+                                      style={{
+                                        background: '#f1f5f9',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: '4px',
+                                        padding: '2px 8px',
+                                        fontSize: '12px',
+                                        fontFamily: 'monospace',
+                                        color: '#475569'
+                                      }}
+                                    >
+                                      {action}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Chain Overview */}
+                    <div className="docs-section">
+                      <h3 className="docs-section-title">🌐 {openclawGuide.chainOverview.title}</h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr 2fr', gap: '8px', fontSize: '12px' }}>
+                        <div style={{ fontWeight: 'bold', padding: '8px', background: '#f3f4f6', borderRadius: '4px' }}>Chain</div>
+                        <div style={{ fontWeight: 'bold', padding: '8px', background: '#f3f4f6', borderRadius: '4px' }}>Role</div>
+                        <div style={{ fontWeight: 'bold', padding: '8px', background: '#f3f4f6', borderRadius: '4px' }}>Description</div>
+                        <div style={{ fontWeight: 'bold', padding: '8px', background: '#f3f4f6', borderRadius: '4px' }}>Key Contract</div>
+
+                        {openclawGuide.chainOverview.chains.map((chain, idx) => (
+                          <React.Fragment key={idx}>
+                            <div style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', fontWeight: 500 }}>{chain.name}</div>
+                            <div style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>{chain.role}</div>
+                            <div style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', color: '#6b7280' }}>{chain.description}</div>
+                            <div style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', fontFamily: 'monospace', fontSize: '11px' }}>{chain.keyContract}</div>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Example Prompts */}
+                    <div className="docs-section">
+                      <h3 className="docs-section-title">💬 Example Prompts</h3>
+                      <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '12px' }}>
+                        What users can say to their OpenClaw agent after installing the OpenWork skill:
+                      </p>
+                      {openclawGuide.examplePrompts.map((example, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '10px 14px',
+                            marginBottom: '8px',
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            fontSize: '13px'
+                          }}
+                        >
+                          <span style={{
+                            background: '#e0f2fe',
+                            color: '#0369a1',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {example.category}
+                          </span>
+                          <span style={{ color: '#334155', fontStyle: 'italic' }}>"{example.prompt}"</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
