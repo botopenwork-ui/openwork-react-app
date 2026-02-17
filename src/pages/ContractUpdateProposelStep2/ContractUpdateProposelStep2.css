@@ -1,0 +1,143 @@
+.contract-update-step2-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  background-color: #FEFEFE;
+}
+
+.contract-update-step2-card {
+  width: 520px;
+  background-color: #FFFFFF;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.contract-update-step2-header {
+  padding: 24px;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background-color: #FFFFFF;
+}
+
+.contract-update-step2-content {
+  padding: 36px;
+}
+
+.contract-update-step2-description {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 28px;
+  color: #868686;
+  margin: 0 0 20px 0;
+  letter-spacing: 0.28px;
+}
+
+.contract-update-step2-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.contract-update-step2-item {
+  width: 456px;
+  height: 64px;
+  background-color: transparent;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.contract-update-step2-item:hover {
+  background-color: rgba(18, 70, 255, 0.02);
+  border-color: rgba(18, 70, 255, 0.1);
+}
+
+.contract-update-step2-item-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.aspect-file-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.aspect-name {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 24px;
+  color: #050505;
+  text-align: left;
+}
+
+.aspect-arrow {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  transform: rotate(90deg);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.contract-update-step2-container {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.contract-update-step2-card {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.contract-update-step2-header {
+  animation: fadeIn 0.6s ease-in-out 0.1s backwards;
+}
+
+.contract-update-step2-description {
+  animation: fadeInUp 0.5s ease-out 0.2s backwards;
+}
+
+.contract-update-step2-list {
+  animation: fadeInUp 0.5s ease-out 0.3s backwards;
+}
+
+.contract-update-step2-item:nth-child(1) {
+  animation: fadeInUp 0.5s ease-out 0.4s backwards;
+}
+
+.contract-update-step2-item:nth-child(2) {
+  animation: fadeInUp 0.5s ease-out 0.5s backwards;
+}

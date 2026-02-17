@@ -1,0 +1,388 @@
+/* Profile Section (LP-2) */
+.lp-2-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FFFFFF;
+  padding: 64px 0;
+}
+
+.lp-2-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 90px;
+  width: 100%;
+  max-width: 1280px;
+  padding: 0 162px;
+}
+
+/* Left Content - LP-2 */
+.lp-2-content {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  width: 432px;
+  flex-shrink: 0;
+}
+
+.lp-2-heading {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 48px;
+  letter-spacing: -1.6px;
+  color: #050505;
+  margin: 0;
+}
+
+.lp-2-description {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  color: #767676;
+  margin: 0;
+}
+
+/* Right Content - Profile Circle */
+.profile-circle-section {
+  width: 500px;
+  height: 450px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.profile-circle-group {
+  position: absolute;
+  width: 383.5px;
+  height: 383.5px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Profile Radiant Glow */
+.profile-radiant-glow {
+  position: absolute;
+  width: 460px;
+  height: 460px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: url('/RadiantGlow.png') center/contain no-repeat;
+  animation: rotate-glow 20s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes rotate-glow {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.profile-radiant-glow img {
+  display: none;
+}
+
+.glow-overlay {
+  display: none;
+}
+
+/* Profile Circle Background */
+.profile-circle-bg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+  z-index: 2;
+}
+
+/* Radial Buttons */
+.radial-button {
+  position: absolute;
+  width: 119.687px;
+  height: 119.687px;
+  background: linear-gradient(180deg, #F4F4F4 0%, #FEFEFE 100%);
+  border: 7.731px solid #FFFFFF;
+  border-radius: 78.939px;
+  z-index: 3;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radial-button-left {
+  left: -52.55px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.radial-button-right {
+  right: -52.55px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.radial-button-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8.716px;
+}
+
+.radial-button-content img {
+  width: 14.527px;
+  height: 14.527px;
+}
+
+.radial-button-content span {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 10.46px;
+  font-weight: 500;
+  color: #4D4D4D;
+  letter-spacing: 0.4184px;
+  text-align: center;
+}
+
+/* Center Profile */
+.center-profile {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 13.945px;
+  z-index: 4;
+}
+
+.profile-avatar {
+  width: 69.727px;
+  height: 69.727px;
+  border-radius: 200px;
+  overflow: hidden;
+  border: 2.905px solid #FFFFFF;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-rating {
+  display: flex;
+  align-items: center;
+  gap: 5.23px;
+}
+
+.rating-text {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 10.459px;
+  font-weight: 700;
+  color: #868686;
+  letter-spacing: 0.2092px;
+}
+
+.star-icon {
+  position: relative;
+  width: 12.202px;
+  height: 12.202px;
+}
+
+.star-bg,
+.star {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.star {
+  z-index: 1;
+}
+
+/* LP-2 Button Override */
+.lp-2-section .blue-button {
+  width: 152px;
+  justify-content: center;
+}
+
+/* LP-2 Responsive Design */
+@media (max-width: 1440px) {
+  .lp-2-container {
+    padding: 0 80px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .lp-2-container {
+    flex-direction: column;
+    gap: 60px;
+    padding: 0 40px;
+  }
+
+  .lp-2-content {
+    width: 100%;
+    max-width: 500px;
+    text-align: center;
+    align-items: center;
+  }
+
+  .profile-circle-section {
+    width: 400px;
+    height: 400px;
+  }
+
+  .profile-circle-group {
+    width: 320px;
+    height: 320px;
+  }
+
+  .profile-radiant-glow {
+    width: 320px;
+    height: 314px;
+  }
+
+  .radial-button {
+    width: 100px;
+    height: 100px;
+    border-radius: 66px;
+    border-width: 6.5px;
+  }
+
+  .radial-button-left {
+    left: -44px;
+  }
+
+  .radial-button-right {
+    right: -44px;
+  }
+
+  .lp-2-heading {
+    font-size: 36px;
+    line-height: 44px;
+  }
+
+  .lp-2-description {
+    font-size: 15px;
+    line-height: 22px;
+  }
+}
+
+@media (max-width: 768px) {
+  .lp-2-container {
+    gap: 40px;
+    padding: 0 20px;
+  }
+
+  .lp-2-heading {
+    font-size: 32px;
+    line-height: 40px;
+    letter-spacing: -1.2px;
+  }
+
+  .lp-2-description {
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .profile-circle-section {
+    width: 320px;
+    height: 320px;
+  }
+
+  .profile-circle-group {
+    width: 260px;
+    height: 260px;
+  }
+
+  .profile-radiant-glow {
+    width: 260px;
+    height: 254px;
+  }
+
+  .radial-button {
+    width: 80px;
+    height: 80px;
+    border-radius: 53px;
+    border-width: 5px;
+  }
+
+  .radial-button-left {
+    left: -35px;
+  }
+
+  .radial-button-right {
+    right: -35px;
+  }
+
+  .radial-button-content img {
+    width: 12px;
+    height: 12px;
+  }
+
+  .radial-button-content span {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 480px) {
+  .lp-2-heading {
+    font-size: 28px;
+    line-height: 36px;
+  }
+
+  .lp-2-description {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .profile-circle-section {
+    width: 280px;
+    height: 280px;
+  }
+
+  .profile-circle-group {
+    width: 220px;
+    height: 220px;
+  }
+
+  .profile-radiant-glow {
+    width: 220px;
+    height: 215px;
+  }
+
+  .radial-button {
+    width: 70px;
+    height: 70px;
+    border-radius: 46px;
+    border-width: 4.5px;
+  }
+
+  .radial-button-left {
+    left: -30px;
+  }
+
+  .radial-button-right {
+    right: -30px;
+  }
+
+  .center-profile {
+    gap: 10px;
+  }
+
+  .profile-avatar {
+    width: 55px;
+    height: 55px;
+    border-width: 2.3px;
+  }
+}

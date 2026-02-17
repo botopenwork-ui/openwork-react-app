@@ -1,0 +1,162 @@
+.skill-oracle-proposal-container {
+    width: 100%;
+    min-height: 100vh;
+    background-color: #FEFEFE;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.skill-oracle-proposal-card {
+    width: 520px;
+    background: #FFFFFF;
+    border: 2px solid #FFFFFF;
+    border-radius: 24px;
+    box-shadow: 0px 0px 1px rgba(0, 0, 0, 0.04), 0px 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.skill-oracle-proposal-header {
+    height: 88px;
+    background: #FFFFFF;
+    border: 2px solid rgba(0, 0, 0, 0.04);
+    border-radius: 24px 24px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 32px;
+}
+
+.skill-oracle-proposal-content {
+    background: #FFFFFF;
+    border: 2px solid rgba(0, 0, 0, 0.04);
+    border-radius: 0 0 24px 24px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+.skill-oracle-proposal-description {
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 28px;
+    letter-spacing: 0.28px;
+    color: #868686;
+    margin: 0;
+    width: 456px;
+}
+
+.options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 456px;
+}
+
+.option-item {
+    width: 456px;
+    height: 68px;
+    background: #FFFFFF;
+    border: 2px solid rgba(0, 0, 0, 0.04);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.option-item:hover {
+    background: rgba(18, 70, 255, 0.02);
+    border-color: rgba(18, 70, 255, 0.1);
+}
+
+.option-item-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.option-icon-wrapper {
+    width: 36px;
+    height: 36px;
+    background: rgba(18, 70, 255, 0.06);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.option-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+}
+
+.option-name {
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 24px;
+    color: #050505;
+}
+
+.option-arrow {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    transform: rotate(90deg);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.skill-oracle-proposal-card {
+    animation: fadeIn 0.3s ease;
+}
+
+.option-item:nth-child(1) {
+    animation: fadeInUp 0.4s ease;
+}
+
+.option-item:nth-child(2) {
+    animation: fadeInUp 0.5s ease;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .skill-oracle-proposal-card {
+        width: 100%;
+        max-width: 520px;
+    }
+
+    .skill-oracle-proposal-description,
+    .options-list,
+    .option-item {
+        width: 100%;
+    }
+}

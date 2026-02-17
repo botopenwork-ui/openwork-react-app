@@ -1,0 +1,25 @@
+.wallet-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: fit-content;
+    padding: 24px;
+    border: 2px solid #f6f6f6;
+    border-radius: 24px;
+    cursor: pointer;
+}
+
+.wallet {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 500;
+}
+
+.wallet-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}

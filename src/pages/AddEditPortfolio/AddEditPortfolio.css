@@ -1,0 +1,439 @@
+/* Add/Edit Portfolio Page - Correct Layout Structure */
+
+.addedit-portfolio-wrapper {
+  min-height: 100vh;
+  width: 100%;
+  background: #FAFAFA;
+  font-family: 'Satoshi', sans-serif;
+  padding: 109px 0 80px 0;
+}
+
+.addedit-portfolio-container {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 282px;
+}
+
+/* Header Section - Outside any card */
+.addedit-header-section {
+  margin-bottom: 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.addedit-back-button {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(180deg, #F4F4F4 0%, #FEFEFE 100%);
+  box-shadow: 0px 0px 0.386148px 1.15844px rgba(0, 0, 0, 0.05), 
+              0px 4.63377px 5.01992px -2.31689px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.addedit-back-button:hover {
+  background: linear-gradient(180deg, #ECECEC 0%, #F4F4F4 100%);
+}
+
+.addedit-title-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.addedit-title {
+  font-family: 'Satoshi';
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 27px;
+  letter-spacing: 0.02em;
+  color: #4D4D4D;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.addedit-title-input {
+  font-family: 'Satoshi';
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 27px;
+  color: #4D4D4D;
+  border: 2px solid #1246FF;
+  border-radius: 8px;
+  padding: 4px 8px;
+  outline: none;
+  letter-spacing: 0.02em;
+}
+
+.addedit-edit-icon {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.addedit-edit-icon:hover {
+  opacity: 1;
+}
+
+.addedit-contract-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Satoshi';
+  font-size: 14px;
+  line-height: 19px;
+  letter-spacing: 0.02em;
+  color: #767676;
+}
+
+.addedit-copy-icon {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.addedit-copy-icon:hover {
+  opacity: 1;
+}
+
+/* Skills Bar - Horizontal row outside card */
+.addedit-skills-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.addedit-skill-badge {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: #FAFAFA;
+  border: 1px solid #EBEBEB;
+  border-radius: 9999px;
+  font-family: 'Satoshi';
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  color: #4D4D4D;
+  white-space: nowrap;
+}
+
+.addedit-change-btn,
+.addedit-delete-btn {
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  border-radius: 8px !important;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.addedit-change-btn {
+  background: #F0F0F0 !important;
+  color: #4D4D4D !important;
+  border: 1px solid #E0E0E0 !important;
+}
+
+.addedit-change-btn:hover {
+  background: #E8E8E8 !important;
+}
+
+.addedit-delete-btn {
+  background: #FFF0F0 !important;
+  color: #DC0500 !important;
+  border: 1px solid #FFCCCB !important;
+}
+
+.addedit-delete-btn:hover {
+  background: #FFE0E0 !important;
+}
+
+/* Upload/Image Card - Independent white box with VISIBLE border */
+.addedit-image-card {
+  width: 100%;
+  background: #FFFFFF;
+  border: 2px solid #E0E0E0;
+  border-radius: 24px;
+  padding: 40px;
+  margin-bottom: 24px;
+  box-sizing: border-box;
+}
+
+.addedit-main-image {
+  position: relative;
+  width: 100%;
+  height: 491px;
+  border: 1px solid #EAEAEA;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.addedit-main-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.addedit-upload-area {
+  width: 100%;
+  height: 491px;
+  border: 2px dashed #CFCFCF;
+  border-radius: 12px;
+  background: #FAFAFA;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 24px;
+}
+
+.addedit-upload-area:hover {
+  border-color: #1246FF;
+  background: #F7F9FF;
+}
+
+.upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+}
+
+.upload-label img {
+  width: 48px;
+  height: 48px;
+  opacity: 0.4;
+}
+
+.upload-label span {
+  font-family: 'Satoshi';
+  font-size: 14px;
+  font-weight: 400;
+  color: #868686;
+}
+
+.image-overlay-actions {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 10;
+}
+
+.addedit-main-image:hover .image-overlay-actions {
+  opacity: 1;
+}
+
+/* Gallery */
+.addedit-image-gallery {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.addedit-image-gallery::-webkit-scrollbar {
+  height: 6px;
+}
+
+.addedit-image-gallery::-webkit-scrollbar-track {
+  background: #F7F7F7;
+  border-radius: 3px;
+}
+
+.addedit-image-gallery::-webkit-scrollbar-thumb {
+  background: #CFCFCF;
+  border-radius: 3px;
+}
+
+.gallery-thumbnail {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  width: 176px;
+  height: 116px;
+  border: 1px solid #CFCFCF;
+  border-radius: 16px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.gallery-thumbnail:hover {
+  border-color: #1246FF;
+  box-shadow: 0 2px 8px rgba(18, 70, 255, 0.1);
+}
+
+.gallery-thumbnail.active {
+  border: 2px solid #1246FF;
+  padding: 7px;
+}
+
+.gallery-thumbnail img {
+  width: 160px;
+  height: 100px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.gallery-add-more {
+  box-sizing: border-box;
+  width: 176px;
+  height: 116px;
+  border: 2px dashed #CFCFCF;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.gallery-add-more:hover {
+  border-color: #1246FF;
+  background: #F7F9FF;
+}
+
+.add-more-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.add-more-label img {
+  width: 32px;
+  height: 32px;
+  opacity: 0.4;
+}
+
+/* Description Card - Independent white box with VISIBLE border */
+.addedit-description-card {
+  width: 100%;
+  background: #FFFFFF;
+  border: 2px solid #E0E0E0;
+  border-radius: 24px;
+  padding: 40px;
+  margin-bottom: 24px;
+  box-sizing: border-box;
+}
+
+.description-textarea {
+  width: 100%;
+  padding: 0;
+  border: none;
+  font-family: 'Satoshi';
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 28px;
+  letter-spacing: 0.02em;
+  color: #050505;
+  resize: vertical;
+  min-height: 120px;
+  outline: none;
+  background: transparent;
+}
+
+.description-textarea::placeholder {
+  color: #868686;
+}
+
+/* Submit Section */
+.addedit-submit-section {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Responsive */
+@media (max-width: 1440px) {
+  .addedit-portfolio-container {
+    padding: 0 140px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .addedit-portfolio-container {
+    padding: 0 60px;
+  }
+}
+
+@media (max-width: 768px) {
+  .addedit-portfolio-wrapper {
+    padding-top: 80px;
+  }
+
+  .addedit-portfolio-container {
+    padding: 0 20px;
+  }
+
+  .addedit-header-section {
+    gap: 12px;
+  }
+
+  .addedit-back-button {
+    width: 36px;
+    height: 36px;
+  }
+
+  .addedit-skills-bar {
+    flex-wrap: wrap;
+  }
+
+  .addedit-image-card,
+  .addedit-description-card {
+    padding: 24px;
+  }
+
+  .addedit-main-image,
+  .addedit-upload-area {
+    height: 300px;
+  }
+
+  .gallery-thumbnail {
+    width: 140px;
+    height: 92px;
+  }
+
+  .gallery-thumbnail img {
+    width: 124px;
+    height: 76px;
+  }
+
+  .gallery-add-more {
+    width: 140px;
+    height: 92px;
+  }
+}

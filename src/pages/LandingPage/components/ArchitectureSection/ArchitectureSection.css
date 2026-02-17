@@ -1,0 +1,182 @@
+/* LP-11 Architecture Section Styles */
+
+.lp-11-section {
+  width: 100%;
+  min-height: 734px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  padding: 64px 0;
+}
+
+.lp-11-container {
+  max-width: 1280px;
+  width: 100%;
+  padding: 0 162px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 90px;
+}
+
+/* Left Content */
+.lp-11-content {
+  width: 432px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.lp-11-content > button,
+.lp-11-content > div > button {
+  width: fit-content;
+}
+
+.lp-11-heading {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 48px;
+  letter-spacing: -1.6px;
+  color: #050505;
+  margin: 0;
+}
+
+.lp-11-description {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  color: #767676;
+  margin: 0;
+  margin-top: 12px;
+}
+
+/* Right Content - Architecture Diagram */
+.lp-11-diagram-container {
+  width: 500px;
+  height: 450px;
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-11-architecture-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Responsive Design */
+@media (max-width: 1440px) {
+  .lp-11-container {
+    padding: 0 120px;
+    gap: 70px;
+  }
+
+  .lp-11-content {
+    width: 400px;
+  }
+
+  .lp-11-heading {
+    font-size: 36px;
+    line-height: 44px;
+  }
+
+  .lp-11-diagram-container {
+    width: 460px;
+    height: 420px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .lp-11-container {
+    padding: 0 80px;
+    gap: 50px;
+    flex-direction: column;
+  }
+
+  .lp-11-content {
+    width: 100%;
+    max-width: 500px;
+    align-items: center;
+    text-align: center;
+  }
+
+  .lp-11-heading {
+    font-size: 32px;
+    line-height: 40px;
+  }
+
+  .lp-11-description {
+    font-size: 15px;
+    line-height: 23px;
+  }
+
+  .lp-11-diagram-container {
+    width: 100%;
+    max-width: 460px;
+    height: 420px;
+  }
+}
+
+@media (max-width: 768px) {
+  .lp-11-section {
+    padding: 60px 0;
+  }
+
+  .lp-11-container {
+    padding: 0 40px;
+    gap: 40px;
+  }
+
+  .lp-11-heading {
+    font-size: 28px;
+    line-height: 36px;
+  }
+
+  .lp-11-description {
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .lp-11-diagram-container {
+    width: 100%;
+    max-width: 380px;
+    height: 350px;
+  }
+
+  .lp-11-architecture-diagram {
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+}
+
+@media (max-width: 480px) {
+  .lp-11-container {
+    padding: 0 20px;
+    gap: 30px;
+  }
+
+  .lp-11-heading {
+    font-size: 24px;
+    line-height: 32px;
+  }
+
+  .lp-11-description {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .lp-11-diagram-container {
+    width: 100%;
+    max-width: 320px;
+    height: 300px;
+  }
+
+  .lp-11-architecture-diagram {
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+}

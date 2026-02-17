@@ -1,0 +1,20 @@
+.status-button {
+    padding: 1px 5px 3px 5px;
+    border-radius: 6px;
+    border: 1px solid var(--Success-200, #72F5BF);
+    border: 1px solid var(--Success-200, color(display-p3 0.6686 0.9392 0.7769));
+    background: var(--Success-50, #E8FDF2);
+    background: var(--Success-50, color(display-p3 0.9267 0.9909 0.9524));
+    color: #067647;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: 'Satoshi', sans-serif;
+}
+
+.status-progress {
+    border: 1px solid var(--Warning-200, #FFDC67);
+    border: 1px solid var(--Warning-200, color(display-p3 0.9977 0.8745 0.5357));
+    background: var(--Warning-50, #FFF9E9);
+    background: var(--Warning-50, color(display-p3 1 0.9791 0.9216));
+    color: #c43d00;
+}

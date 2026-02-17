@@ -1,0 +1,11 @@
+.form-post {
+    width: 536px;
+}
+
+.form-post .skill-box {
+    gap: 3px;
+}
+
+.warning-form {
+    margin-top: 16px;
+}

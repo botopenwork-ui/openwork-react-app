@@ -1,0 +1,156 @@
+/* Original styles */
+.experience-percent {
+    width: 100%;
+}
+
+/* View Detail Button Positioning */
+.view-detail {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding-right: 32px;
+}
+
+/* Progress bar styles (for resolution accuracy) */
+.vote-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.progress-bar-container {
+    flex: 1;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.vote-percentage {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    min-width: 45px;
+}
+
+/* Status badge styles */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-badge.active {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
+
+.status-badge.inactive {
+    background: rgba(156, 163, 175, 0.15);
+    color: #9ca3af;
+}
+
+/* Voting power and stake styles */
+.voting-power,
+.votes-cast {
+    font-weight: 500;
+}
+
+.stake {
+    font-weight: 500;
+}
+
+/* ===== Layout styles to match BrowseJobs page ===== */
+
+/* Larger back button */
+.skill-oracle-page .backIconV,
+.skill-oracle-page .title-section .backIconV,
+.skill-oracle-page .back .backIconV,
+.skill-oracle-page img.backIconV {
+  width: 44px !important;
+  height: 44px !important;
+}
+
+/* Increased padding for title section */
+.skill-oracle-page .title-section {
+  padding-top: 55px !important;
+  padding-bottom: 55px !important;
+}
+
+/* Larger font for title */
+.skill-oracle-page .tableTitleV {
+  font-size: 21px !important;
+}
+
+/* Shift table up on smaller height screens */
+@media (max-height: 800px) {
+  .skill-oracle-page {
+    margin-top: -65px !important;
+  }
+}
+
+/* Clip table row borders 1% on each side */
+.skill-oracle-page .table tbody tr::after {
+  left: 1% !important;
+  right: 1% !important;
+}
+
+/* Hide individual th borders and use row-level border for header */
+.skill-oracle-page .table thead th::after {
+  display: none !important;
+}
+
+.skill-oracle-page .table thead tr {
+  position: relative !important;
+}
+
+.skill-oracle-page .table thead tr::after {
+  content: "" !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 1% !important;
+  right: 1% !important;
+  height: 1px !important;
+  background-color: transparent !important;
+  border-bottom: 1px solid #e9ecf0 !important;
+}
+
+/* Shift Voting Power column (3rd column) 40px right */
+.skill-oracle-page .table thead tr th:nth-child(3),
+.skill-oracle-page .table tbody tr td:nth-child(3) {
+  transform: translateX(40px) !important;
+}
+
+/* Shift Stake + Earned column cells (4th column) 5px left, header stays in place */
+.skill-oracle-page .table tbody tr td:nth-child(4) {
+  transform: translateX(-5px) !important;
+}
+
+/* Shift Status column cells (5th column) 20px right, header stays in place */
+.skill-oracle-page .table tbody tr td:nth-child(5) {
+  transform: translateX(20px) !important;
+}
+
+/* Hide the user icon next to member address */
+.skill-oracle-page .user .userIcon {
+  display: none !important;
+}
+
+/* Hide the dropdown arrow next to Member Address header */
+.skill-oracle-page .table thead tr th:first-child img {
+  display: none !important;
+}
+
+/* Shift view details button (last column) 25px left */
+.skill-oracle-page .table tbody tr td:last-child {
+  transform: translateX(-25px) !important;
+}

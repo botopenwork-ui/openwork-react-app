@@ -1,0 +1,112 @@
+.work-submission-header {
+    padding: 24px 32px;
+    border-radius: 24px 24px 0px 0px;
+    border: 2px solid #f7f7f7;
+    border-bottom: none;
+    background: var(--Base-White, #FFF);
+    background: var(--Base-White, color(display-p3 1 1 1));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+}
+
+.header-close {
+    border-radius: 24px !important;
+    border-bottom: 2px solid #f7f7f7;
+}
+
+.work-submission-body {
+    padding: 32px;
+    border-radius: 0px 0px 24px 24px;
+    border: 2px solid #f7f7f7;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.work-submission-body img {
+    border: 1px solid #eaeaea;
+    border-radius: 12px;
+}
+
+.submission-content {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 28px;
+    letter-spacing: 0.28;
+    font-family: 'Satoshi', sans-serif;
+    color: #050505;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: 85px;
+}
+
+.submission-title {
+    color: var(--Gray-Darker, #4D4D4D);
+    color: var(--Gray-Darker, color(display-p3 0.3034 0.3034 0.3034));
+    font-family: Satoshi;
+    font-size: 20px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    letter-spacing: 0.4px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+}
+
+.date {
+    color: var(--Gray-Main, #868686);
+    color: var(--Gray-Main, color(display-p3 0.5274 0.5274 0.5274));
+    font-family: Satoshi;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 24px; /* 200% */
+}
+
+.submission-attachments {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.attachments-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #767676;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.attachments-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.attachment-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #FAFAFA;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #4D4D4D;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.attachment-link:hover {
+    background: #f0f0f0;
+}
+
+.attachment-link img {
+    width: 16px;
+    height: 16px;
+    border: none !important;
+    border-radius: 0 !important;
+}

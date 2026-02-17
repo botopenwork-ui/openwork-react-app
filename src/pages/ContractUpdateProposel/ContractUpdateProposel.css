@@ -1,0 +1,146 @@
+.contract-update-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  background-color: #FEFEFE;
+}
+
+.contract-update-card {
+  width: 520px;
+  background-color: #FFFFFF;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.contract-update-header {
+  padding: 24px;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.contract-update-content {
+  padding: 36px;
+}
+
+.contract-update-description {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 28px;
+  color: #868686;
+  margin: 0 0 20px 0;
+}
+
+.contract-update-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.contract-update-item {
+  width: 456px;
+  height: 64px;
+  background-color: transparent;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.contract-update-item:hover {
+  background-color: rgba(18, 70, 255, 0.02);
+  border-color: rgba(18, 70, 255, 0.1);
+}
+
+.contract-update-item-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.contract-file-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.contract-name {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 24px;
+  color: #050505;
+}
+
+.contract-arrow {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  transform: rotate(90deg);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.contract-update-container {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.contract-update-card {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.contract-update-header {
+  animation: fadeIn 0.6s ease-in-out 0.1s backwards;
+}
+
+.contract-update-description {
+  animation: fadeInUp 0.5s ease-out 0.2s backwards;
+}
+
+.contract-update-list {
+  animation: fadeInUp 0.5s ease-out 0.3s backwards;
+}
+
+.contract-update-item:nth-child(1) {
+  animation: fadeInUp 0.5s ease-out 0.4s backwards;
+}
+
+.contract-update-item:nth-child(2) {
+  animation: fadeInUp 0.5s ease-out 0.5s backwards;
+}
+
+.contract-update-item:nth-child(3) {
+  animation: fadeInUp 0.5s ease-out 0.6s backwards;
+}
+
+.contract-update-item:nth-child(4) {
+  animation: fadeInUp 0.5s ease-out 0.7s backwards;
+}

@@ -1,0 +1,199 @@
+/* Container */
+.dissolve-skill-oracle-step2-container {
+  min-height: 100vh;
+  background-color: #FEFEFE;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+/* Card */
+.dissolve-skill-oracle-step2-card {
+  width: 520px;
+  background-color: #FFFFFF;
+  border-radius: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  margin-top: 60px;
+  animation: fadeInUp 0.5s ease-in-out;
+}
+
+/* Header */
+.dissolve-skill-oracle-step2-header {
+  height: 88px;
+  display: flex;
+  align-items: center;
+  padding: 0 32px;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.04);
+}
+
+/* Content */
+.dissolve-skill-oracle-step2-content {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Dropdown Section */
+.dissolve-skill-oracle-step2-dropdown-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 440px;
+}
+
+/* Dropdown Button */
+.dissolve-skill-oracle-step2-dropdown-button {
+  width: 100%;
+  height: 48px;
+  background-color: #FFFFFF;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  color: #050505;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dissolve-skill-oracle-step2-dropdown-button:hover {
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.dissolve-skill-oracle-step2-chevron {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+  transform: rotate(180deg);
+}
+
+.dissolve-skill-oracle-step2-chevron.open {
+  transform: rotate(0deg);
+}
+
+/* Info Box */
+.dissolve-skill-oracle-step2-info-box {
+  width: 100%;
+  background-color: #F5F5F5;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dissolve-skill-oracle-step2-info-label {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  line-height: 20px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #767676;
+  margin: 0;
+}
+
+.dissolve-skill-oracle-step2-info-value {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  letter-spacing: 0.32px;
+  color: #4D4D4D;
+  margin: 0;
+}
+
+.dissolve-skill-oracle-step2-info-value .value-main {
+  color: #4D4D4D;
+}
+
+.dissolve-skill-oracle-step2-info-value .value-secondary {
+  color: #767676;
+}
+
+/* Textarea */
+.dissolve-skill-oracle-step2-textarea {
+  width: 440px;
+  min-height: 131px;
+  background-color: #FFFFFF;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 16px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  color: #050505;
+  resize: vertical;
+  transition: all 0.2s ease;
+}
+
+.dissolve-skill-oracle-step2-textarea::placeholder {
+  color: #868686;
+}
+
+.dissolve-skill-oracle-step2-textarea:focus {
+  outline: none;
+  border-color: #1246FF;
+}
+
+/* Actions */
+.dissolve-skill-oracle-step2-actions {
+  width: 440px;
+  display: flex;
+  gap: 16px;
+}
+
+/* Submit Button */
+.dissolve-skill-oracle-step2-submit {
+  width: 100%;
+  height: 48px;
+  background: linear-gradient(180deg, #1246FF 23.958%, #4770FF 134.37%);
+  border: 4px solid #1246FF;
+  border-radius: 12px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 24px;
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dissolve-skill-oracle-step2-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(18, 70, 255, 0.3);
+}
+
+.dissolve-skill-oracle-step2-submit:active {
+  transform: translateY(0);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

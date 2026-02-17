@@ -1,0 +1,442 @@
+@font-face {
+    font-family: 'Satoshi';
+    src: url('/fonts/Satoshi-Regular.otf') format('opentype');
+    font-weight: 400;
+  }
+  
+  @font-face {
+    font-family: 'Satoshi';
+    src: url('/fonts/Satoshi-Medium.otf') format('opentype');
+    font-weight: 500;
+  }
+  
+  @font-face {
+    font-family: 'Satoshi';
+    src: url('/fonts/Satoshi-Bold.otf') format('opentype');
+    font-weight: 700;
+  }
+  
+  
+  body {
+    background-color: white; /* Setting overall background color */
+    margin: 0;
+  }
+  
+  
+  body {
+    background-color: white; /* Setting overall background color */
+    margin: 0;
+  }
+  
+  .table {
+    width: calc(100% - 48px);
+    margin: 24px 24px;
+    border-collapse: collapse; /* Remove borders between table cells */
+    border: none;
+    table-layout: auto;
+  }
+  
+  /* Apply border to table header */
+  .table thead th {
+    position: relative;
+    background-color: white;
+    padding-bottom: 0px
+  }
+  
+  .table thead th::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0px;
+    right: 0;
+    height: 1px;
+    background-color: transparent;
+    border-bottom: 1px solid #e9ecf0;
+  }
+  
+  .table thead th:first-child::after {
+    left: 0px; /* Clip from the start */
+  }
+  
+  .table thead th:last-child::after {
+    right: 0px; /* Clip from the end */
+  }
+  
+  /* Table Row Style */
+  .table tbody tr {
+    position: relative; /* Ensure positioning context for pseudo-elements */
+    background-color: white; /* Set background color to white */
+  }
+  
+  .table thead tr th:first-child {
+    min-width: 196px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .table thead tr th:nth-child(2),
+  .table thead tr th:nth-child(5),
+  .table thead tr th:nth-child(6) {
+    min-width: 144px;
+  }
+
+  .table thead tr th:nth-child(3) {
+    min-width: 180px;
+  }
+
+  .table thead tr th:nth-child(4) {
+    min-width: 109px;
+  }
+  
+  /* Decrease the distance between the 2nd, 3rd, and 4th columns */
+
+  .table tbody tr td:first-child {
+    min-width: 196px;
+  }
+
+  .table tbody tr td:nth-child(2),
+  .table tbody tr td:nth-child(5),
+  .table tbody tr td:nth-child(6) {
+    min-width: 144px;
+  }
+
+  .table tbody tr td:nth-child(3) {
+    min-width: 180px;
+  }
+
+  .table tbody tr td:nth-child(4) {
+    min-width: 109px;
+  }
+
+  .table thead tr th:nth-child(5) {
+    text-align: left;
+    white-space: pre;
+  }
+
+  .table tbody tr td:nth-child(5) {
+    text-align: left;
+    padding-left: 0px !important;
+  }
+
+  .table thead tr th:nth-child(4) {
+    text-align: left;
+  }
+
+  .table tbody tr td:nth-child(4) {
+    text-align: left;
+  }
+  
+  
+  /* Custom Bottom Border */
+  .table tbody tr::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0px;
+    right: 0px;
+    height: 1px;
+    background-color: transparent; /* Ensure the background is transparent */
+    border-bottom: 1px solid #e9ecf0; /* Correct way to set border color */
+  }
+  
+  /* To avoid double borders on the last row */
+  .table tbody tr:last-child::after {
+    display: none;
+  }
+  
+  /* Apply border to table header */
+  .table thead tr::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 24px;
+    right: 24px;
+    height: 1px;
+    background-color: transparent;
+  }
+  
+  .table th {
+    padding: 12px 24px;
+  }
+  .table td {
+    padding: 20px 24px; /* Adjust padding as needed */
+    text-align: left;
+    color: #868686; /* Set text color for table cells */
+  }
+  
+  .table th {
+    height: 48px; /* Set header row height */
+    color: black;/* label */
+  
+    font-family: 'Satoshi', sans-serif;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 14px;
+   
+    /* Base/Black */
+    color: #050505;
+    color: color(display-p3 0.020 0.020 0.020);
+  
+    background-color: white; /* Set background color for table headers */
+    border: none;
+  }
+  
+  .table td {
+    border: none; /* Remove borders from table cells */
+  }
+  
+  .table th:first-child,
+  .table td:first-child {
+    padding-left: 36px; /* Adjust left padding for the first column */
+  }
+  
+  .table th:last-child,
+  .table td:last-child {
+    padding-right: 0px; /* Adjust right padding for the last column */
+  }
+  
+  /* Job Title Column Text Styling */
+  .table td:first-child {
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 19px;
+    letter-spacing: 0.02em;
+    color: #050505;
+  }
+  
+  .table thead tr th:nth-child(7),
+  .table tbody tr td:nth-child(7) {
+    padding-right: 15px; /* Adjust the value as needed */
+  }
+  
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    border:none;
+  }
+  
+  .page-link {
+    padding: 8px 12px;
+    margin: 0 4px;
+    border: 0px solid #ffffff;
+    background-color: #fff;
+    color: #868686;
+    text-decoration: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+  }
+  
+  .pagination-icon {
+    width: 35px; /* Adjust icon size */
+    height: 35px;
+    margin-right: 5px; /* Adjust icon margin */
+  }
+  
+  .page-text {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  
+  .docIcon {
+    vertical-align: middle; /* Align the icon vertically */
+    margin-right: 16px; /* Adjust margin between icon and text */
+    width:32px;
+    height:32px;
+  }
+  
+  #fromAdd, #toAdd {
+  
+  
+    font-family: 'Satoshi', sans-serif;
+    font-style: normal;
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+  
+    /* Gray/Main */
+    color: #868686;
+  
+  }
+  
+  .table td img.docIcon {
+    display: inline-block; /* Ensure the icon aligns with text vertically */
+    vertical-align: middle; /* Align the icon vertically */
+  }
+  
+  .table td span {
+    display: inline-block; /* Ensure the text aligns with icon vertically */
+    vertical-align: middle; /* Align the text vertically */
+  }
+  
+  .amount-cellVJ {
+    position: relative;
+    text-align: right;
+  }
+  
+  .amountV {
+    display: inline-block; /* Ensure the amount and icon stay on the same line */
+    padding-left: 18px;
+    
+  }
+  
+  .amountV:after {
+    content: ''; /* This pseudo-element will contain the USDC icon */
+    display: inline-block;
+    width: 15px; /* Adjust width of the icon */
+    height: 15px; /* Adjust height of the icon */
+    background: url('/xdc.svg') no-repeat center; /* Use the USDC icon as background */
+    background-size: contain; /* Ensure the icon fits within the space */
+    position: absolute;
+    top: 51%;
+    transform: translateY(-50%);
+    right: 105px; /* Adjust this value to position the icon at the extreme right */
+  }
+  
+  .view-icon-cell {
+    text-align: left; /* Align contents to the left */
+  }
+  
+  /* Icon between From and To columns */
+  .from-to-icon {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    margin: 0 8px;
+  }
+  
+  .from-to-icon-cell {
+    width: 24px;
+  }
+  
+  .table td:nth-child(2) { /* To column */
+   width: 20px;
+  }
+
+  .title-section {
+    display: flex;
+    align-items: center;
+    padding: 40px 48px;
+    justify-content: space-between;
+  }
+
+  .title-section .back {
+    display: flex;
+    align-items: center;
+    gap: 70px;
+  }
+
+  .title-option {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .filter-section {
+    padding: 0px 49px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    justify-content: flex-end;
+  }
+  
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.2);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  
+
+  .box-component {
+    width: 100%;
+    border-radius: 16px;
+    border: 2px solid #f8f8f8;
+    background: var(--Base-White, #FFF);
+    background: var(--Base-White, color(display-p3 1 1 1));
+
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    padding: 20px 24px;
+  }
+
+  .box-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .box-title img {
+    border-radius: 8px;
+    background: rgba(0, 71, 255, 0.06);
+    background: color(display-p3 0.0706 0.2745 1 / 0.06);
+    padding: 6px;
+  }
+
+  .box-title span {
+    color: var(--Gray-Dark, #767676);
+    color: var(--Gray-Dark, color(display-p3 0.463 0.463 0.463));
+    text-align: center;
+    font-family: Satoshi;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: 20px; /* 200% */
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .box-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .box-content span {
+    color: var(--Base-Black, #050505);
+    color: var(--Base-Black, color(display-p3 0.0205 0.0205 0.0205));
+    font-family: Satoshi;
+    font-size: 28px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    letter-spacing: 0.56px;
+  }
+
+  .box-section {
+    margin: 39px 0px 32px 0px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+  }
+
+  .back-section {
+    padding: 0;
+    border: none;
+  }
+
+  .back-section .tableTitleV {
+    font-size: 24px !important;
+  }
+  
+  .refer-earn {
+    flex-direction: row-reverse;
+    border-radius: 12px;
+    padding: 8px 16px;
+    border: 4px solid #FFF;
+    border: 4px solid color(display-p3 1 1 1);
+    background: linear-gradient(180deg, #F4F4F4 0%, #FEFEFE 100%);
+    background: linear-gradient(180deg, color(display-p3 0.9569 0.9569 0.9569) 0%, color(display-p3 0.9961 0.9961 0.9961) 100%);
+    box-shadow: 0px 0px 0.386px 1.158px rgba(0, 0, 0, 0.05), 0px 4.634px 5.02px -2.317px rgba(0, 0, 0, 0.10);
+    box-shadow: 0px 0px 0.386px 1.158px color(display-p3 0 0 0 / 0.05), 0px 4.634px 5.02px -2.317px color(display-p3 0 0 0 / 0.10);
+  }

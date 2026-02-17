@@ -1,0 +1,107 @@
+.vote-bar {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+
+    color: var(--Gray-Dark, #767676);
+    color: var(--Gray-Dark, color(display-p3 0.463 0.463 0.463));
+    text-align: center;
+    font-family: 'Satoshi';
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .min-threshold {
+    position: absolute;
+    top: -21px;
+    max-width: 150px;
+    white-space: nowrap;
+    /* Prevent overflow on left side */
+    left: clamp(0px, calc(var(--threshold-pos) - 63px), calc(100% - 150px)) !important;
+  }
+  
+  .min-threshold span {
+    display: inline-block;
+    min-width: max-content;
+  }
+  
+  .header {
+    /* text-align: center;
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 8px; */
+  }
+  
+  .progress-container {
+    position: relative;
+    height: 8px;
+    width: 100%;
+    background-color: #eaecf1;
+    border-radius: 4px;
+  }
+  
+  .progress-bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 100%;
+  }
+  
+  .progress-in-favor {
+    background-color: #17B26A;
+    height: 100%;
+    border-radius: 4px;
+  }
+
+  .progress-in-against {
+    background-color: #B42318;
+    height: 100%;
+    border-radius: 4px;
+  }
+  
+  .threshold-marker {
+    position: absolute;
+    top: -25%;
+    height: 150%;
+    border-left: 2px dashed #aaa;
+    text-align: center;
+    font-size: 12px;
+    color: #B42318;
+    transform: translateX(-50%);
+  }
+
+  .progress-container .dot {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    height: 8px;
+    width: 8px;
+    display: inline-block;
+    border-radius: 50%;
+  }
+  
+  .labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 9px;
+  }
+  
+  .labels .dot {
+    height: 8px;
+    width: 8px;
+    display: inline-block;
+    border-radius: 50%;
+  }
+  
+  .green-dot {
+    background-color: #17B26A;
+  }
+  
+  .red-dot {
+    background-color: #B42318;
+  }

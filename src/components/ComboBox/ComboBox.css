@@ -1,0 +1,26 @@
+.combobox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.check {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.check-label {
+    white-space: pre;
+    color: var(--Gray-Main, #868686);
+    color: var(--Gray-Main, color(display-p3 0.5274 0.5274 0.5274));
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 24px; /* 171.429% */
+}

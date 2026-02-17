@@ -1,0 +1,289 @@
+.viewwork-page-wrapper {
+  min-height: calc(100vh - 80px);
+  width: 100%;
+  background: transparent;
+  font-family: 'Satoshi', sans-serif;
+  padding: 0 0 80px 0;
+}
+
+.viewwork-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Header Section - Outside Card */
+.viewwork-header-section {
+  margin-top: 109px;
+  margin-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.viewwork-user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 60px;
+  font-size: 14px;
+}
+
+.viewwork-user-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.viewwork-user-name {
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 19px;
+  color: #050505;
+}
+
+.viewwork-user-separator {
+  font-weight: 400;
+  font-size: 14px;
+  color: #868686;
+}
+
+.viewwork-user-package {
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 19px;
+  color: #868686;
+}
+
+/* Main Content Card */
+.viewwork-content-card {
+  background: white;
+  border: 2px solid #F7F7F7;
+  border-radius: 24px;
+  overflow: hidden;
+  position: relative;
+  padding: 28px 48px 0 48px;
+}
+
+/* Floating Skills Section - Top Right */
+.viewwork-skills-floating {
+  position: absolute;
+  top: 28px;
+  right: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 10;
+}
+
+.viewwork-skill-badge {
+  background: white;
+  border: 1px solid #EBEBEB;
+  border-radius: 9999px;
+  padding: 6px 12px;
+  font-family: 'Satoshi', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  color: #344054;
+  white-space: nowrap;
+  cursor: default;
+  transition: all 0.2s ease;
+}
+
+.viewwork-skill-badge:hover {
+  background: #F9FAFB;
+}
+
+.viewwork-more-wrapper {
+  position: relative;
+}
+
+.viewwork-more-button {
+  background: white;
+  border: 1px solid #EBEBEB;
+  border-radius: 9999px;
+  padding: 6px 12px;
+  font-family: 'Satoshi', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  color: #344054;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.viewwork-more-button:hover {
+  background: #F9FAFB;
+  border-color: #D0D5DD;
+}
+
+.viewwork-more-button:active {
+  transform: scale(0.98);
+}
+
+/* Skills Dropdown */
+.viewwork-skills-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: white;
+  border: 1px solid #EBEBEB;
+  border-radius: 12px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.08);
+  min-width: 200px;
+  z-index: 20;
+  overflow: hidden;
+}
+
+.viewwork-dropdown-item {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  border-bottom: 1px solid #F7F7F7;
+}
+
+.viewwork-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.viewwork-dropdown-item:hover {
+  background: #F9FAFB;
+}
+
+.viewwork-dropdown-text {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: #050505;
+}
+
+.viewwork-dropdown-check {
+  font-size: 16px;
+  color: #1246FF;
+  font-weight: 700;
+}
+
+/* Main Image Display */
+.viewwork-main-image {
+  background: white;
+  padding: 24px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.main-image {
+  width: 100%;
+  max-width: 796px;
+  height: 491px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+/* Image Gallery */
+.viewwork-image-gallery {
+  background: white;
+  padding: 0 0 24px 0;
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.viewwork-image-gallery::-webkit-scrollbar {
+  display: none;
+}
+
+.gallery-thumbnail {
+  flex-shrink: 0;
+  width: 160px;
+  height: 100px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.gallery-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gallery-thumbnail:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.gallery-thumbnail.active {
+  border-color: #1246FF;
+  box-shadow: 0 0 0 1px #1246FF;
+}
+
+/* Description Section */
+.viewwork-description {
+  background: white;
+  border-top: 2px solid #F7F7F7;
+  padding: 32px 0;
+}
+
+.viewwork-description p {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 24px;
+  color: #050505;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .viewwork-header-section {
+    margin-top: 80px;
+  }
+
+  .viewwork-user-info {
+    padding-left: 40px;
+  }
+
+  .viewwork-content-card {
+    padding: 24px 20px 0 20px;
+  }
+
+  .viewwork-skills-floating {
+    position: static;
+    margin-bottom: 20px;
+    justify-content: flex-start;
+  }
+
+  .viewwork-main-image {
+    padding: 20px 0;
+  }
+
+  .main-image {
+    height: auto;
+    max-height: 400px;
+  }
+
+  .viewwork-image-gallery {
+    gap: 12px;
+  }
+
+  .gallery-thumbnail {
+    width: 120px;
+    height: 75px;
+  }
+
+  .viewwork-description {
+    padding: 24px 0;
+  }
+}

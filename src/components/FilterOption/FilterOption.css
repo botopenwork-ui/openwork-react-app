@@ -1,0 +1,14 @@
+.filter-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 16px;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    list-style-type: none;
+    padding: 0px 8px 4px 4px;
+    /* width: 100%; */
+    z-index: 10;
+}

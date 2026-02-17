@@ -1,0 +1,505 @@
+/* Radial Menu Wrapper */
+.radial-menu-wrapper {
+  position: fixed;
+  left: 50%;
+  top: -110px;
+  transform: translateX(-50%);
+  z-index: 10000;
+  width: 440px;
+  height: 440px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.radial-menu-wrapper * {
+  pointer-events: all;
+}
+
+/* 🎯 Circular Expanding Menu Animation */
+
+/* Background Circle Expansion - Barely visible glow */
+@keyframes circleExpand {
+  0% {
+    transform: translateX(-50%) scale(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.15;
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Background Circle Collapse - Reverse */
+@keyframes circleCollapse {
+  0% {
+    transform: translateX(-50%) scale(1);
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.15;
+  }
+  100% {
+    transform: translateX(-50%) scale(0);
+    opacity: 0;
+  }
+}
+
+.menu-text {
+  position: absolute;
+  top: 32%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.56px;
+  color: #B3B3B3;
+  text-align: center;
+  z-index: 10002;
+  pointer-events: none;
+  opacity: 0;
+}
+
+@keyframes menuFadeIn {
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.5;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.radial-menu-wrapper.menu-open .menu-text {
+  opacity: 1;
+  animation: menuFadeIn 0.5s ease-in-out 0.1s forwards;
+}
+
+.radial-menu-wrapper.menu-closing .menu-text {
+  animation: menuFadeOut 0.5s ease-in-out forwards;
+}
+
+@keyframes menuFadeOut {
+  0% {
+    opacity: 1;
+  }
+  20% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Large Background Circle - Moved down a bit */
+.menu-background-circle {
+  position: fixed;
+  left: 50%;
+  top: -120px;
+  transform: translateX(-50%) scale(0);
+  width: 466px;
+  height: 466px;
+  z-index: 9999;
+  pointer-events: none;
+  animation: circleExpand 0.6s ease-in-out forwards;
+  opacity: 0;
+}
+
+.radial-menu-wrapper.menu-closing .menu-background-circle {
+  animation: circleCollapse 0.6s ease-in-out forwards;
+}
+
+.menu-background-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Menu Items Container - Grouped with background circle */
+.radial-menu-items {
+  position: fixed;
+  left: 50%;
+  top: -90px;
+  transform: translateX(-50%) scale(0);
+  width: 520px;
+  height: 520px;
+  pointer-events: none;
+  z-index: 10002;
+  opacity: 0;
+  animation: groupedExpand 0.6s ease-in-out forwards;
+}
+
+.radial-menu-wrapper.menu-closing .radial-menu-items {
+  animation: groupedCollapse 0.6s ease-in-out forwards;
+}
+
+@keyframes groupedExpand {
+  0% {
+    transform: translateX(-50%) scale(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes groupedCollapse {
+  0% {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateX(-50%) scale(0);
+    opacity: 0;
+  }
+}
+
+/* Individual Menu Item */
+.radial-menu-item {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(180deg, #f4f4f4 0%, #fefefe 100%);
+  border: 8.87px solid white;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  pointer-events: all;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 0 20px rgba(18, 70, 255, 0.05);
+  opacity: 0;
+  animation: itemFadeIn 0.5s ease-in-out 0.15s forwards;
+}
+
+.radial-menu-wrapper.menu-closing .radial-menu-item {
+  animation: itemFadeOut 0.5s ease-in-out forwards;
+}
+
+.radial-menu-item:hover {
+  transform: scale(1.15);
+  background: linear-gradient(180deg, #ffffff 0%, #f4f4f4 100%);
+  box-shadow: 
+    0 8px 24px rgba(18, 70, 255, 0.2),
+    0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* Menu Item Positions - Correct circular curve alignment */
+.radial-menu-item.left-top {
+  left: 2px;
+  bottom: 200px;
+}
+
+.radial-menu-item.right-top {
+  right: 2px;
+  bottom: 200px;
+}
+
+.radial-menu-item.left-middle {
+  left: 65px;
+  bottom: 85px;
+}
+
+.radial-menu-item.right-middle {
+  right: 65px;
+  bottom: 85px;
+}
+
+.radial-menu-item.center-bottom {
+  left: 50%;
+  bottom: 50px;
+  transform: translateX(-50%);
+}
+
+.radial-menu-item.center-bottom:hover {
+  transform: translateX(-50%) scale(1.15);
+}
+
+/* Menu Item Icon */
+.menu-item-icon {
+  width: 18px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-item-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Specific icon width for About icon only */
+.radial-menu-item#about .menu-item-icon {
+  width: 20px;
+}
+
+/* Menu Item Label */
+.menu-item-label {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.2px;
+  color: #4d4d4d;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Hover Instruction */
+.hover-instruction {
+  position: fixed;
+  left: 50%;
+  top: 380px;
+  transform: translateX(-50%);
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.56px;
+  color: #b3b3b3;
+  text-align: center;
+  white-space: nowrap;
+  opacity: 0;
+  animation: instructionFadeIn 0.7s ease-in-out 0.2s forwards;
+  pointer-events: none;
+  z-index: 10002;
+}
+
+.radial-menu-wrapper.menu-closing .hover-instruction {
+  animation: instructionFadeOut 0.7s ease-in-out forwards;
+}
+
+@keyframes instructionFadeOut {
+  0% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Animations */
+@keyframes itemFadeIn {
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes itemFadeOut {
+  0% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes instructionFadeIn {
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.5;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes smoothFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .radial-menu-wrapper,
+  .core-menu {
+    width: 280px;
+    height: 280px;
+    top: -90px;
+  }
+
+  .menu-background-circle {
+    width: 296px;
+    height: 296px;
+    top: -148px;
+  }
+
+  .radiant-glow-menu {
+    width: 356px;
+    height: 356px;
+  }
+
+  .core-image-menu,
+  .core-hovered-menu {
+    width: 280px;
+    height: 280px;
+  }
+
+  .radial-menu-items {
+    width: 340px;
+    height: 340px;
+    top: -90px;
+  }
+
+  .menu-trigger-area {
+    width: 140px;
+    height: 80px;
+  }
+
+  .radial-menu-item {
+    width: 80px;
+    height: 80px;
+  }
+
+  .radial-menu-item.center-top {
+    bottom: 8px;
+  }
+
+  .radial-menu-item.left-top {
+    left: 38px;
+    bottom: 48px;
+  }
+
+  .radial-menu-item.left-middle {
+    left: 16px;
+    bottom: 124px;
+  }
+
+  .radial-menu-item.right-top {
+    right: 38px;
+    bottom: 48px;
+  }
+
+  .radial-menu-item.right-middle {
+    right: 16px;
+    bottom: 124px;
+  }
+
+  .hover-instruction {
+    top: 250px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .radial-menu-wrapper,
+  .core-menu {
+    width: 240px;
+    height: 240px;
+    top: -80px;
+  }
+
+  .menu-background-circle {
+    width: 254px;
+    height: 254px;
+    top: -127px;
+  }
+
+  .radiant-glow-menu {
+    width: 305px;
+    height: 305px;
+  }
+
+  .core-image-menu,
+  .core-hovered-menu {
+    width: 240px;
+    height: 240px;
+  }
+
+  .radial-menu-items {
+    width: 300px;
+    height: 300px;
+    top: -80px;
+  }
+
+  .menu-trigger-area {
+    width: 120px;
+    height: 70px;
+  }
+
+  .radial-menu-item {
+    width: 70px;
+    height: 70px;
+  }
+
+  .radial-menu-item.center-top {
+    bottom: 6px;
+  }
+
+  .radial-menu-item.left-top {
+    left: 32px;
+    bottom: 42px;
+  }
+
+  .radial-menu-item.left-middle {
+    left: 12px;
+    bottom: 106px;
+  }
+
+  .radial-menu-item.right-top {
+    right: 32px;
+    bottom: 42px;
+  }
+
+  .radial-menu-item.right-middle {
+    right: 12px;
+    bottom: 106px;
+  }
+
+  .hover-instruction {
+    top: 210px;
+    font-size: 11px;
+  }
+}

@@ -1,0 +1,98 @@
+.user {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: #050505;
+    font-weight: 500;
+    font-size: 14px;
+    font-family: 'Satoshi', sans-serif;
+}
+
+.userIcon {
+    width: 32px;
+    border: 2px solid #c2cccf;
+    border-radius: 32px;   
+}
+
+.rating {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #868686;
+    font-weight: 500;
+    font-size: 14px;
+    font-family: 'Satoshi', sans-serif;
+}
+
+.experience {
+    color: #868686;
+    font-weight: 500;
+    font-size: 14px;
+    font-family: 'Satoshi', sans-serif;
+}
+
+.hourly-rate {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    color: #868686;
+    font-weight: 500;
+    font-size: 14px;
+    font-family: 'Satoshi', sans-serif;
+}
+
+/* ===== Layout styles to match BrowseJobs page ===== */
+
+/* Larger back button */
+.browse-talent-page .backIconV,
+.browse-talent-page .title-section .backIconV,
+.browse-talent-page .back .backIconV,
+.browse-talent-page img.backIconV {
+  width: 44px !important;
+  height: 44px !important;
+}
+
+/* Increased padding for title section */
+.browse-talent-page .title-section {
+  padding-top: 55px !important;
+  padding-bottom: 55px !important;
+}
+
+/* Larger font for title */
+.browse-talent-page .tableTitleV {
+  font-size: 21px !important;
+}
+
+/* Shift table up on smaller height screens */
+@media (max-height: 800px) {
+  .browse-talent-page {
+    margin-top: -65px !important;
+  }
+}
+
+/* Clip table row borders 1% on each side */
+.browse-talent-page .table tbody tr::after {
+  left: 1% !important;
+  right: 1% !important;
+}
+
+/* Hide individual th borders and use row-level border for header */
+.browse-talent-page .table thead th::after {
+  display: none !important;
+}
+
+.browse-talent-page .table thead tr {
+  position: relative !important;
+}
+
+.browse-talent-page .table thead tr::after {
+  content: "" !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 1% !important;
+  right: 1% !important;
+  height: 1px !important;
+  background-color: transparent !important;
+  border-bottom: 1px solid #e9ecf0 !important;
+}

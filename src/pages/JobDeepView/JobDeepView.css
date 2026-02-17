@@ -1,0 +1,349 @@
+/* JobInfo.css */
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap');
+
+body {
+  font-family: 'Satoshi', sans-serif;
+  background-color: white; /* Setting overall background color */
+  margin: 0;
+  width: 100%;
+}
+.header {
+  height: 80px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  border-bottom: 0px solid white;
+  box-sizing: border-box;
+}
+.flag2 p {
+  margin: 0 10px 0 0;
+  font-size: 16px;
+}
+.flag2 { 
+    display: flex;
+    justify-content:center;
+    flex-direction: row;
+    align-items: center;
+    margin: -20px 0px 40px 0px;
+}
+.info-container {
+  padding: 5px;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  margin-top: 30px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.info-content {
+    background-color: transparent;
+    border-radius: 10px;
+    margin: 0 auto;
+    margin-top: 0px;
+    width: 100%;
+    max-width: 520px;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0 !important;
+}
+
+.info-navigation {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.backButton {
+  margin-right: 15px;
+  text-decoration: none;
+}
+
+#back{
+  width:40px;
+  height:40px;
+}
+
+.infoTitle {
+  font-size: 20px;
+
+}
+
+.contractAddress {
+  justify-content: center;
+  font-size: 14px;
+  color: #666;
+  margin-top: 5px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.copyIcon {
+  width: 16px;
+  height: 16px;
+  margin-left: 5px;
+  cursor: pointer;
+}
+
+.sectionTitle {
+  width: auto;
+  border: 2px solid #f7f7f7;
+  border-radius: 24px 24px 0px 0px;
+  border-bottom: none;
+  padding: 28px 32px;
+  font-family: 'Satoshi', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.sectionBody {
+  width: auto;
+  border: 2px solid #f7f7f7;
+  border-radius: 0px 0px 24px 24px;
+  padding: 24px 32px;
+  padding-bottom: 39px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.info-cardJ {
+  width: 100%;
+  max-width: 520px;
+  margin-top: 48px;
+}
+
+.detail-row {
+  /* margin-bottom: 20px; */
+}
+
+.detail-label {
+  font-family: 'Satoshi', sans-serif;
+  font-style: normal;
+  font-weight: 700;
+  font-size: 10px;
+  line-height: 20px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #767676;
+  margin-bottom: 5px;
+}
+
+.detail-value {
+  font-family: 'Satoshi', sans-serif;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  /* identical to box height, or 171% */
+  display: flex;
+  align-items: center;
+
+  /* Base/Black */
+  color: #050505;
+}
+
+.detail-value-address{
+
+  font-family: 'Satoshi' , sans-serif;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 19px;
+  /* identical to box height */
+  display: flex;
+  align-items: center;
+  letter-spacing: 0.02em;
+
+  /* Base/Black */
+  color: #050505;
+  color: color(display-p3 0.020 0.020 0.020);
+
+
+  /* Inside auto layout */
+  flex: none;
+  flex-grow: 0;
+
+}
+
+.detail-profile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.view-profile {
+  color: #1246FF;
+  display: flex;
+  text-decoration: none;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.description-value {
+  display: block;
+}
+
+.description-value p {
+  margin-bottom: 10px;
+  margin-top: 3px;
+  font-family: 'Satoshi' , sans-serif;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 28px;
+  /* or 200% */
+
+  /* Base/Black */
+  color: #050505;
+}
+
+.description-list {
+  margin-top: 10px;
+  padding-left: 0px;
+  list-style-type: disc;
+}
+
+.description-list li {
+  margin-bottom: 5px;
+}
+
+.Job {
+  width: 28px;
+  height: 28px;
+  margin-right: 10px;
+  margin-top: 5px;
+  border: 1px solid #f7f7f7;
+  border-radius: 28px;
+}
+
+.infoIcon {
+  width: 15px;
+  height: 15px;
+  margin-left: 5px;
+  vertical-align: middle;
+}
+
+.category {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #767676;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.category-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.attachments {
+  margin-top: 20px;
+}
+
+.upload-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.attachment-form {
+  width: 100%;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  border-radius: 12px;
+  border: 2px solid #f7f7f7;
+  /* border: 2px solid color(display-p3 1 1 1); */
+  background: var(--Base-White, #FFF);
+  background: var(--Base-White, color(display-p3 1 1 1));
+
+  overflow: hidden;
+  color: #314056;
+  color: color(display-p3 0.2039 0.251 0.3294);
+  text-overflow: ellipsis;
+  font-family: 'Satoshi', sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 24px; /* 171.429% */
+  letter-spacing: 0.56px;
+}
+
+.newTitle {
+  margin-top: 4%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.titleTop {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.titleBottom {
+  display: flex;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.titleText {
+  white-space: pre;
+  font-family: 'Satoshi', sans-serif;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  letter-spacing: 0.02em;
+  color: #4D4D4D;
+  color: color(display-p3 0.302 0.302 0.302);
+}
+
+.goBack {
+  margin-left: -15px;
+  height: 40px;
+  width: 40px;
+  cursor: pointer;
+}
+
+.goBackImage {
+  width: 100%;
+  height: 100%;
+}
+
+.titleBottom p {
+  font-family: 'Satoshi', sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 24px;
+  color: #868686;
+  color: color(display-p3 0.525 0.525 0.525);
+  margin: 0;
+}
+
+.copyImage {
+  margin-left: 5px;
+  cursor: pointer;
+}

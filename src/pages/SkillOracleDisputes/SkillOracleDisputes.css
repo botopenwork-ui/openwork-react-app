@@ -1,0 +1,98 @@
+.body-container {
+    background-color: var(--background-color);
+    overflow-x: auto;
+}
+
+.view-jobs-container {
+    min-height: 100vh;
+    min-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 2rem;
+    background-color: var(--background-color);
+}
+
+.dispute-title {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.fileIcon {
+    width: 32px;
+    height: 32px;
+}
+
+.dispute-title span {
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: #050505;
+    line-height: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.proposed-by {
+    display: flex;
+    align-items: center;
+}
+
+.proposed-by span {
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: #868686;
+    line-height: normal;
+}
+
+.dispute-role {
+    display: flex;
+    align-items: center;
+}
+
+.dispute-role span {
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: #868686;
+    line-height: normal;
+}
+
+.vote-submissions {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    justify-content: center;
+}
+
+.dispute-amount {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    padding-left: 10px;
+}
+
+.dispute-amount span {
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: #868686;
+    line-height: normal;
+    min-width: 60px;
+    text-align: left;
+}
+
+.currencyIcon {
+    width: 20px;
+    height: 20px;
+}
+
+.view-detail {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding-right: 32px;
+}

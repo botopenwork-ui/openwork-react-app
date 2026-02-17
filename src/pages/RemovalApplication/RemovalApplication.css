@@ -1,0 +1,28 @@
+.reason-removal {
+    overflow: hidden;
+    color: #575757;
+    color: color(display-p3 0.3412 0.3412 0.3412);
+    text-overflow: ellipsis;
+    font-family: 'Satoshi';
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 24px; /* 171.429% */
+}
+
+.failed-status {
+    border-radius: 6px;
+    border: 1px solid var(--Error-200, #FFC8C6);
+    border: 1px solid var(--Error-200, color(display-p3 0.9979 0.8042 0.7904));
+    background: var(--Error-50, #FFF2F2);
+    background: var(--Error-50, color(display-p3 0.9967 0.9516 0.9484));
+
+    color: #C50000;
+    color: color(display-p3 0.7059 0.1373 0.0941);
+    font-family: 'Satoshi';
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: normal;
+    letter-spacing: 0.24px;
+}

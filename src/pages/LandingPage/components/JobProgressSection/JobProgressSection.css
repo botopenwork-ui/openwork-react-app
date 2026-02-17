@@ -1,0 +1,136 @@
+/* Job Progress Section (LP-6) */
+.lp-6-section {
+  background: #FFFFFF;
+  padding-top: 64px;
+}
+
+.lp-6-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 162px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 90px;
+  min-height: calc(100vh - 64px);
+}
+
+.lp-6-content {
+  width: 432px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.lp-6-heading {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 48px;
+  letter-spacing: -1.6px;
+  color: #050505;
+  margin: 0;
+}
+
+.lp-6-description {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  color: #767676;
+  margin: 0;
+}
+
+/* Job Card Container */
+.lp-6-job-card-container {
+  width: 500px;
+  height: 450px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-6-job-card-image {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+/* LP-6 Responsive Design */
+@media (max-width: 1440px) {
+  .lp-6-container {
+    padding: 0 80px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .lp-6-container {
+    flex-direction: column;
+    gap: 60px;
+    padding: 0 40px;
+  }
+
+  .lp-6-content {
+    width: 100%;
+    max-width: 500px;
+    text-align: center;
+    align-items: center;
+  }
+
+  .lp-6-job-card-container {
+    width: 450px;
+    height: 400px;
+  }
+
+  .lp-6-heading {
+    font-size: 36px;
+    line-height: 44px;
+  }
+
+  .lp-6-description {
+    font-size: 15px;
+    line-height: 22px;
+  }
+}
+
+@media (max-width: 768px) {
+  .lp-6-container {
+    gap: 40px;
+    padding: 0 20px;
+  }
+
+  .lp-6-heading {
+    font-size: 32px;
+    line-height: 40px;
+    letter-spacing: -1.2px;
+  }
+
+  .lp-6-description {
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .lp-6-job-card-container {
+    width: 100%;
+    max-width: 380px;
+    height: 350px;
+  }
+}
+
+@media (max-width: 480px) {
+  .lp-6-heading {
+    font-size: 28px;
+    line-height: 36px;
+  }
+
+  .lp-6-description {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .lp-6-job-card-container {
+    width: 100%;
+    max-width: 320px;
+    height: 300px;
+  }
+}

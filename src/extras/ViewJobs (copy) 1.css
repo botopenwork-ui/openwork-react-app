@@ -1,0 +1,246 @@
+/* JobDetails.css */
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap');
+
+body {
+  font-family: 'Satoshi', sans-serif;
+  background-color: white; /* Setting overall background color */
+  margin: 0;
+}
+
+.container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  overflow: hidden;
+}
+
+.headerVJ {
+  height: 80px;
+  display: flex;
+  justify-content: center; /* Center content horizontally */
+  align-items: center; /* Center content vertically */
+  padding: 0 20px;
+  border-bottom: 0px solid white;
+  box-sizing: border-box;
+}
+
+.headerVJ img#logoVJ {
+    width: 199px;
+    height: 27px;
+    transition: opacity 0.5s;
+    position: absolute;
+    left: 10px;
+}
+
+.logoMark {
+
+}
+
+img#connectButton {
+  width: auto;
+  height: 40px;
+  cursor: pointer;
+}
+
+.buttonContainer {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-align: center;
+  overflow: hidden;
+}
+
+img.buttonImage {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.buttonContent {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  text-align: center;
+  z-index: 2;
+}
+
+.amount {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.usdcIcon {
+  width: 15px;
+  height: 15px;
+  margin-left: 5px;
+}
+
+.walletAddress {
+  font-size: 12px;
+  color: #868686;
+}
+
+#buttonLeft {
+  left: calc(50% - 179px);
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#buttonRight {
+  left: calc(50% + 179px);
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.view-jobs-container {
+  width: 900px;
+  margin: 0 auto;
+}
+
+.form-navigation {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px; /* Margin for the back navigation button */
+}
+
+.backButtonV {
+  width: 40px; /* Set the width to 35px */
+  height: 40px; /* Set the height to 35px */
+  margin-right: -20px;
+  margin-bottom: 10px;/* Margin for the back navigation button */
+}
+
+.backIconV {
+  width: 40px; /* Make the icon fit the container */
+  height: 40px; /* Make the icon fit the container */
+}
+
+.tableTitle {
+  font-size: 24px; /* Adjust font size as needed */
+  margin-left: 50px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: color(display-p3 0.020 0.020 0.020);
+}
+
+.tableSubtitle {
+  font-size: 18px; /* Adjust font size as needed */
+  margin-bottom: 10px;
+  font-weight: bold; /* Make the subtitle bold */
+ 
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse; /* Remove borders between table cells */
+  border: none;
+}
+
+.table th,
+.table td {
+  padding: 10px; /* Adjust padding as needed */
+  text-align: left;
+  color: #868686; /* Set text color for table cells */
+}
+
+.table th {
+  height: 48px; /* Set header row height */
+  color: black;
+  background-color: white; /* Set background color for table headers */
+  border: none;
+}
+
+.table td {
+  border: none; /* Remove borders from table cells */
+}
+
+.table th:first-child,
+.table td:first-child {
+  padding-left: 20px; /* Adjust left padding for the first column */
+}
+
+.table th:last-child,
+.table td:last-child {
+  padding-right: 0px; /* Adjust right padding for the last column */
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.page-link {
+  padding: 8px 12px;
+  margin: 0 4px;
+  border: 0px solid #ffffff;
+  background-color: #fff;
+  color: #868686;
+  text-decoration: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.pagination-icon {
+  width: 35px; /* Adjust icon size */
+  height: 35px;
+  margin-right: 5px; /* Adjust icon margin */
+}
+
+.page-text {
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.docIcon {
+  vertical-align: middle; /* Align the icon vertically */
+}
+
+.table td img.docIcon {
+  display: inline-block; /* Ensure the icon aligns with text vertically */
+  vertical-align: middle; /* Align the icon vertically */
+  margin-right: 5px; /* Adjust margin between icon and text */
+}
+
+.table td span {
+  display: inline-block; /* Ensure the text aligns with icon vertically */
+  vertical-align: middle; /* Align the text vertically */
+}
+
+.amount-cell {
+  position: relative;
+}
+
+.amount {
+  display: inline-block; /* Ensure the amount and icon stay on the same line */
+}
+
+.amount:after {
+  content: ''; /* This pseudo-element will contain the USDC icon */
+  display: inline-block;
+  width: 15px; /* Adjust width of the icon */
+  height: 15px; /* Adjust height of the icon */
+  background: url('/usdc.svg') no-repeat center; /* Use the USDC icon as background */
+  background-size: contain; /* Ensure the icon fits within the space */
+  margin-left: 5px; /* Add space between amount and icon */
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 105px; /* Adjust this value to position the icon at the extreme right */
+}
+
+.view-icon-cell {
+  text-align: left; /* Align contents to the left */
+}

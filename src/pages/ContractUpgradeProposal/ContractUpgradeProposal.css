@@ -1,0 +1,159 @@
+.contract-upgrade-container {
+    width: 100%;
+    min-height: 100vh;
+    background-color: #FEFEFE;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.contract-upgrade-card {
+    width: 520px;
+    background: #FFFFFF;
+    border: 2px solid #FFFFFF;
+    border-radius: 24px;
+    box-shadow: 0px 0px 1px rgba(0, 0, 0, 0.04), 0px 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.contract-upgrade-header {
+    height: 88px;
+    background: #FFFFFF;
+    border: 2px solid rgba(0, 0, 0, 0.04);
+    border-radius: 24px 24px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 32px;
+}
+
+.contract-upgrade-content {
+    background: #FFFFFF;
+    border: 2px solid rgba(0, 0, 0, 0.04);
+    border-radius: 0 0 24px 24px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+.contract-upgrade-description {
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 28px;
+    letter-spacing: 0.28px;
+    color: #868686;
+    margin: 0;
+    width: 456px;
+}
+
+.contracts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 456px;
+}
+
+.contract-item {
+    width: 456px;
+    height: 64px;
+    background: #FFFFFF;
+    border: 2px solid rgba(0, 0, 0, 0.04);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.contract-item:hover {
+    background: rgba(18, 70, 255, 0.02);
+    border-color: rgba(18, 70, 255, 0.1);
+}
+
+.contract-item-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.contract-icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
+.contract-name {
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 24px;
+    color: #050505;
+}
+
+.contract-arrow {
+    width: 20px;
+    height: 20px;
+    transform: rotate(90deg);
+    object-fit: contain;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.contract-upgrade-card {
+    animation: fadeIn 0.3s ease;
+}
+
+.contract-item:nth-child(1) {
+    animation: fadeInUp 0.4s ease;
+}
+
+.contract-item:nth-child(2) {
+    animation: fadeInUp 0.5s ease;
+}
+
+.contract-item:nth-child(3) {
+    animation: fadeInUp 0.6s ease;
+}
+
+.contract-item:nth-child(4) {
+    animation: fadeInUp 0.7s ease;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .contract-upgrade-card {
+        width: 100%;
+        max-width: 520px;
+    }
+
+    .contract-upgrade-description,
+    .contracts-list,
+    .contract-item {
+        width: 100%;
+    }
+}

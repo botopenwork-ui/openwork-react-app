@@ -1,0 +1,78 @@
+.tooltip-form {
+    background: #fff;
+    width: 318px;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+
+    border-radius: 12px;
+    /* border: 1px solid #EAECF0;
+    border: 1px solid color(display-p3 0.9176 0.9255 0.9412); */
+    background: var(--Base-White, #FFF);
+    background: var(--Base-White, color(display-p3 1 1 1));
+}
+
+.tooltip-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tooltip-username {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    color: var(--Gray-Darker, #4D4D4D);
+    color: var(--Gray-Darker, color(display-p3 0.3034 0.3034 0.3034));
+    font-family: 'Satoshi', sans-serif;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    letter-spacing: 0.32px;
+}
+
+.tooltip-star {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    color: #A3A3A3;
+    color: color(display-p3 0.64 0.64 0.64);
+    font-family: 'Satoshi', sans-serif;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    letter-spacing: 0.24px;
+}
+
+.tooltip-skill {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.tooltip-user-role {
+    color: #A3A3A3;
+    color: color(display-p3 0.64 0.64 0.64);
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    letter-spacing: 0.28px;
+}
+
+.tooltip-body {
+    width: auto;
+    color: #575757;
+    color: color(display-p3 0.3412 0.3412 0.3412);
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 24px; /* 171.429% */ 
+}

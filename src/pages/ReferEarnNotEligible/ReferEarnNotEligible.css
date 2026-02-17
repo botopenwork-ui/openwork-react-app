@@ -1,0 +1,158 @@
+/* Container */
+.refer-earn-not-eligible-container {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 40px 80px;
+  background-color: #FEFEFE;
+  min-height: calc(100vh - 80px);
+}
+
+/* Card */
+.refer-earn-not-eligible-card {
+  width: 519px;
+  margin: 0 auto;
+  background: white;
+  border: 2px solid white;
+  border-radius: 24px;
+  box-shadow: 0px 0px 1px rgba(0, 0, 0, 0.04), 0px 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+/* Card Header */
+.refer-earn-card-header {
+  padding: 24px 32px;
+  border-bottom: 2px solid #F7F7F7;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  background: white;
+}
+
+.refer-earn-header-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.refer-earn-card-title {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 27px;
+  letter-spacing: 0.4px;
+  color: #4D4D4D;
+  margin: 0;
+}
+
+/* Content */
+.refer-earn-content {
+  padding: 32px 32px 32px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+/* Icon */
+.refer-earn-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  background: rgba(18, 70, 255, 0.06);
+  border-radius: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.refer-earn-icon {
+  width: 32px;
+  height: 32px;
+}
+
+/* Message Section */
+.refer-earn-message-section {
+  width: 100%;
+  max-width: 456px;
+}
+
+.refer-earn-message {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 28px;
+  letter-spacing: 0.28px;
+  color: #868686;
+  text-align: left;
+  margin: 0;
+}
+
+/* Earnings Card */
+.refer-earn-earnings-card {
+  width: 100%;
+  max-width: 456px;
+  background: #F9FAFB;
+  border: 2px solid white;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.refer-earn-earnings-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.refer-earn-earnings-label {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  line-height: 20px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #767676;
+  margin: 0;
+}
+
+.refer-earn-earnings-amount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.earnings-value {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 20px;
+  line-height: normal;
+  letter-spacing: 0.4px;
+  color: #4D4D4D;
+}
+
+.openwork-token {
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(180deg, #1246FF 23.958%, #4770FF 134.37%);
+  border: 1px solid #1246FF;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.token-icon {
+  width: 10px;
+  height: 10px;
+  object-fit: contain;
+}
+
+/* Responsive */
+@media screen and (max-width: 768px) {
+  .refer-earn-not-eligible-card {
+    width: calc(100% - 32px);
+    margin: 0 16px;
+  }
+  
+  .refer-earn-content {
+    padding: 80px 24px 24px 24px;
+  }
+}

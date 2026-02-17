@@ -1,0 +1,542 @@
+/* ===========================
+   Agent Oppy - Standalone Page
+   Mobile-first, responsive design
+   Matches OpenWork app theme
+   =========================== */
+
+.oppy-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  width: 100%;
+  background-color: #FEFEFE;
+  font-family: 'Satoshi', sans-serif;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* ===========================
+   Header
+   =========================== */
+.oppy-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  height: 64px;
+  background: #FFFFFF;
+  border-bottom: 2px solid whitesmoke;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.oppy-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(180deg, #F4F4F4 0%, #FEFEFE 100%);
+  border: 4px solid #FFFFFF;
+  border-radius: 12px;
+  color: #4D4D4D;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  box-shadow: 0px 0px 0.386px 1.158px rgba(0, 0, 0, 0.05);
+}
+
+.oppy-back-btn:hover {
+  opacity: 0.8;
+}
+
+.oppy-header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  margin-left: 12px;
+}
+
+.oppy-header-icon {
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(180deg, #0047FF -23.96%, #3971FF 134.37%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.oppy-header-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #4D4D4D;
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: 0.32px;
+}
+
+.oppy-header-sub {
+  font-size: 12px;
+  color: #868686;
+  font-weight: 400;
+}
+
+.oppy-header-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.oppy-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #0047FF;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.oppy-status-text {
+  font-size: 12px;
+  color: #0047FF;
+  font-weight: 500;
+}
+
+/* ===========================
+   Messages Area
+   =========================== */
+.oppy-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+.oppy-msg {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  animation: msgFadeIn 0.3s ease-out;
+}
+
+@keyframes msgFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.oppy-msg-user {
+  justify-content: flex-end;
+}
+
+.oppy-msg-bot {
+  justify-content: flex-start;
+}
+
+.oppy-msg-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #0047FF -23.96%, #3971FF 134.37%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.oppy-msg-bubble {
+  max-width: 85%;
+  border-radius: 16px;
+  padding: 10px 14px;
+}
+
+.oppy-bubble-user {
+  background: linear-gradient(180deg, #0047FF -23.96%, #3971FF 134.37%);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.oppy-bubble-bot {
+  background: #FFFFFF;
+  border: 1px solid #EAECF0;
+  color: #4D4D4D;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.oppy-bubble-thinking {
+  padding: 14px 20px;
+}
+
+.oppy-msg-text {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* ===========================
+   Rich Text (Markdown) in bot messages
+   =========================== */
+.oppy-rich-text {
+  white-space: normal;
+}
+
+.oppy-rich-text p {
+  margin: 0 0 8px 0;
+}
+
+.oppy-rich-text p:last-child {
+  margin-bottom: 0;
+}
+
+.oppy-rich-text strong {
+  font-weight: 700;
+  color: #333;
+}
+
+.oppy-rich-text em {
+  font-style: italic;
+}
+
+.oppy-rich-text h1,
+.oppy-rich-text h2,
+.oppy-rich-text h3,
+.oppy-rich-text h4 {
+  margin: 12px 0 6px 0;
+  font-weight: 700;
+  color: #333;
+  line-height: 1.3;
+}
+
+.oppy-rich-text h1:first-child,
+.oppy-rich-text h2:first-child,
+.oppy-rich-text h3:first-child,
+.oppy-rich-text h4:first-child {
+  margin-top: 0;
+}
+
+.oppy-rich-text h1 { font-size: 18px; }
+.oppy-rich-text h2 { font-size: 16px; }
+.oppy-rich-text h3 { font-size: 15px; }
+.oppy-rich-text h4 { font-size: 14px; }
+
+.oppy-rich-text ul,
+.oppy-rich-text ol {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+
+.oppy-rich-text li {
+  margin-bottom: 4px;
+}
+
+.oppy-rich-text li:last-child {
+  margin-bottom: 0;
+}
+
+.oppy-rich-text code {
+  background: rgba(0, 71, 255, 0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: #0047FF;
+}
+
+.oppy-rich-text pre {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  overflow-x: auto;
+  margin: 8px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.oppy-rich-text pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+.oppy-rich-text a {
+  color: #0047FF;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.oppy-rich-text a:hover {
+  text-decoration: underline;
+}
+
+.oppy-rich-text blockquote {
+  border-left: 3px solid #0047FF;
+  margin: 8px 0;
+  padding: 4px 12px;
+  color: #666;
+  background: rgba(0, 71, 255, 0.03);
+  border-radius: 0 6px 6px 0;
+}
+
+.oppy-rich-text hr {
+  border: none;
+  border-top: 1px solid #EAECF0;
+  margin: 10px 0;
+}
+
+.oppy-rich-text table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.oppy-rich-text th,
+.oppy-rich-text td {
+  border: 1px solid #EAECF0;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.oppy-rich-text th {
+  background: #F9FAFB;
+  font-weight: 600;
+}
+
+/* Thinking dots animation */
+.oppy-thinking {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.oppy-thinking-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #868686;
+  animation: thinkingBounce 1.4s ease-in-out infinite;
+}
+
+.oppy-thinking-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.oppy-thinking-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes thinkingBounce {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ===========================
+   Suggested Questions
+   =========================== */
+.oppy-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.oppy-suggestion-btn {
+  padding: 8px 14px;
+  border: 1px solid #EAECF0;
+  border-radius: 12px;
+  background: #FFFFFF;
+  color: #4D4D4D;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Satoshi', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.oppy-suggestion-btn:hover {
+  background: rgba(0, 71, 255, 0.06);
+  border-color: #0047FF;
+  color: #0047FF;
+}
+
+.oppy-suggestion-btn:active {
+  transform: scale(0.97);
+}
+
+/* ===========================
+   Input Area
+   =========================== */
+.oppy-input-area {
+  background: #FFFFFF;
+  border-top: 2px solid whitesmoke;
+  padding: 12px 16px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.oppy-input-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.oppy-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 400;
+  font-family: 'Satoshi', sans-serif;
+  transition: all 0.2s ease;
+  outline: none;
+  background: #FAFAFA;
+  min-height: 44px;
+  color: #4D4D4D;
+  -webkit-appearance: none;
+}
+
+.oppy-input:focus {
+  border-color: #0047FF;
+  box-shadow: 0 0 0 3px rgba(0, 71, 255, 0.1);
+  background: #FFFFFF;
+}
+
+.oppy-input::placeholder {
+  color: #868686;
+}
+
+.oppy-send-btn {
+  width: 44px;
+  height: 44px;
+  border: 4px solid #3f69ff;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #0047FF -23.96%, #3971FF 134.37%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.oppy-send-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0px 4px 12px rgba(0, 71, 255, 0.3);
+}
+
+.oppy-send-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.oppy-send-btn:disabled {
+  background: linear-gradient(180deg, #F4F4F4 0%, #FEFEFE 100%);
+  border-color: #FFFFFF;
+  color: #868686;
+  cursor: not-allowed;
+  box-shadow: 0px 0px 0.386px 1.158px rgba(0, 0, 0, 0.05);
+}
+
+.oppy-disclaimer {
+  font-size: 11px;
+  color: #868686;
+  text-align: center;
+  margin: 6px 0 0 0;
+  font-weight: 400;
+}
+
+/* ===========================
+   Tablet & Desktop (768px+)
+   =========================== */
+@media (min-width: 768px) {
+  .oppy-page {
+    position: relative;
+    max-width: 720px;
+    margin: 0 auto;
+    height: 100vh;
+    border-left: 2px solid whitesmoke;
+    border-right: 2px solid whitesmoke;
+  }
+
+  .oppy-header {
+    padding: 14px 24px;
+    height: 80px;
+  }
+
+  .oppy-messages {
+    padding: 24px;
+    gap: 16px;
+  }
+
+  .oppy-msg-bubble {
+    max-width: 75%;
+  }
+
+  .oppy-msg-text {
+    font-size: 14px;
+  }
+
+  .oppy-input-area {
+    padding: 16px 24px;
+  }
+
+  .oppy-input {
+    font-size: 14px;
+    padding: 12px 20px;
+  }
+}
+
+/* ===========================
+   Large Desktop (1200px+)
+   =========================== */
+@media (min-width: 1200px) {
+  .oppy-page {
+    max-width: 800px;
+  }
+
+  .oppy-msg-bubble {
+    max-width: 65%;
+  }
+}

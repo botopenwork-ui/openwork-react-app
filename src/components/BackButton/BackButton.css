@@ -1,0 +1,44 @@
+.form-navigationDC {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    flex: 1;
+    min-width: 0;
+    max-width: 100%;
+}
+  
+  .backButtonDC {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+.backIconDC {
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+}
+  
+.formTitleDC {
+    font-family: 'Satoshi', sans-serif;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 20px;
+    line-height: 27px;
+    display: flex;
+    align-items: center;
+    letter-spacing: 0.02em;
+    color: #4D4D4D;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: help;
+    position: relative;
+    transition: color 0.2s ease;
+}
+
+.formTitleDC:hover {
+    color: #2D2D2D;
+}

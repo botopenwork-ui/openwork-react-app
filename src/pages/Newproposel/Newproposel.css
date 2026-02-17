@@ -1,0 +1,207 @@
+.new-proposal-container {
+    width: 100%;
+    min-height: 100vh;
+    background-color: #FEFEFE;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.new-proposal-card {
+    width: 520px;
+    background: #FFFFFF;
+    border: 2px solid #FFFFFF;
+    border-radius: 24px;
+    box-shadow: 0px 0px 1px rgba(0, 0, 0, 0.04), 0px 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.new-proposal-header {
+    height: 88px;
+    background: #FFFFFF;
+    border: 2px solid rgba(0, 0, 0, 0.04);
+    border-radius: 24px 24px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 32px;
+}
+
+.new-proposal-content {
+    background: #FFFFFF;
+    border: 2px solid rgba(0, 0, 0, 0.04);
+    border-radius: 0 0 24px 24px;
+    padding: 24px 32px 32px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 24px;
+}
+
+.proposal-description {
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 28px;
+    letter-spacing: 0.28px;
+    color: #868686;
+    margin: 0;
+    width: 100%;
+}
+
+.proposal-types-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.proposal-type-button {
+    width: 100%;
+    max-width: 456px;
+    background: #FFFFFF;
+    border: 2px solid rgba(0, 0, 0, 0.04);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: none;
+}
+
+.proposal-type-button:hover {
+    background: rgba(18, 70, 255, 0.02);
+    border-color: rgba(18, 70, 255, 0.1);
+}
+
+.proposal-type-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.proposal-icon-wrapper {
+    width: 36px;
+    height: 36px;
+    background: rgba(18, 70, 255, 0.06);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.proposal-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+}
+
+.proposal-type-title {
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 24px;
+    color: #050505;
+}
+
+.proposal-arrow-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.proposal-arrow {
+    width: 20px;
+    height: 20px;
+    transform: rotate(90deg);
+    flex-shrink: 0;
+    object-fit: contain;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .new-proposal-card {
+        width: 100%;
+        max-width: 520px;
+    }
+
+    .new-proposal-content {
+        padding: 24px 24px 24px 24px;
+    }
+
+    .proposal-type-button {
+        max-width: 100%;
+    }
+}
+
+/* Page Transition Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.new-proposal-container {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.new-proposal-card {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.new-proposal-header {
+    animation: fadeIn 0.6s ease-in-out 0.1s backwards;
+}
+
+.proposal-description {
+    animation: fadeInUp 0.5s ease-out 0.2s backwards;
+}
+
+.proposal-types-list {
+    animation: fadeInUp 0.5s ease-out 0.3s backwards;
+}
+
+.proposal-type-button:nth-child(1) {
+    animation: fadeInUp 0.5s ease-out 0.4s backwards;
+}
+
+.proposal-type-button:nth-child(2) {
+    animation: fadeInUp 0.5s ease-out 0.5s backwards;
+}
+
+.proposal-type-button:nth-child(3) {
+    animation: fadeInUp 0.5s ease-out 0.6s backwards;
+}
+
+.proposal-type-button:nth-child(4) {
+    animation: fadeInUp 0.5s ease-out 0.7s backwards;
+}
+
+.proposal-type-button:nth-child(5) {
+    animation: fadeInUp 0.5s ease-out 0.8s backwards;
+}
+
+.proposal-type-button:nth-child(6) {
+    animation: fadeInUp 0.5s ease-out 0.9s backwards;
+}

@@ -1,0 +1,30 @@
+.form-navigationProposal {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+}
+  
+.backButtonProposal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* .backIconProposal {
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+} */
+
+.formTitleProposal {
+    font-family: 'Satoshi', sans-serif;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 20px;
+    line-height: 27px;
+    display: flex;
+    align-items: center;
+    letter-spacing: 0.02em;
+    color: #4D4D4D;
+    white-space: nowrap;
+}

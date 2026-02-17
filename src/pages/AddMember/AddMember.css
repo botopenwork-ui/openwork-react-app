@@ -1,0 +1,16 @@
+.add-member-address {
+    display: flex;
+    padding: 12px 16px;
+
+    border-radius: 12px;
+    border: 2px solid #FFF;
+    border: 2px solid #f7f7f7;
+
+    color: var(--Base-Black, #050505);
+    color: var(--Base-Black, color(display-p3 0.0205 0.0205 0.0205));
+    font-family: 'Satoshi';
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 24px; /* 171.429% */
+}

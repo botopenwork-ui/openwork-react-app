@@ -1,0 +1,391 @@
+/* Hero Section (LP-1) */
+
+/* Main Content Area */
+.landing-main {
+  width: 100%;
+  min-height: 100vh;
+  padding-top: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* Circle Group - Background elements */
+.circle-group {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 700px;
+  height: 700px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Radiant Glow */
+.radiant-glow-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 740px;
+  height: 740px;
+  background: url('/RadiantGlow.png') center/contain no-repeat;
+  animation: rotate-glow 20s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes rotate-glow {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* Main Circle */
+.main-circle-bg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 580px;
+  height: 580px;
+  object-fit: contain;
+}
+
+/* Floating Icon Buttons */
+.floating-icons {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1280px;
+  height: 734px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.icon-btn {
+  position: absolute;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px;
+  padding: 0 !important;
+  border-radius: 999px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  pointer-events: all;
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 14.667px !important;
+  gap: 0;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hide label text by default */
+.icon-btn span {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #767676;
+  width: 0;
+  opacity: 0;
+  padding: 0;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), 
+              opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1), 
+              padding 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  display: inline-block;
+}
+
+/* Expand on hover */
+.icon-btn:hover {
+  width: auto !important;
+  padding: 14.667px 16px 14.667px 14.667px !important;
+  border-radius: 24px !important;
+  gap: 0;
+  box-shadow: 0 4px 16px rgba(18, 70, 255, 0.25);
+}
+
+.icon-btn:hover span {
+  width: auto;
+  opacity: 1;
+  padding-left: 8px;
+  color: #1246FF;
+}
+
+.icon-btn img {
+  width: 14.667px !important;
+  height: 14.667px !important;
+  flex-shrink: 0;
+  display: block;
+  transition: filter 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.icon-btn:hover img {
+  filter: brightness(0) saturate(100%) invert(27%) sepia(98%) saturate(3089%) hue-rotate(220deg) brightness(101%) contrast(104%);
+}
+
+/* Individual Icon Positions */
+.icon-discoverable {
+  left: 351px;
+  top: 242px;
+}
+
+.icon-direct-contract {
+  left: 624px;
+  top: 68px;
+  transform: translateX(-50%);
+}
+
+.icon-job-progress {
+  left: 812px;
+  top: 129.584px;
+}
+
+.icon-post-job {
+  left: 442px;
+  top: 129.583px;
+}
+
+.icon-raise-dispute {
+  left: 893px;
+  top: 238px;
+}
+
+.icon-dao {
+  left: 910px;
+  top: 393px;
+}
+
+.icon-set-profile {
+  left: 339px;
+  top: 397px;
+}
+
+/* Center Content */
+.center-content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 481px;
+  gap: 48px;
+  padding: 0 20px;
+}
+
+.text-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.main-heading {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 48px;
+  letter-spacing: -1.6px;
+  color: #050505;
+  margin: 0;
+}
+
+.main-description {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  color: #767676;
+  margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 1440px) {
+  .floating-icons {
+    width: 100vw;
+    padding: 0 80px;
+  }
+
+  .icon-discoverable {
+    left: 20%;
+  }
+
+  .icon-direct-contract {
+    left: 50%;
+  }
+
+  .icon-job-progress {
+    left: 65%;
+  }
+
+  .icon-post-job {
+    left: 35%;
+  }
+
+  .icon-raise-dispute {
+    left: 72%;
+  }
+
+  .icon-dao {
+    left: 73%;
+  }
+
+  .icon-set-profile {
+    left: 18%;
+  }
+}
+
+@media (max-width: 1024px) {
+  .circle-group {
+    width: 600px;
+    height: 600px;
+  }
+
+  .radiant-glow-container {
+    width: 560px;
+    height: 560px;
+  }
+
+  .main-circle-bg {
+    width: 550px;
+    height: 550px;
+  }
+
+  .floating-icons {
+    width: 1050px;
+    height: 630px;
+  }
+
+  .center-content {
+    gap: 40px;
+    margin-top: 50px;
+  }
+
+  .text-content {
+    gap: 10px;
+  }
+
+  .main-heading {
+    font-size: 36px;
+    line-height: 44px;
+  }
+
+  .main-description {
+    font-size: 15px;
+    line-height: 22px;
+  }
+}
+
+@media (max-width: 768px) {
+  .circle-group {
+    width: 500px;
+    height: 500px;
+  }
+
+  .radiant-glow-container {
+    width: 470px;
+    height: 470px;
+  }
+
+  .main-circle-bg {
+    width: 460px;
+    height: 460px;
+  }
+
+  .floating-icons {
+    width: 900px;
+    height: 520px;
+  }
+
+  .icon-btn {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .icon-btn img {
+    width: 9px !important;
+    height: 9px !important;
+  }
+
+  .center-content {
+    max-width: 90%;
+    gap: 36px;
+    margin-top: 40px;
+  }
+
+  .text-content {
+    gap: 10px;
+  }
+
+  .main-heading {
+    font-size: 32px;
+    line-height: 40px;
+    letter-spacing: -1.2px;
+  }
+
+  .main-description {
+    font-size: 14px;
+    line-height: 21px;
+  }
+}
+
+@media (max-width: 480px) {
+  .circle-group {
+    width: 350px;
+    height: 350px;
+  }
+
+  .radiant-glow-container {
+    width: 330px;
+    height: 330px;
+  }
+
+  .main-circle-bg {
+    width: 320px;
+    height: 320px;
+  }
+
+  .floating-icons {
+    width: 650px;
+    height: 380px;
+  }
+
+  .icon-btn {
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  .icon-btn img {
+    width: 8px !important;
+    height: 8px !important;
+  }
+
+  .center-content {
+    gap: 32px;
+    margin-top: 30px;
+  }
+
+  .text-content {
+    gap: 8px;
+  }
+
+  .main-heading {
+    font-size: 28px;
+    line-height: 36px;
+  }
+
+  .main-description {
+    font-size: 13px;
+    line-height: 20px;
+  }
+}

@@ -1,0 +1,7 @@
+.work-content {
+    width: 876px;
+    margin: 48px auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}

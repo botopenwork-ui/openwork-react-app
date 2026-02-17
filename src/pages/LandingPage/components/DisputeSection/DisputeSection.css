@@ -1,0 +1,462 @@
+/* LP-7 Dispute Section Styles */
+
+.lp-7-section {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  padding: 90px 0;
+}
+
+.lp-7-container {
+  max-width: 1280px;
+  width: 100%;
+  padding: 0 162px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 90px;
+}
+
+/* Left Content */
+.lp-7-content {
+  width: 432px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.lp-7-heading {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 48px;
+  letter-spacing: -1.6px;
+  color: #050505;
+  margin: 0;
+}
+
+.lp-7-description {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  color: #767676;
+  margin: 0;
+}
+
+/* Right Content - Oracle Circle */
+.lp-7-circle-container {
+  width: 500px;
+  height: 450px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.lp-7-oracle-circle-group {
+  position: relative;
+  width: 389.93px;
+  height: 450px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Core Circle */
+.lp-7-core-circle {
+  position: absolute;
+  left: 80.95px;
+  top: 101.09px;
+  width: 214.988px;
+  height: 214.988px;
+  z-index: 2;
+}
+
+.lp-7-core-circle::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 280px;
+  height: 280px;
+  background: url('/RadiantGlow.png') center/contain no-repeat;
+  animation: lp7-rotate-glow 20s linear infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes lp7-rotate-glow {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.lp-7-core-bg {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  position: relative;
+  z-index: 1;
+}
+
+/* Ellipse Background */
+.lp-7-ellipse-bg {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 600px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Center Athena */
+.lp-7-center-athena {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.7px;
+  z-index: 5;
+}
+
+.lp-7-athena-container {
+  position: relative;
+  width: 79.727px;
+  height: 82.476px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-7-athena-image {
+  width: 99.727px;
+  height: 102.476px;
+  object-fit: contain;
+  position: relative;
+  z-index: 2;
+  transform: translateX(-5px);
+}
+
+.lp-7-job-text {
+  width: auto;
+  height: auto;
+  margin-top: 10px;
+  z-index: 2;
+}
+
+.lp-7-athena-bg {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100.804px;
+  height: 14.662px;
+  z-index: 1;
+}
+
+.lp-7-athena-label {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 10.539px;
+  line-height: normal;
+  letter-spacing: 1.0539px;
+  text-transform: uppercase;
+  color: #767676;
+  text-align: center;
+}
+
+/* Oracle Avatars */
+.lp-7-oracle-avatar {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8.431px;
+  z-index: 3;
+}
+
+.lp-7-oracle-button {
+  width: 50.585px;
+  height: 50.585px;
+  border-radius: 50%;
+  border: 4.215px solid white;
+  background: linear-gradient(180deg, #F4F4F4 0%, #FEFEFE 100%);
+  padding: 8.431px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-7-oracle-img {
+  width: 33.724px;
+  height: 33.724px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.lp-7-oracle-status {
+  width: 28.454px;
+  height: 12.646px;
+}
+
+.lp-7-oracle-coins {
+  position: absolute;
+  bottom: 52px;
+  left: 2.75px;
+  width: 15.808px;
+  height: 18.97px;
+}
+
+.lp-7-coin-stack {
+  width: 100%;
+  height: auto;
+}
+
+/* Oracle Positions */
+.lp-7-oracle-top {
+  left: 155.33px;
+  top: 0;
+  width: 75.746px;
+}
+
+.lp-7-oracle-left {
+  left: 0.41px;
+  top: 105.39px;
+  width: 75.746px;
+}
+
+.lp-7-oracle-bottom-left {
+  left: 37.3px;
+  top: 301.41px;
+  width: 75.746px;
+}
+
+.lp-7-oracle-bottom-right {
+  left: 263.88px;
+  top: 292.97px;
+  width: 75.746px;
+}
+
+.lp-7-oracle-bottom-right .lp-7-oracle-button {
+  width: 44.525px;
+  height: 44.525px;
+}
+
+.lp-7-oracle-bottom-right .lp-7-oracle-img {
+  width: 27.663px;
+  height: 27.663px;
+}
+
+.lp-7-oracle-right {
+  left: 313.41px;
+  top: 125.41px;
+  width: 75.746px;
+}
+
+/* Center Question */
+.lp-7-center-question {
+  position: absolute;
+  left: 50%;
+  top: 242.39px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8.431px;
+  z-index: 6;
+}
+
+.lp-7-question-button {
+  background: linear-gradient(180deg, #1246FF 23.958%, #4770FF 134.37%);
+  border: 2.108px solid #1246FF;
+  border-radius: 52.693px;
+  padding: 8.431px 12.646px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 10.539px;
+  line-height: normal;
+  letter-spacing: 1.0539px;
+  text-transform: uppercase;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.lp-7-question-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(18, 70, 255, 0.3);
+}
+
+.lp-7-vote-options {
+  display: flex;
+  align-items: center;
+  gap: 8.431px;
+}
+
+.lp-7-vote-btn {
+  width: 16.862px;
+  height: 16.862px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.lp-7-vote-btn:hover {
+  transform: scale(1.1);
+}
+
+.lp-7-or-text {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 8.431px;
+  line-height: 11.305px;
+  letter-spacing: 0.8431px;
+  text-transform: uppercase;
+  color: #767676;
+  text-align: center;
+}
+
+/* Bottom Text */
+.lp-7-bottom-text {
+  position: absolute;
+  left: 50%;
+  top: 406.79px;
+  transform: translateX(-50%);
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 12.646px;
+  line-height: 12.646px;
+  color: #767676;
+  text-align: center;
+  white-space: nowrap;
+  margin: 0;
+  z-index: 4;
+}
+
+/* Responsive Design */
+@media (max-width: 1440px) {
+  .lp-7-container {
+    padding: 0 120px;
+    gap: 70px;
+  }
+
+  .lp-7-content {
+    width: 400px;
+  }
+
+  .lp-7-heading {
+    font-size: 36px;
+    line-height: 44px;
+  }
+
+  .lp-7-circle-container {
+    width: 460px;
+    height: 420px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .lp-7-container {
+    padding: 0 80px;
+    gap: 50px;
+    flex-direction: column;
+  }
+
+  .lp-7-content {
+    width: 100%;
+    max-width: 500px;
+    align-items: center;
+    text-align: center;
+  }
+
+  .lp-7-heading {
+    font-size: 32px;
+    line-height: 40px;
+  }
+
+  .lp-7-description {
+    font-size: 15px;
+    line-height: 23px;
+  }
+
+  .lp-7-circle-container {
+    width: 100%;
+    max-width: 460px;
+    height: 420px;
+  }
+}
+
+@media (max-width: 768px) {
+  .lp-7-section {
+    padding: 60px 0;
+  }
+
+  .lp-7-container {
+    padding: 0 40px;
+    gap: 40px;
+  }
+
+  .lp-7-heading {
+    font-size: 28px;
+    line-height: 36px;
+  }
+
+  .lp-7-description {
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .lp-7-circle-container {
+    width: 100%;
+    max-width: 380px;
+    height: 350px;
+  }
+
+  .lp-7-oracle-circle-group {
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+}
+
+@media (max-width: 480px) {
+  .lp-7-container {
+    padding: 0 20px;
+    gap: 30px;
+  }
+
+  .lp-7-heading {
+    font-size: 24px;
+    line-height: 32px;
+  }
+
+  .lp-7-description {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .lp-7-circle-container {
+    width: 100%;
+    max-width: 320px;
+    height: 300px;
+  }
+
+  .lp-7-oracle-circle-group {
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+
+  .lp-7-bottom-text {
+    font-size: 10px;
+    line-height: 10px;
+  }
+}

@@ -1,0 +1,27 @@
+.tooltip-milestone {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    color: var(--Gray-Dark, #767676);
+    color: var(--Gray-Dark, color(display-p3 0.463 0.463 0.463));
+    font-family: 'Satoshi', sans-serif;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: 20px; /* 200% */
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.wallet-address {
+    color: var(--Base-Black, #050505);
+    color: var(--Base-Black, color(display-p3 0.0205 0.0205 0.0205));
+    font-family: Satoshi;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 24px; /* 171.429% */
+}
+

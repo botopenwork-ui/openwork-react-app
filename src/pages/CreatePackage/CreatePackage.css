@@ -1,0 +1,259 @@
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.create-package-container {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #fefefe;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.create-package-card {
+  width: 520px;
+  background-color: #ffffff;
+  border: 2px solid #ffffff;
+  border-radius: 24px;
+  box-shadow: 0px 0px 1px rgba(0, 0, 0, 0.04), 0px 2px 6px rgba(0, 0, 0, 0.04);
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.create-package-header {
+  height: 88px;
+  background-color: #ffffff;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 24px 24px 0 0;
+  display: flex;
+  align-items: center;
+  padding: 0 32px;
+}
+
+.create-package-body {
+  background-color: #ffffff;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 0 0 24px 24px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.create-package-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Input Styles */
+.create-package-input,
+.create-package-textarea {
+  width: 100%;
+  height: 48px;
+  background-color: #ffffff;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  color: #050505;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.create-package-input::placeholder,
+.create-package-textarea::placeholder {
+  color: #868686;
+}
+
+.create-package-input:focus,
+.create-package-textarea:focus {
+  border-color: #1246ff;
+}
+
+.create-package-textarea {
+  min-height: 131px;
+  height: auto;
+  resize: vertical;
+  padding: 16px;
+}
+
+/* Cost Input with Currency Icon */
+.create-package-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.create-package-input-wrapper .create-package-input {
+  padding-right: 48px;
+}
+
+.create-package-currency {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.create-package-currency img {
+  width: 16px;
+  height: 16px;
+}
+
+/* Categories */
+.create-package-categories-container {
+  padding: 16px;
+  background-color: #ffffff;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  min-height: 82px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.create-package-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.create-package-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  padding-right: 8px;
+  background: #fafafa;
+  border: 1px solid #ebebeb;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.create-package-badge:hover {
+  background: #f0f0f0;
+  transform: translateY(-1px);
+}
+
+.create-package-badge-unselected {
+  opacity: 0.6;
+}
+
+.create-package-badge-text {
+  font-family: "Satoshi", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #4d4d4d;
+  line-height: 18px;
+}
+
+.create-package-check-icon {
+  width: 16px;
+  height: 16px;
+  background: rgba(23, 178, 106, 0.1);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.create-package-check-icon img {
+  width: 8px;
+  height: 8px;
+}
+
+/* Link Button */
+.create-package-link-button {
+  width: 100%;
+  padding: 12px 16px;
+  background: #ffffff;
+  border: 2px solid #ffffff;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.create-package-link-button:hover {
+  border-color: #e0e0e0;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.create-package-link-text {
+  font-family: "Satoshi", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #868686;
+  line-height: 24px;
+}
+
+.create-package-chevron {
+  width: 16px;
+  height: 16px;
+  transform: rotate(180deg);
+}
+
+/* Footer */
+.create-package-footer {
+  padding: 0 32px 32px 32px;
+}
+
+.create-package-footer button {
+  width: 100%;
+  height: 48px;
+  background: linear-gradient(180deg, #1246ff 23.958%, #4770ff 134.37%);
+  border: 4px solid #1246ff;
+  border-radius: 12px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 24px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.create-package-footer button:hover {
+  opacity: 0.9;
+}
+
+.create-package-footer button:active {
+  opacity: 0.8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .create-package-card {
+    width: 100%;
+    max-width: 520px;
+  }
+}

@@ -1,0 +1,29 @@
+#buttonTop-home {
+    top: -62px;
+    display: none;
+    z-index: 3;
+}
+
+#buttonTop-home.visible-home {
+    opacity: 1;
+    animation: slideInLeft-home 1s forwards;
+}
+
+#buttonTop-home:not(.visible-home) {
+    animation: slideOutLeft-home 1s forwards;
+}
+
+#buttonBottom-home {
+    bottom: -62px;
+    display: none;
+    z-index: 3;
+}
+
+#buttonBottom-home.visible-home {
+    opacity: 1;
+    animation: slideInBottom-home 1s forwards;
+}
+
+#buttonBottom-home:not(.visible-home) {
+    animation: slideOutBottom-home 1s forwards;
+}

@@ -1,0 +1,19 @@
+.payment-refund-address {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.refund-address-description {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    color: var(--Gray-Main, #868686);
+    color: var(--Gray-Main, color(display-p3 0.5274 0.5274 0.5274));
+    font-family: 'Satoshi', sans-serif;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 20px; /* 166.667% */
+}

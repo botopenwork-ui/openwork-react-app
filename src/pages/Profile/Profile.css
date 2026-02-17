@@ -1,0 +1,80 @@
+.core-profile {
+    position: relative;
+    z-index: 10;
+    width: 85px;
+    height: 85px;
+    padding: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 200px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.core-profile>img {
+    z-index: 10;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border: 2px solid #c2cccf;
+    border-radius: 100px; 
+}
+
+.profile-point {
+    position: absolute;
+    z-index: 10;
+    bottom: -16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    color: var(--Gray-Main, #868686);
+    color: var(--Gray-Main, color(display-p3 0.5274 0.5274 0.5274));
+    font-family: 'Satoshi', sans-serif;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    letter-spacing: 0.24px;
+}
+
+/* Define CSS variables for SVG icons */
+.buttonContainer-home img.buttonIcon-home {
+    --stroke-0: #1246FF;
+    --fill-0: #F2F4F7;
+}
+
+/* Button positioning to match Governance layout */
+#buttonOracle-home {
+    left: calc(50% - 209px);
+    top: 187px;
+    display: none;
+    z-index: 3;
+}
+
+#buttonOracle-home.visible-home {
+    opacity: 1;
+    animation: slideInLeft-home 1s forwards;
+}
+
+#buttonOracle-home:not(.visible-home) {
+    animation: slideOutLeft-home 1s forwards;
+}
+
+#buttonToken-home {
+    left: calc(50% + 90px);
+    top: 187px;
+    display: none;
+    z-index: 3;
+}
+
+#buttonToken-home.visible-home {
+    opacity: 1;
+    animation: slideInRight-home 1s forwards;
+}
+
+#buttonToken-home:not(.visible-home) {
+    animation: slideOutRight-home 1s forwards;
+}

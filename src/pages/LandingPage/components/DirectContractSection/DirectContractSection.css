@@ -1,0 +1,256 @@
+/* Direct Contract Section (LP-5) */
+.lp-5-section {
+  background: #FFFFFF;
+  padding-top: 64px;
+}
+
+.lp-5-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 162px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 90px;
+  min-height: calc(100vh - 64px);
+}
+
+.lp-5-content {
+  width: 432px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.lp-5-heading {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 48px;
+  letter-spacing: -1.6px;
+  color: #050505;
+  margin: 0;
+}
+
+.lp-5-description {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  color: #767676;
+  margin: 0;
+}
+
+.contract-circle-section {
+  width: 500px;
+  height: 450px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.contract-circle-group {
+  position: absolute;
+  width: 266.344px;
+  height: 266.344px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.contract-radiant-glow {
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: url('/RadiantGlow.png') center/contain no-repeat;
+  animation: rotate-glow 20s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes rotate-glow {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.contract-radiant-glow img {
+  display: none;
+}
+
+.contract-radiant-glow .glow-overlay {
+  display: none;
+}
+
+.contract-circle-bg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+  z-index: 2;
+}
+
+.contract-avatar {
+  position: absolute;
+  width: 81.114px;
+  height: 81.114px;
+  background: linear-gradient(180deg, #F4F4F4 0%, #FEFEFE 100%);
+  border: 5.474px solid #FFFFFF;
+  border-radius: 605326px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.contract-avatar img {
+  width: 32.688px;
+  height: 32.688px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.contract-avatar-left {
+  left: -52.55px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.contract-avatar-right {
+  right: -52.55px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.contract-center-info {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.421px;
+  z-index: 4;
+}
+
+.contract-info {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4.843px;
+  z-index: 4;
+}
+
+.contract-info-left {
+  left: -80px;
+  top: 50%;
+  transform: translate(-100%, -50%);
+  align-items: flex-end;
+}
+
+.contract-info-right {
+  right: -80px;
+  top: 50%;
+  transform: translate(100%, -50%);
+  align-items: flex-start;
+}
+
+.contract-amount {
+  display: flex;
+  align-items: center;
+  gap: 4.843px;
+}
+
+.amount-value {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 12.107px;
+  font-weight: 500;
+  color: #767676;
+  letter-spacing: 0.2421px;
+}
+
+.usdc-icon {
+  width: 9.685px;
+  height: 9.685px;
+  object-fit: contain;
+}
+
+.amount-label {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 6.053px;
+  font-weight: 700;
+  color: #767676;
+  letter-spacing: 0.6053px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.user-name {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 8.475px;
+  font-weight: 500;
+  color: #050505;
+  letter-spacing: 0.1695px;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 1440px) {
+  .lp-5-container {
+    padding: 0 80px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .lp-5-container {
+    flex-direction: column;
+    gap: 60px;
+    padding: 0 40px;
+  }
+
+  .lp-5-content {
+    width: 100%;
+    max-width: 500px;
+    text-align: center;
+    align-items: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .lp-5-container {
+    gap: 40px;
+    padding: 0 20px;
+  }
+
+  .lp-5-heading {
+    font-size: 32px;
+    line-height: 40px;
+    letter-spacing: -1.2px;
+  }
+
+  .lp-5-description {
+    font-size: 14px;
+    line-height: 21px;
+  }
+}
+
+@media (max-width: 480px) {
+  .lp-5-heading {
+    font-size: 28px;
+    line-height: 36px;
+  }
+
+  .lp-5-description {
+    font-size: 13px;
+    line-height: 20px;
+  }
+}

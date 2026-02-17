@@ -1,0 +1,17 @@
+.apply-introduction {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+
+    /* overflow: hidden; */
+    color: var(--Base-Black, #050505);
+    color: var(--Base-Black, color(display-p3 0.0205 0.0205 0.0205));
+    /* text-overflow: ellipsis; */
+    /* white-space: nowrap; */
+    font-family: 'Satoshi';
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 24px; /* 171.429% */
+}

@@ -1,0 +1,247 @@
+/* LP-13 Contact Section Styles */
+
+.lp-13-section {
+  width: 100%;
+  min-height: 734px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  padding: 64px 0;
+}
+
+.lp-13-container {
+  max-width: 1280px;
+  width: 100%;
+  padding: 0 162px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 90px;
+}
+
+/* Left Content */
+.lp-13-content {
+  width: 432px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lp-13-content > button,
+.lp-13-content > div > button {
+  width: fit-content;
+}
+
+.lp-13-heading {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 48px;
+  letter-spacing: -1.6px;
+  color: #050505;
+  margin: 0;
+}
+
+.lp-13-description {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  color: #767676;
+  margin: 0;
+}
+
+/* Right Content - Contact Form */
+.lp-13-form-container {
+  width: 500px;
+  height: 450px;
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.lp-13-contact-form {
+  width: 370px;
+  height: 370px;
+  background: white;
+  border: 1px solid #F0F0F0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lp-13-input,
+.lp-13-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 8.823px;
+  background: white;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 20px;
+  color: #050505;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.lp-13-input::placeholder,
+.lp-13-textarea::placeholder {
+  color: #A4A4A4;
+}
+
+.lp-13-input:focus,
+.lp-13-textarea:focus {
+  border-color: #1246FF;
+}
+
+.lp-13-textarea {
+  flex: 1;
+  resize: none;
+  min-height: 120px;
+}
+
+.lp-13-contact-form button {
+  width: fit-content;
+  align-self: flex-start;
+  margin-top: 0;
+}
+
+.lp-13-send-button {
+  background: linear-gradient(180deg, #1246FF 23.958%, #4770FF 134.37%);
+  border: 4.643px solid #1246FF;
+  border-radius: 13.929px;
+  padding: 9.286px 18.572px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4.643px;
+  cursor: pointer;
+  height: 46.43px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 16.251px;
+  line-height: 27.858px;
+  color: white;
+}
+
+.lp-13-button-icon {
+  width: 11px;
+  height: 11px;
+}
+
+/* Responsive Design */
+@media (max-width: 1440px) {
+  .lp-13-container {
+    padding: 0 120px;
+    gap: 70px;
+  }
+
+  .lp-13-content {
+    width: 400px;
+  }
+
+  .lp-13-heading {
+    font-size: 36px;
+    line-height: 44px;
+  }
+
+  .lp-13-form-container {
+    width: 460px;
+    height: 420px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .lp-13-container {
+    padding: 0 80px;
+    gap: 50px;
+    flex-direction: column;
+  }
+
+  .lp-13-content {
+    width: 100%;
+    max-width: 500px;
+    align-items: center;
+    text-align: center;
+  }
+
+  .lp-13-heading {
+    font-size: 32px;
+    line-height: 40px;
+  }
+
+  .lp-13-description {
+    font-size: 15px;
+    line-height: 23px;
+  }
+
+  .lp-13-form-container {
+    width: 100%;
+    max-width: 460px;
+    height: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .lp-13-section {
+    padding: 60px 0;
+  }
+
+  .lp-13-container {
+    padding: 0 40px;
+    gap: 40px;
+  }
+
+  .lp-13-heading {
+    font-size: 28px;
+    line-height: 36px;
+  }
+
+  .lp-13-description {
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .lp-13-contact-form {
+    width: 100%;
+    max-width: 340px;
+  }
+}
+
+@media (max-width: 480px) {
+  .lp-13-container {
+    padding: 0 20px;
+    gap: 30px;
+  }
+
+  .lp-13-heading {
+    font-size: 24px;
+    line-height: 32px;
+  }
+
+  .lp-13-description {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .lp-13-contact-form {
+    width: 100%;
+    max-width: 300px;
+    padding: 12px;
+  }
+
+  .lp-13-input,
+  .lp-13-textarea {
+    font-size: 13px;
+    padding: 10px 14px;
+  }
+}

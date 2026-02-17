@@ -1,0 +1,145 @@
+@import url("../ProfileJobs/ProfileJobs.css");
+
+/* Application-specific styles */
+.application-title-cell {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-left: 0;
+}
+
+.application-title-cell .docIcon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.application-title-cell span {
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #050505;
+    line-height: normal;
+    letter-spacing: 0.02em;
+}
+
+.applicant-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.applicant-cell span {
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #868686;
+    line-height: normal;
+    letter-spacing: 0.02em;
+}
+
+.applicant-cell img {
+    width: 24px;
+    height: 24px;
+}
+
+.sent-to-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sent-to-cell span {
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #868686;
+    line-height: normal;
+    letter-spacing: 0.02em;
+}
+
+.sent-to-cell img {
+    width: 24px;
+    height: 24px;
+}
+
+.status-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.application-status {
+    background: #fafafa;
+    border: 1px solid #ebebeb;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: 'Satoshi', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+    line-height: 16px;
+    letter-spacing: 0.02em;
+}
+
+.application-status.pending {
+    background: #fffaeb;
+    border-color: #fedf89;
+    color: #b54708;
+}
+
+.application-status.accepted {
+    background: #ecfdf3;
+    border-color: #abefc6;
+    color: #067647;
+}
+
+.application-status.rejected {
+    background: #fef3f2;
+    border-color: #fecdca;
+    color: #b42318;
+}
+
+.amount-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.amount-cell span {
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #868686;
+    line-height: normal;
+    letter-spacing: 0.02em;
+}
+
+.amount-cell img {
+    width: 16px;
+    height: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .application-title-cell {
+        gap: 12px;
+    }
+
+    .application-title-cell .docIcon {
+        width: 24px;
+        height: 24px;
+    }
+
+    .sent-to-cell {
+        gap: 6px;
+    }
+
+    .sent-to-cell img {
+        width: 20px;
+        height: 20px;
+    }
+}

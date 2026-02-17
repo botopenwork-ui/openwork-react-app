@@ -1,0 +1,79 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  background-color: #fff;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.backButton {
+  display: flex;
+  align-items: center;
+  color: #000;
+  text-decoration: none;
+  margin: 20px 0;
+}
+
+.backIcon {
+  width: 24px;
+  height: 24px;
+}
+
+#logo {
+  width: 120px;
+}
+
+#connectButton {
+  width: 32px;
+  height: 32px;
+}
+
+.job-update-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.job-update-header h1 {
+  margin: 0;
+}
+
+.add-update-button {
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.job-update-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.job-update-content {
+  margin-top: 20px;
+}
+
+.job-update-card {
+  background-color: #fff;
+  border: 1px solid #eaeaea;
+  border-radius: 5px;
+  padding: 15px;
+  margin-bottom: 10px;
+}
+
+.job-update-info {
+  display: flex;
+  justify-content: space-between;
+}
+
+.job-update-description {
+  margin-top: 10px;
+}

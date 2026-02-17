@@ -1,0 +1,168 @@
+.timeline-page-wrapper {
+    min-height: calc(100vh - 80px);
+    width: 100%;
+    background: transparent;
+    position: relative;
+}
+
+.timeline-form {
+    padding: 40px;
+    margin: 65px auto;
+    max-width: 900px;
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    
+    border-radius: 24px;
+    border: 2px solid #f7f7f7;
+    background: var(--Base-White, #FFF);
+    background: var(--Base-White, color(display-p3 1 1 1));
+    position: relative;
+    z-index: 1;
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: center;
+}
+
+.timeline-title {
+    color: var(--Base-Black, #050505);
+    color: var(--Base-Black, color(display-p3 0.0205 0.0205 0.0205));
+    font-family: 'Satoshi', sans-serif;
+    font-size: 32px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.timeline-subtitle {
+    color: var(--Gray-Main, #868686);
+    color: var(--Gray-Main, color(display-p3 0.5274 0.5274 0.5274));
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 24px;
+    letter-spacing: 0.28px;
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.timeline-checklists {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.timeline-checklist-section {
+    width: 100%;
+}
+
+.timeline-section-divider {
+    display: block;
+    width: 100%;
+    height: 1px;
+    background: #EAECF0;
+    background: color(display-p3 0.9176 0.9255 0.9412);
+}
+
+.timeline-tasks-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 8px 0;
+}
+
+.timeline-task-item {
+    padding: 16px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.timeline-task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.timeline-task-name {
+    color: var(--Base-Black, #050505);
+    color: var(--Base-Black, color(display-p3 0.0205 0.0205 0.0205));
+    font-family: 'Satoshi', sans-serif;
+    font-size: 15px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 24px;
+    flex: 1;
+}
+
+.timeline-task-date {
+    padding: 4px 12px;
+    border-radius: 16px;
+    background: #F0F7FF;
+    background: color(display-p3 0.9412 0.9686 1);
+    color: #1570EF;
+    color: color(display-p3 0.0824 0.4392 0.9373);
+    font-family: 'Satoshi', sans-serif;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 18px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.timeline-task-description {
+    color: var(--Gray-Main, #868686);
+    color: var(--Gray-Main, color(display-p3 0.5274 0.5274 0.5274));
+    font-family: 'Satoshi', sans-serif;
+    font-size: 13px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 22px;
+    letter-spacing: 0.26px;
+    white-space: pre-wrap;
+}
+
+.timeline-task-divider {
+    display: block;
+    width: 100%;
+    height: 1px;
+    background: #F2F4F7;
+    background: color(display-p3 0.949 0.9569 0.9686);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .timeline-form {
+        padding: 24px;
+        margin: 40px auto;
+    }
+
+    .timeline-title {
+        font-size: 24px;
+    }
+
+    .timeline-subtitle {
+        font-size: 13px;
+    }
+
+    .timeline-task-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .timeline-task-date {
+        align-self: flex-start;
+    }
+}

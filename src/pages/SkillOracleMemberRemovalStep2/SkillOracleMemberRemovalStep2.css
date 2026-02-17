@@ -1,0 +1,362 @@
+/* Container */
+.skill-oracle-member-removal-step2-container {
+  min-height: 100vh;
+  background-color: #FEFEFE;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+/* Card */
+.skill-oracle-member-removal-step2-card {
+  width: 520px;
+  background-color: #FFFFFF;
+  border-radius: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  margin-top: 60px;
+  animation: fadeInUp 0.5s ease-in-out;
+}
+
+/* Header */
+.skill-oracle-member-removal-step2-header {
+  height: 88px;
+  display: flex;
+  align-items: center;
+  padding: 0 32px;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.04);
+}
+
+/* Content */
+.skill-oracle-member-removal-step2-content {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Dropdown Section */
+.skill-oracle-member-removal-step2-dropdown-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 440px;
+}
+
+/* Dropdown Button */
+.skill-oracle-member-removal-step2-dropdown-button {
+  width: 100%;
+  height: 48px;
+  background-color: #FFFFFF;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  color: #050505;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.skill-oracle-member-removal-step2-dropdown-button:hover {
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.skill-oracle-member-removal-step2-chevron {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+  transform: rotate(180deg);
+}
+
+.skill-oracle-member-removal-step2-chevron.open {
+  transform: rotate(0deg);
+}
+
+/* Info Box */
+.skill-oracle-member-removal-step2-info-box {
+  width: 100%;
+  background-color: #F5F5F5;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.skill-oracle-member-removal-step2-info-label {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  line-height: 20px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #767676;
+  margin: 0;
+}
+
+.skill-oracle-member-removal-step2-info-value {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  letter-spacing: 0.32px;
+  color: #4D4D4D;
+  margin: 0;
+}
+
+.skill-oracle-member-removal-step2-info-value .value-main {
+  color: #4D4D4D;
+}
+
+.skill-oracle-member-removal-step2-info-value .value-secondary {
+  color: #767676;
+}
+
+/* Warning Badge */
+.skill-oracle-member-removal-step2-warning-badge {
+  width: 440px;
+  background-color: rgba(254, 240, 199, 0.5);
+  border: 1px solid #FEDF89;
+  border-radius: 16px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.skill-oracle-member-removal-step2-warning-badge .warning-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.skill-oracle-member-removal-step2-warning-badge .warning-text {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 18px;
+  color: #B54708;
+  margin: 0;
+  flex: 1;
+}
+
+/* Member Dropdown */
+.skill-oracle-member-removal-step2-member-dropdown {
+  width: 440px;
+  height: 48px;
+  background-color: #FFFFFF;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.skill-oracle-member-removal-step2-member-dropdown:hover {
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.skill-oracle-member-removal-step2-member-dropdown .member-dropdown-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.skill-oracle-member-removal-step2-member-dropdown .member-avatar {
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+}
+
+.skill-oracle-member-removal-step2-member-dropdown span {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  color: #050505;
+}
+
+.skill-oracle-member-removal-step2-member-chevron {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+  transform: rotate(180deg);
+}
+
+.skill-oracle-member-removal-step2-member-chevron.open {
+  transform: rotate(0deg);
+}
+
+/* Textarea */
+.skill-oracle-member-removal-step2-textarea {
+  width: 440px;
+  min-height: 131px;
+  background-color: #FFFFFF;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 16px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  color: #050505;
+  resize: vertical;
+  transition: all 0.2s ease;
+}
+
+.skill-oracle-member-removal-step2-textarea::placeholder {
+  color: #050505;
+}
+
+.skill-oracle-member-removal-step2-textarea:focus {
+  outline: none;
+  border-color: #1246FF;
+}
+
+/* Actions */
+.skill-oracle-member-removal-step2-actions {
+  width: 440px;
+  display: flex;
+  gap: 16px;
+}
+
+/* Submit Button */
+.skill-oracle-member-removal-step2-submit {
+  width: 100%;
+  height: 48px;
+  background: linear-gradient(180deg, #1246FF 23.958%, #4770FF 134.37%);
+  border: 4px solid #1246FF;
+  border-radius: 12px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 24px;
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.skill-oracle-member-removal-step2-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(18, 70, 255, 0.3);
+}
+
+.skill-oracle-member-removal-step2-submit:active {
+  transform: translateY(0);
+}
+
+/* Dropdown Wrappers */
+.skill-oracle-member-removal-step2-dropdown-wrapper {
+  position: relative;
+}
+
+.skill-oracle-member-removal-step2-member-dropdown-wrapper {
+  position: relative;
+  width: 440px;
+}
+
+/* Dropdown Menus */
+.skill-oracle-member-removal-step2-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: #FFFFFF;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  margin-top: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.skill-oracle-member-removal-step2-dropdown-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.skill-oracle-member-removal-step2-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.skill-oracle-member-removal-step2-dropdown-item:hover {
+  background-color: #F5F5F5;
+}
+
+.skill-oracle-member-removal-step2-dropdown-item.selected {
+  background-color: #F5F5F5;
+}
+
+.skill-oracle-member-removal-step2-dropdown-item-name {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  color: #050505;
+}
+
+.skill-oracle-member-removal-step2-dropdown-item-count {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 18px;
+  color: #767676;
+  margin-top: 2px;
+}
+
+/* Member Dropdown Items */
+.skill-oracle-member-removal-step2-member-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.skill-oracle-member-removal-step2-member-item:last-child {
+  border-bottom: none;
+}
+
+.skill-oracle-member-removal-step2-member-item:hover {
+  background-color: #F5F5F5;
+}
+
+.skill-oracle-member-removal-step2-member-item.selected {
+  background-color: #F5F5F5;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

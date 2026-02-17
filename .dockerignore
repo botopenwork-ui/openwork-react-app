@@ -1,0 +1,6 @@
+node_modules
+.git
+backend/node_modules
+backend/db/*.db
+backend/db/*.db-shm
+backend/db/*.db-wal

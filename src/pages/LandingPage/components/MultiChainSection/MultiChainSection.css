@@ -1,0 +1,454 @@
+/* LP-10 Multi-Chain Section Styles */
+
+.lp-10-section {
+  width: 100%;
+  min-height: 734px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  padding: 64px 0;
+}
+
+.lp-10-container {
+  max-width: 1280px;
+  width: 100%;
+  padding: 0 162px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 90px;
+}
+
+/* Left Content */
+.lp-10-content {
+  width: 432px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.lp-10-heading {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 48px;
+  letter-spacing: -1.6px;
+  color: #050505;
+  margin: 0;
+}
+
+.lp-10-description {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  color: #767676;
+  margin: 0;
+  margin-top: 12px;
+}
+
+/* Right Content - Multi-Chain Circle */
+.lp-10-circle-container {
+  width: 500px;
+  height: 450px;
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.lp-10-chain-circle-group {
+  position: absolute;
+  width: 346.047px;
+  height: 360px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Ellipse Background */
+.lp-10-ellipse-bg {
+  position: absolute;
+  left: 0;
+  top: 19.2px;
+  width: 340.798px;
+  height: 340.798px;
+  z-index: 0;
+  pointer-events: none;
+  transform-origin: center center;
+  animation: rotate-lp10-outer 60s linear infinite;
+}
+
+@keyframes rotate-lp10-outer {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Chain Icons Container - rotates with outer circle */
+.lp-10-chain-icons-container {
+  position: absolute;
+  left: 0;
+  top: 19.2px;
+  width: 340.798px;
+  height: 340.798px;
+  z-index: 3;
+  pointer-events: none;
+  transform-origin: center center;
+  animation: rotate-lp10-outer 60s linear infinite;
+}
+
+.lp-10-chain-icons-container > * {
+  pointer-events: all;
+}
+
+/* Radiant Glow */
+.lp-10-radiant-glow {
+  position: absolute;
+  left: 61.67px;
+  top: 80.99px;
+  width: 217.618px;
+  height: 217.53px;
+  animation: lp10-rotate-glow 20s linear infinite;
+  z-index: 1;
+}
+
+@keyframes lp10-rotate-glow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.lp-10-glow-layer-1,
+.lp-10-glow-layer-2 {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Core Circle */
+.lp-10-core-circle {
+  position: absolute;
+  left: 61.67px;
+  top: 80.99px;
+  width: 217.618px;
+  height: 217.618px;
+  z-index: 2;
+}
+
+.lp-10-core-circle::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 280px;
+  height: 280px;
+  background: url('/RadiantGlow.png') center/contain no-repeat;
+  animation: lp10-rotate-glow 20s linear infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes lp10-rotate-glow {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.lp-10-core-bg {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Center Label */
+.lp-10-center-label {
+  position: absolute;
+  left: calc(50% + 0.324px);
+  top: 223.74px;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.978px;
+}
+
+.lp-10-compatible-text {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 11.065px;
+  line-height: normal;
+  letter-spacing: 1.1065px;
+  text-transform: uppercase;
+  color: #767676;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Ellipse Background */
+.lp-10-ellipse-bg {
+  position: absolute;
+  left: 0;
+  top: 19.2px;
+  width: 340.798px;
+  height: 340.798px;
+  z-index: 0;
+  pointer-events: none;
+  transform-origin: center center;
+  animation: rotate-lp10-outer 60s linear infinite;
+}
+
+@keyframes rotate-lp10-outer {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Outer Chain Icons Container - rotates with ellipse */
+.lp-10-outer-icons-container {
+  position: absolute;
+  left: 0;
+  top: 19.2px;
+  width: 340.798px;
+  height: 340.798px;
+  z-index: 3;
+  pointer-events: none;
+  transform-origin: center center;
+  animation: rotate-lp10-outer 60s linear infinite;
+}
+
+.lp-10-outer-icons-container > * {
+  pointer-events: all;
+}
+
+/* Chain Icons */
+.lp-10-chain-icon {
+  position: absolute;
+  z-index: 3;
+  overflow: hidden;
+}
+
+.lp-10-chain-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Chain Positions */
+.lp-10-chain-ethereum {
+  left: 106.55px;
+  top: 0;
+  width: 38.403px;
+  height: 38.403px;
+}
+
+.lp-10-chain-tron {
+  left: 3.19px;
+  top: 101.06px;
+  width: 28.802px;
+  height: 28.802px;
+}
+
+.lp-10-chain-bnb {
+  left: 15.47px;
+  top: 267.76px;
+  width: 29.869px;
+  height: 29.869px;
+}
+
+.lp-10-chain-arbitrum-bottom {
+  left: 290.58px;
+  top: 267.76px;
+  width: 29.869px;
+  height: 29.869px;
+}
+
+.lp-10-chain-filecoin {
+  left: 320.44px;
+  top: 119.19px;
+  width: 25.602px;
+  height: 25.602px;
+}
+
+.lp-10-chain-xdc {
+  left: 126.08px;
+  top: 154.4px;
+  width: 42.67px;
+  height: 42.67px;
+}
+
+.lp-10-chain-arbitrum-center {
+  left: 177.61px;
+  top: 154.4px;
+  width: 42.67px;
+  height: 42.67px;
+}
+
+/* Bottom Chain Group */
+.lp-10-chain-group {
+  position: absolute;
+  bottom: -11px;
+  left: 145.08px;
+  display: flex;
+  align-items: center;
+  z-index: 4;
+}
+
+.lp-10-chain-icon-small {
+  width: 25.602px;
+  height: 25.602px;
+  margin-right: -16.001px;
+  flex-shrink: 0;
+}
+
+.lp-10-chain-icon-small img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.lp-10-chain-counter {
+  width: 29.869px;
+  height: 29.869px;
+  border-radius: 50%;
+  border: 1.67px solid white;
+  background: linear-gradient(180deg, #F4F4F4 0%, #FEFEFE 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 8.534px;
+  color: white;
+  margin-right: -16.001px;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Responsive Design */
+@media (max-width: 1440px) {
+  .lp-10-container {
+    padding: 0 120px;
+    gap: 70px;
+  }
+
+  .lp-10-content {
+    width: 400px;
+  }
+
+  .lp-10-heading {
+    font-size: 36px;
+    line-height: 44px;
+  }
+
+  .lp-10-circle-container {
+    width: 460px;
+    height: 420px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .lp-10-container {
+    padding: 0 80px;
+    gap: 50px;
+    flex-direction: column;
+  }
+
+  .lp-10-content {
+    width: 100%;
+    max-width: 500px;
+    align-items: center;
+    text-align: center;
+  }
+
+  .lp-10-heading {
+    font-size: 32px;
+    line-height: 40px;
+  }
+
+  .lp-10-description {
+    font-size: 15px;
+    line-height: 23px;
+  }
+
+  .lp-10-circle-container {
+    width: 100%;
+    max-width: 460px;
+    height: 420px;
+  }
+}
+
+@media (max-width: 768px) {
+  .lp-10-section {
+    padding: 60px 0;
+  }
+
+  .lp-10-container {
+    padding: 0 40px;
+    gap: 40px;
+  }
+
+  .lp-10-heading {
+    font-size: 28px;
+    line-height: 36px;
+  }
+
+  .lp-10-description {
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .lp-10-circle-container {
+    width: 100%;
+    max-width: 380px;
+    height: 350px;
+  }
+
+  .lp-10-chain-circle-group {
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+}
+
+@media (max-width: 480px) {
+  .lp-10-container {
+    padding: 0 20px;
+    gap: 30px;
+  }
+
+  .lp-10-heading {
+    font-size: 24px;
+    line-height: 32px;
+  }
+
+  .lp-10-description {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .lp-10-circle-container {
+    width: 100%;
+    max-width: 320px;
+    height: 300px;
+  }
+
+  .lp-10-chain-circle-group {
+    transform: translate(-50%, -50%) scale(0.75);
+  }
+}

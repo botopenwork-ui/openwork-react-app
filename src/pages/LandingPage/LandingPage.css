@@ -1,0 +1,98 @@
+/* ============================================
+   LANDING PAGE - ESSENTIAL BASE STYLES ONLY
+   ============================================
+   
+   This file contains ONLY essential base styles.
+   All component-specific styles are in their
+   respective component CSS files.
+   ============================================ */
+
+/* Main Landing Page Container */
+.landing-page {
+  width: 100vw;
+  min-height: 100vh;
+  background: #FFFFFF;
+  position: relative;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Base Section Wrapper - Applied to all LP sections */
+.lp-section {
+  width: 100%;
+  min-height: 100vh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 60px;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1440px) {
+  .lp-section {
+    padding: 60px 40px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .lp-section {
+    padding: 40px 30px;
+    min-height: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .lp-section {
+    padding: 40px 20px;
+  }
+}
+
+/* Shared Blue Button Style for Landing Page */
+.lp-blue-button {
+  background: linear-gradient(180deg, #1246FF 23.958%, #4770FF 134.37%);
+  border: 4px solid #1246FF;
+  border-radius: 12px;
+  padding: 8px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  height: 40px;
+  width: fit-content;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 24px;
+  color: white;
+  text-decoration: none;
+  transition: opacity 0.2s;
+  outline: none;
+}
+
+.lp-blue-button:hover {
+  opacity: 0.9;
+}
+
+.lp-blue-button:active {
+  opacity: 0.8;
+}
+
+.lp-button-icon {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+}
+
+/* Rotate arrow down in hero section */
+.lp-1-section .lp-button-icon {
+  transform: rotate(135deg);
+}
+
+@media (max-width: 480px) {
+  .lp-section {
+    padding: 30px 16px;
+  }
+}

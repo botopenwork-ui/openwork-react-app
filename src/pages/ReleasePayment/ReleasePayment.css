@@ -1,0 +1,295 @@
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap');
+
+body {
+  font-family: 'Satoshi', sans-serif;
+  background-color: white; /* Setting overall background color */
+  margin: 0;
+}
+
+.release-payment-container {
+  width: 520px;
+  margin: 0 auto;
+  margin-bottom: 65px;
+}
+
+.form-container-release {
+  width: auto;
+  margin-top: 40px;
+  margin-bottom: 24px;
+}
+
+.release-payment-body {
+  padding: 32px;
+  border: 2px solid #f7f7f7;
+  border-radius: 0px 0px 24px 24px;
+}
+
+.backButtonR {
+  text-decoration: none;
+}
+
+.title-containerR {
+  text-align: center; /* Center the container */
+  display: flex;
+  margin-top:40px;
+  align-items: center;
+  justify-content: center;
+}
+
+.flag1 {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Center the elements horizontally */
+  gap: 20px; /* Space of 20px between back button and title */
+  margin-bottom: 10px; /* Adjust spacing between flag1 and flag2 if needed */
+}
+
+.backButtonR {
+  text-decoration: none;
+}
+
+.backIconR {
+  width: 40px; /* Adjust size if needed */
+  height: 40px; /* Adjust size if needed */
+  margin-top: 5px;
+}
+
+.flag1 h1 {
+  font-family: 'Satoshi', sans-serif;
+  font-style: normal;
+  font-weight: 700;
+  font-size: 24px;
+  color: #4D4D4D;
+  margin: 0; /* Remove margin for proper alignment */
+}
+
+.flag2 {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Center the elements horizontally */
+  margin-left: 185px; /* Adjust space between title and contract ID */
+  margin-top: 16px;
+}
+
+#contractIDR {
+  font-family: 'Satoshi', sans-serif;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 14px;
+  color: #868686;
+  margin-right:4px;
+}
+
+.copyIcon {
+  width: 16px; /* Adjust size if needed */
+  height: 16px; /* Adjust size if needed */
+  margin-left: 0px; /* Space between contract ID and copy icon */
+  margin-top: 0px;
+  cursor: pointer;
+}
+
+
+.form-container-release h1 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #4d4d4d;
+  margin: 0;
+}
+
+#rel-title{
+  /* margin-left: 32px; */
+  padding-top: 31px;
+  font-family: 'Satoshi', sans-serif;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 20px;
+  line-height: 27px;
+  letter-spacing: 0.02em;
+  /* Gray/Darker */
+  color: #4D4D4D;
+  color: color(display-p3 0.302 0.302 0.302);
+}
+
+
+.job-detail-sectionR {
+  background-color: #fafafa;
+  border: 2px solid #f7f7f7;
+  border-radius:12px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#fetchedAmounts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.job-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.job-detail-item-title {
+  color: var(--Gray-Dark, #767676);
+  color: var(--Gray-Dark, color(display-p3 0.463 0.463 0.463));
+  text-align: center;
+  font-family: 'Satoshi', sans-serif;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px; /* 200% */
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.job-detail-item .usdc-icon {
+  width: 16px;
+  height: 16px;
+  margin-left: 5px;
+}
+
+.usdc-iconJD {
+  width: 16px;
+  height: 16px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.form-group input,
+.form-group textarea {
+  margin-left: 21px;
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  font-family: 'Satoshi', sans-serif;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  color: #050505;
+}
+
+.form-group textarea {
+  width: 456px;
+  height: 100px;
+  resize: vertical;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  font-family: 'Satoshi', sans-serif;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  color: #050505;
+}
+
+.input-with-icon input::placeholder,
+textarea::placeholder {
+  font-family: 'Satoshi', sans-serif;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  color: #868686;
+}
+
+
+.input-with-icon .usdc-icon {
+  position: absolute;
+  right: 30px;
+  width: 20px;
+  height: 20px;
+}
+
+.release-button {
+  margin-top: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 55px;
+  padding: 10px;
+  background: url('/release.svg') no-repeat center center;
+  background-size: 92%; /* Adjust this value to shrink the background image */
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+
+.release-button:active {
+  background-color: #003d80;
+  box-shadow: 0 1px #002a55, 0 1px 10px rgba(0, 0, 0, 0.2);
+  transform: translateY(2px);
+}
+
+.release-button .usdc-icon {
+  width: 20px;
+  height: 20px;
+  margin-left: 5px;
+}
+
+
+#txText {
+  font-family: 'Satoshi', sans-serif;
+  font-style: bold;
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 27px;
+  letter-spacing: 0.02em;
+  text-align: center;
+  /* Gray/Darker */
+  color: #4D4D4D;
+  color: color(display-p3 0.302 0.302 0.302);
+}
+
+#txSubtext {
+  /* text */
+  margin-top: -5px;
+  width: 254px;
+  font-family: 'Satoshi', sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 28px;
+  /* or 175% */
+  letter-spacing: 0.02em;
+  text-align: center;
+
+  /* Gray/Dark */
+  color: #767676;
+  color: color(display-p3 0.463 0.463 0.463);
+}
+
+.loadingIconT {
+  width: 60px;
+  height: 48px;
+}
+
+.loading-containerT {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  vertical-align: center;
+}

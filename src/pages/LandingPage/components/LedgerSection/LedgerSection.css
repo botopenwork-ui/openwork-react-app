@@ -1,0 +1,108 @@
+/* Ledger Section (LP-3) */
+.lp-3-section {
+  background: #FFFFFF;
+  padding-top: 64px;
+}
+
+.lp-3-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 162px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 90px;
+  min-height: calc(100vh - 64px);
+}
+
+.lp-3-content {
+  width: 432px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.lp-3-heading {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 48px;
+  letter-spacing: -1.6px;
+  color: #050505;
+  margin: 0;
+}
+
+.lp-3-description {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  color: #767676;
+  margin: 0;
+}
+
+.lp-3-ledger-container {
+  width: 500px;
+  height: 450px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.openwork-ledger-image {
+  width: 200%;
+  height: auto;
+  object-fit: contain;
+}
+
+/* Responsive */
+@media (max-width: 1440px) {
+  .lp-3-container {
+    padding: 0 80px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .lp-3-container {
+    flex-direction: column;
+    gap: 60px;
+    padding: 0 40px;
+  }
+
+  .lp-3-content {
+    width: 100%;
+    max-width: 500px;
+    text-align: center;
+    align-items: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .lp-3-container {
+    gap: 40px;
+    padding: 0 20px;
+  }
+
+  .lp-3-heading {
+    font-size: 32px;
+    line-height: 40px;
+    letter-spacing: -1.2px;
+  }
+
+  .lp-3-description {
+    font-size: 14px;
+    line-height: 21px;
+  }
+}
+
+@media (max-width: 480px) {
+  .lp-3-heading {
+    font-size: 28px;
+    line-height: 36px;
+  }
+
+  .lp-3-description {
+    font-size: 13px;
+    line-height: 20px;
+  }
+}

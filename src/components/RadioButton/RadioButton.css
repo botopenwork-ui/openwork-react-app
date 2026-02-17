@@ -1,0 +1,33 @@
+.radio-button {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+  
+  .radio-input {
+    display: none !important;
+  }
+  
+  .radio-circle {
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    background: url('/radio-unchecked.svg') no-repeat center;
+    transition: border-color 0.3s;
+  }
+  
+  .radio-circle.selected {
+    background: url('/radio-checked.svg') no-repeat center;
+  }
+  
+  .radio-label {
+    color: var(--Base-Black, #050505);
+    color: var(--Base-Black, color(display-p3 0.0205 0.0205 0.0205));
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 24px; /* 171.429% */
+  }
+  

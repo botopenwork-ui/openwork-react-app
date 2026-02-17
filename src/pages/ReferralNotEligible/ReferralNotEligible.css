@@ -1,0 +1,183 @@
+/* Container */
+.referral-not-eligible-container {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 40px 80px;
+  background-color: #FEFEFE;
+  min-height: calc(100vh - 80px);
+}
+
+/* Header Section - Same as Proposal Pages */
+.referral-header-section {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.referral-back-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.referral-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.referral-main-title {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 32px;
+  letter-spacing: 0.48px;
+  color: #4D4D4D;
+  margin: 0;
+}
+
+/* Card */
+.referral-not-eligible-card {
+  width: 519px;
+  margin: 0 auto;
+  background: white;
+  border: 2px solid white;
+  border-radius: 24px;
+  box-shadow: 0px 0px 1px rgba(0, 0, 0, 0.04), 0px 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+/* Card Header */
+.referral-card-header {
+  padding: 24px 32px;
+  border-bottom: 2px solid #F7F7F7;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  background: white;
+  text-align: left;
+}
+
+.referral-card-title {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 27px;
+  letter-spacing: 0.4px;
+  color: #4D4D4D;
+  margin: 0;
+}
+
+/* Content */
+.referral-content {
+  padding: 118px 32px 32px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+/* Icon */
+.referral-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  background: rgba(18, 70, 255, 0.06);
+  border-radius: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.referral-icon {
+  width: 32px;
+  height: 32px;
+}
+
+/* Message Section */
+.referral-message-section {
+  width: 100%;
+  max-width: 456px;
+}
+
+.referral-message {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 28px;
+  letter-spacing: 0.28px;
+  color: #868686;
+  text-align: left;
+  margin: 0;
+}
+
+/* Earnings Card */
+.referral-earnings-card {
+  width: 100%;
+  max-width: 456px;
+  background: #F9FAFB;
+  border: 2px solid white;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.referral-earnings-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.referral-earnings-label {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  line-height: 20px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #767676;
+  margin: 0;
+}
+
+.referral-earnings-amount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.earnings-value {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 20px;
+  line-height: normal;
+  letter-spacing: 0.4px;
+  color: #4D4D4D;
+}
+
+.openwork-token {
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(180deg, #1246FF 23.958%, #4770FF 134.37%);
+  border: 1px solid #1246FF;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.token-icon {
+  width: 10px;
+  height: 10px;
+  object-fit: contain;
+}
+
+/* Responsive */
+@media screen and (max-width: 768px) {
+  .referral-not-eligible-card {
+    width: calc(100% - 32px);
+    margin: 0 16px;
+  }
+  
+  .referral-content {
+    padding: 80px 24px 24px 24px;
+  }
+}

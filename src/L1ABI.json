@@ -1,0 +1,660 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "userAddress",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "newIpfsHash",
+        "type": "string"
+      }
+    ],
+    "name": "UserProfileModified",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "userAddress",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "ipfsHash",
+        "type": "string"
+      }
+    ],
+    "name": "UserRegistered",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" },
+      { "internalType": "uint256", "name": "applicationID", "type": "uint256" }
+    ],
+    "name": "addApplicationIDToJob",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" },
+      { "internalType": "uint256", "name": "submissionID", "type": "uint256" }
+    ],
+    "name": "addSubmissionIDToJob",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "name": "applications",
+    "outputs": [
+      { "internalType": "uint256", "name": "applicationID", "type": "uint256" },
+      { "internalType": "address", "name": "applicant", "type": "address" },
+      {
+        "internalType": "uint256",
+        "name": "proposedAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "proposalDescription",
+        "type": "string"
+      },
+      { "internalType": "bool", "name": "isSelected", "type": "bool" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" },
+      { "internalType": "address", "name": "applicant", "type": "address" },
+      {
+        "internalType": "uint256",
+        "name": "proposedAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "proposalDetailsHash",
+        "type": "string"
+      }
+    ],
+    "name": "createApplication",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "employer", "type": "address" },
+      { "internalType": "string", "name": "jobDetailHash", "type": "string" }
+    ],
+    "name": "createJob",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "userAddress", "type": "address" },
+      { "internalType": "string", "name": "ipfsHash", "type": "string" }
+    ],
+    "name": "createUserProfile",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" },
+      { "internalType": "address", "name": "worker", "type": "address" },
+      { "internalType": "string", "name": "submissionHash", "type": "string" }
+    ],
+    "name": "createWorkSubmission",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getAllJobIds",
+    "outputs": [
+      { "internalType": "uint256[]", "name": "", "type": "uint256[]" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getAllUserAddresses",
+    "outputs": [
+      { "internalType": "address[]", "name": "", "type": "address[]" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "applicationID", "type": "uint256" }
+    ],
+    "name": "getApplicationApplicant",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "applicationID", "type": "uint256" }
+    ],
+    "name": "getApplicationDetails",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "applicationID",
+            "type": "uint256"
+          },
+          { "internalType": "address", "name": "applicant", "type": "address" },
+          {
+            "internalType": "uint256",
+            "name": "proposedAmount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "proposalDescription",
+            "type": "string"
+          },
+          { "internalType": "bool", "name": "isSelected", "type": "bool" }
+        ],
+        "internalType": "struct OpenWorkL1.Application",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "applicationID", "type": "uint256" }
+    ],
+    "name": "getApplicationProposalDescription",
+    "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "applicationID", "type": "uint256" }
+    ],
+    "name": "getApplicationProposedAmount",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" }
+    ],
+    "name": "getJobApplicationIDs",
+    "outputs": [
+      { "internalType": "uint256[]", "name": "", "type": "uint256[]" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" }
+    ],
+    "name": "getJobApplications",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "applicationID",
+            "type": "uint256"
+          },
+          { "internalType": "address", "name": "applicant", "type": "address" },
+          {
+            "internalType": "uint256",
+            "name": "proposedAmount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "proposalDescription",
+            "type": "string"
+          },
+          { "internalType": "bool", "name": "isSelected", "type": "bool" }
+        ],
+        "internalType": "struct OpenWorkL1.Application[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" }
+    ],
+    "name": "getJobDetailHash",
+    "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" }
+    ],
+    "name": "getJobDetails",
+    "outputs": [
+      {
+        "components": [
+          { "internalType": "uint256", "name": "id", "type": "uint256" },
+          { "internalType": "address", "name": "employer", "type": "address" },
+          { "internalType": "bool", "name": "isOpen", "type": "bool" },
+          {
+            "internalType": "string",
+            "name": "jobDetailHash",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "applicationIDs",
+            "type": "uint256[]"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "submissionIDs",
+            "type": "uint256[]"
+          },
+          {
+            "internalType": "uint256",
+            "name": "selectedApplicationID",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "escrowAmount",
+            "type": "uint256"
+          },
+          { "internalType": "bool", "name": "workCompleted", "type": "bool" },
+          {
+            "internalType": "bool",
+            "name": "employerApproved",
+            "type": "bool"
+          },
+          { "internalType": "bool", "name": "contractEntered", "type": "bool" }
+        ],
+        "internalType": "struct OpenWorkL1.Job",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" }
+    ],
+    "name": "getJobEmployer",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" }
+    ],
+    "name": "getJobEscrowAmount",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" }
+    ],
+    "name": "getJobSubmissionIDs",
+    "outputs": [
+      { "internalType": "uint256[]", "name": "", "type": "uint256[]" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" }
+    ],
+    "name": "getJobWorkSubmissions",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "submissionID",
+            "type": "uint256"
+          },
+          { "internalType": "address", "name": "worker", "type": "address" },
+          {
+            "internalType": "string",
+            "name": "submissionHash",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct OpenWorkL1.WorkSubmission[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" }
+    ],
+    "name": "getSelectedApplicationID",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "submissionID", "type": "uint256" }
+    ],
+    "name": "getSubmissionHash",
+    "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "submissionID", "type": "uint256" }
+    ],
+    "name": "getSubmissionWorker",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "userAddress", "type": "address" }
+    ],
+    "name": "getUserProfileHash",
+    "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "submissionID", "type": "uint256" }
+    ],
+    "name": "getWorkSubmission",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "submissionID",
+            "type": "uint256"
+          },
+          { "internalType": "address", "name": "worker", "type": "address" },
+          {
+            "internalType": "string",
+            "name": "submissionHash",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct OpenWorkL1.WorkSubmission",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "applicationID", "type": "uint256" }
+    ],
+    "name": "isApplicationSelected",
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" }
+    ],
+    "name": "isContractEntered",
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" }
+    ],
+    "name": "isJobEmployerApproved",
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" }
+    ],
+    "name": "isJobOpen",
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" }
+    ],
+    "name": "isJobWorkCompleted",
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "name": "jobs",
+    "outputs": [
+      { "internalType": "uint256", "name": "id", "type": "uint256" },
+      { "internalType": "address", "name": "employer", "type": "address" },
+      { "internalType": "bool", "name": "isOpen", "type": "bool" },
+      { "internalType": "string", "name": "jobDetailHash", "type": "string" },
+      {
+        "internalType": "uint256",
+        "name": "selectedApplicationID",
+        "type": "uint256"
+      },
+      { "internalType": "uint256", "name": "escrowAmount", "type": "uint256" },
+      { "internalType": "bool", "name": "workCompleted", "type": "bool" },
+      { "internalType": "bool", "name": "employerApproved", "type": "bool" },
+      { "internalType": "bool", "name": "contractEntered", "type": "bool" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "applicationID", "type": "uint256" },
+      { "internalType": "bool", "name": "newIsSelected", "type": "bool" }
+    ],
+    "name": "modifyApplicationIsSelected",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "applicationID", "type": "uint256" },
+      {
+        "internalType": "string",
+        "name": "newProposalDescription",
+        "type": "string"
+      }
+    ],
+    "name": "modifyApplicationProposalDescription",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "applicationID", "type": "uint256" },
+      {
+        "internalType": "uint256",
+        "name": "newProposedAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "modifyApplicationProposedAmount",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" },
+      { "internalType": "bool", "name": "newContractEntered", "type": "bool" }
+    ],
+    "name": "modifyContractEntered",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" },
+      { "internalType": "string", "name": "newJobDetailHash", "type": "string" }
+    ],
+    "name": "modifyJobDetailHash",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" },
+      { "internalType": "bool", "name": "employerApproved", "type": "bool" }
+    ],
+    "name": "modifyJobEmployerApproval",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" },
+      { "internalType": "uint256", "name": "escrowAmount", "type": "uint256" }
+    ],
+    "name": "modifyJobEscrowAmount",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" },
+      { "internalType": "bool", "name": "isOpen", "type": "bool" }
+    ],
+    "name": "modifyJobStatus",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" },
+      { "internalType": "bool", "name": "workCompleted", "type": "bool" }
+    ],
+    "name": "modifyJobWorkCompletion",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "jobId", "type": "uint256" },
+      {
+        "internalType": "uint256",
+        "name": "newSelectedApplicationID",
+        "type": "uint256"
+      }
+    ],
+    "name": "modifySelectedApplicationID",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "userAddress", "type": "address" },
+      { "internalType": "string", "name": "ipfsHash", "type": "string" }
+    ],
+    "name": "modifyUserProfile",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "submissionID", "type": "uint256" },
+      {
+        "internalType": "string",
+        "name": "newSubmissionHash",
+        "type": "string"
+      }
+    ],
+    "name": "modifyWorkSubmissionHash",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "name": "userProfiles",
+    "outputs": [
+      { "internalType": "string", "name": "ipfsHash", "type": "string" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "name": "workSubmissions",
+    "outputs": [
+      { "internalType": "uint256", "name": "submissionID", "type": "uint256" },
+      { "internalType": "address", "name": "worker", "type": "address" },
+      { "internalType": "string", "name": "submissionHash", "type": "string" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

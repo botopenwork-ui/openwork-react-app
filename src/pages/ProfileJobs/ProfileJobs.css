@@ -1,0 +1,67 @@
+.job-from {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    justify-content: space-between;
+
+    white-space: pre;
+}
+
+.job-status {
+    width: fit-content;
+    margin: 0px auto;
+    display: flex;
+    padding: 4px 10px 6px 10px;
+    align-items: center;
+}
+
+.Disputed {
+    border-radius: 6px;
+    border: 1px solid var(--Error-200, #FFC8C6);
+    border: 1px solid var(--Error-200, color(display-p3 0.9979 0.8042 0.7904));
+    background: var(--Error-50, #FFF2F2);
+    background: var(--Error-50, color(display-p3 0.9967 0.9516 0.9484));
+
+    color: #C50000;
+    color: color(display-p3 0.7059 0.1373 0.0941);
+    font-family: 'Satoshi', sans-serif;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: normal;
+    letter-spacing: 0.24px;
+}
+
+.Ongoing {
+    border-radius: 6px;
+    border: 1px solid var(--Warning-200, #FFDC67);
+    border: 1px solid var(--Warning-200, color(display-p3 0.9977 0.8745 0.5357));
+    background: var(--Warning-50, #FFF9E9);
+    background: var(--Warning-50, color(display-p3 1 0.9791 0.9216));
+
+    color: #C43D00;
+    color: color(display-p3 0.7115 0.2797 0.0296);
+    font-family: 'Satoshi', sans-serif;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: normal;
+    letter-spacing: 0.24px;
+}
+
+.Complete {
+    border-radius: 6px;
+    border: 1px solid var(--Success-200, #72F5BF);
+    border: 1px solid var(--Success-200, color(display-p3 0.6686 0.9392 0.7769));
+    background: var(--Success-50, #E8FDF2);
+    background: var(--Success-50, color(display-p3 0.9267 0.9909 0.9524));
+
+    color: #007842;
+    color: color(display-p3 0.0235 0.4627 0.2784);
+    font-family: 'Satoshi', sans-serif;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: normal;
+    letter-spacing: 0.24px;
+}

@@ -1,0 +1,93 @@
+.milestone {
+    width: auto;
+    border: 2px solid #f7f7f7;
+    border-radius: 24px;
+    padding: 24px;
+}
+
+.milestone-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    cursor: pointer;
+}
+
+.milestone-header-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.milestone-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #4d4d4d;
+    font-family: 'Satoshi', sans-serif;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: normal;
+    letter-spacing: 0.32px;
+}
+
+.milestone-amount {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #575757;
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 24px; /* 171.429% */
+}
+
+.arrow-icon {
+    padding: 7px 5px;
+}
+
+.milestone-body-line {
+    margin: 18px 0px;
+    width: auto;
+    height: 1px;
+    background: #f8f8f8;
+}
+
+.milestone-body-content {
+    /* width: 363px; */
+    color: #575757;
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 24px; /* 171.429% */
+}
+
+.edit-content {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.editButton {
+    display: flex !important;
+    height: var(--6xl, 40px) !important;
+    padding: 8px !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 6px !important;
+
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 700 !important;
+    font-size: 14px !important;
+
+    border-radius: 12px !important;
+    border: 4px solid #FFF !important;
+    border: 4px solid color(display-p3 1 1 1) !important;
+    background: linear-gradient(180deg, #F4F4F4 0%, #FEFEFE 100%) !important;
+    background: linear-gradient(180deg, color(display-p3 0.9569 0.9569 0.9569) 0%, color(display-p3 0.9961 0.9961 0.9961) 100%) !important;
+    box-shadow: 0px 0px 0.386px 1.158px rgba(0, 0, 0, 0.05), 0px 4.634px 5.02px -2.317px rgba(0, 0, 0, 0.10) !important;
+    box-shadow: 0px 0px 0.386px 1.158px color(display-p3 0 0 0 / 0.05), 0px 4.634px 5.02px -2.317px color(display-p3 0 0 0 / 0.10) !important;
+}

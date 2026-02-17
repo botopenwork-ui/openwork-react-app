@@ -1,0 +1,23 @@
+.milestone-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.milestone-section-header {
+    color: var(--Gray-Dark, #767676);
+    color: var(--Gray-Dark, color(display-p3 0.463 0.463 0.463));
+    font-family: 'Satoshi', sans-serif;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: 20px; /* 200% */
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.milestone-section-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}

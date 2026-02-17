@@ -1,0 +1,126 @@
+.body-container {
+    background-color: var(--background-color);
+    overflow-x: auto;
+}
+
+.view-jobs-container {
+    min-height: 100vh;
+    min-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 2rem;
+    background-color: var(--background-color);
+}
+
+.member-name {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.member-name .userIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+.member-name span {
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: #050505;
+    line-height: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    letter-spacing: 0.28px;
+}
+
+.proposals-created {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.proposals-created span {
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: #868686;
+    line-height: normal;
+    letter-spacing: 0.28px;
+}
+
+.proposals-voted {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.proposals-voted span {
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: #868686;
+    line-height: normal;
+    letter-spacing: 0.28px;
+}
+
+.last-activity {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.last-activity span {
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: #868686;
+    line-height: normal;
+    letter-spacing: 0.28px;
+}
+
+.wallet-address {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.wallet-address span {
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: #868686;
+    line-height: normal;
+    letter-spacing: 0.28px;
+}
+
+.tokens-staked {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+.tokens-staked span {
+    font-family: 'Satoshi', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: #868686;
+    line-height: normal;
+    letter-spacing: 0.28px;
+}
+
+.tokenIcon {
+    width: 16px;
+    height: 16px;
+}
+
+/* View Detail Button Positioning */
+.view-detail {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding-right: 32px;
+}

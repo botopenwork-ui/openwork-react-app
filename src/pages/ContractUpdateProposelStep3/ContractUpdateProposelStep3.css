@@ -1,0 +1,251 @@
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.contract-update-step3-container {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 40px 80px;
+  background-color: #FEFEFE;
+  min-height: 100vh;
+}
+
+/* Header Section - Same as View Pages */
+.proposalHeaderSection {
+  margin-bottom: 16px;
+}
+
+.back {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.proposalMainTitleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.proposalMainTitle {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  line-height: normal;
+  letter-spacing: 0.48px;
+  color: #4D4D4D;
+  margin: 0;
+}
+
+.viewContractLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-bottom: 32px;
+  justify-content: center;
+}
+
+.viewContractLink span {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  color: #1246FF;
+}
+
+.contract-update-step3-card {
+  width: 520px;
+  margin: 0 auto;
+  background-color: #ffffff;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 24px;
+  box-shadow: 0px 0px 1px rgba(0, 0, 0, 0.04), 0px 2px 6px rgba(0, 0, 0, 0.04);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.contract-update-step3-card-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.contract-update-step3-card-title {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  line-height: normal;
+  letter-spacing: 0.4px;
+  color: #4d4d4d;
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.contract-update-step3-description {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 28px;
+  letter-spacing: 0.28px;
+  color: #868686;
+  margin: 0;
+}
+
+.contract-update-step3-field-section {
+  width: 100%;
+  background-color: #ffffff;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 20px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.contract-update-step3-field-label {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 24px;
+  color: #4d4d4d;
+  margin: 0;
+}
+
+.contract-update-step3-values-row {
+  display: flex;
+  gap: 16px;
+}
+
+.contract-update-step3-value-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contract-update-step3-input-label {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  line-height: 20px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #767676;
+}
+
+.contract-update-step3-input-readonly {
+  width: 100%;
+  height: 48px;
+  background-color: #f5f5f5;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+}
+
+.contract-update-step3-input-readonly span {
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  color: #868686;
+}
+
+.contract-update-step3-input {
+  width: 100%;
+  height: 48px;
+  background-color: #ffffff;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  color: #050505;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.contract-update-step3-input::placeholder {
+  color: #868686;
+}
+
+.contract-update-step3-input:focus {
+  border-color: #1246ff;
+}
+
+.contract-update-step3-textarea {
+  width: 100%;
+  min-height: 131px;
+  background-color: #ffffff;
+  border: 2px solid rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 16px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 24px;
+  color: #050505;
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.2s ease;
+}
+
+.contract-update-step3-textarea::placeholder {
+  color: #868686;
+}
+
+.contract-update-step3-textarea:focus {
+  border-color: #1246ff;
+}
+
+.contract-update-step3-actions {
+  width: 100%;
+}
+
+.contract-update-step3-submit {
+  width: 100%;
+  height: 48px;
+  background: linear-gradient(180deg, #1246ff 23.958%, #4770ff 134.37%);
+  border: 4px solid #1246ff;
+  border-radius: 12px;
+  font-family: 'Satoshi', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 24px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.contract-update-step3-submit:hover {
+  opacity: 0.9;
+}
+
+.contract-update-step3-submit:active {
+  opacity: 0.8;
+}

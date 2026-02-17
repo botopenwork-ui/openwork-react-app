@@ -1,0 +1,15 @@
+{
+    "workbench.colorTheme": "Visual Studio Dark",
+    "security.workspace.trust.untrustedFiles": "open",
+    "claudeCode.environmentVariables": [
+      
+
+  {"name": "AWS_PROFILE", "value": "default"},
+  {"name": "AWS_REGION", "value": "us-east-1"},
+  {"name": "BEDROCK_MODEL_ID", "value": "anthropic.claude-opus-4-5-20251101-v1:0"},
+  {"name": "CLAUDE_CODE_USE_BEDROCK", "value": "1"}
+
+        
+    ],
+    "claudeCode.preferredLocation": "panel"
+}

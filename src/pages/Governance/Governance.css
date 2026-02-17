@@ -1,0 +1,59 @@
+/* Adjust circle position on smaller screens for better spacing */
+@media (max-height: 800px) {
+    .theCircle-home {
+        top: calc(50% + 30px);
+    }
+}
+
+@media (max-height: 700px) {
+    .theCircle-home {
+        top: calc(50% + 40px);
+    }
+}
+
+#buttonTop-home {
+    top: -62px;
+    display: none;
+    z-index: 3;
+}
+
+#buttonTop-home.visible-home {
+    opacity: 1;
+    animation: slideInTop-home 1s forwards;
+}
+
+#buttonTop-home:not(.visible-home) {
+    animation: slideOutTop-home 1s forwards;
+}
+
+#buttonOracle-home {
+    left: calc(50% - 209px);
+    top: 187px;
+    display: none;
+    z-index: 3;
+}
+
+#buttonOracle-home.visible-home {
+    opacity: 1;
+    animation: slideInLeft-home 1s forwards;
+}
+
+#buttonOracle-home:not(.visible-home) {
+    animation: slideOutLeft-home 1s forwards;
+}
+
+#buttonToken-home {
+    left: calc(50% + 90px);
+    top: 187px;
+    display: none;
+    z-index: 3;
+}
+
+#buttonToken-home.visible-home {
+    opacity: 1;
+    animation: slideInRight-home 1s forwards;
+}
+
+#buttonToken-home:not(.visible-home) {
+    animation: slideOutRight-home 1s forwards;
+}

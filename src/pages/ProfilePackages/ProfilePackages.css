@@ -1,0 +1,230 @@
+@import url("../ProfilePortfolio/ProfilePortfolio.css");
+
+/* Reset body styles that JobsTable applies globally */
+body.profile-packages-page {
+    background-color: white;
+    margin: 0;
+}
+
+/* Isolate ProfilePackages from JobsTable body styles */
+.body-container {
+    min-height: calc(100vh - 80px);
+    width: 100%;
+    background: transparent;
+    position: relative;
+    font-family: 'Satoshi', sans-serif;
+}
+
+/* Override and specific styling for ProfilePackages */
+.body-container .newTitle {
+    margin-top: 88px;
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+
+.body-container .titleTop {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.body-container .titleBottom {
+    display: flex;
+    align-items: center;
+}
+
+/* Wrapper to isolate JobsTable styles */
+.view-jobs-container {
+    width: 100%;
+    max-width: 960px;
+    margin: 32px auto 0;
+    padding: 0 20px 80px;
+    position: relative;
+    z-index: 1;
+    /* Prevent JobsTable styles from affecting parent layout */
+    isolation: isolate;
+}
+
+.view-jobs-container .table {
+    width: 100%;
+    margin: 28px auto;
+}
+
+/* Package Title Cell */
+.package-title-cell {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-left: 0;
+}
+
+.packageIcon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.package-title-cell span {
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #050505;
+    line-height: normal;
+    letter-spacing: 0.02em;
+}
+
+/* Posted By Cell */
+.posted-by-cell {
+    display: flex;
+    align-items: center;
+}
+
+.posted-by-cell span {
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #868686;
+    line-height: normal;
+    letter-spacing: 0.02em;
+}
+
+/* Rating Cell */
+.rating-cell {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.rating-value {
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #868686;
+    line-height: normal;
+    letter-spacing: 0.02em;
+}
+
+.star-icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* Category Cell */
+.category-cell {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.category-badge {
+    background: #fafafa;
+    border: 1px solid #ebebeb;
+    border-radius: 9999px;
+    padding: 6px 12px;
+    font-family: 'Satoshi', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: #4d4d4d;
+    white-space: nowrap;
+    line-height: 18px;
+    text-align: center;
+}
+
+/* Cost Cell */
+.cost-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.cost-cell span {
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #868686;
+    line-height: normal;
+    letter-spacing: 0.02em;
+}
+
+.xdc-icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* Details Cell */
+.details-cell {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding-right: 10px;
+}
+
+.package-details-button.custom-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px 8px 12px;
+    background: linear-gradient(180deg, #f4f4f4 0%, #fefefe 100%);
+    border: 4px solid white;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #868686;
+    line-height: 24px;
+    height: 40px;
+    box-sizing: border-box;
+}
+
+.package-details-button.custom-button img {
+    width: 16px;
+    height: 16px;
+}
+
+.package-details-button.custom-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.package-details-button.custom-button:active {
+    transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .view-jobs-container {
+        padding: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .view-jobs-container {
+        padding: 12px;
+    }
+
+    .package-title-cell {
+        gap: 12px;
+    }
+
+    .packageIcon {
+        width: 24px;
+        height: 24px;
+    }
+
+    .category-cell {
+        gap: 6px;
+    }
+
+    .package-details-button.custom-button {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+}

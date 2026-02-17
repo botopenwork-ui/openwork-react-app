@@ -1,0 +1,51 @@
+.blue-button {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 14px;
+    white-space: pre;
+    background: linear-gradient(180deg, #0047FF -23.96%, #3971FF 134.37%);
+    background: linear-gradient(180deg, color(display-p3 0.0706 0.2745 1) -23.96%, color(display-p3 0.2793 0.4374 1) 134.37%);
+    background: linear-gradient(180deg, #0047FF -23.96%, #3971FF 134.37%);
+    background: linear-gradient(180deg, color(display-p3 0.0706 0.2745 1) -23.96%, color(display-p3 0.2793 0.4374 1) 134.37%);
+    border: 4px solid #3f69ff;
+    border-radius: 12px;
+    color: #fff;
+    font-family: "Satoshi", sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.amount-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 24px; /* 171.429% */
+}
+
+.release-amount {
+    font-family: 'Satoshi', sans-serif;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 24px; /* 171.429% */
+}
+
+.lock-button {
+    border-radius: 12px;
+    border: 4px solid #FFF;
+    border: 4px solid color(display-p3 1 1 1);
+    background: linear-gradient(180deg, #F4F4F4 0%, #FEFEFE 100%);
+    background: linear-gradient(180deg, color(display-p3 0.9569 0.9569 0.9569) 0%, color(display-p3 0.9961 0.9961 0.9961) 100%);
+    box-shadow: 0px 0px 0.386px 1.158px rgba(0, 0, 0, 0.05), 0px 4.634px 5.02px -2.317px rgba(0, 0, 0, 0.10);
+    box-shadow: 0px 0px 0.386px 1.158px color(display-p3 0 0 0 / 0.05), 0px 4.634px 5.02px -2.317px color(display-p3 0 0 0 / 0.10);
+    color: var(--Brand-Main, #0047FF);
+    color: var(--Brand-Main, color(display-p3 0.0706 0.2745 1));
+}
