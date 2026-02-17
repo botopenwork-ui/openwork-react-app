@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { MessageSquare, Send, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { buildOppyContext, FALLBACK_RESPONSES } from '../Documentation/data/oppyKnowledge';
@@ -135,6 +136,10 @@ const AgentOppy = () => {
                   <span className="oppy-thinking-dot"></span>
                   <span className="oppy-thinking-dot"></span>
                   <span className="oppy-thinking-dot"></span>
+                </div>
+              ) : msg.role === 'oppy' ? (
+                <div className="oppy-msg-text oppy-rich-text">
+                  <ReactMarkdown>{msg.text}</ReactMarkdown>
                 </div>
               ) : (
                 <p className="oppy-msg-text">{msg.text}</p>

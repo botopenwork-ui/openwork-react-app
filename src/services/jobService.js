@@ -100,7 +100,7 @@ export async function getInProgressJobs(forceRefresh = false) {
  */
 async function fetchJobTitleFromIPFS(jobDetailHash) {
   try {
-    const response = await fetch(`https://gateway.pinata.cloud/ipfs/${jobDetailHash}`);
+    const response = await fetch(`https://gateway.lighthouse.storage/ipfs/${jobDetailHash}`);
     const data = await response.json();
     return data.title || data.jobTitle || "Untitled Job";
   } catch (error) {

@@ -67,7 +67,7 @@ const fetchFromIPFS = async (hash, timeout = 5000) => {
 
   const gateways = [
     `https://ipfs.io/ipfs/${hash}`,
-    `https://gateway.pinata.cloud/ipfs/${hash}`,
+    `https://gateway.lighthouse.storage/ipfs/${hash}`,
     `https://dweb.link/ipfs/${hash}`,
     `https://w3s.link/ipfs/${hash}`
   ];
@@ -779,7 +779,7 @@ export default function ViewReceivedApplication() {
                         {applicationDetails.attachments.map((file, index) => (
                           <a
                             key={index}
-                            href={`https://gateway.pinata.cloud/ipfs/${file.ipfsHash}`}
+                            href={`https://gateway.lighthouse.storage/ipfs/${file.ipfsHash}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{ textDecoration: 'none' }}

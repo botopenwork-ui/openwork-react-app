@@ -7,10 +7,10 @@ import ProfileGenesisABI from '../ABIs/profile-genesis_ABI.json';
 
 // IPFS Gateways for fetching (with fallback)
 const IPFS_GATEWAYS = [
+  'https://gateway.lighthouse.storage/ipfs/',
   'https://gateway.pinata.cloud/ipfs/',
   'https://ipfs.io/ipfs/',
-  'https://dweb.link/ipfs/',
-  'https://w3s.link/ipfs/'
+  'https://dweb.link/ipfs/'
 ];
 
 /**

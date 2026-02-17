@@ -137,7 +137,7 @@ export default function ProfilePortfolio() {
               >
                 {item.images && item.images.length > 0 ? (
                   <img 
-                    src={`https://gateway.pinata.cloud/ipfs/${item.images[0]}`} 
+                    src={`https://gateway.lighthouse.storage/ipfs/${item.images[0]}`} 
                     alt={item.title || 'Portfolio item'} 
                   />
                 ) : (

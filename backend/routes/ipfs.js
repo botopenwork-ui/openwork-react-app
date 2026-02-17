@@ -1,25 +1,27 @@
 const express = require('express');
 const router = express.Router();
-const fetch = require('node-fetch');
+const lighthouse = require('@lighthouse-web3/sdk');
 const multer = require('multer');
-const FormData = require('form-data');
 
 // Configure multer for memory storage
 const upload = multer({ storage: multer.memoryStorage() });
 
 /**
- * Upload file to IPFS via Pinata
+ * Upload file to IPFS via Lighthouse
  * POST /api/ipfs/upload-file
  * Body: FormData with 'file' field
+ *
+ * Response format kept identical to previous Pinata integration:
+ * { success: true, IpfsHash: "Qm...", PinSize: 12345, Timestamp: "..." }
  */
 router.post('/upload-file', upload.single('file'), async (req, res) => {
   try {
-    const PINATA_API_KEY = process.env.PINATA_API_KEY;
-    
-    if (!PINATA_API_KEY) {
+    const LIGHTHOUSE_API_KEY = process.env.LIGHTHOUSE_API_KEY;
+
+    if (!LIGHTHOUSE_API_KEY) {
       return res.status(500).json({
         success: false,
-        error: 'Pinata API key not configured on server'
+        error: 'Lighthouse API key not configured on server'
       });
     }
 
@@ -30,39 +32,28 @@ router.post('/upload-file', upload.single('file'), async (req, res) => {
       });
     }
 
-    // Create FormData for Pinata
-    const formData = new FormData();
-    formData.append('file', req.file.buffer, {
-      filename: req.file.originalname,
-      contentType: req.file.mimetype
-    });
+    // Upload buffer to Lighthouse
+    const response = await lighthouse.uploadBuffer(
+      req.file.buffer,
+      LIGHTHOUSE_API_KEY,
+      req.file.originalname
+    );
 
-    // Forward the file upload to Pinata
-    const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${PINATA_API_KEY}`,
-        ...formData.getHeaders()
-      },
-      body: formData
-    });
-
-    const data = await response.json();
-    
-    if (response.ok) {
+    if (response && response.data && response.data.Hash) {
       res.json({
         success: true,
-        IpfsHash: data.IpfsHash,
-        PinSize: data.PinSize,
-        Timestamp: data.Timestamp
+        IpfsHash: response.data.Hash,
+        PinSize: parseInt(response.data.Size) || 0,
+        Timestamp: new Date().toISOString()
       });
     } else {
-      res.status(response.status).json({
+      console.error('Unexpected Lighthouse response:', response);
+      res.status(500).json({
         success: false,
-        error: data.error || 'Pinata upload failed'
+        error: 'Lighthouse upload returned unexpected response'
       });
     }
-    
+
   } catch (error) {
     console.error('Error uploading to IPFS:', error);
     res.status(500).json({
@@ -73,46 +64,52 @@ router.post('/upload-file', upload.single('file'), async (req, res) => {
 });
 
 /**
- * Upload JSON to IPFS via Pinata
+ * Upload JSON to IPFS via Lighthouse
  * POST /api/ipfs/upload-json
  * Body: { pinataContent: {}, pinataMetadata: {} }
+ *
+ * Accepts the same body format as the previous Pinata integration
+ * so no frontend changes are needed.
  */
 router.post('/upload-json', async (req, res) => {
   try {
-    const PINATA_API_KEY = process.env.PINATA_API_KEY;
-    
-    if (!PINATA_API_KEY) {
+    const LIGHTHOUSE_API_KEY = process.env.LIGHTHOUSE_API_KEY;
+
+    if (!LIGHTHOUSE_API_KEY) {
       return res.status(500).json({
         success: false,
-        error: 'Pinata API key not configured on server'
+        error: 'Lighthouse API key not configured on server'
       });
     }
 
-    const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${PINATA_API_KEY}`
-      },
-      body: JSON.stringify(req.body)
-    });
+    // Extract content from the Pinata-format body (backwards compatible)
+    const content = req.body.pinataContent || req.body;
+    const metadata = req.body.pinataMetadata || {};
+    const name = metadata.name || `json-${Date.now()}`;
 
-    const data = await response.json();
-    
-    if (response.ok) {
+    // Serialize JSON and upload as text
+    const jsonString = JSON.stringify(content);
+    const response = await lighthouse.uploadText(
+      jsonString,
+      LIGHTHOUSE_API_KEY,
+      name
+    );
+
+    if (response && response.data && response.data.Hash) {
       res.json({
         success: true,
-        IpfsHash: data.IpfsHash,
-        PinSize: data.PinSize,
-        Timestamp: data.Timestamp
+        IpfsHash: response.data.Hash,
+        PinSize: parseInt(response.data.Size) || 0,
+        Timestamp: new Date().toISOString()
       });
     } else {
-      res.status(response.status).json({
+      console.error('Unexpected Lighthouse response:', response);
+      res.status(500).json({
         success: false,
-        error: data.error || 'Pinata JSON upload failed'
+        error: 'Lighthouse upload returned unexpected response'
       });
     }
-    
+
   } catch (error) {
     console.error('Error uploading JSON to IPFS:', error);
     res.status(500).json({

@@ -26,7 +26,7 @@ const ARBITRUM_RPC = IS_MAINNET
 const fetchFromIPFS = async (hash, timeout = 5000) => {
     const gateways = [
         `https://ipfs.io/ipfs/${hash}`,
-        `https://gateway.pinata.cloud/ipfs/${hash}`,
+        `https://gateway.lighthouse.storage/ipfs/${hash}`,
         `https://cloudflare-ipfs.com/ipfs/${hash}`,
         `https://dweb.link/ipfs/${hash}`
     ];

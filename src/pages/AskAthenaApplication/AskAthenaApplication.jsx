@@ -210,7 +210,7 @@ export default function AskAthenaApplication() {
 
   const fetchFromIPFS = async (hash) => {
     try {
-      const response = await fetch(`https://gateway.pinata.cloud/ipfs/${hash}`);
+      const response = await fetch(`https://gateway.lighthouse.storage/ipfs/${hash}`);
       return await response.json();
     } catch (error) {
       console.error("Error fetching data from IPFS:", error);
@@ -583,7 +583,7 @@ export default function AskAthenaApplication() {
                         <div className="upload-content" key={index}>
                           <ATTACHMENTS
                             title={file.name || file.fileName || `Attachment ${index + 1}`}
-                            url={file.ipfsHash ? `https://gateway.pinata.cloud/ipfs/${file.ipfsHash}` : null}
+                            url={file.ipfsHash ? `https://gateway.lighthouse.storage/ipfs/${file.ipfsHash}` : null}
                           />
                         </div>
                       ))}

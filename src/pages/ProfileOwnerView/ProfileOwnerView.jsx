@@ -10,6 +10,7 @@ import Warning from "../../components/Warning/Warning";
 import ProfileGenesisABI from "../../ABIs/profile-genesis_ABI.json";
 import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
 import { getLOWJCContract } from "../../services/localChainService";
+import { getNativeChain, isMainnet } from "../../config/chainConfig";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
@@ -83,6 +84,8 @@ export default function ProfileOwnerView() {
     const [location, setLocation] = useState("");
     const [profilePhotoHash, setProfilePhotoHash] = useState("");
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const [skills, setSkills] = useState([]);
+    const [skillInput, setSkillInput] = useState("");
 
     // Referrer address state - initialize from URL param if available
     const [referrerAddress, setReferrerAddress] = useState(referrerFromUrl || "");
@@ -205,9 +208,9 @@ export default function ProfileOwnerView() {
                 username: username,
                 firstName: firstName,
                 lastName: lastName,
-                skills: SKILLITEMS.map(item => ({
+                skills: skills.map(item => ({
                     title: item.title,
-                    verified: item.verified
+                    verified: item.verified || false
                 })),
                 location: location,
                 languages: languages,
@@ -218,8 +221,8 @@ export default function ProfileOwnerView() {
                 phone: phone,
                 profilePhotoHash: profilePhotoHash || "",
                 profilePhoto: profilePhotoHash 
-                    ? `https://gateway.pinata.cloud/ipfs/${profilePhotoHash}` 
-                    : "/user.png",
+                    ? `https://gateway.lighthouse.storage/ipfs/${profilePhotoHash}` 
+                    : "/default-avatar.svg",
                 createdFromChain: chainConfig?.name,
                 createdFromChainId: chainId
             };
@@ -235,7 +238,7 @@ export default function ProfileOwnerView() {
             const web3 = new Web3(window.ethereum);
             const lowjcContract = await getLOWJCContract(chainId);
             const lzOptions = chainConfig?.layerzero?.options;
-            
+
             if (!lzOptions) {
                 throw new Error("LayerZero options not configured for this chain");
             }
@@ -244,7 +247,7 @@ export default function ProfileOwnerView() {
             setTransactionStatus(`💰 Getting LayerZero fee quote on ${chainConfig.name}...`);
             const bridgeAddress = await lowjcContract.methods.bridge().call();
             console.log("Bridge address:", bridgeAddress);
-            
+
             const bridgeABI = [{
                 "inputs": [
                     {"name": "_payload", "type": "bytes"},
@@ -255,9 +258,9 @@ export default function ProfileOwnerView() {
                 "stateMutability": "view",
                 "type": "function"
             }];
-            
+
             const bridgeContract = new web3.eth.Contract(bridgeABI, bridgeAddress);
-            
+
             // Encode payload
             let payload;
             // Use referrer from URL param/state, or zero address if not provided
@@ -276,22 +279,29 @@ export default function ProfileOwnerView() {
                     ['createProfile', walletAddress, ipfsHash, referrerForProfile]
                 );
             }
-            
+
             console.log("Payload:", payload);
             console.log("LZ Options:", lzOptions);
-            
+
             const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, lzOptions).call();
-            console.log(`💰 LayerZero fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH`);
+            // Add 20% buffer to LZ fee (matching release/direct contract pattern)
+            const feeWithBuffer = (BigInt(quotedFee) * BigInt(120) / BigInt(100)).toString();
+            console.log(`💰 LayerZero fee: ${web3.utils.fromWei(quotedFee.toString(), 'ether')} ETH (with 20% buffer: ${web3.utils.fromWei(feeWithBuffer, 'ether')} ETH)`);
+
+            // Get gas price for EIP-1559 pricing (low priority fee to reduce displayed cost)
+            const gasPrice = await web3.eth.getGasPrice();
 
             // Step 4: Call contract function
             if (hasProfile) {
                 setTransactionStatus(`Updating profile on ${chainConfig.name}...`);
                 await lowjcContract.methods
                     .updateProfile(ipfsHash, lzOptions)
-                    .send({ 
+                    .send({
                         from: walletAddress,
-                        value: quotedFee,
-                        gas: 5000000
+                        value: feeWithBuffer,
+                        gas: 500000,
+                        maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
+                        maxFeePerGas: gasPrice
                     });
                 setTransactionStatus(`✅ Profile updated on ${chainConfig.name}!`);
             } else {
@@ -301,8 +311,10 @@ export default function ProfileOwnerView() {
                     .createProfile(ipfsHash, referrerForProfile, lzOptions)
                     .send({
                         from: walletAddress,
-                        value: quotedFee,
-                        gas: 5000000
+                        value: feeWithBuffer,
+                        gas: 500000,
+                        maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
+                        maxFeePerGas: gasPrice
                     });
                 setTransactionStatus(`✅ Profile created on ${chainConfig.name}!`);
                 setHasProfile(true);
@@ -334,10 +346,14 @@ export default function ProfileOwnerView() {
     useEffect(() => {
         async function checkProfileExists() {
             if (!address) return;
-            
+
             try {
-                const web3 = new Web3(import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL);
-                const contractAddress = import.meta.env.VITE_PROFILE_GENESIS_ADDRESS;
+                const nativeChain = getNativeChain();
+                const rpcUrl = isMainnet()
+                    ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
+                    : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+                const web3 = new Web3(rpcUrl);
+                const contractAddress = nativeChain?.contracts?.profileGenesis;
                 const contract = new web3.eth.Contract(ProfileGenesisABI, contractAddress);
                 
                 const profileExists = await contract.methods.hasProfile(address).call();
@@ -361,9 +377,13 @@ export default function ProfileOwnerView() {
             try {
                 console.log("Fetching profile data for:", address);
                 
-                // Get profile from ProfileGenesis contract on Arbitrum Sepolia
-                const web3 = new Web3(import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL);
-                const contractAddress = import.meta.env.VITE_PROFILE_GENESIS_ADDRESS;
+                // Get profile from ProfileGenesis contract on Arbitrum
+                const nativeChain = getNativeChain();
+                const rpcUrl = isMainnet()
+                    ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
+                    : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+                const web3 = new Web3(rpcUrl);
+                const contractAddress = nativeChain?.contracts?.profileGenesis;
                 const contract = new web3.eth.Contract(ProfileGenesisABI, contractAddress);
                 
                 const profile = await contract.methods.getProfile(address).call();
@@ -377,7 +397,7 @@ export default function ProfileOwnerView() {
                 }
                 
                 // Fetch profile data from IPFS
-                const response = await fetch(`https://gateway.pinata.cloud/ipfs/${ipfsHash}`);
+                const response = await fetch(`https://gateway.lighthouse.storage/ipfs/${ipfsHash}`);
                 if (!response.ok) {
                     throw new Error("Failed to fetch profile data from IPFS");
                 }
@@ -396,6 +416,9 @@ export default function ProfileOwnerView() {
                 if (profileData.languages) setLanguages(profileData.languages);
                 if (profileData.location) setLocation(profileData.location);
                 if (profileData.profilePhotoHash) setProfilePhotoHash(profileData.profilePhotoHash);
+                if (profileData.skills && Array.isArray(profileData.skills)) {
+                    setSkills(profileData.skills);
+                }
                 
             } catch (error) {
                 console.error("Error fetching profile data:", error);
@@ -427,20 +450,17 @@ export default function ProfileOwnerView() {
       return `${start}....${end}`;
     }
 
-    const SKILLITEMS = [
-        {
-            title: 'UX Design',
-            verified: true
-        },
-        {
-            title: 'UI Design',
-            verified: false
-        },
-        {
-            title: 'Webflow',
-            verified: false
+    const handleAddSkill = () => {
+        const trimmed = skillInput.trim();
+        if (trimmed && !skills.some(s => s.title.toLowerCase() === trimmed.toLowerCase())) {
+            setSkills([...skills, { title: trimmed, verified: false }]);
+            setSkillInput("");
         }
-    ]
+    };
+
+    const handleRemoveSkill = (index) => {
+        setSkills(skills.filter((_, i) => i !== index));
+    };
 
     return (
         <>
@@ -449,7 +469,7 @@ export default function ProfileOwnerView() {
                 <div className="goBack" onClick={() => navigate(`/profile`)} style={{ cursor: 'pointer' }}>
                     <img className="goBackImage" src="/back.svg" alt="Back Button" />
                 </div>
-                <div className="titleText">{username || "Loading..."}</div>
+                <div className="titleText">{username || `${firstName} ${lastName}`.trim() || formatWalletAddress(address)}</div>
                 </div>
                 <div className="titleBottom"><p>  Wallet ID:{" "}
                 {formatWalletAddress(address)}
@@ -490,8 +510,8 @@ export default function ProfileOwnerView() {
                             }}>
                                 <img 
                                     src={profilePhotoHash 
-                                        ? `https://gateway.pinata.cloud/ipfs/${profilePhotoHash}` 
-                                        : "/user.png"
+                                        ? `https://gateway.lighthouse.storage/ipfs/${profilePhotoHash}` 
+                                        : "/default-avatar.svg"
                                     } 
                                     alt="Profile"
                                     style={{
@@ -578,9 +598,42 @@ export default function ProfileOwnerView() {
                         </div>
                         <div className="profile-skill-box">
                             <div className="profile-skill">
-                                {SKILLITEMS.map((item, index) => (
-                                    <SkillBox key={index} title={item.title} verified={item.verified} />
+                                {skills.map((item, index) => (
+                                    <div key={index} style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                                        <SkillBox title={item.title} verified={item.verified} />
+                                        {isOwner && (
+                                            <span
+                                                onClick={() => handleRemoveSkill(index)}
+                                                style={{ cursor: 'pointer', color: '#999', fontSize: '14px', lineHeight: '1' }}
+                                            >×</span>
+                                        )}
+                                    </div>
                                 ))}
+                                {isOwner && (
+                                    <input
+                                        type="text"
+                                        value={skillInput}
+                                        onChange={(e) => setSkillInput(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                handleAddSkill();
+                                            } else if (e.key === 'Backspace' && skillInput === '' && skills.length > 0) {
+                                                e.preventDefault();
+                                                handleRemoveSkill(skills.length - 1);
+                                            }
+                                        }}
+                                        placeholder="Add skill (Enter to add)"
+                                        style={{
+                                            border: 'none',
+                                            background: 'transparent',
+                                            outline: 'none',
+                                            fontSize: '12px',
+                                            minWidth: '120px',
+                                            flex: '1'
+                                        }}
+                                    />
+                                )}
                             </div>
                         </div>
                         <div className="profile-item">

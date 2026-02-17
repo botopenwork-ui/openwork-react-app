@@ -1,7 +1,7 @@
 // IPFS Gateway utility
-// Using Pinata gateway for files uploaded through Pinata
+// Using Lighthouse gateway for decentralized permanent storage
 
-const IPFS_GATEWAY = 'https://gateway.pinata.cloud/ipfs';
+const IPFS_GATEWAY = 'https://gateway.lighthouse.storage/ipfs';
 
 export function getIPFSUrl(hash) {
   if (!hash) return null;

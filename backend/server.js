@@ -12,6 +12,7 @@ const registryRoutes = require('./routes/registry');
 const adminRoutes = require('./routes/admin');
 const ipfsRoutes = require('./routes/ipfs');
 const chatRoutes = require('./routes/chat');
+const docsRoutes = require('./routes/docs');
 
 // Initialize Express
 const app = express();
@@ -35,6 +36,9 @@ app.use('/api/ipfs', ipfsRoutes);
 
 // Mount chat routes
 app.use('/api/chat', chatRoutes);
+
+// Mount docs routes (machine-readable documentation for AI agents)
+app.use('/api/docs', docsRoutes);
 
 // Track processing jobs to avoid duplicates
 const processingJobs = new Set();

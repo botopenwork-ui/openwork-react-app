@@ -99,7 +99,7 @@ export default function ProfileAbout() {
   
     const fetchFromIPFS = async (hash) => {
       try {
-        const response = await fetch(`https://gateway.pinata.cloud/ipfs/${hash}`);
+        const response = await fetch(`https://gateway.lighthouse.storage/ipfs/${hash}`);
         return await response.json();
       } catch (error) {
         console.error("Error fetching data from IPFS:", error);

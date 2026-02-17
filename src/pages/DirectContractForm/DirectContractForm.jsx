@@ -70,13 +70,11 @@ function FileUpload({ onFilesUploaded, uploadedFiles }) {
         const formData = new FormData();
         formData.append('file', file);
 
+        const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
         const response = await fetch(
-          'https://api.pinata.cloud/pinning/pinFileToIPFS',
+          `${BACKEND_URL}/api/ipfs/upload-file`,
           {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${import.meta.env.VITE_PINATA_API_KEY}`,
-            },
             body: formData,
           }
         );

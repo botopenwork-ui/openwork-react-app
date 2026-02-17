@@ -221,7 +221,7 @@ export default function RaiseDispute() {
             console.log("Fetching IPFS data from hash:", jobData.jobDetailHash);
             const gateways = [
               `https://ipfs.io/ipfs/${jobData.jobDetailHash}`,
-              `https://gateway.pinata.cloud/ipfs/${jobData.jobDetailHash}`,
+              `https://gateway.lighthouse.storage/ipfs/${jobData.jobDetailHash}`,
               `https://cloudflare-ipfs.com/ipfs/${jobData.jobDetailHash}`,
               `https://dweb.link/ipfs/${jobData.jobDetailHash}`
             ];

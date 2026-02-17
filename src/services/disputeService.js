@@ -85,7 +85,7 @@ export async function fetchAllDisputes(forceRefresh = false) {
           // Fetch job title from IPFS if available
           if (job.jobDetailHash) {
             try {
-              const response = await fetch(`https://gateway.pinata.cloud/ipfs/${job.jobDetailHash}`);
+              const response = await fetch(`https://gateway.lighthouse.storage/ipfs/${job.jobDetailHash}`);
               if (response.ok) {
                 const jobDetails = await response.json();
                 if (jobDetails?.title) {

@@ -119,7 +119,7 @@ export default function ViewWorkProfile() {
         {/* Main Image */}
         <div className="viewwork-main-image">
           <img
-            src={`https://gateway.pinata.cloud/ipfs/${workData.images[selectedImage]}`}
+            src={`https://gateway.lighthouse.storage/ipfs/${workData.images[selectedImage]}`}
             alt="Work preview"
           />
         </div>
@@ -132,7 +132,7 @@ export default function ViewWorkProfile() {
               className={`viewwork-thumbnail ${selectedImage === index ? "active" : ""}`}
               onClick={() => setSelectedImage(index)}
             >
-              <img src={`https://gateway.pinata.cloud/ipfs/${image}`} alt={`Thumbnail ${index + 1}`} />
+              <img src={`https://gateway.lighthouse.storage/ipfs/${image}`} alt={`Thumbnail ${index + 1}`} />
             </div>
           ))}
         </div>

@@ -203,6 +203,137 @@
   overflow-wrap: break-word;
 }
 
+/* ===========================
+   Rich Text (Markdown) in bot messages
+   =========================== */
+.oppy-rich-text {
+  white-space: normal;
+}
+
+.oppy-rich-text p {
+  margin: 0 0 8px 0;
+}
+
+.oppy-rich-text p:last-child {
+  margin-bottom: 0;
+}
+
+.oppy-rich-text strong {
+  font-weight: 700;
+  color: #333;
+}
+
+.oppy-rich-text em {
+  font-style: italic;
+}
+
+.oppy-rich-text h1,
+.oppy-rich-text h2,
+.oppy-rich-text h3,
+.oppy-rich-text h4 {
+  margin: 12px 0 6px 0;
+  font-weight: 700;
+  color: #333;
+  line-height: 1.3;
+}
+
+.oppy-rich-text h1:first-child,
+.oppy-rich-text h2:first-child,
+.oppy-rich-text h3:first-child,
+.oppy-rich-text h4:first-child {
+  margin-top: 0;
+}
+
+.oppy-rich-text h1 { font-size: 18px; }
+.oppy-rich-text h2 { font-size: 16px; }
+.oppy-rich-text h3 { font-size: 15px; }
+.oppy-rich-text h4 { font-size: 14px; }
+
+.oppy-rich-text ul,
+.oppy-rich-text ol {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+
+.oppy-rich-text li {
+  margin-bottom: 4px;
+}
+
+.oppy-rich-text li:last-child {
+  margin-bottom: 0;
+}
+
+.oppy-rich-text code {
+  background: rgba(0, 71, 255, 0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: #0047FF;
+}
+
+.oppy-rich-text pre {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  overflow-x: auto;
+  margin: 8px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.oppy-rich-text pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+.oppy-rich-text a {
+  color: #0047FF;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.oppy-rich-text a:hover {
+  text-decoration: underline;
+}
+
+.oppy-rich-text blockquote {
+  border-left: 3px solid #0047FF;
+  margin: 8px 0;
+  padding: 4px 12px;
+  color: #666;
+  background: rgba(0, 71, 255, 0.03);
+  border-radius: 0 6px 6px 0;
+}
+
+.oppy-rich-text hr {
+  border: none;
+  border-top: 1px solid #EAECF0;
+  margin: 10px 0;
+}
+
+.oppy-rich-text table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.oppy-rich-text th,
+.oppy-rich-text td {
+  border: 1px solid #EAECF0;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.oppy-rich-text th {
+  background: #F9FAFB;
+  font-weight: 600;
+}
+
 /* Thinking dots animation */
 .oppy-thinking {
   display: flex;
