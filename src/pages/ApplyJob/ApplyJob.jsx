@@ -11,6 +11,8 @@ import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetecti
 import { getLOWJCContract } from "../../services/localChainService";
 import { buildLzOptions, DESTINATION_GAS_ESTIMATES, getNativeChain, isMainnet } from "../../config/chainConfig";
 import GenesisABI from "../../ABIs/genesis_ABI.json";
+import CrossChainStatus, { buildLZSteps } from "../../components/CrossChainStatus/CrossChainStatus";
+import { monitorLZMessage, STATUS } from "../../utils/crossChainMonitor";
 
 // Backend URL for secure API calls
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
@@ -34,6 +36,7 @@ export default function ApplyJob() {
   const [jobDescription, setJobDescription] = useState("");
   const [loadingT, setLoadingT] = useState("");
   const [transactionStatus, setTransactionStatus] = useState("");
+  const [crossChainSteps, setCrossChainSteps] = useState(null);
   const [selectedOption, setSelectedOption] = useState('Single Milestone');
 
   // Multi-chain hooks
@@ -334,9 +337,30 @@ export default function ApplyJob() {
       });
 
       console.log("✅ Application submitted:", tx.transactionHash);
-      setTransactionStatus(`Success! Application submitted on ${chainConfig?.name}. Syncing to Arbitrum Genesis...`);
+      setTransactionStatus(`✅ Application submitted on ${chainConfig?.name}. Tracking cross-chain sync...`);
 
-      // Poll for cross-chain sync before redirecting
+      // ── Client-side LZ monitoring ─────────────────────────────────────────
+      const srcTxHash = tx.transactionHash;
+      const lzLink    = `https://layerzeroscan.com/tx/${srcTxHash}`;
+      setCrossChainSteps(buildLZSteps({
+        sourceTxHash: srcTxHash,
+        sourceChainId: chainConfig?.chainId,
+        lzStatus: 'active',
+        lzLink,
+      }));
+      monitorLZMessage(srcTxHash, (update) => {
+        setCrossChainSteps(buildLZSteps({
+          sourceTxHash: srcTxHash,
+          sourceChainId: chainConfig?.chainId,
+          lzStatus: update.status === STATUS.SUCCESS ? 'delivered'
+                  : update.status === STATUS.FAILED  ? 'failed' : 'active',
+          lzLink:   update.lzLink || lzLink,
+          dstTxHash: update.dstTxHash,
+          dstChainId: 42161,
+        }));
+      });
+      // ─────────────────────────────────────────────────────────────────────
+
       await pollForApplicationSync(jobId, expectedAppCount);
       
     } catch (error) {
@@ -375,6 +399,12 @@ export default function ApplyJob() {
               <div className="form-groupDC warning-form">
                 <Warning content={transactionStatus} icon="/info.svg"/>
               </div>
+            )}
+            {crossChainSteps && (
+              <CrossChainStatus
+                title="Application cross-chain status"
+                steps={crossChainSteps}
+              />
             )}
             <div className="form-groupDC form-platformFee">
               <div className="platform-fee">
