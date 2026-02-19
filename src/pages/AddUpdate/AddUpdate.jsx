@@ -13,6 +13,8 @@ import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetecti
 import { getChainConfig, extractChainIdFromJobId } from "../../config/chainConfig";
 import { switchToChain } from "../../utils/switchNetwork";
 import { getLOWJCContract } from "../../services/localChainService";
+import CrossChainStatus, { buildLZSteps } from "../../components/CrossChainStatus/CrossChainStatus";
+import { monitorLZMessage, STATUS } from "../../utils/crossChainMonitor";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
@@ -26,6 +28,7 @@ export default function AddUpdate() {
   const [account, setAccount] = useState(null);
   const [loadingT, setLoadingT] = useState("");
   const [transactionStatus, setTransactionStatus] = useState("");
+  const [crossChainSteps, setCrossChainSteps] = useState(null);
   const [applicationData, setApplicationData] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   
@@ -187,11 +190,29 @@ export default function AddUpdate() {
       });
 
       console.log(`✅ Work submitted on ${requiredChainConfig.name}:`, tx.transactionHash);
-      setTransactionStatus(`✅ Work submitted on ${requiredChainConfig.name}! Syncing to Arbitrum...`);
-      
-      setTimeout(() => {
-        navigate(`/job-update/${jobId}`);
-      }, 2000);
+      setTransactionStatus(`✅ Work submitted! Tracking sync to Arbitrum...`);
+
+      // Client-side LZ monitoring
+      const srcTxHash = tx.transactionHash;
+      const lzLink    = `https://layerzeroscan.com/tx/${srcTxHash}`;
+      setCrossChainSteps(buildLZSteps({ sourceTxHash: srcTxHash, sourceChainId: requiredChainConfig?.chainId, lzStatus: 'active', lzLink }));
+      monitorLZMessage(srcTxHash, (update) => {
+        setCrossChainSteps(buildLZSteps({
+          sourceTxHash: srcTxHash,
+          sourceChainId: requiredChainConfig?.chainId,
+          lzStatus:  update.status === STATUS.SUCCESS ? 'delivered' : update.status === STATUS.FAILED ? 'failed' : 'active',
+          lzLink:    update.lzLink || lzLink,
+          dstTxHash: update.dstTxHash,
+          dstChainId: 42161,
+        }));
+        if (update.status === STATUS.SUCCESS) {
+          setTransactionStatus('✅ Work synced to Arbitrum! Redirecting...');
+          setTimeout(() => navigate(`/job-update/${jobId}`), 1500);
+        }
+      });
+
+      // Fallback redirect if LZ monitor doesn't fire in time
+      setTimeout(() => navigate(`/job-update/${jobId}`), 30000);
       
     } catch (error) {
       console.error("❌ Error submitting work:", error);
@@ -317,6 +338,9 @@ export default function AddUpdate() {
               <div className="form-groupDC warning-form">
                 <Warning content={transactionStatus} icon="/info.svg" />
               </div>
+            )}
+            {crossChainSteps && (
+              <CrossChainStatus title="Work submission cross-chain status" steps={crossChainSteps} />
             )}
             
             {userChainId && jobChainId && userChainId !== jobChainId && (
