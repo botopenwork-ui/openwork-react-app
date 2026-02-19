@@ -1,0 +1,162 @@
+/* CrossChainStatus.css */
+
+.ccs {
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 12px 0;
+}
+
+.ccs--compact {
+  padding: 10px 12px;
+  font-size: 12px;
+}
+
+.ccs--failed { border-color: rgba(239, 68, 68, 0.3); }
+.ccs--warning { border-color: rgba(251, 191, 36, 0.3); }
+.ccs--success { border-color: rgba(34, 197, 94, 0.3); }
+.ccs--active  { border-color: rgba(99, 179, 237, 0.3); }
+
+/* Title */
+.ccs-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 12px;
+}
+
+/* Steps container */
+.ccs-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Individual step */
+.ccs-step {
+  display: flex;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.ccs-step-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 20px;
+}
+
+.ccs-step-connector {
+  flex: 1;
+  width: 1px;
+  background: rgba(255,255,255,0.1);
+  margin: 3px 0;
+  min-height: 8px;
+}
+
+.ccs-step:last-child .ccs-step-connector {
+  display: none;
+}
+
+/* Icons */
+.ccs-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.ccs-success { color: #22c55e; background: rgba(34,197,94,0.12); }
+.ccs-failed  { color: #ef4444; background: rgba(239,68,68,0.12); }
+.ccs-warning { color: #fbbf24; background: rgba(251,191,36,0.12); }
+.ccs-active  { color: #60a5fa; background: rgba(96,165,250,0.12); }
+.ccs-pending { color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.05); }
+
+/* Spinning animation for active */
+@keyframes ccs-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.ccs-spin {
+  animation: ccs-rotate 1.4s linear infinite;
+}
+
+/* Step content */
+.ccs-step-right {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 10px;
+}
+
+.ccs-step-label {
+  font-weight: 500;
+  color: rgba(255,255,255,0.85);
+  font-size: 13px;
+}
+
+.ccs-step--pending .ccs-step-label { color: rgba(255,255,255,0.3); }
+.ccs-step--success .ccs-step-label { color: rgba(255,255,255,0.7); }
+
+.ccs-step-message {
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+  margin-top: 2px;
+  word-break: break-word;
+}
+
+.ccs-step--failed  .ccs-step-message { color: rgba(239,68,68,0.8); }
+.ccs-step--warning .ccs-step-message { color: rgba(251,191,36,0.8); }
+.ccs-step--active  .ccs-step-message { color: rgba(96,165,250,0.7); }
+.ccs-step--success .ccs-step-message { color: rgba(34,197,94,0.7); }
+
+/* Links row */
+.ccs-step-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ccs-link {
+  font-size: 11px;
+  color: #60a5fa;
+  text-decoration: none;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(96,165,250,0.08);
+  border: 1px solid rgba(96,165,250,0.2);
+  transition: background 0.15s;
+}
+
+.ccs-link:hover { background: rgba(96,165,250,0.16); }
+
+.ccs-link--subtle {
+  color: rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.08);
+}
+
+.ccs-link--subtle:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); }
+
+/* Footer */
+.ccs-footer {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  font-size: 12px;
+}
+
+.ccs-footer--error   { color: rgba(239,68,68,0.8); }
+.ccs-footer--success { color: rgba(34,197,94,0.7); }
