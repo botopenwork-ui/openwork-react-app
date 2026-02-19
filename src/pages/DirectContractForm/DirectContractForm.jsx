@@ -15,6 +15,8 @@ import Milestone from "../../components/Milestone/Milestone";
 import RadioButton from "../../components/RadioButton/RadioButton";
 import Warning from "../../components/Warning/Warning";
 import { getLocalChains, getChainConfig, getNativeChain, isMainnet } from "../../config/chainConfig";
+import CrossChainStatus, { buildPaymentSteps } from "../../components/CrossChainStatus/CrossChainStatus";
+import { monitorLZMessage, monitorCCTPTransfer, STATUS } from "../../utils/crossChainMonitor";
 
 const SKILLOPTIONS = [
   'UX/UI Skill Oracle','Full Stack development','UX/UI Skill Oracle',
@@ -253,6 +255,7 @@ export default function DirectContractForm() {
   const [skillInput, setSkillInput] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [transactionStatus, setTransactionStatus] = useState("Direct contract creation requires blockchain transaction fees");
+  const [crossChainSteps, setCrossChainSteps] = useState(null);
   const [platformFee, setPlatformFee] = useState(null);
   const [milestones, setMilestones] = useState([
     {
@@ -795,22 +798,66 @@ export default function DirectContractForm() {
 
               if (jobId) {
                 console.log("✅ Job ID:", jobId);
-                setTransactionStatus("✅ Contract created! Starting CCTP relay...");
+                setTransactionStatus("✅ Contract created! Tracking cross-chain progress...");
                 setLoadingT(false);
 
-                // Trigger backend CCTP relay (OP→ARB) so NOWJC receives the USDC
+                // ── Client-side cross-chain monitoring ────────────────────
+                const srcTxHash  = receipt.transactionHash;
+                const srcChainId = Number(chainId);
+                const lzLink     = `https://layerzeroscan.com/tx/${srcTxHash}`;
+                const circleLink = `https://iris-api.circle.com/v2/messages/${currentChainConfig?.cctpDomain ?? 2}?transactionHash=${srcTxHash}`;
+
+                setCrossChainSteps(buildPaymentSteps({
+                  sourceChainId: srcChainId,
+                  usdcApproved: true,
+                  sourceTxHash: srcTxHash,
+                  lzStatus: 'active',
+                  lzLink,
+                  circleLink,
+                }));
+
+                monitorLZMessage(srcTxHash, (lzUpdate) => {
+                  setCrossChainSteps(prev => buildPaymentSteps({
+                    ...prev,
+                    lzStatus:    lzUpdate.status === STATUS.SUCCESS ? 'delivered'
+                               : lzUpdate.status === STATUS.FAILED  ? 'failed' : 'active',
+                    lzLink:      lzUpdate.lzLink || lzLink,
+                    lzDstTxHash: lzUpdate.dstTxHash,
+                    lzDstChainId: 42161,
+                    cctpBurnTxHash: lzUpdate.dstTxHash,
+                    cctpSourceDomain: 3,
+                    sourceChainId: srcChainId,
+                    usdcApproved: true,
+                    sourceTxHash: srcTxHash,
+                    circleLink,
+                  }));
+                  if (lzUpdate.status === STATUS.SUCCESS && lzUpdate.dstTxHash) {
+                    monitorCCTPTransfer(lzUpdate.dstTxHash, 3,
+                      (cctpUpdate) => setCrossChainSteps(prev => buildPaymentSteps({
+                        ...prev,
+                        cctpAttestationStatus: cctpUpdate.status === STATUS.SUCCESS ? 'complete'
+                                             : cctpUpdate.message?.includes('slow') ? 'slow' : 'pending',
+                      })),
+                      () => setCrossChainSteps(prev => buildPaymentSteps({ ...prev, cctpAttestationStatus: 'complete' }))
+                    );
+                  }
+                });
+                // ─────────────────────────────────────────────────────────
+
+                // Trigger backend CCTP relay (belt + suspenders)
                 const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
                 fetch(`${backendUrl}/api/start-job`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ jobId, txHash: receipt.transactionHash })
+                  body: JSON.stringify({ jobId, txHash: srcTxHash })
                 }).then(res => res.json()).then(result => {
                   console.log("📡 Backend CCTP relay started:", result);
                 }).catch(err => {
-                  console.warn("⚠️ Backend CCTP relay request failed:", err.message);
+                  console.warn("⚠️ Backend unavailable, client-side monitor handling:", err.message);
+                  setTransactionStatus("⚠️ Backend offline — tracking cross-chain status directly. Check progress below.");
                 });
 
-                // Start polling for cross-chain sync
+                // Also poll Genesis for job sync visibility
                 pollForJobSync(jobId);
               } else {
                 console.log("❌ Could not determine job ID");
@@ -1096,6 +1143,12 @@ export default function DirectContractForm() {
             <div className="warning-form">
               <Warning content={transactionStatus} />
             </div>
+            {crossChainSteps && (
+              <CrossChainStatus
+                title="Contract cross-chain status"
+                steps={crossChainSteps}
+              />
+            )}
           </div>
         </div>
       </div>

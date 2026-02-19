@@ -21,6 +21,10 @@ import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetecti
 import { postJob as postJobMultiChain } from "../../services/localChainService";
 import { getLocalChains, getNativeChain, isMainnet } from "../../config/chainConfig";
 
+// Cross-chain monitoring
+import CrossChainStatus, { buildLZSteps } from "../../components/CrossChainStatus/CrossChainStatus";
+import { monitorLZMessage, STATUS, explorerTxUrl } from "../../utils/crossChainMonitor";
+
 // Dynamic network mode functions for cross-chain polling
 function getGenesisAddress() {
   const nativeChain = getNativeChain();
@@ -54,6 +58,7 @@ export default function PostJob() {
   const [skillInput, setSkillInput] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [transactionStatus, setTransactionStatus] = useState("Job posting requires blockchain transaction fees");
+  const [crossChainSteps, setCrossChainSteps] = useState(null); // null = not started
   const [milestones, setMilestones] = useState([
     {
       title: "Milestone 1",
@@ -602,11 +607,38 @@ export default function PostJob() {
                 
                 // For testing/debugging: log the job ID we're going to use
                 console.log("🎯 Final Job ID for redirect:", jobId);
+
+                // ── Start cross-chain status tracking ──────────────────
+                const sourceTxHash = receipt.transactionHash;
+                const lzLink = `https://layerzeroscan.com/tx/${sourceTxHash}`;
+
+                // Set initial steps immediately
+                setCrossChainSteps(buildLZSteps({
+                  sourceTxHash,
+                  sourceChainId: chainId,
+                  lzStatus: 'active',
+                  lzLink,
+                }));
+
+                // Monitor LZ message delivery
+                monitorLZMessage(sourceTxHash, (update) => {
+                  setCrossChainSteps(prev => buildLZSteps({
+                    sourceTxHash,
+                    sourceChainId: chainId,
+                    lzStatus: update.status === STATUS.SUCCESS ? 'delivered'
+                             : update.status === STATUS.FAILED  ? 'failed'
+                             : 'active',
+                    lzLink: update.lzLink || lzLink,
+                    dstTxHash: update.dstTxHash,
+                    dstChainId: 42161, // Arbitrum One
+                  }));
+                  if (update.status === STATUS.FAILED) {
+                    setTransactionStatus(`❌ LayerZero delivery failed. TX: ${sourceTxHash}`);
+                  }
+                });
+                // ─────────────────────────────────────────────────────────
                 
-                // TEMPORARY: Override for testing - remove this when done
-                // jobId = "40161-3"; // Uncomment to test with specific job
-                
-                // Start polling for cross-chain sync
+                // Start polling for cross-chain sync (job visible in browse)
                 pollForJobSync(jobId);
               } else {
                 console.log("❌ Failed to determine job ID");
@@ -809,6 +841,12 @@ export default function PostJob() {
             <div className="warning-form">
               <Warning content={transactionStatus} />
             </div>
+            {crossChainSteps && (
+              <CrossChainStatus
+                title="Cross-chain status"
+                steps={crossChainSteps}
+              />
+            )}
           </div>
         </div>
       </div>

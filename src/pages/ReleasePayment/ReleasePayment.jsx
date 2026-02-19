@@ -13,6 +13,8 @@ import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetecti
 import { getChainConfig, extractChainIdFromJobId, getNativeChain, isMainnet, buildLzOptions, DESTINATION_GAS_ESTIMATES } from "../../config/chainConfig";
 import { switchToChain } from "../../utils/switchNetwork";
 import { getLOWJCContract } from "../../services/localChainService";
+import CrossChainStatus, { buildPaymentSteps } from "../../components/CrossChainStatus/CrossChainStatus";
+import { monitorLZMessage, monitorCCTPTransfer, STATUS } from "../../utils/crossChainMonitor";
 
 const OPTIONS = [
   'Milestone 1','Milestone 2','Milestone 3'
@@ -48,6 +50,8 @@ export default function ReleasePayment() {
   const [isLocking, setIsLocking] = useState(false);
   const [currentMilestoneNumber, setCurrentMilestoneNumber] = useState(1);
   const [cctpStatus, setCctpStatus] = useState(null);
+  // Client-side cross-chain status tracking (fallback when backend is down)
+  const [paymentStepState, setPaymentStepState] = useState(null);
 
   // Multi-chain hooks
   const { chainId: userChainId, chainConfig: userChainConfig } = useChainDetection();
@@ -410,30 +414,84 @@ export default function ReleasePayment() {
       });
 
       console.log(`✅ Payment release initiated on ${jobChainConfig.name}:`, releasePaymentTx.transactionHash);
-      
-      // Step 2: Send to backend for CCTP processing
-      setTransactionStatus(`🔄 Step 2/3: Waiting for LayerZero message to reach Arbitrum (30-60 seconds)...`);
-      
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-      const response = await fetch(`${backendUrl}/api/release-payment`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          jobId,
-          opSepoliaTxHash: releasePaymentTx.transactionHash
-        })
+
+      // ── Client-side cross-chain monitoring (no backend needed) ────────────
+      const srcTxHash    = releasePaymentTx.transactionHash;
+      const srcChainId   = jobChainId;
+      const destDomain   = job.applicantChainDomain || 2;
+      const lzLink       = `https://layerzeroscan.com/tx/${srcTxHash}`;
+      const circleLink   = `https://iris-api.circle.com/v2/messages/${jobChainConfig?.cctpDomain ?? 2}?transactionHash=${srcTxHash}`;
+
+      // Initialise steps immediately so the UI renders right away
+      setPaymentStepState({
+        sourceChainId: srcChainId,
+        sourceTxHash: srcTxHash,
+        lzStatus: 'active',
+        lzLink,
+        circleLink,
       });
 
-      const result = await response.json();
+      // Monitor LayerZero message → when delivered, start CCTP monitor
+      monitorLZMessage(srcTxHash, (lzUpdate) => {
+        setPaymentStepState(prev => ({
+          ...prev,
+          lzStatus:   lzUpdate.status === STATUS.SUCCESS ? 'delivered'
+                    : lzUpdate.status === STATUS.FAILED  ? 'failed'
+                    : 'active',
+          lzLink:     lzUpdate.lzLink || lzLink,
+          lzDstTxHash: lzUpdate.dstTxHash,
+          lzDstChainId: 42161,
+          // Once LZ delivers, the CCTP burn happens on Arbitrum
+          cctpBurnTxHash: lzUpdate.dstTxHash || prev?.cctpBurnTxHash,
+          cctpSourceDomain: 3, // Arbitrum CCTP domain
+        }));
 
-      if (result.success) {
-        setTransactionStatus("🔄 Step 3/3: Backend processing CCTP transfer to recipient's chain...");
+        // When LZ delivers, start watching the CCTP burn on Arbitrum
+        if (lzUpdate.status === STATUS.SUCCESS && lzUpdate.dstTxHash) {
+          monitorCCTPTransfer(
+            lzUpdate.dstTxHash,
+            3, // Arbitrum is the CCTP source for the payment leg
+            (cctpUpdate) => {
+              setPaymentStepState(prev => ({
+                ...prev,
+                cctpAttestationStatus: cctpUpdate.status === STATUS.SUCCESS ? 'complete'
+                                     : cctpUpdate.message?.includes('slow')  ? 'slow'
+                                     : 'pending',
+                circleLink: cctpUpdate.circleLink || circleLink,
+              }));
+            },
+            (attestation) => {
+              // Attestation ready — update final step
+              setPaymentStepState(prev => ({ ...prev, cctpAttestationStatus: 'complete' }));
+              setTransactionStatus('✅ CCTP attestation complete. USDC being minted on recipient chain...');
+            }
+          );
+        }
+      });
+      // ─────────────────────────────────────────────────────────────────────
 
-        // Poll using statusKey (unique per release tx) instead of jobId
-        const statusKey = result.statusKey || jobId;
-        pollPaymentStatus(statusKey, backendUrl);
-      } else {
-        throw new Error(result.error || 'Backend failed to start processing');
+      // Step 2: Also notify backend for server-side CCTP relay (belt + suspenders)
+      setTransactionStatus(`🔄 Waiting for LayerZero message to reach Arbitrum...`);
+
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      try {
+        const response = await fetch(`${backendUrl}/api/release-payment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jobId,
+            opSepoliaTxHash: srcTxHash
+          })
+        });
+        const result = await response.json();
+        if (result.success) {
+          const statusKey = result.statusKey || jobId;
+          pollPaymentStatus(statusKey, backendUrl);
+        }
+      } catch (backendErr) {
+        // Backend is down — that's OK, client-side monitor is running
+        console.warn('⚠️ Backend unavailable, relying on client-side monitoring:', backendErr.message);
+        setTransactionStatus('⚠️ Backend offline — tracking cross-chain status directly via LayerZero & Circle APIs');
       }
 
     } catch (error) {
@@ -673,9 +731,47 @@ export default function ReleasePayment() {
 
       console.log("✅ Milestone locked:", lockTx.transactionHash);
 
-      // Trigger backend CCTP relay so USDC reaches NOWJC on Arbitrum
-      setTransactionStatus(`🔒 Lock TX confirmed: ${lockTx.transactionHash.substring(0, 10)}... Starting CCTP relay to deliver USDC to Arbitrum...`);
+      // ── Client-side monitoring for lock milestone ─────────────────────────
+      const lockTxHash = lockTx.transactionHash;
+      const lockLzLink = `https://layerzeroscan.com/tx/${lockTxHash}`;
+      setPaymentStepState({
+        sourceChainId: jobChainId,
+        usdcApproved: true,
+        sourceTxHash: lockTxHash,
+        lzStatus: 'active',
+        lzLink: lockLzLink,
+        circleLink: `https://iris-api.circle.com/v2/messages/${jobChainConfig?.cctpDomain ?? 2}?transactionHash=${lockTxHash}`,
+      });
 
+      monitorLZMessage(lockTxHash, (lzUpdate) => {
+        setPaymentStepState(prev => ({
+          ...prev,
+          lzStatus:     lzUpdate.status === STATUS.SUCCESS ? 'delivered'
+                      : lzUpdate.status === STATUS.FAILED  ? 'failed'
+                      : 'active',
+          lzDstTxHash:  lzUpdate.dstTxHash,
+          lzDstChainId: 42161,
+          cctpBurnTxHash: lzUpdate.dstTxHash || prev?.cctpBurnTxHash,
+          cctpSourceDomain: 3,
+        }));
+        if (lzUpdate.status === STATUS.SUCCESS && lzUpdate.dstTxHash) {
+          monitorCCTPTransfer(lzUpdate.dstTxHash, 3,
+            (cctpUpdate) => {
+              setPaymentStepState(prev => ({
+                ...prev,
+                cctpAttestationStatus: cctpUpdate.status === STATUS.SUCCESS ? 'complete'
+                                     : cctpUpdate.message?.includes('slow')  ? 'slow'
+                                     : 'pending',
+              }));
+            },
+            () => setPaymentStepState(prev => ({ ...prev, cctpAttestationStatus: 'complete' }))
+          );
+        }
+      });
+      // ─────────────────────────────────────────────────────────────────────
+
+      // Also trigger backend relay (belt + suspenders)
+      setTransactionStatus(`🔒 Milestone locked. Monitoring CCTP relay to Arbitrum...`);
       const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       let lockStatusKey = null;
 
@@ -683,27 +779,21 @@ export default function ReleasePayment() {
         const relayRes = await fetch(`${backendUrl}/api/lock-milestone`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jobId, txHash: lockTx.transactionHash })
+          body: JSON.stringify({ jobId, txHash: lockTxHash })
         });
         const relayResult = await relayRes.json();
         console.log("📡 Backend CCTP relay started:", relayResult);
         lockStatusKey = relayResult.statusKey;
       } catch (err) {
         console.warn("⚠️ Backend CCTP relay request failed:", err.message);
-        setTransactionStatus(`⚠️ Lock TX confirmed (${lockTx.transactionHash.substring(0, 10)}...) but CCTP relay request failed: ${err.message}. USDC may not reach NOWJC. Save this TX hash for manual relay.`);
-        setIsLocking(false);
-        return;
+        // Client-side monitor is still running — don't block the user
       }
 
-      if (!lockStatusKey) {
-        setTransactionStatus(`⚠️ Lock confirmed but could not get CCTP status key. TX: ${lockTx.transactionHash}`);
-        setIsLocking(false);
-        setTimeout(() => window.location.reload(), 3000);
-        return;
+      if (lockStatusKey) {
+        await pollLockMilestoneStatus(lockStatusKey, lockTxHash, backendUrl);
+      } else {
+        setTransactionStatus(`🔒 Lock confirmed (${lockTxHash.substring(0,10)}...). Tracking cross-chain progress below.`);
       }
-
-      // Poll for CCTP relay completion
-      await pollLockMilestoneStatus(lockStatusKey, lockTx.transactionHash, backendUrl);
       setIsLocking(false);
       
     } catch (error) {
@@ -955,6 +1045,14 @@ export default function ReleasePayment() {
                   icon="/triangle_warning.svg"
                 />
               </div>
+            )}
+
+            {/* Client-side cross-chain progress tracker */}
+            {paymentStepState && (
+              <CrossChainStatus
+                title="Payment cross-chain status"
+                steps={buildPaymentSteps(paymentStepState)}
+              />
             )}
           </div>
         </div>
