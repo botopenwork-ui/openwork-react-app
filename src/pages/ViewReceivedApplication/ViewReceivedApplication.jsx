@@ -16,6 +16,8 @@ import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetecti
 import { getChainConfig, extractChainIdFromJobId, getNativeChain, isMainnet, buildLzOptions, DESTINATION_GAS_ESTIMATES } from "../../config/chainConfig";
 import { switchToChain } from "../../utils/switchNetwork";
 import { getLOWJCContract } from "../../services/localChainService";
+import CrossChainStatus, { buildPaymentSteps } from "../../components/CrossChainStatus/CrossChainStatus";
+import { monitorLZMessage, monitorCCTPTransfer, STATUS } from "../../utils/crossChainMonitor";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
@@ -141,6 +143,7 @@ export default function ViewReceivedApplication() {
   const [jobDetails, setJobDetails] = useState(null);
   const [milestoneDetails, setMilestoneDetails] = useState([]);
   const [transactionStatus, setTransactionStatus] = useState("Start job requires USDC approval and blockchain transaction fees");
+  const [crossChainSteps, setCrossChainSteps] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const hasFetchedRef = React.useRef(false);
   const [cctpStatus, setCctpStatus] = useState(null);
@@ -590,28 +593,73 @@ export default function ViewReceivedApplication() {
       }
       
       console.log(`✅ Job started on ${jobChainConfig.name}:`, startJobTx.transactionHash);
-      setTransactionStatus(`✅ Step 2/3: Job started on ${jobChainConfig.name}`);
-      
-      // ============ STEP 3: SEND TO BACKEND & POLL FOR STATUS ============
-      setTransactionStatus("📡 Step 3/3: Backend processing CCTP transfer...");
-      console.log("📡 Sending tx hash to backend for CCTP processing");
-      
-      // Send to backend
-      const backendResponse = await fetch(`${BACKEND_URL}/api/start-job`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          jobId, 
-          txHash: startJobTx.transactionHash 
-        })
+      setTransactionStatus(`✅ Job started on ${jobChainConfig.name}. Tracking cross-chain progress...`);
+
+      // ── Client-side cross-chain monitoring (works even if backend is down) ──
+      const srcTxHash  = startJobTx.transactionHash;
+      const srcChainId = jobChainId;
+      const lzLink     = `https://layerzeroscan.com/tx/${srcTxHash}`;
+      const circleLink = `https://iris-api.circle.com/v2/messages/${jobChainConfig?.cctpDomain ?? 2}?transactionHash=${srcTxHash}`;
+
+      setCrossChainSteps(buildPaymentSteps({
+        sourceChainId: srcChainId,
+        usdcApproved: true,
+        sourceTxHash: srcTxHash,
+        lzStatus: 'active',
+        lzLink,
+        circleLink,
+      }));
+
+      monitorLZMessage(srcTxHash, (lzUpdate) => {
+        setCrossChainSteps(() => buildPaymentSteps({
+          sourceChainId: srcChainId,
+          usdcApproved: true,
+          sourceTxHash: srcTxHash,
+          lzStatus:     lzUpdate.status === STATUS.SUCCESS ? 'delivered'
+                      : lzUpdate.status === STATUS.FAILED  ? 'failed' : 'active',
+          lzLink:       lzUpdate.lzLink || lzLink,
+          lzDstTxHash:  lzUpdate.dstTxHash,
+          lzDstChainId: 42161,
+          cctpBurnTxHash: lzUpdate.dstTxHash,
+          cctpSourceDomain: 3,
+          circleLink,
+        }));
+        if (lzUpdate.status === STATUS.SUCCESS && lzUpdate.dstTxHash) {
+          monitorCCTPTransfer(lzUpdate.dstTxHash, 3,
+            (cu) => setCrossChainSteps(() => buildPaymentSteps({
+              sourceChainId: srcChainId, usdcApproved: true, sourceTxHash: srcTxHash,
+              lzStatus: 'delivered', lzDstTxHash: lzUpdate.dstTxHash, lzDstChainId: 42161,
+              cctpBurnTxHash: lzUpdate.dstTxHash, cctpSourceDomain: 3, lzLink, circleLink,
+              cctpAttestationStatus: cu.status === STATUS.SUCCESS ? 'complete'
+                                   : cu.message?.includes('slow') ? 'slow' : 'pending',
+            })),
+            () => setCrossChainSteps(() => buildPaymentSteps({
+              sourceChainId: srcChainId, usdcApproved: true, sourceTxHash: srcTxHash,
+              lzStatus: 'delivered', lzDstTxHash: lzUpdate.dstTxHash, lzDstChainId: 42161,
+              cctpBurnTxHash: lzUpdate.dstTxHash, cctpSourceDomain: 3, lzLink, circleLink,
+              cctpAttestationStatus: 'complete',
+            }))
+          );
+        }
       });
-      
-      if (!backendResponse.ok) {
-        throw new Error('Backend failed to accept request');
+      // ──────────────────────────────────────────────────────────────────────
+
+      // Also notify backend for server-side relay (belt + suspenders)
+      setTransactionStatus("📡 Monitoring CCTP transfer to Arbitrum...");
+      try {
+        const backendResponse = await fetch(`${BACKEND_URL}/api/start-job`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobId, txHash: srcTxHash })
+        });
+        if (backendResponse.ok) {
+          const backendData = await backendResponse.json();
+          console.log("✅ Backend accepted request:", backendData);
+        }
+      } catch (backendErr) {
+        console.warn("⚠️ Backend unavailable, relying on client-side monitoring:", backendErr.message);
+        setTransactionStatus("⚠️ Backend offline — tracking via LayerZero & Circle APIs directly. See progress below.");
       }
-      
-      const backendData = await backendResponse.json();
-      console.log("✅ Backend accepted request:", backendData);
       
       // Poll backend for status updates
       const pollInterval = setInterval(async () => {
@@ -905,6 +953,14 @@ export default function ViewReceivedApplication() {
                          icon="/triangle_warning.svg"
                        />
                      </div>
+                   )}
+
+                   {/* Client-side cross-chain progress tracker */}
+                   {crossChainSteps && (
+                     <CrossChainStatus
+                       title="Start job cross-chain status"
+                       steps={crossChainSteps}
+                     />
                    )}
                  </>
                )}
