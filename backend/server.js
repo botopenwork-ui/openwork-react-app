@@ -926,10 +926,10 @@ async function startEventListener() {
   console.log('🎧 Starting OpenWork Event Listener...\n');
   console.log('📡 Configuration:');
   console.log(`   - NOWJC Contract: ${config.NOWJC_ADDRESS}`);
-  console.log(`   - Arbitrum RPC: ${config.ARBITRUM_SEPOLIA_RPC}`);
+  console.log(`   - Arbitrum RPC: ${config.ARBITRUM_RPC} (${config.NETWORK_MODE})`);
   console.log(`   - Service Wallet: ${config.WALL2_PRIVATE_KEY ? '✓ Configured' : '✗ Missing'}\n`);
 
-  const web3 = new Web3(config.ARBITRUM_SEPOLIA_RPC);
+  const web3 = new Web3(config.ARBITRUM_RPC);
   const nowjcContract = new web3.eth.Contract(config.ABIS.NOWJC_EVENTS, config.NOWJC_ADDRESS);
 
   // Get current block to start listening from

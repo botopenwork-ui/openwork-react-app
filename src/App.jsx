@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Routes, Route, Link, BrowserRouter } from "react-router-dom";
+import { Routes, Route, Link, BrowserRouter, Navigate } from "react-router-dom";
 import "./App.css";
 import { Layout } from "./components/Layout/layout";
 import DirectContractForm from "./pages/DirectContractForm/DirectContractForm";
@@ -316,6 +316,7 @@ export default function App() {
               <Route path="/work" element={<Work />} />
               <Route path="/governance" element={<Governance/>}/>
               <Route path="/browse-jobs" element={<BrowseJobs/>}/>
+              <Route path="/jobs" element={<Navigate to="/browse-jobs" replace />}/>
               <Route path="/browse-talent" element={<BrowseTalent/>}/>
               <Route path="/direct-contract" element={<DirectContractForm />} />
               <Route path="/post-job" element={<PostJob/>}/>

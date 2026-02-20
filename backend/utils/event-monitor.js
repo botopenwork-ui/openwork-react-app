@@ -19,9 +19,9 @@ async function waitForNOWJCEvent(eventName, jobId, timeout = config.EVENT_DETECT
   const web3 = new Web3(config.ARBITRUM_RPC);
   const nowjcContract = new web3.eth.Contract(config.ABIS.NOWJC_EVENTS, config.NOWJC_ADDRESS);
   
-  // Look back 100 blocks (~2-5 minutes on Arbitrum) to catch events that happened during delay
+  // Look back 7500 blocks (~30 min on Arbitrum @4 blocks/sec) — handles Cloud Run cold starts
   const latestBlockInitial = await web3.eth.getBlockNumber();
-  const startBlock = BigInt(latestBlockInitial) - 100n; 
+  const startBlock = BigInt(latestBlockInitial) - 7500n; 
   const startTime = Date.now();
   const endTime = startTime + timeout;
   
