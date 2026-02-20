@@ -22,7 +22,7 @@ async function saveCCTPTransfer(operation, jobId, sourceTxHash, sourceChain, sou
     INSERT INTO cctp_transfers (
       operation, job_id, dispute_id, source_tx_hash, source_chain, source_domain, status, step
     )
-    VALUES (?, ?, ?, ?, ?, ?, 'pending', 'initiated')
+    VALUES ($1, $2, $3, $4, $5, $6, 'pending', 'initiated')
   `, operation, jobId, disputeId, sourceTxHash, sourceChain, sourceDomain);
 
   console.log(`💾 Saved CCTP transfer to DB: ${operation} for ${jobId} (ID: ${result.lastInsertRowid})`);
@@ -42,30 +42,25 @@ async function updateCCTPStatus(jobId, operation, updates) {
   const values = [];
 
   if (updates.status !== undefined) {
-    fields.push('status = ?');
+    fields.push(`status = $${values.length + 1}`);
     values.push(updates.status);
-
-    // Set completed_at when status becomes 'completed'
-    if (updates.status === 'completed') {
-      fields.push('completed_at = CURRENT_TIMESTAMP');
-    }
+    if (updates.status === 'completed') fields.push(`completed_at = CURRENT_TIMESTAMP`);
   }
+  if (updates.step)              { fields.push(`step = $${values.length + 1}`);               values.push(updates.step); }
+  if (updates.lastError)         { fields.push(`last_error = $${values.length + 1}`);         values.push(updates.lastError); }
+  if (updates.completionTxHash)  { fields.push(`completion_tx_hash = $${values.length + 1}`); values.push(updates.completionTxHash); }
+  if (updates.attestationMessage){ fields.push(`attestation_message = $${values.length + 1}`);values.push(updates.attestationMessage); }
+  if (updates.attestationSignature){fields.push(`attestation_signature = $${values.length+1}`);values.push(updates.attestationSignature); }
+  if (updates.incrementRetry)      fields.push(`retry_count = retry_count + 1`);
 
-  if (updates.step) { fields.push('step = ?'); values.push(updates.step); }
-  if (updates.lastError) { fields.push('last_error = ?'); values.push(updates.lastError); }
-  if (updates.completionTxHash) { fields.push('completion_tx_hash = ?'); values.push(updates.completionTxHash); }
-  if (updates.attestationMessage) { fields.push('attestation_message = ?'); values.push(updates.attestationMessage); }
-  if (updates.attestationSignature) { fields.push('attestation_signature = ?'); values.push(updates.attestationSignature); }
-  if (updates.incrementRetry) { fields.push('retry_count = retry_count + 1'); }
+  fields.push(`updated_at = CURRENT_TIMESTAMP`);
 
-  // Always update timestamp
-  fields.push('updated_at = CURRENT_TIMESTAMP');
-
+  values.push(jobId, operation);
   const result = await db.run(`
     UPDATE cctp_transfers
     SET ${fields.join(', ')}
-    WHERE job_id = ? AND operation = ?
-  `, ...values, jobId, operation);
+    WHERE job_id = $${values.length - 1} AND operation = $${values.length}
+  `, ...values);
 
   if (result.changes > 0) {
     console.log(`💾 Updated CCTP status for ${operation}/${jobId}:`, Object.keys(updates).join(', '));
@@ -75,7 +70,7 @@ async function updateCCTPStatus(jobId, operation, updates) {
 }
 
 /**
- * Get CCTP transfer status
+ * Get CCTP transfer status by jobId + operation
  * @param {string} jobId - Job ID
  * @param {string} operation - Operation type
  * @returns {object|null} Status record or null
@@ -83,16 +78,80 @@ async function updateCCTPStatus(jobId, operation, updates) {
 async function getCCTPStatus(jobId, operation) {
   return await db.get(`
     SELECT * FROM cctp_transfers
-    WHERE job_id = ? AND operation = ?
+    WHERE job_id = $1 AND operation = $2
     ORDER BY created_at DESC
     LIMIT 1
   `, jobId, operation);
 }
 
 /**
- * Get all pending CCTP transfers (for monitoring/cleanup)
- * @returns {array} Array of pending transfer records
+ * Get CCTP transfer status by source tx hash (for lockMilestone per-tx tracking)
+ * @param {string} sourceTxHash - Source transaction hash
+ * @returns {object|null} Status record or null
  */
+async function getCCTPStatusByTxHash(sourceTxHash) {
+  return await db.get(`
+    SELECT * FROM cctp_transfers
+    WHERE source_tx_hash = $1
+    ORDER BY created_at DESC
+    LIMIT 1
+  `, sourceTxHash);
+}
+
+/**
+ * Save or update a CCTP transfer using source_tx_hash as the unique key.
+ * Use this for lockMilestone to avoid overwriting previous lock records on the same job.
+ * @param {string} operation
+ * @param {string} jobId
+ * @param {string} sourceTxHash
+ * @param {string} sourceChain
+ * @param {number} sourceDomain
+ * @param {string} [disputeId]
+ */
+async function saveCCTPTransferByTxHash(operation, jobId, sourceTxHash, sourceChain, sourceDomain, disputeId = null) {
+  const result = await db.run(`
+    INSERT INTO cctp_transfers
+      (operation, job_id, dispute_id, source_tx_hash, source_chain, source_domain, status, step)
+    VALUES ($1, $2, $3, $4, $5, $6, 'pending', 'initiated')
+    ON CONFLICT (source_tx_hash, operation) DO UPDATE SET
+      updated_at = CURRENT_TIMESTAMP
+  `, operation, jobId, disputeId, sourceTxHash, sourceChain, sourceDomain);
+
+  console.log(`💾 Saved CCTP transfer (by txHash) to DB: ${operation} for ${jobId}`);
+  return result;
+}
+
+/**
+ * Update CCTP transfer status by source tx hash (for lockMilestone per-tx updates)
+ */
+async function updateCCTPStatusByTxHash(sourceTxHash, operation, updates) {
+  const fields = [];
+  const values = [];
+
+  if (updates.status !== undefined) {
+    fields.push(`status = $${values.length + 1}`);
+    values.push(updates.status);
+    if (updates.status === 'completed') fields.push(`completed_at = CURRENT_TIMESTAMP`);
+  }
+  if (updates.step)              { fields.push(`step = $${values.length + 1}`);               values.push(updates.step); }
+  if (updates.lastError)         { fields.push(`last_error = $${values.length + 1}`);         values.push(updates.lastError); }
+  if (updates.completionTxHash)  { fields.push(`completion_tx_hash = $${values.length + 1}`); values.push(updates.completionTxHash); }
+  if (updates.attestationMessage){ fields.push(`attestation_message = $${values.length + 1}`);values.push(updates.attestationMessage); }
+  if (updates.attestationSignature){fields.push(`attestation_signature = $${values.length+1}`);values.push(updates.attestationSignature); }
+  if (updates.incrementRetry)      fields.push(`retry_count = retry_count + 1`);
+
+  fields.push(`updated_at = CURRENT_TIMESTAMP`);
+
+  values.push(sourceTxHash, operation);
+  const result = await db.run(`
+    UPDATE cctp_transfers
+    SET ${fields.join(', ')}
+    WHERE source_tx_hash = $${values.length - 1} AND operation = $${values.length}
+  `, ...values);
+
+  return result;
+}
+
 async function getPendingTransfers() {
   return await db.all(`
     SELECT * FROM cctp_transfers
@@ -101,10 +160,6 @@ async function getPendingTransfers() {
   `);
 }
 
-/**
- * Get all failed CCTP transfers (for retry queue)
- * @returns {array} Array of failed transfer records
- */
 async function getFailedTransfers() {
   return await db.all(`
     SELECT * FROM cctp_transfers
@@ -113,10 +168,6 @@ async function getFailedTransfers() {
   `);
 }
 
-/**
- * Clean up old completed records (older than 7 days)
- * @returns {number} Number of records deleted
- */
 async function cleanupOldRecords() {
   const result = await db.run(`
     DELETE FROM cctp_transfers
@@ -133,8 +184,11 @@ async function cleanupOldRecords() {
 
 module.exports = {
   saveCCTPTransfer,
+  saveCCTPTransferByTxHash,
   updateCCTPStatus,
+  updateCCTPStatusByTxHash,
   getCCTPStatus,
+  getCCTPStatusByTxHash,
   getPendingTransfers,
   getFailedTransfers,
   cleanupOldRecords
