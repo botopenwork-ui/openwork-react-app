@@ -1149,6 +1149,58 @@ async function startServer() {
       console.error('❌ Startup recovery failed:', err.message);
     }
   }, 8000); // After listener is started
+
+  // ── Auto-retry failed CCTP transfers every 5 minutes ─────────────────────
+  setInterval(async () => {
+    try {
+      const failed = await getFailedTransfers();
+      if (failed.length === 0) return;
+      console.log(`\n🔄 Auto-retry: ${failed.length} failed CCTP transfer(s) found`);
+      for (const transfer of failed) {
+        const { operation, job_id: jobId, source_tx_hash: txHash, retry_count: retries } = transfer;
+        if (retries >= config.MAX_RETRY_ATTEMPTS) {
+          console.warn(`⚠️ Skipping ${operation}/${jobId} — retry limit (${retries})`);
+          continue;
+        }
+        // Exponential backoff: skip if updated too recently
+        const msSinceUpdate = Date.now() - new Date(transfer.updated_at).getTime();
+        const backoffMs = Math.min(300000, 30000 * Math.pow(2, retries)); // 30s → 60s → 120s → max 5min
+        if (msSinceUpdate < backoffMs) continue;
+        console.log(`  ↻ Retrying ${operation}/${jobId} (attempt ${retries + 1})`);
+        if (operation === 'startJob') {
+          processStartJobDirect(jobId, txHash).catch(e => console.error(`Retry failed ${jobId}:`, e.message));
+        } else if (operation === 'releasePayment') {
+          processReleasePaymentFlow(jobId, jobStatuses).catch(e => console.error(`Retry failed ${jobId}:`, e.message));
+        } else if (operation === 'lockMilestone') {
+          processLockMilestoneCCTP(jobId, txHash, `lock-${jobId}-${txHash}`).catch(e => console.error(`Retry failed ${jobId}:`, e.message));
+        }
+      }
+    } catch (err) {
+      console.error('❌ Auto-retry job error:', err.message);
+    }
+  }, 5 * 60 * 1000);
+
+  // ── Service wallet health monitor every 30 minutes ───────────────────────
+  const checkWalletHealth = async () => {
+    try {
+      const web3Arb = new Web3(config.ARBITRUM_RPC);
+      const pk = config.WALL2_PRIVATE_KEY?.startsWith('0x')
+        ? config.WALL2_PRIVATE_KEY : `0x${config.WALL2_PRIVATE_KEY}`;
+      const address = web3Arb.eth.accounts.privateKeyToAccount(pk).address;
+      const balWei  = await web3Arb.eth.getBalance(address);
+      const balEth  = parseFloat(web3Arb.utils.fromWei(balWei, 'ether'));
+      if (balEth < 0.005) {
+        console.error(`\n🚨 WALLET ALERT: Arbitrum service wallet critically low: ${balEth.toFixed(6)} ETH — ${address}`);
+        console.error(`   receive() calls WILL FAIL. Top up immediately.\n`);
+      } else {
+        console.log(`💳 Wallet health: ${balEth.toFixed(6)} ETH (${address.slice(0, 10)}...)`);
+      }
+    } catch (err) {
+      console.warn('⚠️ Wallet health check failed:', err.message);
+    }
+  };
+  await checkWalletHealth(); // Immediate boot check
+  setInterval(checkWalletHealth, 30 * 60 * 1000);
 }
 
 startServer().catch(err => {
