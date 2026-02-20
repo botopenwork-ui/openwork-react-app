@@ -80,6 +80,12 @@ async function initDatabase() {
   await db.exec('CREATE INDEX IF NOT EXISTS idx_cctp_job_operation ON cctp_transfers(job_id, operation)');
   await db.exec('CREATE INDEX IF NOT EXISTS idx_cctp_status ON cctp_transfers(status)');
   await db.exec('CREATE INDEX IF NOT EXISTS idx_cctp_created ON cctp_transfers(created_at DESC)');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_cctp_source_tx ON cctp_transfers(source_tx_hash)');
+  // Unique constraint for per-txHash lookups (used by lockMilestone to avoid row collisions)
+  await db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_cctp_tx_operation
+    ON cctp_transfers(source_tx_hash, operation)
+  `);
 
   // Create proposals table
   await db.exec(`

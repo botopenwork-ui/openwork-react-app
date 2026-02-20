@@ -13,6 +13,12 @@ const adminRoutes = require('./routes/admin');
 const ipfsRoutes = require('./routes/ipfs');
 const chatRoutes = require('./routes/chat');
 const docsRoutes = require('./routes/docs');
+const {
+  getCCTPStatus,
+  getCCTPStatusByTxHash,
+  getPendingTransfers,
+  getFailedTransfers,
+} = require('./utils/cctp-storage');
 
 // Initialize Express
 const app = express();
@@ -44,6 +50,60 @@ app.use('/api/docs', docsRoutes);
 const processingJobs = new Set();
 const completedJobs = new Map(); // jobId -> timestamp
 const jobStatuses = new Map(); // jobId -> { status, message, error }
+
+// ─── Unified Status Lookup ────────────────────────────────────────────────────
+/**
+ * Look up a CCTP/job status from in-memory map first, then DB.
+ * This makes status endpoints resilient to Cloud Run restarts.
+ *
+ * @param {string} key          - In-memory map key (jobId, statusKey, etc.)
+ * @param {string} [jobId]      - Job ID for DB fallback
+ * @param {string} [operation]  - Operation for DB fallback ('startJob' | 'releasePayment' | 'lockMilestone')
+ * @param {string} [txHash]     - Source tx hash for per-txHash lookups (lockMilestone)
+ * @returns {object|null}
+ */
+async function getStatus(key, jobId, operation, txHash) {
+  // 1. In-memory (fast path — available during the same instance lifetime)
+  const memStatus = jobStatuses.get(key);
+  if (memStatus) return memStatus;
+
+  // 2. DB fallback — lookup by (jobId, operation)
+  if (jobId && operation) {
+    try {
+      const dbRecord = await getCCTPStatus(jobId, operation);
+      if (dbRecord) return normalizeDbStatus(dbRecord);
+    } catch (e) {
+      console.warn('[getStatus] DB lookup failed:', e.message);
+    }
+  }
+
+  // 3. DB fallback — lookup by txHash (for lockMilestone per-tx tracking)
+  if (txHash) {
+    try {
+      const dbRecord = await getCCTPStatusByTxHash(txHash);
+      if (dbRecord) return normalizeDbStatus(dbRecord);
+    } catch (e) {
+      console.warn('[getStatus] DB tx-hash lookup failed:', e.message);
+    }
+  }
+
+  return null;
+}
+
+/** Normalize a DB cctp_transfers row into the in-memory status format */
+function normalizeDbStatus(row) {
+  return {
+    status:            row.status,
+    message:           row.step    ? `Step: ${row.step}` : `Status: ${row.status}`,
+    step:              row.step,
+    txHash:            row.source_tx_hash,
+    completionTxHash:  row.completion_tx_hash,
+    lastError:         row.last_error,
+    retryCount:        row.retry_count,
+    sourceChain:       row.source_chain,
+    fromDatabase:      true, // flag so caller knows this survived a restart
+  };
+}
 
 // Event listener state
 let eventListenerActive = false;
@@ -159,23 +219,16 @@ app.post('/api/start-job', async (req, res) => {
   });
 });
 
-// Get job status endpoint
-app.get('/api/start-job-status/:jobId', (req, res) => {
+// Get job status endpoint — reads memory first, falls back to DB
+app.get('/api/start-job-status/:jobId', async (req, res) => {
   const { jobId } = req.params;
-  const status = jobStatuses.get(jobId);
-  
+  const status = await getStatus(jobId, jobId, 'startJob');
+
   if (!status) {
-    return res.status(404).json({
-      success: false,
-      error: 'Job status not found'
-    });
+    return res.status(404).json({ success: false, error: 'Job status not found' });
   }
-  
-  res.json({
-    success: true,
-    jobId,
-    ...status
-  });
+
+  res.json({ success: true, jobId, ...status });
 });
 
 // Release payment endpoint - accepts jobId from frontend
@@ -361,43 +414,39 @@ app.post('/api/lock-milestone', async (req, res) => {
   });
 });
 
-// Get lock milestone CCTP relay status
-app.get('/api/lock-milestone-status/:statusKey', (req, res) => {
+// Get lock milestone CCTP relay status — reads memory first, falls back to DB by txHash
+// statusKey format: "lock-{jobId}-{txHash}"
+app.get('/api/lock-milestone-status/:statusKey', async (req, res) => {
   const { statusKey } = req.params;
-  const status = jobStatuses.get(statusKey);
+
+  // Parse txHash out of the statusKey for DB fallback
+  const txHashMatch = statusKey.match(/-(0x[a-fA-F0-9]+)$/);
+  const txHash = txHashMatch ? txHashMatch[1] : null;
+  const jobId  = txHash ? statusKey.replace(`-${txHash}`, '').replace(/^lock-/, '') : null;
+
+  const status = await getStatus(statusKey, jobId, 'lockMilestone', txHash);
 
   if (!status) {
-    return res.status(404).json({
-      success: false,
-      error: 'Lock milestone status not found'
-    });
+    return res.status(404).json({ success: false, error: 'Lock milestone status not found' });
   }
 
-  res.json({
-    success: true,
-    statusKey,
-    ...status
-  });
+  res.json({ success: true, statusKey, ...status });
 });
 
-// Get release payment status endpoint
-// Supports both /api/release-payment-status/:statusKey and legacy /api/release-payment-status/:jobId
-app.get('/api/release-payment-status/:statusKey', (req, res) => {
+// Get release payment status — reads memory first, falls back to DB
+// statusKey format is either jobId or "{jobId}-{opTxHash}" (per-tx tracking)
+app.get('/api/release-payment-status/:statusKey', async (req, res) => {
   const { statusKey } = req.params;
-  const status = jobStatuses.get(statusKey);
+
+  // Extract jobId from statusKey (format: "30111-71-0xabc..." or just "30111-71")
+  const jobId = statusKey.includes('-0x') ? statusKey.split('-0x')[0] : statusKey;
+  const status = await getStatus(statusKey, jobId, 'releasePayment');
 
   if (!status) {
-    return res.status(404).json({
-      success: false,
-      error: 'Payment status not found'
-    });
+    return res.status(404).json({ success: false, error: 'Payment status not found' });
   }
 
-  res.json({
-    success: true,
-    statusKey,
-    ...status
-  });
+  res.json({ success: true, statusKey, ...status });
 });
 
 // Settle dispute endpoint - accepts tx hash from frontend
@@ -790,58 +839,56 @@ async function processLockMilestoneCCTP(jobId, sourceTxHash, statusKey) {
     console.log(`Status Key: ${statusKey}`);
 
     const { getDomainFromJobId, getChainNameFromJobId } = require('./utils/chain-utils');
-    const { saveCCTPTransfer, updateCCTPStatus } = require('./utils/cctp-storage');
+    const {
+      saveCCTPTransferByTxHash,
+      updateCCTPStatusByTxHash,
+    } = require('./utils/cctp-storage');
     const { pollCCTPAttestation } = require('./utils/cctp-poller');
     const { executeReceiveOnArbitrum } = require('./utils/tx-executor');
 
-    // Detect source chain from job ID
-    const sourceChain = getChainNameFromJobId(jobId);
+    const sourceChain  = getChainNameFromJobId(jobId);
     const sourceDomain = getDomainFromJobId(jobId);
     console.log(`Source Chain: ${sourceChain} (Domain ${sourceDomain})`);
 
-    // Save to database
-    await saveCCTPTransfer('lockMilestone', jobId, sourceTxHash, sourceChain, sourceDomain);
+    // Use per-txHash save so multiple locks on same job don't collide
+    await saveCCTPTransferByTxHash('lockMilestone', jobId, sourceTxHash, sourceChain, sourceDomain);
 
-    // Update in-memory status
     jobStatuses.set(statusKey, {
       status: 'polling_attestation',
       message: `Polling Circle API for CCTP attestation from ${sourceChain}...`,
-      txHash: sourceTxHash
+      txHash: sourceTxHash,
     });
 
-    await updateCCTPStatus(jobId, 'lockMilestone', { step: 'polling_attestation' });
+    await updateCCTPStatusByTxHash(sourceTxHash, 'lockMilestone', { step: 'polling_attestation' });
 
-    // STEP 1: Poll Circle API for CCTP attestation
     console.log(`\n📍 STEP 1/2: Polling Circle API for CCTP attestation (Domain ${sourceDomain})...`);
     const attestation = await pollCCTPAttestation(sourceTxHash, sourceDomain);
     console.log(`✅ Attestation received from ${sourceChain}`);
 
-    // Update status
-    await updateCCTPStatus(jobId, 'lockMilestone', {
+    await updateCCTPStatusByTxHash(sourceTxHash, 'lockMilestone', {
       step: 'executing_receive',
       attestationMessage: attestation.message,
-      attestationSignature: attestation.attestation
+      attestationSignature: attestation.attestation,
     });
 
     jobStatuses.set(statusKey, {
       status: 'executing_receive',
       message: 'Executing receive() on Arbitrum CCTP Transceiver...',
-      txHash: sourceTxHash
+      txHash: sourceTxHash,
     });
 
-    // STEP 2: Execute receive() on Arbitrum
     console.log('\n📍 STEP 2/2: Executing receive() on Arbitrum...');
     const result = await executeReceiveOnArbitrum(attestation);
 
     if (result.alreadyCompleted) {
-      console.log('✅ USDC already transferred to NOWJC (completed by CCTP)');
+      console.log('✅ USDC already transferred to NOWJC (nonce already used)');
     } else {
       console.log(`✅ USDC transferred to NOWJC: ${result.transactionHash}`);
     }
 
-    await updateCCTPStatus(jobId, 'lockMilestone', {
+    await updateCCTPStatusByTxHash(sourceTxHash, 'lockMilestone', {
       status: 'completed',
-      completionTxHash: result.transactionHash || 'already_completed'
+      completionTxHash: result.transactionHash || 'already_completed',
     });
 
     console.log('\n🎉 ========== LOCK MILESTONE CCTP RELAY COMPLETED ==========\n');
@@ -852,19 +899,19 @@ async function processLockMilestoneCCTP(jobId, sourceTxHash, statusKey) {
       sourceTxHash,
       sourceChain,
       completionTxHash: result.transactionHash,
-      alreadyCompleted: result.alreadyCompleted
+      alreadyCompleted: result.alreadyCompleted,
     };
 
   } catch (error) {
     console.error('\n❌ ========== LOCK MILESTONE CCTP RELAY FAILED ==========');
-    console.error(`Job ID: ${jobId}`);
+    console.error(`Job ID: ${jobId}, TX: ${sourceTxHash}`);
     console.error(`Error: ${error.message}`);
     console.error('=======================================================\n');
 
-    const { updateCCTPStatus } = require('./utils/cctp-storage');
-    await updateCCTPStatus(jobId, 'lockMilestone', {
+    const { updateCCTPStatusByTxHash } = require('./utils/cctp-storage');
+    await updateCCTPStatusByTxHash(sourceTxHash, 'lockMilestone', {
       status: 'failed',
-      lastError: error.message
+      lastError: error.message,
     });
 
     throw error;
@@ -1046,8 +1093,61 @@ async function startServer() {
     console.log(`   - Stats:  http://localhost:${PORT}/stats`);
     console.log(`   - API: http://localhost:${PORT}/api/*\n`);
     console.log('✅ Server ready to accept requests');
-    console.log('ℹ️  Event listener is OFF by default (start via /api/start-listener when needed)\n');
   });
+
+  // ── Auto-start event listener (needed for release payment flow) ──────────
+  // Small delay to let the DB connection stabilize after init
+  setTimeout(() => {
+    console.log('🎧 Auto-starting event listener...');
+    startEventListener().catch(err =>
+      console.error('❌ Event listener auto-start failed:', err.message)
+    );
+  }, 5000);
+
+  // ── Startup recovery: re-queue any pending/failed CCTP transfers ─────────
+  setTimeout(async () => {
+    try {
+      const pending = await getPendingTransfers();
+      const failed  = await getFailedTransfers();
+      const toRetry = [...pending, ...failed];
+
+      if (toRetry.length === 0) {
+        console.log('✅ No pending/failed CCTP transfers to recover.');
+        return;
+      }
+
+      console.log(`\n🔄 Recovering ${toRetry.length} pending/failed CCTP transfer(s)...`);
+
+      for (const transfer of toRetry) {
+        const { operation, job_id: jobId, source_tx_hash: txHash, retry_count: retries } = transfer;
+
+        // Skip transfers that have already been retried too many times
+        if (retries >= config.MAX_RETRY_ATTEMPTS) {
+          console.warn(`⚠️ Skipping ${operation}/${jobId} — retry limit reached (${retries})`);
+          continue;
+        }
+
+        console.log(`  ↻ Re-queuing ${operation} for job ${jobId} (tx: ${txHash?.slice(0,10)}..., retry #${retries + 1})`);
+
+        if (operation === 'startJob') {
+          processStartJobDirect(jobId, txHash).catch(err =>
+            console.error(`Recovery failed for startJob/${jobId}:`, err.message)
+          );
+        } else if (operation === 'releasePayment') {
+          processReleasePaymentFlow(jobId, jobStatuses).catch(err =>
+            console.error(`Recovery failed for releasePayment/${jobId}:`, err.message)
+          );
+        } else if (operation === 'lockMilestone') {
+          const statusKey = `lock-${jobId}-${txHash}`;
+          processLockMilestoneCCTP(jobId, txHash, statusKey).catch(err =>
+            console.error(`Recovery failed for lockMilestone/${jobId}:`, err.message)
+          );
+        }
+      }
+    } catch (err) {
+      console.error('❌ Startup recovery failed:', err.message);
+    }
+  }, 8000); // After listener is started
 }
 
 startServer().catch(err => {
