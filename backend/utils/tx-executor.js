@@ -10,7 +10,6 @@ async function executeReceiveOnArbitrum(attestationData) {
   console.log('🔗 Executing receive() on Arbitrum CCTP Transceiver...');
   console.log(`   Network Mode: ${config.NETWORK_MODE}`);
 
-  // Use dynamic RPC based on network mode
   const web3 = new Web3(config.ARBITRUM_RPC);
   const privateKey = config.WALL2_PRIVATE_KEY.startsWith('0x')
     ? config.WALL2_PRIVATE_KEY
@@ -19,13 +18,16 @@ async function executeReceiveOnArbitrum(attestationData) {
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   web3.eth.accounts.wallet.add(account);
 
-  // Use dynamic CCTP address based on network mode
   const cctpAddress = config.CCTP_ARB_ADDRESS;
+  const cctpContract = new web3.eth.Contract(config.ABIS.CCTP_TRANSCEIVER, cctpAddress);
 
-  const cctpContract = new web3.eth.Contract(
-    config.ABIS.CCTP_TRANSCEIVER,
-    cctpAddress
-  );
+  // Check service wallet balance before attempting
+  const balance = await web3.eth.getBalance(account.address);
+  const balanceEth = parseFloat(web3.utils.fromWei(balance, 'ether'));
+  console.log(`   Service Wallet: ${account.address} (${balanceEth.toFixed(6)} ETH)`);
+  if (balanceEth < 0.001) {
+    throw new Error(`Service wallet balance too low on Arbitrum: ${balanceEth.toFixed(6)} ETH. Top up required.`);
+  }
 
   console.log('📋 Transaction parameters:', {
     contract: cctpAddress,
@@ -33,40 +35,45 @@ async function executeReceiveOnArbitrum(attestationData) {
     messageLength: attestationData.message?.length,
     attestationLength: attestationData.attestation?.length
   });
-  
+
   try {
+    // Dynamic gas estimation with 30% buffer
+    let gasLimit;
+    try {
+      const gasEstimate = await cctpContract.methods.receive(
+        attestationData.message,
+        attestationData.attestation
+      ).estimateGas({ from: account.address });
+      gasLimit = Math.ceil(Number(gasEstimate) * 1.3);
+      console.log(`   Gas estimate: ${gasEstimate} → with 30% buffer: ${gasLimit}`);
+    } catch (estimateErr) {
+      // If estimation fails (e.g. nonce already used), fall back to safe static value
+      console.warn(`   Gas estimation failed: ${estimateErr.message} — using fallback 300000`);
+      gasLimit = 300000;
+    }
+
     const tx = await cctpContract.methods.receive(
       attestationData.message,
       attestationData.attestation
     ).send({
       from: account.address,
-      gas: 300000
+      gas: gasLimit
     });
-    
+
     console.log('✅ Receive transaction completed:', {
       txHash: tx.transactionHash,
       blockNumber: tx.blockNumber,
       gasUsed: tx.gasUsed
     });
-    
-    return {
-      transactionHash: tx.transactionHash,
-      alreadyCompleted: false
-    };
-    
+
+    return { transactionHash: tx.transactionHash, alreadyCompleted: false };
+
   } catch (error) {
     console.log('⚠️ Receive execution failed:', error.message);
-
-    // Only treat "Nonce already used" as already completed — that specifically means
-    // the CCTP message was already relayed. Other reverts are real failures.
     if (error.message.includes('Nonce already used')) {
       console.log('✅ USDC transfer was already completed by CCTP (nonce already used).');
-      return {
-        transactionHash: null,
-        alreadyCompleted: true
-      };
+      return { transactionHash: null, alreadyCompleted: true };
     }
-
     throw new Error(`Arbitrum receive() failed: ${error.message}`);
   }
 }
@@ -130,18 +137,15 @@ async function executeReceiveMessage(attestationData, destinationChain = 'Optimi
   console.log(`   MessageTransmitter: ${transmitterAddress}`);
   console.log(`   Service Wallet: ${account.address}`);
 
+  const transmitterContract = new web3.eth.Contract(config.ABIS.MESSAGE_TRANSMITTER, transmitterAddress);
+
   // Check service wallet balance
   const balance = await web3.eth.getBalance(account.address);
-  console.log(`   Service Wallet Balance: ${web3.utils.fromWei(balance, 'ether')} ETH`);
-
-  if (BigInt(balance) < BigInt(web3.utils.toWei('0.001', 'ether'))) {
-    console.warn(`⚠️ WARNING: Service wallet has low balance on ${destinationChain}!`);
+  const balanceEth = parseFloat(web3.utils.fromWei(balance, 'ether'));
+  console.log(`   Service Wallet Balance: ${balanceEth.toFixed(6)} ETH`);
+  if (balanceEth < 0.001) {
+    throw new Error(`Service wallet balance too low on ${destinationChain}: ${balanceEth.toFixed(6)} ETH. Top up required.`);
   }
-
-  const transmitterContract = new web3.eth.Contract(
-    config.ABIS.MESSAGE_TRANSMITTER,
-    transmitterAddress
-  );
 
   console.log('📋 Transaction parameters:', {
     chain: destinationChain,
@@ -154,12 +158,26 @@ async function executeReceiveMessage(attestationData, destinationChain = 'Optimi
   });
   
   try {
+    // Dynamic gas estimation with 30% buffer
+    let gasLimit;
+    try {
+      const gasEstimate = await transmitterContract.methods.receiveMessage(
+        attestationData.message,
+        attestationData.attestation
+      ).estimateGas({ from: account.address });
+      gasLimit = Math.ceil(Number(gasEstimate) * 1.3);
+      console.log(`   Gas estimate: ${gasEstimate} → with 30% buffer: ${gasLimit}`);
+    } catch (estimateErr) {
+      console.warn(`   Gas estimation failed: ${estimateErr.message} — using fallback 300000`);
+      gasLimit = 300000;
+    }
+
     const tx = await transmitterContract.methods.receiveMessage(
       attestationData.message,
       attestationData.attestation
     ).send({
       from: account.address,
-      gas: 300000
+      gas: gasLimit
     });
     
     console.log(`✅ ReceiveMessage transaction completed on ${destinationChain}:`, {
