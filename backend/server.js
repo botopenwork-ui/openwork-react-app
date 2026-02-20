@@ -422,9 +422,10 @@ app.get('/api/lock-milestone-status/:statusKey', async (req, res) => {
   // Parse txHash out of the statusKey for DB fallback
   const txHashMatch = statusKey.match(/-(0x[a-fA-F0-9]+)$/);
   const txHash = txHashMatch ? txHashMatch[1] : null;
-  const jobId  = txHash ? statusKey.replace(`-${txHash}`, '').replace(/^lock-/, '') : null;
 
-  const status = await getStatus(statusKey, jobId, 'lockMilestone', txHash);
+  // For lockMilestone, always use txHash lookup — multiple locks per job means
+  // (jobId, operation) would return the wrong row. Skip to txHash directly.
+  const status = await getStatus(statusKey, null, null, txHash);
 
   if (!status) {
     return res.status(404).json({ success: false, error: 'Lock milestone status not found' });
