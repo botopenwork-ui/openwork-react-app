@@ -105,59 +105,6 @@ export default function DAO() {
         loadDAOData();
     }, []);
 
-    const dummyProposals = [
-        {
-            id: "0x1234",
-            title: "OpenWork Token Contract Upgrade",
-            proposedBy: "0xDEAF...f8BB",
-            voteSubmissions: 70,
-            type: "Upgrade",
-            timeLeft: "2 days",
-            color: "#FFA500",
-            viewUrl: "/contract-upgrade-proposal-view"
-        },
-        {
-            id: "0x2345",
-            title: "OpenWork Token Contract Update",
-            proposedBy: "0xDEAF...f8BB",
-            voteSubmissions: 90,
-            type: "Update",
-            timeLeft: "5 days",
-            color: "#00C853",
-            viewUrl: "/contract-update-proposal-view"
-        },
-        {
-            id: "0x3456",
-            title: "Treasury Proposal",
-            proposedBy: "Jollie Hall",
-            voteSubmissions: 40,
-            type: "Treasury",
-            timeLeft: "1 day",
-            color: "#F44336",
-            viewUrl: "/treasury-proposal-view"
-        },
-        {
-            id: "0x4567",
-            title: "Dissolve General Skill Oracle",
-            proposedBy: "0xDEAF...f8BB",
-            voteSubmissions: 60,
-            type: "Dissolve Oracle",
-            timeLeft: "2 hrs",
-            color: "#FFA500",
-            viewUrl: "/dissolve-oracle-proposal-view"
-        },
-        {
-            id: "0x5678",
-            title: "Recruit Member to Skill Oracle",
-            proposedBy: "Mollie Hall",
-            voteSubmissions: 80,
-            type: "Recruitment",
-            timeLeft: "3 days",
-            color: "#00C853",
-            viewUrl: "/recruitment-proposal-view"
-        }
-    ];
-
     const titleOptions = [
         {
             title: 'DAO View',
@@ -204,8 +151,8 @@ export default function DAO() {
         }
     ];
 
-    // Use blockchain data or fallback to dummy data
-    let displayProposals = proposals.length > 0 ? proposals : dummyProposals;
+    // Use blockchain data only
+    let displayProposals = proposals;
     
     // Apply filter
     if (selectedFilter !== 'All') {

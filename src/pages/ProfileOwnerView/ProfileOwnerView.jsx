@@ -11,6 +11,8 @@ import ProfileGenesisABI from "../../ABIs/profile-genesis_ABI.json";
 import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
 import { getLOWJCContract } from "../../services/localChainService";
 import { getNativeChain, isMainnet } from "../../config/chainConfig";
+import CrossChainStatus, { buildLZSteps } from "../../components/CrossChainStatus/CrossChainStatus";
+import { monitorLZMessage, STATUS } from "../../utils/crossChainMonitor";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
@@ -70,6 +72,7 @@ export default function ProfileOwnerView() {
     const [hasProfile, setHasProfile] = useState(false);
     const [profileLoading, setProfileLoading] = useState(true);
     const [transactionStatus, setTransactionStatus] = useState("");
+    const [crossChainSteps, setCrossChainSteps] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
 
     // Profile field states - initialize with empty values
@@ -304,6 +307,10 @@ export default function ProfileOwnerView() {
                         maxFeePerGas: gasPrice
                     });
                 setTransactionStatus(`✅ Profile updated on ${chainConfig.name}!`);
+                const srcTx = receipt.transactionHash;
+                const lzLink = `https://layerzeroscan.com/tx/${srcTx}`;
+                setCrossChainSteps(buildLZSteps({ sourceTxHash: srcTx, sourceChainId: chainConfig?.chainId, lzStatus: 'active', lzLink }));
+                monitorLZMessage(srcTx, (u) => setCrossChainSteps(buildLZSteps({ sourceTxHash: srcTx, sourceChainId: chainConfig?.chainId, lzStatus: u.status === STATUS.SUCCESS ? 'delivered' : u.status === STATUS.FAILED ? 'failed' : 'active', lzLink: u.lzLink || lzLink, dstTxHash: u.dstTxHash, dstChainId: 42161 })));
             } else {
                 setTransactionStatus(`Creating profile on ${chainConfig.name}...`);
                 console.log("Creating profile with referrer:", referrerForProfile);
@@ -317,6 +324,10 @@ export default function ProfileOwnerView() {
                         maxFeePerGas: gasPrice
                     });
                 setTransactionStatus(`✅ Profile created on ${chainConfig.name}!`);
+                const srcTx = receipt.transactionHash;
+                const lzLink = `https://layerzeroscan.com/tx/${srcTx}`;
+                setCrossChainSteps(buildLZSteps({ sourceTxHash: srcTx, sourceChainId: chainConfig?.chainId, lzStatus: 'active', lzLink }));
+                monitorLZMessage(srcTx, (u) => setCrossChainSteps(buildLZSteps({ sourceTxHash: srcTx, sourceChainId: chainConfig?.chainId, lzStatus: u.status === STATUS.SUCCESS ? 'delivered' : u.status === STATUS.FAILED ? 'failed' : 'active', lzLink: u.lzLink || lzLink, dstTxHash: u.dstTxHash, dstChainId: 42161 })));
                 setHasProfile(true);
             }
 
@@ -794,6 +805,9 @@ export default function ProfileOwnerView() {
                             <div className="warning-form">
                                 <Warning content={transactionStatus} />
                             </div>
+                        )}
+                        {crossChainSteps && (
+                            <CrossChainStatus title="Profile sync status" steps={crossChainSteps} />
                         )}
                         {isOwner && !profileLoading && (
                             <div className="form-groupDC" style={{display:'flex', alignItems:'center', gap:'16px'}}>

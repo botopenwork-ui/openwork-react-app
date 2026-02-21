@@ -1,6 +1,7 @@
-node_modules
+.gcloudignore
 .git
-backend/node_modules
-backend/db/*.db
-backend/db/*.db-shm
-backend/db/*.db-wal
+node_modules/
+backend/node_modules/
+dist/
+backend/.env
+*.md

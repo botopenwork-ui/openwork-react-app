@@ -106,65 +106,6 @@ export default function ProfileJobs() {
         loadJobs();
     }, [address]);
 
-    const dummyJobs = [
-        {
-            id: 0,
-            title: 'UI for OpenWork',
-            from: 'Me',
-            to: 'Mllie Hall',
-            status: 'Disputed',
-            amount: '7624.14'
-        },
-        {
-            id: 1,
-            title: 'UI for OpenWork',
-            from: 'Me',
-            to: 'Mllie Hall',
-            status: 'Ongoing',
-            amount: '24.14'
-        },
-        {
-            id: 2,
-            title: 'UI for OpenWork',
-            from: 'Mllie Hall',
-            to: 'Me',
-            status: 'Disputed',
-            amount: '762'
-        },
-        {
-            id: 2,
-            title: 'UI for OpenWork',
-            from: 'Me',
-            to: 'Mllie Hall',
-            status: 'Complete',
-            amount: '762'
-        },
-        {
-            id: 2,
-            title: 'UI for OpenWork',
-            from: 'Mllie Hall',
-            to: 'Me',
-            status: 'Ongoing',
-            amount: '762'
-        },
-        {
-            id: 2,
-            title: 'UI for OpenWork',
-            from: 'Mllie Hall',
-            to: 'Me',
-            status: 'Disputed',
-            amount: '762'
-        },
-        {
-            id: 2,
-            title: 'UI for OpenWork',
-            from: 'Me',
-            to: 'Mllie Hall',
-            status: 'Disputed',
-            amount: '762'
-        },
-    ]
-
     const titleOptions = [
         {
             title: 'Jobs View',
@@ -206,8 +147,8 @@ export default function ProfileJobs() {
         }
     ] 
 
-    // Use blockchain data or fallback to dummy
-    const displayJobs = jobs.length > 0 ? jobs : dummyJobs;
+    // Use blockchain data only
+    const displayJobs = jobs;
 
     const tableData = useMemo(() => {
         return displayJobs.map((job) => {
