@@ -2,6 +2,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Cache bust arg - change to force full rebuild
+ARG CACHEBUST=1
+
 # Install frontend dependencies and build
 COPY package*.json ./
 RUN npm ci
