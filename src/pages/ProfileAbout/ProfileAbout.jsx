@@ -135,7 +135,7 @@ export default function ProfileAbout() {
             <div className="newTitle">
                 <div className="titleTop">
                 <Link className="goBack" to={`/profile`}><img className="goBackImage" src="/back.svg" alt="Back Button" /></Link>  
-                <div className="titleText">formatWalletAddress(walletAddress)</div>
+                <div className="titleText">{formatWalletAddress(walletAddress)}</div>
                 </div>
                 <div className="titleBottom"><p>  Contract ID:{" "}
                 {formatWalletAddress(walletAddress)}
