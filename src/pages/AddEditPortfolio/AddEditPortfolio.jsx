@@ -10,6 +10,8 @@ import Warning from "../../components/Warning/Warning";
 import "./AddEditPortfolio.css";
 import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
 import { getLOWJCContract } from "../../services/localChainService";
+import CrossChainStatus, { buildLZSteps } from "../../components/CrossChainStatus/CrossChainStatus";
+import { monitorLZMessage, STATUS } from "../../utils/crossChainMonitor";
 
 export default function AddEditPortfolio() {
   const navigate = useNavigate();
@@ -35,6 +37,7 @@ export default function AddEditPortfolio() {
   const [loading, setLoading] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState("");
+  const [crossChainSteps, setCrossChainSteps] = useState(null);
 
   function formatWalletAddress(address) {
     if (!address) return "0xfd08...024a";
@@ -184,6 +187,10 @@ export default function AddEditPortfolio() {
             gas: 5000000
           });
         setTransactionStatus(`✅ Portfolio updated on ${chainConfig.name}!`);
+        const srcTx = receipt.transactionHash;
+        const lzLink = `https://layerzeroscan.com/tx/${srcTx}`;
+        setCrossChainSteps(buildLZSteps({ sourceTxHash: srcTx, sourceChainId: chainConfig?.chainId, lzStatus: 'active', lzLink }));
+        monitorLZMessage(srcTx, (u) => setCrossChainSteps(buildLZSteps({ sourceTxHash: srcTx, sourceChainId: chainConfig?.chainId, lzStatus: u.status === STATUS.SUCCESS ? 'delivered' : u.status === STATUS.FAILED ? 'failed' : 'active', lzLink: u.lzLink || lzLink, dstTxHash: u.dstTxHash, dstChainId: 42161 })));
       } else {
         setTransactionStatus(`Adding portfolio on ${chainConfig.name}...`);
         await lowjcContract.methods
@@ -194,6 +201,10 @@ export default function AddEditPortfolio() {
             gas: 5000000
           });
         setTransactionStatus(`✅ Portfolio added on ${chainConfig.name}!`);
+        const srcTx = receipt.transactionHash;
+        const lzLink = `https://layerzeroscan.com/tx/${srcTx}`;
+        setCrossChainSteps(buildLZSteps({ sourceTxHash: srcTx, sourceChainId: chainConfig?.chainId, lzStatus: 'active', lzLink }));
+        monitorLZMessage(srcTx, (u) => setCrossChainSteps(buildLZSteps({ sourceTxHash: srcTx, sourceChainId: chainConfig?.chainId, lzStatus: u.status === STATUS.SUCCESS ? 'delivered' : u.status === STATUS.FAILED ? 'failed' : 'active', lzLink: u.lzLink || lzLink, dstTxHash: u.dstTxHash, dstChainId: 42161 })));
       }
 
       setTimeout(() => navigate("/profile-portfolio"), 2000);
@@ -377,6 +388,9 @@ export default function AddEditPortfolio() {
           <div className="warning-form" style={{marginBottom: '12px'}}>
             <Warning content={transactionStatus} />
           </div>
+        )}
+        {crossChainSteps && (
+          <CrossChainStatus title="Portfolio sync status" steps={crossChainSteps} />
         )}
         
         <div className="addedit-submit-section">

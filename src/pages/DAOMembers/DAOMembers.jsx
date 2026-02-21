@@ -81,54 +81,6 @@ export default function DAOMembers() {
         loadMembers();
     }, []);
 
-    const dummyMembers = [
-        {
-            id: 0,
-            name: 'Mollie Hall',
-            proposalsCreated: 23,
-            proposalsVoted: 23,
-            lastActivity: '10 days ago',
-            walletAddress: '0912412jg...1sg',
-            tokensStaked: 129487
-        },
-        {
-            id: 1,
-            name: 'Jollie Hall',
-            proposalsCreated: 51,
-            proposalsVoted: 51,
-            lastActivity: '10 days ago',
-            walletAddress: '0912412jg...1sg',
-            tokensStaked: 5215555
-        },
-        {
-            id: 2,
-            name: 'Mollie Hall',
-            proposalsCreated: 2,
-            proposalsVoted: 2,
-            lastActivity: '10 days ago',
-            walletAddress: '0912412jg...1sg',
-            tokensStaked: 12511111
-        },
-        {
-            id: 3,
-            name: 'Jollie Hall',
-            proposalsCreated: 5,
-            proposalsVoted: 5,
-            lastActivity: '10 days ago',
-            walletAddress: '0912412jg...1sg',
-            tokensStaked: 52512636
-        },
-        {
-            id: 4,
-            name: 'Mollie Hall',
-            proposalsCreated: 611,
-            proposalsVoted: 611,
-            lastActivity: '10 days ago',
-            walletAddress: '0912412jg...1sg',
-            tokensStaked: 216263626
-        }
-    ]
-
     const titleOptions = [
         {
             title: 'DAO View',
@@ -170,8 +122,8 @@ export default function DAOMembers() {
         }
     ] 
 
-    // Use blockchain data or fallback to dummy
-    const displayMembers = members.length > 0 ? members : dummyMembers;
+    // Use blockchain data only
+    const displayMembers = members;
 
     const tableData = useMemo(() => {
         return displayMembers.map((member) => {

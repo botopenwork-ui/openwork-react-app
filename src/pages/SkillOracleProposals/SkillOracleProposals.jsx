@@ -80,65 +80,6 @@ export default function SkillOracleProposals() {
         loadProposals();
     }, []);
 
-    const dummyProposals = [
-        {
-            id: 0,
-            title: 'React Development Oracle Recruitment Suggestion',
-            submittedBy: '0xDEAF...fB8B',
-            type: 'Eligibility Application',
-            votePercent: 70,
-            color: '#FFA500'
-        },
-        {
-            id: 1,
-            title: 'UX/UI Oracle Recruitment Suggestion',
-            submittedBy: '0xDEAF...fB8B',
-            type: 'Recruitment Proposal',
-            votePercent: 90,
-            color: '#00C853'
-        },
-        {
-            id: 2,
-            title: 'Member Removal Suggestion',
-            submittedBy: 'Jollie Hall',
-            type: 'Removal Proposal',
-            votePercent: 40,
-            color: '#F44336'
-        },
-        {
-            id: 3,
-            title: 'Branding Oracle Recruitment Suggestion',
-            submittedBy: '0xDEAF...fB8B',
-            type: 'Recruitment Proposal',
-            votePercent: 60,
-            color: '#FFA500'
-        },
-        {
-            id: 4,
-            title: 'UX/UI Skill Verification Request',
-            submittedBy: '0xDEAF...fB8B',
-            type: 'Skill Verification',
-            votePercent: 20,
-            color: '#F44336'
-        },
-        {
-            id: 5,
-            title: 'Web Development Oracle Update',
-            submittedBy: '0xDEAF...fB8B',
-            type: 'Recruitment Proposal',
-            votePercent: 80,
-            color: '#00C853'
-        },
-        {
-            id: 6,
-            title: 'Member Activity Review',
-            submittedBy: 'Jollie Hall',
-            type: 'Removal Proposal',
-            votePercent: 30,
-            color: '#F44336'
-        },
-    ]
-
     const titleOptions = [
         {
             title: 'Skill Oracle View',
@@ -179,7 +120,7 @@ export default function SkillOracleProposals() {
         }
     ] 
 
-    const displayProposals = proposals.length > 0 ? proposals : dummyProposals;
+    const displayProposals = proposals;
 
     const tableData = useMemo(() => {
         return displayProposals.map((proposal) => {

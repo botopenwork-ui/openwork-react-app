@@ -81,72 +81,6 @@ export default function SkillOracleDisputes() {
         loadDisputes();
     }, []);
 
-    const dummyDisputes = [
-        {
-            id: "0x1234",
-            title: 'OpenWork UX/UI',
-            proposedBy: '0xDEAF...fB8B',
-            role: 'Job Giver',
-            voteSubmissions: 70,
-            amount: '7624.14',
-            color: "#FFA500"
-        },
-        {
-            id: "0x2345",
-            title: 'OpenWork UX/UI',
-            proposedBy: '0xDEAF...fB8B',
-            role: 'Job Taker',
-            voteSubmissions: 90,
-            amount: '24.14',
-            color: "#00C853"
-        },
-        {
-            id: "0x3456",
-            title: 'OpenWork UX/UI',
-            proposedBy: 'Jollie Hall',
-            role: 'Job Giver',
-            voteSubmissions: 40,
-            amount: '762',
-            color: "#F44336"
-        },
-        {
-            id: "0x4567",
-            title: 'OpenWork UX/UI',
-            proposedBy: 'Jollie Hall',
-            role: 'Job Giver',
-            voteSubmissions: 40,
-            amount: '762',
-            color: "#F44336"
-        },
-        {
-            id: "0x5678",
-            title: 'OpenWork UX/UI',
-            proposedBy: '0xDEAF...fB8B',
-            role: 'Job Taker',
-            voteSubmissions: 60,
-            amount: '624.14',
-            color: "#FFA500"
-        },
-        {
-            id: "0x6789",
-            title: 'Web Development Dispute',
-            proposedBy: '0xDEAF...fB8B',
-            role: 'Job Giver',
-            voteSubmissions: 80,
-            amount: '1024.50',
-            color: "#00C853"
-        },
-        {
-            id: "0x7890",
-            title: 'Smart Contract Review',
-            proposedBy: 'Jollie Hall',
-            role: 'Job Taker',
-            voteSubmissions: 30,
-            amount: '500.00',
-            color: "#F44336"
-        },
-    ]
-
     const titleOptions = [
         {
             title: 'Skill Oracle View',
@@ -187,7 +121,7 @@ export default function SkillOracleDisputes() {
         }
     ] 
 
-    const displayDisputes = disputes.length > 0 ? disputes : dummyDisputes;
+    const displayDisputes = disputes;
 
     const tableData = useMemo(() => {
         return displayDisputes.map((dispute) => {
