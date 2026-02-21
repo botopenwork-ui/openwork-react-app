@@ -183,7 +183,6 @@ export default function RaiseDispute() {
         const firstActive = oracleData.find(o => o.isActive);
         if (firstActive) {
           setSelectedOracle(firstActive.name);
-          console.log("✅ Auto-selected oracle:", firstActive.name);
         }
 
         setOraclesLoading(false);
@@ -370,7 +369,6 @@ export default function RaiseDispute() {
   // Check if dispute exists on Arbitrum (native chain)
   const checkDisputeExistsOnArbitrum = async (jobId) => {
     try {
-      console.log("🔍 Checking for dispute:", jobId);
 
       // Get native chain config dynamically
       const nativeChain = getNativeChain();
@@ -393,10 +391,8 @@ export default function RaiseDispute() {
 
       // Check if dispute exists (totalFees > 0 means dispute was registered)
       const disputeExists = disputeInfo && parseFloat(disputeInfo.totalFees) > 0;
-      console.log("✅ Dispute exists:", disputeExists);
       return disputeExists;
     } catch (error) {
-      console.log("❌ Dispute not yet synced:", error.message);
       return false;
     }
   };
@@ -478,7 +474,6 @@ export default function RaiseDispute() {
     try {
       setLoadingT(true);
       setTransactionStatus(`🔄 Validating requirements on ${chainConfig?.name}...`);
-      console.log("🚀 Starting dispute flow:", { jobId, compensation, disputeAmount, oracle: selectedOracle, chain: chainConfig?.name });
 
       const web3 = new Web3(window.ethereum);
       const compensationAmount = Math.floor(parseFloat(compensation) * 1000000);
@@ -504,12 +499,10 @@ export default function RaiseDispute() {
         throw new Error(`Insufficient USDC balance. Required: ${compensation} USDC, Available: ${balanceInUSDC.toFixed(2)} USDC`);
       }
 
-      console.log(`✅ USDC balance check passed: ${balanceInUSDC.toFixed(2)} USDC available`);
 
       // ============ STEP 1: CHECK ALLOWANCE & APPROVE IF NEEDED ============
       setTransactionStatus("🔍 Checking USDC allowance...");
       const currentAllowance = await usdcContract.methods.allowance(walletAddress, athenaClientAddress).call();
-      console.log(`📊 Current allowance: ${parseFloat(currentAllowance) / 1000000} USDC, Required: ${compensation} USDC`);
 
       if (BigInt(currentAllowance) < BigInt(compensationAmount)) {
         setTransactionStatus(`💰 Step 1/3: Approving ${compensation} USDC spending - Please confirm in MetaMask`);
@@ -523,13 +516,11 @@ export default function RaiseDispute() {
           throw new Error("Approval transaction failed");
         }
 
-        console.log("✅ USDC approval confirmed:", approveTx.transactionHash);
         setTransactionStatus(`✅ Step 1/3: USDC approval confirmed`);
 
         // Wait for transaction to be properly mined
         await new Promise(resolve => setTimeout(resolve, 2000));
       } else {
-        console.log("✅ Sufficient allowance already exists, skipping approval");
         setTransactionStatus(`✅ Step 1/3: USDC allowance already sufficient`);
       }
 
@@ -568,7 +559,6 @@ export default function RaiseDispute() {
         throw new Error("Dispute transaction failed");
       }
 
-      console.log(`✅ Dispute raised on ${chainConfig.name}!`, receipt.transactionHash);
       setTransactionStatus(`✅ Step 3/3: Dispute raised on ${chainConfig.name}! Syncing to Arbitrum...`);
       setLoadingT(false);
 

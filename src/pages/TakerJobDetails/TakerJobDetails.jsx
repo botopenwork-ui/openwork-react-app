@@ -168,10 +168,10 @@ export default function TakerJobDetails() {
               <Link className="goBack" to={`/job-details/${jobId}`} style={{visibility:'hidden'}}><img className="goBackImage" src="/back.svg" alt="Back Button" /></Link>  
              </div>
              <div className="titleBottom"><p>  Contract ID:{" "}
-             {formatWalletAddress("0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d")}
+             {formatWalletAddress(walletAddress)}
              </p><img src="/copy.svg" className="copyImage" onClick={() =>
                      handleCopyToClipboard(
-                       "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d"
+                       walletAddress
                      )
                    }
                    /></div>
@@ -185,8 +185,7 @@ export default function TakerJobDetails() {
                 <div className="detail-profile">
                   <span className="detail-value-address">
                     <img src="/person.svg" alt="JobGiver" className="Job" />
-                    {/* <p>{formatWalletAddress(job.employer)}</p> */}
-                    <p>Mollie Hall</p>
+                    <p>{formatWalletAddress(job.employer)}</p>
                   </span>
                   <a href="/profile" className="view-profile">
                     <span>View Profile</span>
@@ -199,8 +198,7 @@ export default function TakerJobDetails() {
                 <div className="detail-profile">
                   <span className="detail-value-address" style={{ height: "47px" }}>
                     <img src="/person.svg" alt="JobTaker" className="Job" />
-                    {/* {formatWalletAddress(job.taker)} */}
-                    <p>Jollie Hall</p>
+                    <p>{formatWalletAddress(job.taker)}</p>
                   </span>
                   <a href="/profile" className="view-profile">
                     <span>View Profile</span>
@@ -211,8 +209,7 @@ export default function TakerJobDetails() {
               <div className="detail-row">
                 <span className="detail-label">TOTAL COMPENSATION</span>
                 <span className="detail-value" style={{ height: "47px" }}>
-                  {/* {job.escrowAmount}{" "} */}
-                  50
+                  {job.escrowAmount}
                   <img src="/xdc.svg" alt="Info" className="infoIcon" />
                 </span>
               </div>
@@ -244,8 +241,13 @@ export default function TakerJobDetails() {
                         <span>MILESTONES</span>
                    </div>
                    <div className="milestone-section-body">
-                        <Milestone amount={25} status="Completed" title="Milestone 1" content={"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."}/>
-                        <Milestone amount={25} status="In Progress" title="Milestone 2" content={"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."}/>
+                        {job.milestones && job.milestones.length > 0 ? (
+                          job.milestones.map((m, i) => (
+                            <Milestone key={i} amount={m.amount} title={m.title || `Milestone ${i + 1}`} content={m.content || ""} />
+                          ))
+                        ) : (
+                          <p style={{ color: '#888', padding: '12px 0' }}>No milestone details available.</p>
+                        )}
                    </div>
               </div>
             </div>

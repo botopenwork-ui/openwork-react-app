@@ -41,7 +41,7 @@ const DissolveOracleProposalView = () => {
           <div className="proposerInfo">
             <div className="proposerLeft">
               <img src="/avatar-profile.png" alt="Proposer" className="proposerAvatar" />
-              <span className="proposerName">Mollie Hall</span>
+              <span className="proposerName">—</span>
             </div>
             <button className="viewProfileButton">
               <span>View Profile</span>

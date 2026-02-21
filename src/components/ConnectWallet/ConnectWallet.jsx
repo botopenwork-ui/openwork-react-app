@@ -5,7 +5,6 @@ import { formatWalletAddress } from "../../functions/formatWalletAddress"; // Ut
 
 import BackButton from "../../components/BackButton/BackButton";
 
-const contractAddress = "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d";
 
 const WALLETITEMS = [
     {

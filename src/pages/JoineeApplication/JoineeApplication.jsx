@@ -217,10 +217,10 @@ export default function JoineeApplication() {
             <div className="titleText" style={{fontWeight:'550'}}>{job.title}</div>
          </div>
          <div className="titleBottom"><p>  Contract ID:{" "}
-         {formatWalletAddress("0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d")}
+         {formatWalletAddress(walletAddress)}
          </p><img src="/copy.svg" className="copyImage" onClick={() =>
                  handleCopyToClipboard(
-                   "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d"
+                   walletAddress
                  )
                }
                /></div>
@@ -239,7 +239,7 @@ export default function JoineeApplication() {
                     <div className="detail-profile">
                     <span className="detail-value-address">
                         <img src="/user.png" alt="JobGiver" className="Job" />
-                        <p>Mollie Hall</p>
+                        <p>{job ? formatWalletAddress(job.employer) : "—"}</p>
                     </span>
                     <a href="/profile" className="view-profile">
                         <span>View Profile</span>

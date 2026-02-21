@@ -28,7 +28,7 @@ export default function ViewWorkProfile() {
         if (portfolio) {
           setWorkData({
             title: portfolio.title,
-            userName: "molliehall2504",
+            userName: "",
             packageType: portfolio.packageType || "Webflow Package",
             skills: portfolio.skills || [],
             images: portfolio.images || [],

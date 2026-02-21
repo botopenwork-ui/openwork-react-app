@@ -2,38 +2,9 @@ import React from "react";
 import DropDown from "../../components/DropDown/DropDown";
 
 import "./Notification.css";
-import JobItem from "../../components/JobItem/JobItem";
 
 const FILTERITEMS = [
     'All', 'F1','F2'
-]
-
-const JOBITEMS = [
-    {
-        icon: 'user.png',
-        inform: 'Mollie submitted an application!',
-        devName: 'Mollie Hall',
-        time: 20,
-    },
-    {
-        icon: 'user.png',
-        inform: 'Jollie just paid you',
-        devName: 'Jollie Hall',
-        time: 20,
-        payAmount: 28.762
-    },
-    {
-        icon: 'user.png',
-        inform: 'Mollie submitted an application!',
-        devName: 'Mollie Hall',
-        time: 20,
-    },
-    {
-        icon: 'user.png',
-        inform: 'Mollie submitted an application!',
-        devName: 'Mollie Hall',
-        time: 20,
-    }
 ]
 
 export default function Notification() {
@@ -44,14 +15,10 @@ export default function Notification() {
                 <DropDown label={FILTERITEMS[0]} options={FILTERITEMS}/>
             </div>
             <div className="notification-body">
-                {
-                    JOBITEMS.map((item, index) => (
-                        <>
-                            <JobItem key={index} icon={item.icon} inform={item.inform} devName={item.devName} time={item.time} payAmount={item.payAmount}/>
-                            {index != JOBITEMS.length-1 && (<span className="item-line"></span>)}
-                        </>
-                    ))
-                }
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', color: '#888' }}>
+                    <p style={{ fontSize: '15px', marginBottom: '8px' }}>No notifications yet.</p>
+                    <p style={{ fontSize: '13px', color: '#aaa' }}>Activity related to your jobs and proposals will appear here.</p>
+                </div>
             </div>
         </div>
     )

@@ -52,7 +52,6 @@ export async function getDAOStats(userAddress, forceRefresh = false) {
   }
 
   try {
-    console.log("Fetching DAO stats from both chains...", isMainnet() ? "(mainnet)" : "(testnet)");
 
     // Get dynamic addresses and RPC URLs
     const { NATIVE_DAO_ADDRESS, MAIN_DAO_ADDRESS, GENESIS_ADDRESS, NATIVE_REWARDS_ADDRESS } = getAddresses();
@@ -157,7 +156,6 @@ export async function getDAOStats(userAddress, forceRefresh = false) {
     cache.stats = stats;
     cache.statsTimestamp = Date.now();
 
-    console.log("DAO stats loaded:", stats);
     return stats;
 
   } catch (error) {
@@ -184,7 +182,6 @@ export async function getAllProposals(forceRefresh = false) {
   }
 
   try {
-    console.log("Fetching proposals from both chains and database...", isMainnet() ? "(mainnet)" : "(testnet)");
 
     // Get dynamic addresses and RPC URLs
     const { NATIVE_DAO_ADDRESS, MAIN_DAO_ADDRESS } = getAddresses();
@@ -213,7 +210,6 @@ export async function getAllProposals(forceRefresh = false) {
         const key = `${dbProposal.proposal_id}-${dbProposal.chain}`;
         dbProposalsMap.set(key, dbProposal);
       });
-      console.log(`📊 Found ${dbProposalsMap.size} proposals in database`);
     }
 
     // Format proposals
@@ -239,7 +235,6 @@ export async function getAllProposals(forceRefresh = false) {
             votePercentage = Math.round((Number(forVotes) / Number(totalVotes)) * 100);
           }
         } catch (error) {
-          console.log(`Could not fetch votes for proposal ${proposalId}`);
         }
         
         try {
@@ -260,7 +255,6 @@ export async function getAllProposals(forceRefresh = false) {
             timeLeft = "Ended";
           }
         } catch (error) {
-          console.log(`Could not fetch deadline for proposal ${proposalId}`);
         }
         
         // Check if this proposal has database metadata
@@ -303,7 +297,6 @@ export async function getAllProposals(forceRefresh = false) {
             votePercentage = Math.round((Number(forVotes) / Number(totalVotes)) * 100);
           }
         } catch (error) {
-          console.log(`Could not fetch votes for proposal ${proposalId}`);
         }
         
         try {
@@ -324,7 +317,6 @@ export async function getAllProposals(forceRefresh = false) {
             timeLeft = "Ended";
           }
         } catch (error) {
-          console.log(`Could not fetch deadline for proposal ${proposalId}`);
         }
         
         // Check if this proposal has database metadata
@@ -358,7 +350,6 @@ export async function getAllProposals(forceRefresh = false) {
     cache.proposals = formattedProposals;
     cache.proposalsTimestamp = Date.now();
 
-    console.log(`Loaded ${formattedProposals.length} proposals`);
     return formattedProposals;
 
   } catch (error) {
@@ -399,7 +390,6 @@ function getStateColor(state) {
  */
 export async function getAllDAOMembers(forceRefresh = false) {
   try {
-    console.log("Fetching DAO members from both chains...", isMainnet() ? "(mainnet)" : "(testnet)");
 
     // Get dynamic addresses and RPC URLs
     const { NATIVE_DAO_ADDRESS, MAIN_DAO_ADDRESS, GENESIS_ADDRESS } = getAddresses();
@@ -420,7 +410,6 @@ export async function getAllDAOMembers(forceRefresh = false) {
 
     // Combine and get unique addresses
     const allAddresses = [...new Set([...nativeStakers, ...mainStakers])];
-    console.log(`Found ${allAddresses.length} unique DAO members`);
 
     // Fetch data for each member
     const memberData = await Promise.all(
@@ -476,7 +465,6 @@ export async function getAllDAOMembers(forceRefresh = false) {
       return bStake - aStake;
     });
 
-    console.log(`Loaded data for ${memberData.length} members`);
     return memberData;
 
   } catch (error) {
@@ -514,7 +502,6 @@ function formatTimeSince(timestamp) {
  */
 export async function getProposalDetails(proposalId, chain) {
   try {
-    console.log(`Fetching proposal ${proposalId} from ${chain}...`, isMainnet() ? "(mainnet)" : "(testnet)");
 
     // Try to fetch from database first
     let dbProposal = null;
@@ -523,10 +510,8 @@ export async function getProposalDetails(proposalId, chain) {
       if (response.ok) {
         const data = await response.json();
         dbProposal = data.proposal;
-        console.log('✅ Found proposal in database:', dbProposal.proposal_type);
       }
     } catch (dbError) {
-      console.log('📡 Proposal not in database, fetching from blockchain only');
     }
 
     // Get dynamic addresses and RPC URLs

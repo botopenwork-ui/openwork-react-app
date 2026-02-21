@@ -150,7 +150,6 @@ export default function ReviewDispute() {
       if (userVoter) {
         setHasVoted(true);
         setUserVote(userVoter.voteFor);
-        console.log(`✅ User already voted: ${userVoter.voteFor ? 'FOR' : 'AGAINST'}`);
       }
     }
     
@@ -221,7 +220,6 @@ export default function ReviewDispute() {
         setVoters(votersData);
         
         // Debug logging for button visibility
-        console.log("🔍 Button visibility conditions:");
         console.log("  isVotingActive:", disputeData.isVotingActive);
         console.log("  isFinalized:", disputeData.isFinalized);
         console.log("  remainingSeconds:", remainingSeconds);
@@ -449,7 +447,6 @@ export default function ReviewDispute() {
             console.log("Settle receipt received:", receipt);
             
             if (receipt.status == 1 || receipt.status == "1") {
-              console.log("✅ Dispute settled on Arbitrum! TX:", receipt.transactionHash);
               resolve(receipt);
             } else {
               reject(new Error("Transaction reverted by the blockchain"));
@@ -482,7 +479,6 @@ export default function ReviewDispute() {
       }
       
       const backendData = await backendResponse.json();
-      console.log("✅ Backend accepted settlement request:", backendData);
       
       // Poll backend for status updates
       const pollInterval = setInterval(async () => {
@@ -491,7 +487,6 @@ export default function ReviewDispute() {
           
           if (statusResponse.ok) {
             const statusData = await statusResponse.json();
-            console.log("📊 Backend status:", statusData);
             
             // Update UI based on status
             if (statusData.status === 'polling_attestation') {
@@ -502,7 +497,6 @@ export default function ReviewDispute() {
               clearInterval(pollInterval);
               setLoadingT("");
               setSuccessMessage("🎉 Dispute settled and funds delivered to winner on OP Sepolia!");
-              console.log("✅ Cross-chain settlement completed");
               
               setTimeout(() => {
                 window.location.reload();

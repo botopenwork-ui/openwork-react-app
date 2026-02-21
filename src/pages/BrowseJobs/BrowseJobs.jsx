@@ -28,7 +28,6 @@ const fetchFromIPFS = async (hash, timeout = 5000) => {
     // Check cache first
     const cached = ipfsCache.get(hash);
     if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
-        console.log(`✅ Using cached IPFS data for ${hash}`);
         return cached.data;
     }
 
@@ -196,7 +195,6 @@ export default function BrowseJobs() {
             try {
                 const rpcUrl = getArbitrumRpc();
                 const contractAddress = getGenesisAddress();
-                console.log("🔧 BrowseJobs Init - RPC:", rpcUrl, "Contract:", contractAddress, isMainnet() ? "(mainnet)" : "(testnet)");
 
                 const web3Instance = new Web3(rpcUrl);
                 const contractInstance = new web3Instance.eth.Contract(
@@ -231,12 +229,8 @@ export default function BrowseJobs() {
 
                 // Get all job IDs
                 const jobIds = await contract.methods.getAllJobIds().call();
-                console.log("🔍 BrowseJobs Debug - Job IDs:", jobIds);
-                console.log("🔍 BrowseJobs Debug - Contract Address:", getGenesisAddress());
-                console.log("🔍 BrowseJobs Debug - RPC:", getArbitrumRpc(), isMainnet() ? "(mainnet)" : "(testnet)");
 
                 if (jobIds.length === 0) {
-                    console.log("❌ No job IDs found");
                     setJobs([]);
                     setLoading(false);
                     return;
@@ -400,7 +394,6 @@ export default function BrowseJobs() {
             const chainName = getChainConfig(jobChainId)?.name || "Unknown";
 
             // Debug chain extraction - show full job ID format
-            console.log(`🔍 Job ID: "${job.id}" (type: ${typeof job.id}) → chainId: ${jobChainId}, logo: ${chainLogo}, name: ${chainName}`);
             console.log(`   Raw jobData.id: "${job.rawJobData?.id}", contains dash: ${String(job.id).includes('-')}`);
 
             // Create all possible column data

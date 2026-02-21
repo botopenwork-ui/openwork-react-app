@@ -62,8 +62,7 @@ export default function PostJob() {
   const [milestones, setMilestones] = useState([
     {
       title: "Milestone 1",
-      content:
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+      content: "",
       amount: 1,
     },
   ]);
@@ -82,7 +81,6 @@ export default function PostJob() {
   // Function to extract job ID from LayerZero logs (MULTI-CHAIN COMPATIBLE)
   const extractJobIdFromLayerZeroLogs = (receipt) => {
     try {
-      console.log("🔍 Searching for LayerZero logs in transaction...");
       
       // LayerZero event signature
       const layerZeroSignature = "0x1ab700d4ced0c005b164c0f789fd09fcbb0156d4c2041b8a3bfbcd961cd1567f";
@@ -93,11 +91,9 @@ export default function PostJob() {
       );
       
       if (!layerZeroLog) {
-        console.log("❌ LayerZero message log not found");
         return null;
       }
       
-      console.log("✅ Found LayerZero log");
       
       // Extract job ID from the log data
       const logData = layerZeroLog.data;
@@ -114,12 +110,10 @@ export default function PostJob() {
             // Match EID-jobNumber pattern (e.g., "40161-6", "40232-5")
             // EIDs are 5 digits: 40161 (ETH), 40232 (OP), 40231 (ARB), 40245 (BASE)
             if (decoded.match(/^40\d{3}-\d+$/)) {
-              console.log("🎯 Found job ID with EID pattern:", decoded);
               return decoded;
             }
             // Also check for any numeric pattern as fallback
             if (decoded.match(/^\d+-\d+$/)) {
-              console.log("🎯 Found job ID:", decoded);
               return decoded;
             }
           }
@@ -128,7 +122,6 @@ export default function PostJob() {
         }
       }
       
-      console.log("❌ Job ID not found in LayerZero data");
       return null;
       
     } catch (error) {
@@ -144,20 +137,12 @@ export default function PostJob() {
       const arbitrumRpc = getArbitrumRpc();
       const networkMode = isMainnet() ? "mainnet" : "testnet";
 
-      console.log("🔍 Polling for job ID:", jobId);
-      console.log("📍 Checking contract:", genesisAddress);
-      console.log("🌐 Using RPC:", arbitrumRpc, `(${networkMode})`);
-      console.log("⏰ Current time:", new Date().toISOString());
 
       const arbitrumWeb3 = new Web3(arbitrumRpc);
       const browseJobsContract = new arbitrumWeb3.eth.Contract(BrowseJobsABI, genesisAddress);
       
       // Try to get the job data
       const jobData = await browseJobsContract.methods.getJob(jobId).call();
-      console.log("📋 Job data received:", jobData);
-      console.log("🆔 jobData.id:", jobData.id);
-      console.log("👤 jobData.jobGiver:", jobData.jobGiver);
-      console.log("🔍 Looking for jobId:", jobId);
       
       // Check if job exists - jobData.id should match our jobId
       // Also check if jobGiver is not zero address (indicates real job)
@@ -169,29 +154,23 @@ export default function PostJob() {
                         jobData.jobGiver !== '0x0000000000000000000000000000000000000000';
       
       if (jobExists) {
-        console.log("✅ Job exists on Arbitrum! Job ID matches and has valid jobGiver");
       } else {
-        console.log("⏳ Job not yet synced to Arbitrum");
         if (jobData.id === '') console.log("   - Reason: Job ID is empty");
         if (jobData.id !== jobId) console.log(`   - Reason: Job ID mismatch (got: '${jobData.id}', expected: '${jobId}')`);
         if (!jobData.jobGiver || jobData.jobGiver === '0x0000000000000000000000000000000000000000') {
-          console.log("   - Reason: Invalid jobGiver address");
         }
       }
       return jobExists;
     } catch (error) {
-      console.log("❌ Job not yet synced:", error.message);
       return false;
     }
   };
 
   // Function to poll for job sync completion
   const pollForJobSync = async (jobId) => {
-    console.log("🚀 Starting cross-chain sync polling for job:", jobId);
     setTransactionStatus(`Job posted successfully! Syncing ${jobId} to Arbitrum (15-30 seconds)...`);
     
     // Wait 15 seconds before starting to poll (LayerZero typically takes 10-20s)
-    console.log("⏳ Waiting 15 seconds for LayerZero to propagate...");
     await new Promise(resolve => setTimeout(resolve, 15000));
     setTransactionStatus(`Checking if ${jobId} has synced to Arbitrum...`);
     
@@ -199,7 +178,6 @@ export default function PostJob() {
     const pollInterval = 5000; // 5 seconds
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      console.log(`Polling attempt ${attempt}/${maxAttempts} for job ${jobId}`);
       
       const jobExists = await checkJobExistsOnArbitrum(jobId);
       
@@ -223,7 +201,6 @@ export default function PostJob() {
     setTransactionStatus("Job posted but sync taking longer than expected. Check browse jobs in a few minutes.");
     
     // Redirect to browse jobs page after a delay
-    console.log("⏳ Sync timeout - redirecting to browse jobs page");
     setTimeout(() => {
       navigate('/browse-jobs');
     }, 3000);
@@ -237,7 +214,7 @@ export default function PostJob() {
         {
           title: "Milestone 1",
           content:
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+            "",
           amount: 1,
         },
       ]);
@@ -246,13 +223,13 @@ export default function PostJob() {
         {
           title: "Milestone 1",
           content:
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+            "",
           amount: 1,
         },
         {
           title: "Milestone 2",
           content:
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+            "",
           amount: 1,
         },
       ]);
@@ -286,7 +263,7 @@ export default function PostJob() {
     const newMilestoneNumber = milestones.length + 1;
     const newMilestone = {
       title: `Milestone ${newMilestoneNumber}`,
-      content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+      content: "",
       amount: 1,
     };
     setMilestones([...milestones, newMilestone]);
@@ -411,12 +388,10 @@ export default function PostJob() {
           return;
         }
         
-        console.log(`✅ Posting job on ${chainConfig.name} (Chain ID: ${chainId})`);
         
         const accounts = await web3.eth.getAccounts();
         const fromAddress = accounts[0];
 
-        console.log("=== STARTING MILESTONE HASHING ===");
         setTransactionStatus("Uploading milestone data to IPFS...");
 
         // Step 1: Create hashes for each milestone
@@ -425,7 +400,6 @@ export default function PostJob() {
 
         for (let i = 0; i < milestones.length; i++) {
           const milestone = milestones[i];
-          console.log(`Hashing milestone ${i}:`, milestone);
 
           const milestoneHash = await pinMilestoneToIPFS(milestone, i);
           if (!milestoneHash) {
@@ -435,21 +409,10 @@ export default function PostJob() {
           milestoneHashes.push(milestoneHash);
           milestoneAmounts.push(milestone.amount * 1000000); // Convert to USDT units (6 decimals)
 
-          console.log(`Milestone ${i} hash:`, milestoneHash);
         }
 
-        console.log("All milestone hashes:", milestoneHashes);
-        console.log("All milestone amounts:", milestoneAmounts);
 
         // Step 2: Create comprehensive job details object (including milestone hashes)
-        console.log("📝 Creating job details object with:");
-        console.log("📋 Job Title:", jobTitle);
-        console.log("📄 Job Description:", jobDescription);
-        console.log("🎯 Selected Skills:", selectedSkills);
-        console.log("📊 Selected Option:", selectedOption);
-        console.log("🎯 Milestones:", milestones);
-        console.log("💰 Total Compensation:", totalCompensation);
-        console.log("📎 Uploaded Files:", uploadedFiles);
         
         const jobDetails = {
           title: jobTitle,
@@ -464,16 +427,13 @@ export default function PostJob() {
           timestamp: new Date().toISOString(),
         };
         
-        console.log("📦 Complete jobDetails object:", jobDetails);
 
         // Step 3: Pin comprehensive job details to IPFS
         setTransactionStatus("Uploading job details to IPFS...");
         const jobResponse = await pinJobDetailsToIPFS(jobDetails);
-        console.log("Job IPFS Response:", jobResponse);
 
         if (jobResponse && jobResponse.IpfsHash) {
           const jobDetailHash = jobResponse.IpfsHash;
-          console.log("Job IPFS Hash:", jobDetailHash);
 
           // Step 4: Prepare contract parameters - USE DETECTED CHAIN CONFIG
           const lowjcAddress = chainConfig.contracts.lowjc;
@@ -485,23 +445,11 @@ export default function PostJob() {
           );
 
           // DEBUG: Log all transaction data
-          console.log("=== MULTI-CHAIN TRANSACTION DEBUG ===");
-          console.log("🌐 Chain:", chainConfig.name, `(${chainId})`);
-          console.log("📍 LOWJC Address:", lowjcAddress);
-          console.log("📄 Job Detail Hash:", jobDetailHash);
-          console.log("📋 Milestone Hashes:", milestoneHashes);
-          console.log("💰 Milestone Amounts:", milestoneAmounts);
-          console.log("⚡ LayerZero Options:", layerzeroOptions);
-          console.log("👤 From Address:", fromAddress);
-          console.log("📦 Job Details:", jobDetails);
-          console.log("========================================");
 
           // Step 5: Get LayerZero fee quote
           setTransactionStatus("Getting LayerZero fee quote...");
 
           const bridgeAddress = await contract.methods.bridge().call();
-          console.log("🌉 Bridge address from LOWJC:", bridgeAddress);
-          console.log("🔧 Expected bridge (from config):", chainConfig.contracts.localBridge);
 
           const bridgeABI = [{
             "inputs": [
@@ -520,9 +468,6 @@ export default function PostJob() {
           const jobCounter = await contract.methods.getJobCount().call();
           const layerZeroEid = chainConfig.layerzero.eid; // Get EID from chain config
           const predictedJobId = `${layerZeroEid}-${Number(jobCounter) + 1}`; // Use LayerZero EID, not chain ID
-          console.log("📊 Current job count on", chainConfig.name + ":", jobCounter);
-          console.log("🔮 Predicted next jobId:", predictedJobId);
-          console.log("🔢 Using LayerZero EID:", layerZeroEid, "for chain:", chainId, "(" + chainConfig.name + ")");
           
           // Encode payload with predicted jobId
           const payload = web3.eth.abi.encodeParameters(
@@ -531,11 +476,9 @@ export default function PostJob() {
           );
           
           const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, layerzeroOptions).call();
-          console.log("💰 LayerZero quoted fee:", web3.utils.fromWei(quotedFee, 'ether'), "ETH");
           
           // Dynamic fee from LayerZero quote
           const feeToUse = quotedFee;
-          console.log("✅ Using quoted fee:", web3.utils.fromWei(feeToUse, 'ether'), "ETH");
           
           // Step 6: Call postJob function with milestone hashes as descriptions
           setTransactionStatus(`Sending transaction on ${chainConfig.name}...`);
@@ -553,7 +496,6 @@ export default function PostJob() {
               gasPrice: await web3.eth.getGasPrice(),
             })
             .on("receipt", function (receipt) {
-              console.log("📄 Full transaction receipt:", receipt);
               
               // First, try to extract job ID from JobPosted event
               let jobId = null;
@@ -562,9 +504,7 @@ export default function PostJob() {
               // Note: jobId is an indexed string, so returnValues.jobId is the keccak256 hash, not the actual ID
               // We use predictedJobId since we know what ID we're posting
               if (receipt.events && receipt.events.JobPosted) {
-                console.log("✅ JobPosted event detected (indexed jobId hash:", receipt.events.JobPosted.returnValues.jobId, ")");
                 jobId = predictedJobId; // Use predicted since indexed strings are hashed
-                console.log("✅ Using predicted Job ID:", jobId);
               } else if (receipt.logs && receipt.logs.length > 0) {
                 // Try to find JobPosted event by topic signature
                 const jobPostedSignature = web3.utils.keccak256("JobPosted(string,address,string)");
@@ -580,9 +520,7 @@ export default function PostJob() {
                     // For indexed string parameters, the hash is stored
                     // We'll use the predicted ID as it should match
                     jobId = predictedJobId;
-                    console.log("📝 JobPosted event found, using predicted ID:", jobId);
                   } catch (e) {
-                    console.log("⚠️ Could not decode JobPosted event");
                   }
                 }
               }
@@ -591,13 +529,11 @@ export default function PostJob() {
               if (!jobId) {
                 jobId = extractJobIdFromLayerZeroLogs(receipt);
                 if (jobId) {
-                  console.log("✅ Extracted Job ID from LayerZero logs:", jobId);
                 }
               }
               
               // Final fallback: use predicted ID
               if (!jobId) {
-                console.log("⚠️ Could not extract job ID from events, using predicted ID:", predictedJobId);
                 jobId = predictedJobId;
               }
               
@@ -606,7 +542,6 @@ export default function PostJob() {
                 setLoadingT(false);
                 
                 // For testing/debugging: log the job ID we're going to use
-                console.log("🎯 Final Job ID for redirect:", jobId);
 
                 // ── Start cross-chain status tracking ──────────────────
                 const sourceTxHash = receipt.transactionHash;
@@ -641,7 +576,6 @@ export default function PostJob() {
                 // Start polling for cross-chain sync (job visible in browse)
                 pollForJobSync(jobId);
               } else {
-                console.log("❌ Failed to determine job ID");
                 setTransactionStatus("✅ Transaction confirmed but job ID extraction failed");
                 setLoadingT(false);
               }
@@ -652,7 +586,6 @@ export default function PostJob() {
               setLoadingT(false);
             })
             .on("transactionHash", function (hash) {
-              console.log("Transaction hash:", hash);
               setTransactionStatus(`Transaction sent! Hash: ${hash.substring(0, 10)}...`);
             })
             .catch(function (error) {

@@ -135,13 +135,13 @@ export default function ProfileAbout() {
             <div className="newTitle">
                 <div className="titleTop">
                 <Link className="goBack" to={`/profile`}><img className="goBackImage" src="/back.svg" alt="Back Button" /></Link>  
-                <div className="titleText">molliehall2504</div>
+                <div className="titleText">formatWalletAddress(walletAddress)</div>
                 </div>
                 <div className="titleBottom"><p>  Contract ID:{" "}
-                {formatWalletAddress("0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d")}
+                {formatWalletAddress(walletAddress)}
                 </p><img src="/copy.svg" className="copyImage" onClick={() =>
                         handleCopyToClipboard(
-                        "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d"
+                        walletAddress
                         )
                     }
                     /></div>
@@ -196,7 +196,7 @@ export default function ProfileAbout() {
                         <div className="profile-about-item">
                             <span>telegram</span>
                             <div className="profile-about-content" style={{color: '#0047ff'}}>
-                                <span>telegram.co/molliehall</span>
+                                <span>—</span>
                                 <img src="/view_profile.svg" alt="" />
                             </div>
                         </div>

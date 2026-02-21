@@ -202,11 +202,11 @@ export default function RemoveMember() {
           <Link className="goBack" to={`/payments/${jobId}`} style={{visibility:'hidden'}}><img className="goBackImage" src="/back.svg" alt="Back Button" /></Link>  
          </div>
          <div className="titleBottom">
-          <p>  molliehall2504{" "}•{" "}
-         {formatWalletAddress("0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d")}
+          <p>  formatWalletAddress(walletAddress){" "}•{" "}
+         {formatWalletAddress(walletAddress)}
          </p><img src="/copy.svg" className="copyImage" onClick={() =>
                  handleCopyToClipboard(
-                   "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d"
+                   walletAddress
                  )
                }
                /></div>
@@ -220,7 +220,7 @@ export default function RemoveMember() {
           <div className="release-payment-body payment-history-body">
                 <div className="remove-address">
                     <img src="/user.png" alt="" />
-                    <span>0xDEAF...fB8B</span>
+                    <span>—</span>
                 </div>
                 <DropDown label={SKILLITEMS[0]} options={SKILLITEMS} customCSS={'form-dropdown profile-dropdown'}/>
                 <DropDown label={MEMBERITEMS[0]} options={MEMBERITEMS} customCSS={'form-dropdown profile-dropdown'}/>

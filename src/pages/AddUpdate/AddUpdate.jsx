@@ -132,7 +132,6 @@ export default function AddUpdate() {
       }
 
       const submissionHash = ipfsData.IpfsHash;
-      console.log("✅ IPFS Hash:", submissionHash);
 
       // Get contract and LayerZero fee
       setTransactionStatus(`💰 Getting LayerZero fee quote on ${requiredChainConfig.name}...`);
@@ -189,7 +188,6 @@ export default function AddUpdate() {
         gas: 5000000  // Explicit gas limit
       });
 
-      console.log(`✅ Work submitted on ${requiredChainConfig.name}:`, tx.transactionHash);
       setTransactionStatus(`✅ Work submitted! Tracking sync to Arbitrum...`);
 
       // Client-side LZ monitoring
@@ -312,7 +310,7 @@ export default function AddUpdate() {
               {" "}
               Contract ID:{" "}
               {formatWalletAddress(
-                "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d",
+                walletAddress,
               )}
             </p>
             <img
@@ -320,7 +318,7 @@ export default function AddUpdate() {
               className="copyImage"
               onClick={() =>
                 handleCopyToClipboard(
-                  "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d",
+                  walletAddress,
                 )
               }
             />

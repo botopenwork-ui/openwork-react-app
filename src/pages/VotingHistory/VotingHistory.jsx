@@ -194,11 +194,11 @@ export default function VotingHistory() {
           <div className="titleText">{job.title}</div>
           <Link className="goBack" to={`/members-governance/${jobId}`} style={{visibility:'hidden'}}><img className="goBackImage" src="/back.svg" alt="Back Button" /></Link>  
          </div>
-         <div className="titleBottom"><p> molliehall2504{" "}•{" "}
-         {formatWalletAddress("0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d")}
+         <div className="titleBottom"><p> formatWalletAddress(walletAddress){" "}•{" "}
+         {formatWalletAddress(walletAddress)}
          </p><img src="/copy.svg" className="copyImage" onClick={() =>
                  handleCopyToClipboard(
-                   "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d"
+                   walletAddress
                  )
                }
                /></div>

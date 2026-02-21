@@ -86,7 +86,6 @@ export default function BrowseTalent() {
                 
                 // Use the new getAllProfileAddresses() method - instant!
                 const userAddresses = await contract.methods.getAllProfileAddresses().call();
-                console.log(`Found ${userAddresses.length} profiles`);
                 
                 // Fetch profile data for each user
                 const profilePromises = userAddresses.map(async (address, index) => {
@@ -115,7 +114,6 @@ export default function BrowseTalent() {
                         }
                         
                         const profileData = await response.json();
-                        console.log(`[${index + 1}/${userAddresses.length}] ✅ Successfully loaded profile for ${address}`);
                         
                         // Get user ratings
                         let averageRating = 0;
@@ -164,64 +162,7 @@ export default function BrowseTalent() {
         fetchAllProfiles();
     }, []);
 
-    const users = profiles.length > 0 ? profiles : [
-        {
-            id: 0,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            hourly_rate: '30'
-        },
-        {
-            id: 1,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            hourly_rate: '30'
-        },
-        {
-            id: 0,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            hourly_rate: '30'
-        },
-        {
-            id: 0,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            hourly_rate: '30'
-        },
-        {
-            id: 0,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            hourly_rate: '30'
-        },
-        {
-            id: 0,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            hourly_rate: '30'
-        },
-        {
-            id: 0,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            hourly_rate: '30'
-        },
-    ]
+    const users = profiles.length > 0 ? profiles : [];
 
     const titleOptions = [
         {

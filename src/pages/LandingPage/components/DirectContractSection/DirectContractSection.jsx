@@ -40,11 +40,11 @@ const DirectContractSection = () => {
             />
 
             <div className="contract-avatar contract-avatar-left">
-              <img src="/assets/3d90d978da202913302b7c506fa777f428500cc6.png" alt="Jollie Hall" />
+              <img src="/assets/3d90d978da202913302b7c506fa777f428500cc6.png" alt="Client" />
             </div>
 
             <div className="contract-avatar contract-avatar-right">
-              <img src="/assets/mollie-avatar.png" alt="Mollie Hall" />
+              <img src="/assets/mollie-avatar.png" alt="Freelancer" />
             </div>
 
             <div className="contract-center-info">
@@ -61,7 +61,7 @@ const DirectContractSection = () => {
                 <img src="/assets/usdc-icon.png" alt="USDC" className="usdc-icon" />
               </div>
               <span className="amount-label">AMOUNT PAID</span>
-              <span className="user-name">Jollie Hall</span>
+              <span className="user-name">Client</span>
             </div>
 
             <div className="contract-info contract-info-right">
@@ -70,7 +70,7 @@ const DirectContractSection = () => {
                 <img src="/assets/usdc-icon.png" alt="USDC" className="usdc-icon" />
               </div>
               <span className="amount-label">AMOUNT RECEIVED</span>
-              <span className="user-name">Mollie Hall</span>
+              <span className="user-name">Freelancer</span>
             </div>
           </div>
         </div>

@@ -166,11 +166,9 @@ export async function approveTokens(amount, onTxHash, onReceipt) {
         .approve(MAIN_DAO_ADDRESS, amount)
         .send({ from: fromAddress })
         .on("transactionHash", (hash) => {
-          console.log("Approval tx hash:", hash);
           if (onTxHash) onTxHash(hash);
         })
         .on("receipt", (receipt) => {
-          console.log("Approval confirmed:", receipt);
           if (onReceipt) onReceipt(receipt);
           resolve(receipt);
         })
@@ -200,7 +198,6 @@ export async function quoteLZFees(userAddress) {
       LAYERZERO_OPTIONS_VALUE
     ).call();
 
-    console.log("LayerZero fee quote:", fee);
     return fee.toString();
   } catch (error) {
     console.error("Error quoting LZ fees:", error);
@@ -229,8 +226,6 @@ export async function executeStake(amount, durationMinutes, lzFee, onTxHash, onR
     const gasPriceString = typeof gasPrice === 'bigint' ? gasPrice.toString() : gasPrice;
 
     // Log all transaction parameters
-    console.log("=== STAKE TRANSACTION PARAMETERS ===");
-    console.log("Contract:", MAIN_DAO_ADDRESS);
     console.log("Network:", isMainnet() ? "Ethereum Mainnet" : "Base Sepolia");
     console.log("Amount (wei):", amount);
     console.log("Amount (OW tokens):", Web3.utils.fromWei(amount, 'ether'));
@@ -251,11 +246,9 @@ export async function executeStake(amount, durationMinutes, lzFee, onTxHash, onR
           gasPrice: gasPriceString
         })
         .on("transactionHash", (hash) => {
-          console.log("✅ Stake tx hash:", hash);
           if (onTxHash) onTxHash(hash);
         })
         .on("receipt", (receipt) => {
-          console.log("✅ Stake confirmed:", receipt);
           if (onReceipt) onReceipt(receipt);
           resolve(receipt);
         })

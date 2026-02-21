@@ -55,12 +55,10 @@ function isCacheValid() {
 export async function fetchAllProposals(forceRefresh = false) {
   // Check cache
   if (!forceRefresh && isCacheValid()) {
-    console.log("Returning cached proposals");
     return cachedProposals;
   }
 
   try {
-    console.log("Fetching proposals from blockchain...");
     const { helperContract } = initializeContracts();
 
     // Fetch both types of proposals in parallel
@@ -69,7 +67,6 @@ export async function fetchAllProposals(forceRefresh = false) {
       helperContract.methods.getActiveAskAthenaApplications().call(),
     ]);
 
-    console.log(`Found ${skillApplications.length} skill verifications and ${askAthenaApplications.length} Ask Athena applications`);
 
     // Format skill verification applications
     const skillProposals = skillApplications.map((app) => {
@@ -130,7 +127,6 @@ export async function fetchAllProposals(forceRefresh = false) {
     cachedProposals = allProposals;
     cacheTimestamp = Date.now();
 
-    console.log(`Loaded ${allProposals.length} total proposals`);
     return allProposals;
 
   } catch (error) {

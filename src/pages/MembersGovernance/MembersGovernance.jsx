@@ -233,9 +233,9 @@ export default function MembersGovernance() {
           <div className="titleBottom">
             <p>
               {" "}
-              molliehall2504{" "}•{" "}
+              formatWalletAddress(walletAddress){" "}•{" "}
               {formatWalletAddress(
-                "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d"
+                walletAddress
               )}
             </p>
             <img
@@ -243,7 +243,7 @@ export default function MembersGovernance() {
               className="copyImage"
               onClick={() =>
                 handleCopyToClipboard(
-                  "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d"
+                  walletAddress
                 )
               }
             />

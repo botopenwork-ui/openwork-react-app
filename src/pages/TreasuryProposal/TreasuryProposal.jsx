@@ -138,7 +138,6 @@ export default function TreasuryProposal() {
             
             // Display success message and redirect
             if (result.success) {
-                console.log("✅ Proposal creation result:", result);
                 console.log("   Proposal ID:", result.proposalId);
                 console.log("   Transaction Hash:", result.transactionHash);
                 
@@ -152,7 +151,6 @@ export default function TreasuryProposal() {
                     
                     // Redirect to proposal view after 2 seconds
                     setTimeout(() => {
-                        console.log("🔄 Redirecting to:", `/proposal-view/${result.proposalId}/Base`);
                         navigate(`/proposal-view/${result.proposalId}/Base`);
                     }, 2000);
                 }

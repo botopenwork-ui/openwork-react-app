@@ -193,10 +193,10 @@ export default function PaymentRefund() {
           <Link className="goBack" to={`/payments/${jobId}`} style={{visibility:'hidden'}}><img className="goBackImage" src="/back.svg" alt="Back Button" /></Link>  
          </div>
          <div className="titleBottom"><p>  Contract ID:{" "}
-         {formatWalletAddress("0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d")}
+         {formatWalletAddress(walletAddress)}
          </p><img src="/copy.svg" className="copyImage" onClick={() =>
                  handleCopyToClipboard(
-                   "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d"
+                   walletAddress
                  )
                }
                /></div>
@@ -231,7 +231,7 @@ export default function PaymentRefund() {
                     ></textarea>
                 </div>
                 <div className="payment-refund-address">
-                    <TransactionItem title={'RECEIVER WALLET ADDRESS'} address={'0xDEAF...fB8B'}/>
+                    <TransactionItem title={'RECEIVER WALLET ADDRESS'} address={job ? job.employer : '—'}/>
                     <div className="refund-address-description">
                         <img src="/warning.svg" alt="" />
                         <span>The funds can only be returned to the Job Giver’s wallet address</span>

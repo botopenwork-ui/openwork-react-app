@@ -129,7 +129,6 @@ export default function ViewJobApplications() {
 
                 // Get application count from Genesis contract
                 const appCount = await genesisContract.methods.getJobApplicationCount(jobId).call();
-                console.log(`📊 Total applications from Genesis: ${appCount}`);
 
                 // If no applications, show empty state
                 if (appCount == 0) {
@@ -193,7 +192,6 @@ export default function ViewJobApplications() {
                 const resolvedApplications = await Promise.all(applicationPromises);
                 const validApplications = resolvedApplications.filter(app => app !== null);
                 
-                console.log(`✅ Found ${validApplications.length} applications from Genesis`);
 
                 setApplications(validApplications);
             } catch (error) {
@@ -214,7 +212,6 @@ export default function ViewJobApplications() {
 
     // Helper function to get status display
     const getStatusDisplay = (status) => {
-        console.log("🔍 Application status value:", status, "type:", typeof status);
         switch (parseInt(status)) {
             case 0: return { text: "In Review", css: "pending-status" };
             case 1: return { text: "Selected", css: "accepted-status" };

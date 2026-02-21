@@ -10,7 +10,8 @@ const SKILLITEMS = [
 
 export default function AddMember() {
   const [updateText, setUpdateText] = useState("");
-  const [jobTitle, setJobTitle] = useState(""); 
+  const [jobTitle, setJobTitle] = useState("");
+  const [memberAddress, setMemberAddress] = useState(""); 
 
   return (
     <>
@@ -25,7 +26,13 @@ export default function AddMember() {
             </div>
             <div className="form-groupDC">
                 <div className="add-member-address">
-                    <span>0xDEAF...fB8B</span>
+                    <input
+                      type="text"
+                      placeholder="Enter wallet address (0x...)"
+                      value={memberAddress}
+                      onChange={(e) => setMemberAddress(e.target.value)}
+                      style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%' }}
+                    />
                 </div>
             </div>
             <div className="form-groupDC">

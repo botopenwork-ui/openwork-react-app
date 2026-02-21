@@ -1,13 +1,19 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import './UserReferralSignIn.css';
 
 const UserReferralSignIn = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const referrerAddress = searchParams.get('ref') || '';
+
+  const formatReferrerAddress = (addr) => {
+    if (!addr) return 'Unknown referrer';
+    return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
+  };
 
   const handleConnectSignUp = () => {
     // Navigate to wallet connection or sign up process
-    console.log('Connect & Sign Up clicked');
   };
 
   return (
@@ -39,7 +45,7 @@ const UserReferralSignIn = () => {
                 <div className="referrer-label">YOUR REFERRER</div>
                 <div className="referrer-address">
                   <img src="/assets/user-swatch.png" alt="" className="referrer-icon" />
-                  <span className="referrer-wallet">0xDEAF...fB8B</span>
+                  <span className="referrer-wallet">{formatReferrerAddress(referrerAddress)}</span>
                 </div>
               </div>
             </div>
