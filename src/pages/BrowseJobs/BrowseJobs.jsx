@@ -15,9 +15,8 @@ function getGenesisAddress() {
 }
 
 function getArbitrumRpc() {
-    return isMainnet()
-        ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
-        : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+    const nativeChain = getNativeChain();
+    return nativeChain?.rpcUrl;
 }
 
 // IPFS cache with 1-hour TTL

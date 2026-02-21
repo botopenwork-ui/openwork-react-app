@@ -205,7 +205,7 @@ export const MAINNET_CHAIN_CONFIG = {
       symbol: "ETH",
       decimals: 18
     },
-    rpcUrl: import.meta.env.VITE_OPTIMISM_MAINNET_RPC_URL,
+    rpcUrl: import.meta.env.VITE_OPTIMISM_MAINNET_RPC_URL || 'https://opt-mainnet.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ',
     blockExplorer: "https://optimistic.etherscan.io",
     contracts: {
       lowjc: "0x620205A4Ff0E652fF03a890d2A677de878a1dB63", // V4 Proxy with impl V3 (Jan 23)
@@ -233,7 +233,7 @@ export const MAINNET_CHAIN_CONFIG = {
       symbol: "ETH",
       decimals: 18
     },
-    rpcUrl: import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL,
+    rpcUrl: import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL || 'https://arb-mainnet.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ',
     blockExplorer: "https://arbiscan.io",
     contracts: {
       genesis: "0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294",
@@ -269,7 +269,7 @@ export const MAINNET_CHAIN_CONFIG = {
       symbol: "ETH",
       decimals: 18
     },
-    rpcUrl: import.meta.env.VITE_ETHEREUM_MAINNET_RPC_URL,
+    rpcUrl: import.meta.env.VITE_ETHEREUM_MAINNET_RPC_URL || 'https://eth-mainnet.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ',
     blockExplorer: "https://etherscan.io",
     contracts: {
       openworkToken: "0x765D70496Ef775F6ba1cB7465c2e0B296eB50d87",
