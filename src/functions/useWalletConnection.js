@@ -1,7 +1,20 @@
 import { useState, useEffect } from "react";
 
+const STORAGE_KEY = "ow_wallet_address";
+
 export function useWalletConnection() {
-  const [walletAddress, setWalletAddress] = useState("");
+  const [walletAddress, setWalletAddressState] = useState(
+    () => localStorage.getItem(STORAGE_KEY) || ""
+  );
+
+  const setWalletAddress = (address) => {
+    setWalletAddressState(address);
+    if (address) {
+      localStorage.setItem(STORAGE_KEY, address);
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  };
 
   useEffect(() => {
     const checkWalletConnection = async () => {
@@ -19,7 +32,10 @@ export function useWalletConnection() {
       }
     };
 
-    checkWalletConnection();
+    // Only check on-chain if we don't already have a stored address
+    if (!localStorage.getItem(STORAGE_KEY)) {
+      checkWalletConnection();
+    }
 
     // Listen for account changes
     const handleAccountsChanged = (accounts) => {
