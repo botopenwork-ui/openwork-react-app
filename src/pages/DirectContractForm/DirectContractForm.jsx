@@ -260,7 +260,7 @@ export default function DirectContractForm() {
   const [milestones, setMilestones] = useState([
     {
       title: "Milestone 1",
-      content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      content: "",
       amount: 1,
     },
   ]);
@@ -273,7 +273,7 @@ export default function DirectContractForm() {
       setMilestones([
         {
           title: "Milestone 1",
-          content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+          content: "",
           amount: 1,
         },
       ]);
@@ -281,12 +281,12 @@ export default function DirectContractForm() {
       setMilestones([
         {
           title: "Milestone 1",
-          content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+          content: "",
           amount: 1,
         },
         {
           title: "Milestone 2",
-          content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+          content: "",
           amount: 1,
         },
       ]);
@@ -330,7 +330,7 @@ export default function DirectContractForm() {
     const newMilestoneNumber = milestones.length + 1;
     const newMilestone = {
       title: `Milestone ${newMilestoneNumber}`,
-      content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      content: "",
       amount: 1,
     };
     setMilestones([...milestones, newMilestone]);
@@ -364,7 +364,6 @@ export default function DirectContractForm() {
   // Function to extract job ID from LayerZero logs
   const extractJobIdFromLayerZeroLogs = (receipt) => {
     try {
-      console.log("🔍 Searching for LayerZero logs in transaction...");
       
       const layerZeroSignature = "0x1ab700d4ced0c005b164c0f789fd09fcbb0156d4c2041b8a3bfbcd961cd1567f";
       
@@ -373,11 +372,9 @@ export default function DirectContractForm() {
       );
       
       if (!layerZeroLog) {
-        console.log("❌ LayerZero message log not found");
         return null;
       }
       
-      console.log("✅ Found LayerZero log:", layerZeroLog);
       
       const logData = layerZeroLog.data;
       const dataStr = logData.slice(2);
@@ -389,7 +386,6 @@ export default function DirectContractForm() {
           if (cleanChunk.length > 0) {
             const decoded = Web3.utils.hexToUtf8("0x" + cleanChunk);
             if (decoded.match(/^\d+-\d+$/)) {
-              console.log("🎯 Found job ID:", decoded);
               return decoded;
             }
           }
@@ -412,17 +408,12 @@ export default function DirectContractForm() {
       const arbitrumRpc = getArbitrumRpc();
       const networkMode = isMainnet() ? "mainnet" : "testnet";
 
-      console.log("\n🔍 ========== POLLING ATTEMPT ==========");
-      console.log("  Job ID:", jobId);
-      console.log("  Contract:", genesisAddress);
-      console.log("  RPC:", arbitrumRpc, `(${networkMode})`);
 
       const arbitrumWeb3 = new Web3(arbitrumRpc);
 
       // Test RPC connection
       try {
         const blockNumber = await arbitrumWeb3.eth.getBlockNumber();
-        console.log("  ✅ RPC connected, current block:", blockNumber);
       } catch (rpcError) {
         console.error("  ❌ RPC connection failed:", rpcError);
         return false;
@@ -434,16 +425,9 @@ export default function DirectContractForm() {
       );
 
       // Try to call getJob
-      console.log("  📞 Calling getJob('" + jobId + "')...");
       const jobData = await browseJobsContract.methods.getJob(jobId).call();
-      console.log("  📊 Job data received:", jobData);
-      console.log("  📝 Job ID from data:", jobData.id);
-      console.log("  📝 Job Giver:", jobData.jobGiver);
-      console.log("  📝 Status:", jobData.status);
 
       const jobExists = jobData && jobData.id && jobData.id === jobId;
-      console.log("  " + (jobExists ? "✅" : "❌") + " Job exists:", jobExists);
-      console.log("=========================================\n");
 
       return jobExists;
     } catch (error) {
@@ -469,14 +453,12 @@ export default function DirectContractForm() {
     await new Promise(resolve => setTimeout(resolve, 10000));
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      console.log(`Poll attempt ${attempt}/${maxAttempts} for job ${jobId}`);
 
       // Check LZ sync (job exists on Arbitrum)
       if (!jobSynced) {
         const jobExists = await checkJobExistsOnArbitrum(jobId);
         if (jobExists) {
           jobSynced = true;
-          console.log("✅ Job synced on Arbitrum via LayerZero");
         }
       }
 
@@ -486,11 +468,9 @@ export default function DirectContractForm() {
           const res = await fetch(`${backendUrl}/api/start-job-status/${jobId}`);
           if (res.ok) {
             const status = await res.json();
-            console.log("📡 CCTP status:", status.status, status.message);
 
             if (status.status === 'completed') {
               cctpCompleted = true;
-              console.log("✅ CCTP relay completed — USDC received by NOWJC");
             } else if (status.status === 'failed') {
               setTransactionStatus(`Step 2/2: CCTP relay failed: ${status.error || status.message}. USDC may need manual relay.`);
               // Still redirect if job is synced — user can see the job but release won't work until CCTP is fixed
@@ -625,9 +605,6 @@ export default function DirectContractForm() {
         const accounts = await web3.eth.getAccounts();
         const fromAddress = accounts[0];
 
-        console.log("=== STARTING DIRECT CONTRACT ===");
-        console.log("Job Taker:", jobTaker);
-        console.log("Milestones:", milestones);
 
         // Step 1: Upload milestones to IPFS
         const milestoneHashes = [];
@@ -635,7 +612,6 @@ export default function DirectContractForm() {
 
         for (let i = 0; i < milestones.length; i++) {
           const milestone = milestones[i];
-          console.log(`Uploading milestone ${i}:`, milestone);
 
           const milestoneHash = await pinMilestoneToIPFS(milestone, i);
           if (!milestoneHash) {
@@ -645,11 +621,8 @@ export default function DirectContractForm() {
           milestoneHashes.push(milestoneHash);
           milestoneAmounts.push(milestone.amount * 1000000); // Convert to USDT units (6 decimals)
 
-          console.log(`Milestone ${i} hash:`, milestoneHash);
         }
 
-        console.log("All milestone hashes:", milestoneHashes);
-        console.log("All milestone amounts:", milestoneAmounts);
 
         // Step 2: Create job details object
         const jobDetails = {
@@ -667,11 +640,9 @@ export default function DirectContractForm() {
 
         // Step 3: Upload job details to IPFS
         const jobResponse = await pinJobDetailsToIPFS(jobDetails);
-        console.log("Job IPFS Response:", jobResponse);
 
         if (jobResponse && jobResponse.IpfsHash) {
           const jobDetailHash = jobResponse.IpfsHash;
-          console.log("Job IPFS Hash:", jobDetailHash);
 
           // Step 4: Prepare contract call
           const contract = new web3.eth.Contract(
@@ -689,7 +660,6 @@ export default function DirectContractForm() {
           const USDC_ADDRESS = currentChainConfig.contracts.usdc;
           const firstMilestoneUSDC = milestones[0].amount * 1000000; // Only first milestone - contract locks one at a time
 
-          console.log("💰 Approving USDC amount:", firstMilestoneUSDC, "units (", firstMilestoneUSDC / 1000000, "USDC) - first milestone only");
           
           const usdcABI = [{
             "inputs": [
@@ -710,7 +680,6 @@ export default function DirectContractForm() {
               firstMilestoneUSDC.toString()
             ).send({ from: fromAddress });
             
-            console.log("✅ USDC approval successful");
           } catch (approvalError) {
             console.error("❌ USDC approval failed:", approvalError);
             setTransactionStatus("❌ USDC approval failed - Please try again");
@@ -747,25 +716,12 @@ export default function DirectContractForm() {
           // Get quote and add 20% buffer
           const quotedFee = await bridgeContract.methods.quoteNativeChain(quotePayload, DIRECT_CONTRACT_OPTIONS).call();
           const feeToUse = (BigInt(quotedFee) * BigInt(120) / BigInt(100)).toString();
-          console.log("💰 LayerZero quote:", web3.utils.fromWei(quotedFee.toString(), 'ether'), "ETH");
-          console.log("💰 With 20% buffer:", web3.utils.fromWei(feeToUse, 'ether'), "ETH");
 
           // Get current job count to predict next jobId
           const jobCounter = await contract.methods.getJobCount().call();
           const layerZeroEid = currentChainConfig.layerzero.eid;
           const predictedJobId = `${layerZeroEid}-${Number(jobCounter) + 1}`;
-          console.log("📊 Current job count:", jobCounter);
-          console.log("🔮 Predicted next jobId:", predictedJobId);
-          console.log("🔢 Using LayerZero EID:", layerZeroEid, "for chain:", chainId);
 
-          console.log("\n=== TRANSACTION PARAMETERS ===");
-          console.log("Job Taker:", jobTaker);
-          console.log("Job Detail Hash:", jobDetailHash);
-          console.log("Milestone Hashes:", milestoneHashes);
-          console.log("Milestone Amounts:", milestoneAmounts);
-          console.log("Chain Domain:", jobTakerChainDomain);
-          console.log("Milestone Count:", milestones.length);
-          console.log("LayerZero Options (1.6M gas):", DIRECT_CONTRACT_OPTIONS);
 
           // Step 6: Call startDirectContract with higher gas options
           setTransactionStatus("Sending transaction to blockchain...");
@@ -785,19 +741,16 @@ export default function DirectContractForm() {
               gasPrice: await web3.eth.getGasPrice(),
             })
             .on("receipt", function (receipt) {
-              console.log("📄 Transaction receipt:", receipt);
 
               // Try to extract job ID from LayerZero logs first
               let jobId = extractJobIdFromLayerZeroLogs(receipt);
 
               // Fallback: use predicted job ID
               if (!jobId) {
-                console.log("⚠️ Could not extract from logs, using predicted ID:", predictedJobId);
                 jobId = predictedJobId;
               }
 
               if (jobId) {
-                console.log("✅ Job ID:", jobId);
                 setTransactionStatus("✅ Contract created! Tracking cross-chain progress...");
                 setLoadingT(false);
 
@@ -851,7 +804,6 @@ export default function DirectContractForm() {
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ jobId, txHash: srcTxHash })
                 }).then(res => res.json()).then(result => {
-                  console.log("📡 Backend CCTP relay started:", result);
                 }).catch(err => {
                   console.warn("⚠️ Backend unavailable, client-side monitor handling:", err.message);
                   setTransactionStatus("⚠️ Backend offline — tracking cross-chain status directly. Check progress below.");
@@ -860,7 +812,6 @@ export default function DirectContractForm() {
                 // Also poll Genesis for job sync visibility
                 pollForJobSync(jobId);
               } else {
-                console.log("❌ Could not determine job ID");
                 setTransactionStatus("✅ Transaction confirmed but job ID extraction failed. Check browse jobs manually.");
                 setLoadingT(false);
               }
@@ -871,7 +822,6 @@ export default function DirectContractForm() {
               setLoadingT(false);
             })
             .on("transactionHash", function (hash) {
-              console.log("Transaction hash:", hash);
               setTransactionStatus(`Transaction sent! Hash: ${hash.substring(0, 10)}...`);
             })
             .catch(function (error) {
@@ -933,7 +883,6 @@ export default function DirectContractForm() {
       );
 
       const data = await response.json();
-      console.log("Job details pinned to IPFS:", data);
       return data;
     } catch (error) {
       console.error('Error pinning job details to IPFS:', error);
@@ -956,9 +905,6 @@ export default function DirectContractForm() {
     // Add 20% buffer for safety margin
     const gasWithBuffer = Math.floor(totalGas * 1.2);
     
-    console.log(`🔥 Gas calculation for ${milestoneCount} milestone(s):`);
-    console.log(`   Base: ${BASE_GAS}, Per-Milestone: ${GAS_PER_MILESTONE}`);
-    console.log(`   Total: ${totalGas}, With Buffer: ${gasWithBuffer}`);
     
     return gasWithBuffer;
   };
@@ -974,8 +920,6 @@ export default function DirectContractForm() {
     // gasHex = custom gas limit
     const optionsValue = '0x000301001101' + gasHex;
     
-    console.log(`⚙️ Built LayerZero options: ${optionsValue}`);
-    console.log(`   Gas limit: ${gasLimit} (0x${gasLimit.toString(16)})`);
     
     return optionsValue;
   };

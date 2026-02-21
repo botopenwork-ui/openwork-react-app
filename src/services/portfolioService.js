@@ -35,7 +35,6 @@ export const fetchFromIPFS = async (hash, timeout = 5000) => {
       
       if (response.ok) {
         const data = await response.json();
-        console.log(`✅ Fetched from ${gateway}${hash}`);
         return data;
       }
     } catch (error) {
@@ -65,7 +64,6 @@ export const uploadFileToIPFS = async (file) => {
     }
 
     const data = await response.json();
-    console.log('✅ File uploaded to IPFS:', data.IpfsHash);
     return data.IpfsHash;
   } catch (error) {
     console.error('Error uploading file to IPFS:', error);
@@ -97,7 +95,6 @@ export const uploadJSONToIPFS = async (jsonData, filename = 'data.json') => {
     }
 
     const data = await response.json();
-    console.log('✅ JSON uploaded to IPFS:', data.IpfsHash);
     return data.IpfsHash;
   } catch (error) {
     console.error('Error uploading JSON to IPFS:', error);
@@ -123,39 +120,28 @@ export const fetchUserPortfolios = async (userAddress) => {
       return [];
     }
 
-    console.log('🔍 Fetching portfolios for:', userAddress);
-    console.log('📍 Using RPC:', import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL);
-    console.log('📍 ProfileGenesis:', import.meta.env.VITE_PROFILE_GENESIS_ADDRESS);
 
     const web3 = new Web3(import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL);
     const contract = getProfileGenesisContract(web3);
 
     // Check if profile exists
-    console.log('🔍 Checking if profile exists...');
     const hasProfile = await contract.methods.hasProfile(userAddress).call();
-    console.log('📊 Has profile:', hasProfile);
     
     if (!hasProfile) {
-      console.log('ℹ️  User has no profile on Arbitrum yet');
       return [];
     }
 
     // Get profile data
-    console.log('📥 Fetching profile data...');
     const profile = await contract.methods.getProfile(userAddress).call();
-    console.log('📊 Profile data:', profile);
     
     const portfolioHashes = profile.portfolioHashes || profile[3] || []; // Try both property name and index
-    console.log(`📋 Found ${portfolioHashes.length} portfolio hashes:`, portfolioHashes);
 
     // Fetch each portfolio's data from IPFS
     const portfolios = [];
     for (let i = 0; i < portfolioHashes.length; i++) {
       try {
         const hash = portfolioHashes[i];
-        console.log(`📥 Fetching portfolio ${i} from IPFS: ${hash}`);
         const portfolioData = await fetchFromIPFS(hash);
-        console.log(`✅ Portfolio ${i} loaded:`, portfolioData);
         portfolios.push({
           id: i,
           ipfsHash: hash,
@@ -175,7 +161,6 @@ export const fetchUserPortfolios = async (userAddress) => {
       }
     }
 
-    console.log(`✅ Successfully loaded ${portfolios.length} portfolios`);
     return portfolios;
   } catch (error) {
     console.error('❌ Error fetching user portfolios:', error);
@@ -215,7 +200,6 @@ export const addPortfolioToBlockchain = async (walletAddress, portfolioHash) => 
       gas: gasWithBuffer
     });
 
-    console.log('✅ Portfolio added to blockchain:', tx.transactionHash);
     return tx;
   } catch (error) {
     console.error('Error adding portfolio to blockchain:', error);
@@ -257,7 +241,6 @@ export const updatePortfolioOnBlockchain = async (walletAddress, index, newPortf
       gas: gasWithBuffer
     });
 
-    console.log('✅ Portfolio updated on blockchain:', tx.transactionHash);
     return tx;
   } catch (error) {
     console.error('Error updating portfolio on blockchain:', error);
@@ -297,7 +280,6 @@ export const deletePortfolioFromBlockchain = async (walletAddress, index) => {
       gas: gasWithBuffer
     });
 
-    console.log('✅ Portfolio deleted from blockchain:', tx.transactionHash);
     return tx;
   } catch (error) {
     console.error('Error deleting portfolio from blockchain:', error);

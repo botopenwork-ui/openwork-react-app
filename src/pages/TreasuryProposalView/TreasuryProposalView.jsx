@@ -138,7 +138,7 @@ const TreasuryProposalView = () => {
           {/* Receiver Escrow Section */}
           <div className="receiverEscrowBox">
             <span className="receiverEscrowLabel">RECEIVER ESCROW</span>
-            <span className="receiverAddress">0xDEAF...fB8B</span>
+            <span className="receiverAddress">{proposal.recipientAddress ? `${proposal.recipientAddress.substring(0, 6)}...${proposal.recipientAddress.substring(proposal.recipientAddress.length - 4)}` : '—'}</span>
           </div>
 
           {/* Reason Box */}

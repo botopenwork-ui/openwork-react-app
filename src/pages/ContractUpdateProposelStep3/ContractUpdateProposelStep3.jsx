@@ -401,11 +401,6 @@ const ContractUpdateProposelStep3 = () => {
       const web3 = new Web3(window.ethereum);
       const chainId = await web3.eth.getChainId();
       
-      console.log("=== CHAIN ID DEBUG ===");
-      console.log("Detected chainId:", chainId);
-      console.log("ChainId type:", typeof chainId);
-      console.log("Expected chainId:", config.chainId);
-      console.log("Comparison result:", Number(chainId) !== config.chainId);
       
       if (Number(chainId) !== config.chainId) {
         throw new Error(`Please switch to ${config.chain} network (detected: ${Number(chainId)}, expected: ${config.chainId})`);
@@ -429,16 +424,6 @@ const ContractUpdateProposelStep3 = () => {
         [proposedValue]
       );
       
-      console.log("=== UPDATE PROPOSAL PARAMETERS ===");
-      console.log("Contract:", contractName);
-      console.log("Parameter:", parameterName);
-      console.log("Function:", functionName);
-      console.log("Current:", currentValue);
-      console.log("Proposed:", proposedValue);
-      console.log("Target:", config.address);
-      console.log("Chain:", config.chain);
-      console.log("DAO:", config.dao);
-      console.log("Calldata:", calldata);
       
       let result;
       

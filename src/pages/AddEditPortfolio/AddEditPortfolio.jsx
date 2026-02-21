@@ -60,7 +60,6 @@ export default function AddEditPortfolio() {
       const uploadPromises = Array.from(files).map(file => uploadFileToIPFS(file));
       const ipfsHashes = await Promise.all(uploadPromises);
       setImages([...images, ...ipfsHashes]);
-      console.log('✅ Images uploaded to IPFS:', ipfsHashes);
     } catch (error) {
       console.error('Error uploading images:', error);
       alert('Failed to upload images. Please try again.');
@@ -143,7 +142,6 @@ export default function AddEditPortfolio() {
         `portfolio-${projectName.replace(/\s+/g, '-')}-${Date.now()}.json`
       );
 
-      console.log('✅ Portfolio data uploaded to IPFS:', portfolioHash);
 
       // Get contract and LayerZero options
       const web3 = new Web3(window.ethereum);

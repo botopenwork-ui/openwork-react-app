@@ -41,7 +41,7 @@ const RecruitmentProposalView = () => {
           <div className="proposerInfo">
             <div className="proposerLeft">
               <img src="/avatar-profile.png" alt="Proposer" className="proposerAvatar" />
-              <span className="proposerName">Mollie Hall</span>
+              <span className="proposerName">—</span>
             </div>
             <button className="viewProfileButton">
               <span>View Profile</span>
@@ -77,7 +77,7 @@ const RecruitmentProposalView = () => {
           
           {/* Wallet Address Field */}
           <div className="walletAddressInput">
-            0xDEAF...fB8B
+            —
           </div>
 
           {/* Email/Telegram Field */}

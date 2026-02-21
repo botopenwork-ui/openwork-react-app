@@ -22,7 +22,7 @@ export default function ProfilePackages() {
         {
             id: 0,
             title: 'Branding Package',
-            postedBy: 'molliehall2504',
+            postedBy: '',
             rating: 4.9,
             categories: ['UX Design', '+5'],
             cost: '7624.14',
@@ -31,7 +31,7 @@ export default function ProfilePackages() {
         {
             id: 1,
             title: 'React WebApp Deve...',
-            postedBy: 'molliehall2504',
+            postedBy: '',
             rating: 3.2,
             categories: ['Webflow', '+2'],
             cost: '24.14',
@@ -40,7 +40,7 @@ export default function ProfilePackages() {
         {
             id: 2,
             title: 'UI Design Package',
-            postedBy: 'molliehall2504',
+            postedBy: '',
             rating: 4.9,
             categories: ['UX Design', '+6'],
             cost: '762',
@@ -49,7 +49,7 @@ export default function ProfilePackages() {
         {
             id: 3,
             title: 'UI for OpenWork',
-            postedBy: 'molliehall2504',
+            postedBy: '',
             rating: 4.9,
             categories: ['UX Design', '+5'],
             cost: '7624.14',
@@ -70,8 +70,8 @@ export default function ProfilePackages() {
     return (
         <div className="profile-packages-main-container">
             <ProfilePackagesHeader
-                profileName="molliehall2504"
-                contractId="0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d"
+                profileName={formatWalletAddress(walletAddress) || "—"}
+                contractId={walletAddress || ""}
                 onCopyContractId={handleCopyToClipboard}
                 backUrl="/profile"
             />

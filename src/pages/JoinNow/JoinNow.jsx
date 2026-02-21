@@ -14,7 +14,9 @@ const SKILLOPTIONS = [
 ]
 
 
-const contractAddress = "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d";
+import { getNativeChain } from "../../config/chainConfig";
+const nativeChain = getNativeChain();
+const contractAddress = nativeChain?.contracts?.genesis || "";
 
 function ImageUpload() {
   const [selectedImage, setSelectedImage] = useState(null);

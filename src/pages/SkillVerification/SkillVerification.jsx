@@ -329,7 +329,6 @@ export default function SkillVerification() {
           }
         }
       } catch (e) {
-        console.log(`Polling attempt ${attempt}/${maxAttempts}:`, e.message);
       }
 
       const timeRemaining = Math.max(0, 45 - (10 + attempt * 5));
@@ -468,7 +467,6 @@ export default function SkillVerification() {
           .call();
         // Add 20% buffer to quoted fee
         lzFee = (BigInt(quotedFee) * BigInt(120) / BigInt(100)).toString();
-        console.log(`LayerZero quoted fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH (+20% buffer)`);
       } catch (quoteErr) {
         console.warn("Fee quote failed, using fallback:", quoteErr.message);
         lzFee = web3.utils.toWei("0.0005", "ether");
@@ -492,7 +490,6 @@ export default function SkillVerification() {
         throw new Error("Skill verification transaction failed");
       }
 
-      console.log(`Skill verification submitted on ${chainConfig.name}!`, receipt.transactionHash);
       setTransactionStatus(
         `Step 3/3: Skill verification submitted on ${chainConfig.name}! Syncing to Arbitrum...`
       );

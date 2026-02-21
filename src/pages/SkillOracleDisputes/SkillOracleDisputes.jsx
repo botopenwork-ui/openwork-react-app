@@ -69,7 +69,6 @@ export default function SkillOracleDisputes() {
                 const disputeData = await fetchAllDisputes();
                 setDisputes(disputeData);
                 
-                console.log("Dispute data loaded successfully!");
             } catch (err) {
                 console.error("Error loading disputes:", err);
                 setError(err.message);

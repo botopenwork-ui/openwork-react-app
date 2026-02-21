@@ -9,7 +9,7 @@ import Button from "../../components/Button/Button";
 export default function EditPicture() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
-        username: "molliehall2504",
+        username: formatWalletAddress(walletAddress) || "",
         firstName: "Mollie",
         lastName: "Hall",
         location: "Melbourne, Australia",
@@ -72,11 +72,11 @@ export default function EditPicture() {
                     <div className="titleText">{formData.username}</div>
                 </div>
                 <div className="titleBottom">
-                    <p>Contract ID: 0xDEAF...fB8B</p>
+                    <p>Contract ID: 0xdEF4...a8d</p>
                     <img 
                         src="/copy.svg" 
                         className="copyImage" 
-                        onClick={() => handleCopyToClipboard("0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d")}
+                        onClick={() => handleCopyToClipboard(walletAddress)}
                     />
                 </div>
             </div>

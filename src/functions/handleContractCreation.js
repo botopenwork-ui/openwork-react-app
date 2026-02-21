@@ -1,7 +1,8 @@
 import Web3 from "web3";
 import JobContractABI from "../JobContractABI.json";
 
-const contractAddress = "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d";
+// Contract address sourced dynamically from chainConfig
+const contractAddress = ""; // TODO: pass contract address as parameter
 
 export const handleSubmit = async (e, jobDetails, amount, setLoadingT, navigate, pinJobDetailsToIPFS) => {
   e.preventDefault();

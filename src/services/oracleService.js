@@ -72,26 +72,19 @@ function isCacheValid(timestamp, duration) {
  */
 async function fetchOracleNames() {
   try {
-    console.log("Initializing contracts...");
-    console.log("Genesis Address:", GENESIS_ADDRESS);
-    console.log("RPC URL:", RPC_URL ? "Set" : "NOT SET");
     
     const { genesisContract } = initializeContracts();
     
-    console.log("Calling getOracleCount()...");
     // First, get the total count of oracles
     const oracleCount = await genesisContract.methods.getOracleCount().call();
-    console.log(`Oracle count: ${oracleCount}`);
     
     if (Number(oracleCount) === 0) {
-      console.log("No oracles found in the system");
       return [];
     }
     
     console.log(`Fetching ${oracleCount} oracle names...`);
     // Fetch all oracle names using batch method
     const oracleNames = await genesisContract.methods.getOracleNamesBatch(0, Number(oracleCount)).call();
-    console.log("Oracle names fetched successfully:", oracleNames);
     return oracleNames;
   } catch (error) {
     console.error("DETAILED ERROR in fetchOracleNames:");
@@ -402,7 +395,6 @@ export async function fetchAllOracleData(forceRefresh = false) {
   }
 
   try {
-    console.log("Fetching oracle data from blockchain...");
     
     // Step 1: Get all oracle names
     const oracleNames = await fetchOracleNames();

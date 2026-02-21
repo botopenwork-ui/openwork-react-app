@@ -79,13 +79,11 @@ export default function ApplicationJobs() {
                 setLoading(true);
                 const appData = await getAllApplications();
                 setApplications(appData);
-                console.log("Applications loaded successfully!");
                 
                 // Fetch job titles from IPFS in background
                 if (appData.length > 0) {
                     fetchJobTitles(appData).then(appsWithTitles => {
                         setApplications(appsWithTitles);
-                        console.log("Application job titles updated from IPFS");
                     }).catch(error => {
                         console.error("Error fetching titles:", error);
                     });

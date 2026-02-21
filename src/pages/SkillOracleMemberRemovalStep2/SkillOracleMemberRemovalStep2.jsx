@@ -48,7 +48,6 @@ const SkillOracleMemberRemovalStep2 = () => {
           setSelectedOracle(data.oracles[0]);
         }
         
-        console.log(`Loaded ${data.oracles.length} oracles`);
       } catch (error) {
         console.error("Error loading oracles:", error);
         setError("Failed to load oracles from blockchain");
@@ -149,7 +148,6 @@ const SkillOracleMemberRemovalStep2 = () => {
       });
       
       if (result.success) {
-        console.log("✅ Member removal proposal creation result:", result);
         console.log("   Proposal ID:", result.proposalId);
         console.log("   Transaction Hash:", result.transactionHash);
         
@@ -162,7 +160,6 @@ const SkillOracleMemberRemovalStep2 = () => {
           
           // Redirect to proposal view after 2 seconds
           setTimeout(() => {
-            console.log("🔄 Redirecting to:", `/proposal-view/${result.proposalId}/Arbitrum`);
             navigate(`/proposal-view/${result.proposalId}/Arbitrum`);
           }, 2000);
         }

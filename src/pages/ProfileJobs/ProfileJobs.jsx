@@ -85,13 +85,11 @@ export default function ProfileJobs() {
                     : await getInProgressJobs();
                     
                 setJobs(jobData);
-                console.log(`Jobs loaded successfully! (${address ? 'user-filtered' : 'all'})`);
                 
                 // Fetch titles from IPFS in background (progressive enhancement)
                 if (jobData.length > 0) {
                     fetchJobTitles(jobData).then(jobsWithTitles => {
                         setJobs(jobsWithTitles);
-                        console.log("Job titles updated from IPFS");
                     }).catch(error => {
                         console.error("Error fetching titles:", error);
                     });

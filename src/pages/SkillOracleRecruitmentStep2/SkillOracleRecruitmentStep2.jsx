@@ -50,7 +50,6 @@ const SkillOracleRecruitmentStep2 = () => {
           setSelectedOracle(eligibleOracles[0]);
         }
         
-        console.log(`Loaded ${eligibleOracles.length} eligible oracles`);
       } catch (error) {
         console.error("Error loading oracles:", error);
         setError("Failed to load oracles from blockchain");
@@ -137,7 +136,6 @@ const SkillOracleRecruitmentStep2 = () => {
       });
       
       if (result.success) {
-        console.log("✅ Member recruitment proposal creation result:", result);
         console.log("   Proposal ID:", result.proposalId);
         console.log("   Transaction Hash:", result.transactionHash);
         
@@ -150,7 +148,6 @@ const SkillOracleRecruitmentStep2 = () => {
           
           // Redirect to proposal view after 2 seconds
           setTimeout(() => {
-            console.log("🔄 Redirecting to:", `/proposal-view/${result.proposalId}/Arbitrum`);
             navigate(`/proposal-view/${result.proposalId}/Arbitrum`);
           }, 2000);
         }
@@ -232,7 +229,7 @@ const SkillOracleRecruitmentStep2 = () => {
           <input
             type="text"
             className="skill-oracle-recruitment-step2-input"
-            placeholder="0xDEAF...fB8B"
+            placeholder="Enter wallet address (0x...)"
             value={walletAddress}
             onChange={(e) => setWalletAddress(e.target.value)}
           />

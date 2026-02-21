@@ -12,64 +12,7 @@ export default function ExistingMemberSkillOracle() {
 
     const headers = ["Member Name", "Rating", "Skills", "Experience", "Resolution Accuracy", ""];
 
-    const users = [
-        {
-            id: 0,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            prcent: '70'
-        },
-        {
-            id: 1,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            prcent: '90'
-        },
-        {
-            id: 2,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            prcent: '40'
-        },
-        {
-            id: 3,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            prcent: '60'
-        },
-        {
-            id: 4,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            prcent: '20'
-        },
-        {
-            id: 5,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            prcent: '80'
-        },
-        {
-            id: 6,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            prcent: '20'
-        },
-    ];
+    const users = [];
 
     const titleOptions = [
         {
@@ -114,6 +57,13 @@ export default function ExistingMemberSkillOracle() {
     ];
 
     const tableData = useMemo(() => {
+        if (users.length === 0) {
+            return [[
+                <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+                    No members found in this oracle.
+                </div>
+            ]];
+        }
         return users.map((user) => {
             return [
                 <div className="user">

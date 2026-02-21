@@ -223,10 +223,10 @@ export default function GetSkillsVerified() {
           <Link className="goBack" to={`/profile-owner-view/${jobId}`} style={{visibility:'hidden'}}><img className="goBackImage" src="/back.svg" alt="Back Button" /></Link>  
          </div>
          <div className="titleBottom"><p>  Contract ID:{" "}
-         {formatWalletAddress("0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d")}
+         {formatWalletAddress(walletAddress)}
          </p><img src="/copy.svg" className="copyImage" onClick={() =>
                  handleCopyToClipboard(
-                   "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d"
+                   walletAddress
                  )
                }
                /></div>

@@ -70,7 +70,6 @@ export default function DAOMembers() {
                 setLoading(true);
                 const memberData = await getAllDAOMembers();
                 setMembers(memberData);
-                console.log("DAO members loaded successfully!");
             } catch (error) {
                 console.error("Error loading DAO members:", error);
             } finally {

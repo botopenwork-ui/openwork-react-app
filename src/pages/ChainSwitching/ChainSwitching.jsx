@@ -16,7 +16,7 @@ const ChainSwitching = () => {
         {/* Contract Info */}
         <div className="contract-info">
           <div className="contract-id">
-            <span>Contract ID: 0xDEAF...fB8B</span>
+            <span>Contract ID: —</span>
             <img src="/copy-01.svg" alt="copy" className="copy-icon" />
           </div>
         </div>
@@ -72,12 +72,12 @@ const ChainSwitching = () => {
               <img src="/info.svg" alt="info" className="info-icon-small" />
             </div>
             <p className="side-label">AMOUNT PAID</p>
-            <p className="side-name">Jollie Hall</p>
+            <p className="side-name">Job Giver</p>
           </div>
 
           {/* Left Side Avatar */}
           <div className="side-avatar side-avatar-left">
-            <img src="/avatar-profile.png" alt="Jollie Hall" className="avatar-image" />
+            <img src="/avatar-profile.png" alt="Job Giver" className="avatar-image" />
             <img src="/person.svg" alt="icon" className="avatar-icon" />
           </div>
 
@@ -91,12 +91,12 @@ const ChainSwitching = () => {
               <img src="/info.svg" alt="info" className="info-icon-small" />
             </div>
             <p className="side-label">AMOUNT RECEIVED</p>
-            <p className="side-name">Mollie Hall</p>
+            <p className="side-name">Job Taker</p>
           </div>
 
           {/* Right Side Avatar */}
           <div className="side-avatar side-avatar-right">
-            <img src="/avatar-profile.png" alt="Mollie Hall" className="avatar-image" />
+            <img src="/avatar-profile.png" alt="Job Taker" className="avatar-image" />
             <img src="/person.svg" alt="icon" className="avatar-icon" />
           </div>
 

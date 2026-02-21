@@ -46,8 +46,8 @@ export default function ApplyJob() {
   const [milestone2Amount, setMilestone2Amount] = useState(1);
   const [milestone1Title, setMilestone1Title] = useState("Milestone 1");
   const [milestone2Title, setMilestone2Title] = useState("Milestone 2");
-  const [milestone1Content, setMilestone1Content] = useState("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.");
-  const [milestone2Content, setMilestone2Content] = useState("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.");
+  const [milestone1Content, setMilestone1Content] = useState("");
+  const [milestone2Content, setMilestone2Content] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState([]);
 
   // Function to get application count on Arbitrum (Genesis contract)
@@ -57,30 +57,22 @@ export default function ApplyJob() {
       const arbitrumRpc = getArbitrumRpc();
       const networkMode = isMainnet() ? "mainnet" : "testnet";
 
-      console.log("🔍 Checking application count for job:", jobId);
-      console.log("📍 Genesis contract:", genesisAddress);
-      console.log("🌐 Using RPC:", arbitrumRpc, `(${networkMode})`);
 
       const arbitrumWeb3 = new Web3(arbitrumRpc);
       const genesisContract = new arbitrumWeb3.eth.Contract(GenesisABI, genesisAddress);
 
       const count = await genesisContract.methods.getJobApplicationCount(jobId).call();
-      console.log("📊 Application count:", count);
       return Number(count);
     } catch (error) {
-      console.log("❌ Error getting application count:", error.message);
       return 0;
     }
   };
 
   // Function to poll for application sync completion
   const pollForApplicationSync = async (jobId, expectedCount) => {
-    console.log("🚀 Starting cross-chain sync polling for application on job:", jobId);
-    console.log("📊 Expected application count:", expectedCount);
     setTransactionStatus(`Application submitted! Syncing to Arbitrum (15-30 seconds)...`);
 
     // Wait 15 seconds before starting to poll (LayerZero typically takes 10-20s)
-    console.log("⏳ Waiting 15 seconds for LayerZero to propagate...");
     await new Promise(resolve => setTimeout(resolve, 15000));
     setTransactionStatus(`Checking if application has synced to Arbitrum...`);
 
@@ -88,7 +80,6 @@ export default function ApplyJob() {
     const pollInterval = 5000; // 5 seconds
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      console.log(`Polling attempt ${attempt}/${maxAttempts} for application sync`);
 
       const currentCount = await getApplicationCountOnArbitrum(jobId);
 
@@ -114,7 +105,6 @@ export default function ApplyJob() {
     setLoadingT(false);
 
     // Redirect to job page after a delay
-    console.log("⏳ Sync timeout - redirecting to job page");
     setTimeout(() => {
       navigate(`/job-deep-view/${jobId}`);
     }, 3000);
@@ -269,7 +259,6 @@ export default function ApplyJob() {
       // Build LZ options with appropriate destination gas for this operation
       const destGas = DESTINATION_GAS_ESTIMATES.APPLY_JOB;
       const lzOptions = buildLzOptions(destGas);
-      console.log(`⛽ Destination gas (Arbitrum): ${destGas} for APPLY_JOB`);
 
       // Get bridge contract for quoting
       const bridgeAddress = await contract.methods.bridge().call();
@@ -294,32 +283,19 @@ export default function ApplyJob() {
       // Get quote and add 20% buffer
       const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, lzOptions).call();
       const lzFee = BigInt(quotedFee) * BigInt(120) / BigInt(100); // +20% buffer
-      console.log(`💰 LayerZero quote: ${web3.utils.fromWei(quotedFee.toString(), 'ether')} ETH`);
-      console.log(`💰 With 20% buffer: ${web3.utils.fromWei(lzFee.toString(), 'ether')} ETH`);
 
       // Get current application count before submitting (to detect when new one syncs)
       setTransactionStatus(`Checking current application count...`);
       const currentAppCount = await getApplicationCountOnArbitrum(jobId);
       const expectedAppCount = currentAppCount + 1;
-      console.log(`📊 Current application count: ${currentAppCount}, expecting: ${expectedAppCount}`);
 
       // Submit application
       setTransactionStatus(`Submitting application on ${chainConfig?.name}...`);
 
       // Log all transaction parameters for debugging
-      console.log('📋 ====== APPLY TO JOB TRANSACTION PARAMS ======');
-      console.log('1️⃣ jobId:', jobId);
-      console.log('2️⃣ applicationHash:', applicationHash);
-      console.log('3️⃣ milestoneHashes:', milestoneHashes);
-      console.log('4️⃣ amounts:', amounts, '→', amounts.map(a => `${a / 1000000} USDC`));
-      console.log('5️⃣ preferredChainDomain:', chainConfig.cctpDomain);
-      console.log('6️⃣ lzOptions:', lzOptions, `(${destGas} destination gas)`);
-      console.log('7️⃣ lzFee:', lzFee.toString(), `(${web3.utils.fromWei(lzFee.toString(), 'ether')} ETH)`);
-      console.log('📋 =============================================');
 
       // Get current gas price from network (Optimism L2 is extremely cheap)
       const gasPrice = await web3.eth.getGasPrice();
-      console.log(`⛽ Network gas price: ${web3.utils.fromWei(gasPrice, 'gwei')} gwei`);
 
       const tx = await contract.methods.applyToJob(
         jobId,
@@ -336,7 +312,6 @@ export default function ApplyJob() {
         maxFeePerGas: gasPrice
       });
 
-      console.log("✅ Application submitted:", tx.transactionHash);
       setTransactionStatus(`✅ Application submitted on ${chainConfig?.name}. Tracking cross-chain sync...`);
 
       // ── Client-side LZ monitoring ─────────────────────────────────────────

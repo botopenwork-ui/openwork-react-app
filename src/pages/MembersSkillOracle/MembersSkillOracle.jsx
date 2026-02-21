@@ -69,8 +69,6 @@ export default function MembersSkillOracle() {
                 
                 const data = await fetchAllOracleData();
                 setOracleData(data);
-                
-                console.log("Member data loaded successfully!");
             } catch (err) {
                 console.error("Error loading member data:", err);
                 setError(err.message);
@@ -82,70 +80,7 @@ export default function MembersSkillOracle() {
         loadMemberData();
     }, []);
 
-    const users = oracleData.members.length > 0 ? oracleData.members : [
-        {
-            id: 0,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            prcent: 70,
-            color: '#FFA500'
-        },
-        {
-            id: 1,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            prcent: 90,
-            color: '#00C853'
-        },
-        {
-            id: 2,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            prcent: 40,
-            color: '#F44336'
-        },
-        {
-            id: 3,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            prcent: 60,
-            color: '#FFA500'
-        },
-        {
-            id: 4,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            prcent: 20,
-            color: '#F44336'
-        },
-        {
-            id: 5,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            prcent: 80,
-            color: '#00C853'
-        },
-        {
-            id: 0,
-            name: 'Mollie Hall',
-            rating: '4.9',
-            skills: 'UX Design',
-            experience: '4',
-            prcent: '20'
-        },
-    ]
+    const users = oracleData.members.length > 0 ? oracleData.members : [];
 
     const titleOptions = [
         {
@@ -187,8 +122,22 @@ export default function MembersSkillOracle() {
     ] 
 
     const tableData = useMemo(() => {
+        if (loading) {
+            return [[
+                <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+                    Loading members from blockchain...
+                </div>
+            ]];
+        }
+        if (users.length === 0) {
+            return [[
+                <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+                    No members found.
+                </div>
+            ]];
+        }
         return users.map((user) => {
-            // Handle both real blockchain data and dummy data
+            // Handle real blockchain data
             const isRealData = user.address !== undefined;
             const accuracyColor = isRealData ? getAccuracyColor(user.accuracy) : (user.color || '#FFA500');
 

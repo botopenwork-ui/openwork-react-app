@@ -218,7 +218,6 @@ const ContractUpgradeProposalStep2 = () => {
       });
       
       if (result.success) {
-        console.log("✅ Upgrade proposal creation result:", result);
         console.log("   Proposal ID:", result.proposalId);
         console.log("   Transaction Hash:", result.transactionHash);
         
@@ -231,7 +230,6 @@ const ContractUpgradeProposalStep2 = () => {
           
           // Redirect to proposal view after 2 seconds
           setTimeout(() => {
-            console.log("🔄 Redirecting to:", `/proposal-view/${result.proposalId}/Base`);
             navigate(`/proposal-view/${result.proposalId}/Base`);
           }, 2000);
         }

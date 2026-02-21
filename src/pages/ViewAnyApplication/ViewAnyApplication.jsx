@@ -84,8 +84,8 @@ export default function ViewAnyApplication() {
                     <span>MILESTONES</span>
                 </div>
                 <div className="milestone-section-body">
-                    <Milestone amount={25} title="Milestone 1" content={"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."} editable={true}/>
-                    <Milestone amount={25} title="Milestone 2" content={"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."} editable={true}/>
+                    <Milestone amount={25} title="Milestone 1" content={""} editable={true}/>
+                    <Milestone amount={25} title="Milestone 2" content={""} editable={true}/>
                 </div>
             </div>
             <div className="form-platformFee">

@@ -67,7 +67,7 @@ function ContractUpdateProposalView() {
           <div className="proposerInfo">
             <div className="proposerLeft">
               <img src="/avatar-profile.png" alt="Proposer" className="proposerAvatar" />
-              <span className="proposerName">Mollie Hall</span>
+              <span className="proposerName">—</span>
             </div>
             <button className="viewProfileButton" onClick={handleViewProfile}>
               <span>View Profile</span>

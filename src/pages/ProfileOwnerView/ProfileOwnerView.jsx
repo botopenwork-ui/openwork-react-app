@@ -234,7 +234,6 @@ export default function ProfileOwnerView() {
             setTransactionStatus("📤 Uploading profile data to IPFS...");
             const ipfsResponse = await pinProfileToIPFS(profileData);
             const ipfsHash = ipfsResponse.IpfsHash;
-            console.log("✅ IPFS Hash:", ipfsHash);
 
             // Step 2: Get contract for current chain
             setTransactionStatus(`Connecting to ${chainConfig.name}...`);

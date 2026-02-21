@@ -42,12 +42,10 @@ let cache = {
 export async function getInProgressJobs(forceRefresh = false) {
   // Check cache
   if (!forceRefresh && cache.inProgressJobs && (Date.now() - cache.timestamp < CACHE_DURATION)) {
-    console.log("Returning cached in-progress jobs");
     return cache.inProgressJobs;
   }
 
   try {
-    console.log("Fetching in-progress jobs from blockchain...", isMainnet() ? "(mainnet)" : "(testnet)");
 
     const ARBITRUM_RPC = getArbitrumRpc();
     const { GENESIS_HELPER_ADDRESS, GENESIS_HELPER_V3_ADDRESS } = getAddresses();
@@ -113,7 +111,6 @@ async function fetchJobTitleFromIPFS(jobDetailHash) {
  * Fetch titles for jobs from IPFS (background process)
  */
 export async function fetchJobTitles(jobs) {
-  console.log(`Fetching titles for ${jobs.length} jobs from IPFS...`);
   
   const updatedJobs = await Promise.all(
     jobs.map(async (job) => {
@@ -127,7 +124,6 @@ export async function fetchJobTitles(jobs) {
     })
   );
 
-  console.log("Job titles loaded from IPFS");
   return updatedJobs;
 }
 
@@ -136,7 +132,6 @@ export async function fetchJobTitles(jobs) {
  */
 export async function getUserJobs(userAddress) {
   try {
-    console.log(`Fetching jobs for user: ${userAddress}`);
     
     // Get all in-progress jobs
     const allJobs = await getInProgressJobs();
@@ -161,7 +156,6 @@ export async function getUserJobs(userAddress) {
  */
 export async function getAllApplications(forceRefresh = false) {
   try {
-    console.log("Fetching all applications from blockchain...", isMainnet() ? "(mainnet)" : "(testnet)");
 
     const ARBITRUM_RPC = getArbitrumRpc();
     const { GENESIS_HELPER_ADDRESS, GENESIS_HELPER_V4_ADDRESS, GENESIS_ADDRESS } = getAddresses();

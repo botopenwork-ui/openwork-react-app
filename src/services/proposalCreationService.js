@@ -53,10 +53,6 @@ function calculateProposalId(targets, values, calldatas, description) {
   // Hash the encoded data to get proposal ID
   const proposalId = web3.utils.keccak256(encoded);
   
-  console.log("📊 Calculated Proposal ID:", proposalId);
-  console.log("   Targets:", targets);
-  console.log("   Values:", values);
-  console.log("   Description Hash:", descriptionHash);
   
   return proposalId;
 }
@@ -105,7 +101,6 @@ async function saveProposalToDatabase({
       return { success: false, error: data.error };
     }
 
-    console.log('✅ Proposal saved to database:', proposalId);
     return { success: true, data };
 
   } catch (error) {
@@ -373,21 +368,12 @@ export async function createMainDAOProposal({
     const values = [0]; // No ETH transfer
     const calldatas = [transferCalldata];
 
-    console.log("=== MAIN DAO PROPOSAL PARAMETERS ===");
-    console.log("Contract:", MAIN_DAO_ADDRESS);
-    console.log("Targets:", targets);
-    console.log("Values:", values);
-    console.log("Calldatas:", calldatas);
-    console.log("Description:", description);
-    console.log("LayerZero Fee:", web3.utils.fromWei(fee.toString(), 'ether'), "ETH");
 
     // Calculate proposal ID deterministically (OpenZeppelin standard method)
     const proposalId = calculateProposalId(targets, values, calldatas, description);
-    console.log("✅ Calculated Proposal ID (before transaction):", proposalId);
 
     // Create proposal and wait for confirmation
     return new Promise((resolve, reject) => {
-      console.log("[SERVICE TIMING] Creating promise and calling .send():", new Date().toISOString());
       
       mainDAOContract.methods
         .propose(targets, values, calldatas, description, LAYERZERO_OPTIONS)
@@ -397,17 +383,11 @@ export async function createMainDAOProposal({
           gas: 500000
         })
         .on('transactionHash', (hash) => {
-          console.log("[SERVICE TIMING] transactionHash event fired:", new Date().toISOString());
-          console.log("Transaction hash:", hash);
         })
         .on('receipt', async (receipt) => {
-          console.log("[SERVICE TIMING] receipt event fired:", new Date().toISOString());
-          console.log("Transaction receipt:", receipt);
-          console.log("Receipt status:", receipt.status);
           
           // Check if transaction was successful (status: 1 or "1")
           if (receipt.status == 1 || receipt.status == "1") {
-            console.log("✅ Transaction successful! Using calculated proposal ID:", proposalId);
             
             const result = {
               success: true,
@@ -416,7 +396,6 @@ export async function createMainDAOProposal({
             };
             
             // Save to database
-            console.log("💾 Saving proposal to database...");
             await saveProposalToDatabase({
               proposalId: BigInt(proposalId).toString(), // Convert hex to decimal to match blockchain format
               chain: 'Base',
@@ -435,16 +414,13 @@ export async function createMainDAOProposal({
               }
             });
             
-            console.log("[SERVICE TIMING] Transaction SUCCESS - Resolving promise with:", result);
             resolve(result);
           } else {
             // Transaction reverted (status: 0 or "0")
-            console.log("[SERVICE TIMING] Transaction REVERTED - Rejecting promise");
             reject(new Error("Transaction reverted by the blockchain"));
           }
         })
         .on('error', (error) => {
-          console.log("[SERVICE TIMING] error event fired:", new Date().toISOString());
           console.error("Transaction error:", error);
           reject(error);
         });
@@ -494,12 +470,6 @@ export async function createNativeDAOProposal({
     const { NATIVE_DAO_ADDRESS } = getAddresses();
     const nativeDAOContract = new web3.eth.Contract(NATIVE_DAO_ABI, NATIVE_DAO_ADDRESS);
 
-    console.log("=== NATIVE DAO PROPOSAL PARAMETERS ===");
-    console.log("Contract:", NATIVE_DAO_ADDRESS);
-    console.log("Targets:", targets);
-    console.log("Values:", values);
-    console.log("Calldatas:", calldatas);
-    console.log("Description:", description);
 
     // Create proposal (no LayerZero options needed)
     const tx = await nativeDAOContract.methods
@@ -509,7 +479,6 @@ export async function createNativeDAOProposal({
         gas: 500000
       });
 
-    console.log("Transaction successful:", tx);
     return {
       success: true,
       transactionHash: tx.transactionHash,
@@ -587,19 +556,9 @@ export async function createUpgradeProposal({
     const values = [0];
     const calldatas = [upgradeCalldata];
 
-    console.log("=== CONTRACT UPGRADE PROPOSAL PARAMETERS ===");
-    console.log("Contract to Upgrade:", contractName);
-    console.log("Target Chain ID:", targetChainId);
-    console.log("Target Proxy:", targetProxy);
-    console.log("New Implementation:", newImplementation);
-    console.log("Main DAO:", MAIN_DAO_ADDRESS);
-    console.log("Calldata:", upgradeCalldata);
-    console.log("Description:", description);
-    console.log("LayerZero Fee:", web3.utils.fromWei(fee.toString(), 'ether'), "ETH");
 
     // Calculate proposal ID deterministically (OpenZeppelin standard method)
     const proposalId = calculateProposalId(targets, values, calldatas, description);
-    console.log("✅ Calculated Proposal ID (before transaction):", proposalId);
 
     // Create proposal and wait for confirmation
     return new Promise((resolve, reject) => {
@@ -611,14 +570,11 @@ export async function createUpgradeProposal({
           gas: 500000
         })
         .on('transactionHash', (hash) => {
-          console.log("Transaction sent! Hash:", hash);
         })
         .on('receipt', async (receipt) => {
-          console.log("Transaction receipt:", receipt);
           
           // Check if transaction was successful
           if (receipt.status == 1 || receipt.status == "1") {
-            console.log("✅ Transaction successful! Using calculated proposal ID:", proposalId);
             
             const result = {
               success: true,
@@ -627,7 +583,6 @@ export async function createUpgradeProposal({
             };
             
             // Save to database
-            console.log("💾 Saving upgrade proposal to database...");
             const dbSaveResult = await saveProposalToDatabase({
               proposalId: BigInt(proposalId).toString(), // Convert hex to decimal to match blockchain format
               chain: 'Base',
@@ -651,15 +606,12 @@ export async function createUpgradeProposal({
             });
             
             if (dbSaveResult.success) {
-              console.log("✅ DATABASE SAVE SUCCESSFUL for proposal:", proposalId);
             } else {
               console.error("❌ DATABASE SAVE FAILED:", dbSaveResult.error);
             }
             
-            console.log("Upgrade proposal created successfully:", result);
             resolve(result);
           } else {
-            console.log("Transaction reverted");
             reject(new Error("Transaction reverted by the blockchain"));
           }
         })
@@ -718,12 +670,6 @@ export async function createGenericMainDAOProposal({
       .quoteGovernanceNotification(fromAddress, LAYERZERO_OPTIONS)
       .call();
 
-    console.log("=== MAIN DAO GENERIC PROPOSAL ===");
-    console.log("Targets:", targets);
-    console.log("Values:", values);
-    console.log("Calldatas:", calldatas);
-    console.log("Description:", description);
-    console.log("LayerZero Fee:", web3.utils.fromWei(fee.toString(), 'ether'), "ETH");
 
     // Create proposal and wait for confirmation
     return new Promise((resolve, reject) => {
@@ -735,10 +681,8 @@ export async function createGenericMainDAOProposal({
           gas: 500000
         })
         .on('transactionHash', (hash) => {
-          console.log("Transaction sent! Hash:", hash);
         })
         .on('receipt', (receipt) => {
-          console.log("Transaction receipt:", receipt);
           
           if (receipt.status == 1 || receipt.status == "1") {
             resolve({
@@ -882,18 +826,11 @@ export async function executeProposal({
       isMainChain ? MAIN_DAO_ADDRESS : NATIVE_DAO_ADDRESS
     );
 
-    console.log("=== EXECUTING PROPOSAL ===");
-    console.log("Proposal ID:", proposalId);
-    console.log("Targets:", targets);
-    console.log("Values:", values);
-    console.log("Calldatas:", calldatas);
-    console.log("Description Hash:", descriptionHash);
 
     // Estimate gas instead of using hardcoded value
     const executeMethod = daoContract.methods.execute(targets, values, calldatas, descriptionHash);
     const estimatedGas = await executeMethod.estimateGas({ from: fromAddress });
     const gasLimit = Math.ceil(Number(estimatedGas) * 1.2); // Add 20% buffer
-    console.log("Estimated gas:", estimatedGas, "Using limit:", gasLimit);
 
     return new Promise((resolve, reject) => {
       let resolved = false;
@@ -916,7 +853,6 @@ export async function executeProposal({
           if (resolved) return;
           resolved = true;
           if (receipt.status == 1) {
-            console.log("✅ Proposal executed successfully");
             resolve({ success: true, transactionHash: receipt.transactionHash });
           } else {
             reject(new Error("Transaction reverted"));
@@ -1053,24 +989,12 @@ export async function createOracleProposal({
     const values = [0];
     const calldatas = [oracleCalldata];
 
-    console.log("=== ORACLE CREATION PROPOSAL PARAMETERS ===");
-    console.log("Oracle Name:", oracleName);
-    console.log("Short Description:", shortDescription);
-    console.log("Details Hash:", detailsHash);
-    console.log("Members:", members);
-    console.log("Skill Verified:", skillVerifiedAddresses);
-    console.log("Oracle Manager:", ORACLE_MANAGER_ADDRESS);
-    console.log("Native DAO:", NATIVE_DAO_ADDRESS);
-    console.log("Calldata:", oracleCalldata);
-    console.log("Proposal Description:", proposalDescription);
 
     // Calculate proposal ID deterministically (OpenZeppelin standard method)
     const proposalId = calculateProposalId(targets, values, calldatas, proposalDescription);
-    console.log("✅ Calculated Proposal ID (before transaction):", proposalId);
 
     // Create proposal and wait for confirmation
     return new Promise((resolve, reject) => {
-      console.log("[SERVICE TIMING] Creating oracle proposal:", new Date().toISOString());
 
       let txHash = null;
       let resolved = false;
@@ -1087,7 +1011,6 @@ export async function createOracleProposal({
         };
 
         // Save to database
-        console.log("💾 Saving oracle proposal to database...");
         const dbSaveResult = await saveProposalToDatabase({
           proposalId: BigInt(proposalId).toString(), // Convert hex to decimal to match blockchain format
           chain: 'Arbitrum',
@@ -1112,12 +1035,10 @@ export async function createOracleProposal({
         });
 
         if (dbSaveResult.success) {
-          console.log("✅ DATABASE SAVE SUCCESSFUL for proposal:", proposalId);
         } else {
           console.error("❌ DATABASE SAVE FAILED:", dbSaveResult.error);
         }
 
-        console.log("Oracle proposal created successfully:", result);
         resolve(result);
       };
 
@@ -1128,21 +1049,14 @@ export async function createOracleProposal({
           gas: 500000
         })
         .on('transactionHash', (hash) => {
-          console.log("[SERVICE TIMING] transactionHash event fired:", new Date().toISOString());
-          console.log("Transaction hash:", hash);
           txHash = hash;
         })
         .on('receipt', async (receipt) => {
-          console.log("[SERVICE TIMING] receipt event fired:", new Date().toISOString());
-          console.log("Transaction receipt:", receipt);
-          console.log("Receipt status:", receipt.status);
 
           // Check if transaction was successful
           if (receipt.status == 1 || receipt.status == "1") {
-            console.log("✅ Transaction successful! Using calculated proposal ID:", proposalId);
             await saveAndResolve(receipt.transactionHash, receipt.blockNumber);
           } else {
-            console.log("Transaction reverted");
             reject(new Error("Transaction reverted by the blockchain"));
           }
         })
@@ -1152,7 +1066,6 @@ export async function createOracleProposal({
           // Handle timeout errors - if we have a txHash, the transaction was sent
           // and likely succeeded on-chain even if we timed out waiting for receipt
           if (txHash && (error.message?.includes('timeout') || error.message?.includes('Timeout') || error.name === 'TransactionBlockTimeoutError')) {
-            console.log("⚠️ Transaction timed out but was sent. Assuming success since txHash exists:", txHash);
             await saveAndResolve(txHash);
           } else {
             reject(error);
@@ -1227,23 +1140,12 @@ export async function createOracleMemberRecruitmentProposal({
     // Prepare proposal description
     const proposalDescription = `Recruit new member to ${oracleName}\n\nMember: ${memberAddress}\nContact: ${emailOrTelegram}\n\nReason: ${reason}`;
 
-    console.log("=== ORACLE MEMBER RECRUITMENT PROPOSAL PARAMETERS ===");
-    console.log("Oracle Name:", oracleName);
-    console.log("New Member:", memberAddress);
-    console.log("Contact:", emailOrTelegram);
-    console.log("Reason:", reason);
-    console.log("Oracle Manager:", ORACLE_MANAGER_ADDRESS);
-    console.log("Native DAO:", NATIVE_DAO_ADDRESS);
-    console.log("Calldata:", addMembersCalldata);
-    console.log("Proposal Description:", proposalDescription);
 
     // Calculate proposal ID deterministically
     const proposalId = calculateProposalId(targets, values, calldatas, proposalDescription);
-    console.log("✅ Calculated Proposal ID (before transaction):", proposalId);
 
     // Create proposal and wait for confirmation
     return new Promise((resolve, reject) => {
-      console.log("[SERVICE TIMING] Creating member recruitment proposal:", new Date().toISOString());
 
       let txHash = null;
       let resolved = false;
@@ -1260,7 +1162,6 @@ export async function createOracleMemberRecruitmentProposal({
         };
 
         // Save to database
-        console.log("💾 Saving member recruitment proposal to database...");
         const dbSaveResult = await saveProposalToDatabase({
           proposalId: BigInt(proposalId).toString(), // Convert hex to decimal to match blockchain format
           chain: 'Arbitrum',
@@ -1285,12 +1186,10 @@ export async function createOracleMemberRecruitmentProposal({
         });
 
         if (dbSaveResult.success) {
-          console.log("✅ DATABASE SAVE SUCCESSFUL for proposal:", proposalId);
         } else {
           console.error("❌ DATABASE SAVE FAILED:", dbSaveResult.error);
         }
 
-        console.log("Member recruitment proposal created successfully:", result);
         resolve(result);
       };
 
@@ -1301,21 +1200,14 @@ export async function createOracleMemberRecruitmentProposal({
           gas: 500000
         })
         .on('transactionHash', (hash) => {
-          console.log("[SERVICE TIMING] transactionHash event fired:", new Date().toISOString());
-          console.log("Transaction hash:", hash);
           txHash = hash;
         })
         .on('receipt', async (receipt) => {
-          console.log("[SERVICE TIMING] receipt event fired:", new Date().toISOString());
-          console.log("Transaction receipt:", receipt);
-          console.log("Receipt status:", receipt.status);
 
           // Check if transaction was successful
           if (receipt.status == 1 || receipt.status == "1") {
-            console.log("✅ Transaction successful! Using calculated proposal ID:", proposalId);
             await saveAndResolve(receipt.transactionHash, receipt.blockNumber);
           } else {
-            console.log("Transaction reverted");
             reject(new Error("Transaction reverted by the blockchain"));
           }
         })
@@ -1325,7 +1217,6 @@ export async function createOracleMemberRecruitmentProposal({
           // Handle timeout errors - if we have a txHash, the transaction was sent
           // and likely succeeded on-chain even if we timed out waiting for receipt
           if (txHash && (error.message?.includes('timeout') || error.message?.includes('Timeout') || error.name === 'TransactionBlockTimeoutError')) {
-            console.log("⚠️ Transaction timed out but was sent. Assuming success since txHash exists:", txHash);
             await saveAndResolve(txHash);
           } else {
             reject(error);
@@ -1398,22 +1289,12 @@ export async function createOracleMemberRemovalProposal({
     // Prepare proposal description
     const proposalDescription = `Remove member from ${oracleName}\n\nMember to Remove: ${memberAddress}\n\nReason: ${reason}`;
 
-    console.log("=== ORACLE MEMBER REMOVAL PROPOSAL PARAMETERS ===");
-    console.log("Oracle Name:", oracleName);
-    console.log("Member to Remove:", memberAddress);
-    console.log("Reason:", reason);
-    console.log("Oracle Manager:", ORACLE_MANAGER_ADDRESS);
-    console.log("Native DAO:", NATIVE_DAO_ADDRESS);
-    console.log("Calldata:", removeMemberCalldata);
-    console.log("Proposal Description:", proposalDescription);
 
     // Calculate proposal ID deterministically
     const proposalId = calculateProposalId(targets, values, calldatas, proposalDescription);
-    console.log("✅ Calculated Proposal ID (before transaction):", proposalId);
 
     // Create proposal and wait for confirmation
     return new Promise((resolve, reject) => {
-      console.log("[SERVICE TIMING] Creating member removal proposal:", new Date().toISOString());
       
       nativeDAOContract.methods
         .propose(targets, values, calldatas, proposalDescription)
@@ -1422,17 +1303,11 @@ export async function createOracleMemberRemovalProposal({
           gas: 500000
         })
         .on('transactionHash', (hash) => {
-          console.log("[SERVICE TIMING] transactionHash event fired:", new Date().toISOString());
-          console.log("Transaction hash:", hash);
         })
         .on('receipt', async (receipt) => {
-          console.log("[SERVICE TIMING] receipt event fired:", new Date().toISOString());
-          console.log("Transaction receipt:", receipt);
-          console.log("Receipt status:", receipt.status);
           
           // Check if transaction was successful
           if (receipt.status == 1 || receipt.status == "1") {
-            console.log("✅ Transaction successful! Using calculated proposal ID:", proposalId);
             
             const result = {
               success: true,
@@ -1441,7 +1316,6 @@ export async function createOracleMemberRemovalProposal({
             };
             
             // Save to database
-            console.log("💾 Saving member removal proposal to database...");
             const dbSaveResult = await saveProposalToDatabase({
               proposalId: BigInt(proposalId).toString(), // Convert hex to decimal to match blockchain format
               chain: 'Arbitrum',
@@ -1464,15 +1338,12 @@ export async function createOracleMemberRemovalProposal({
             });
             
             if (dbSaveResult.success) {
-              console.log("✅ DATABASE SAVE SUCCESSFUL for proposal:", proposalId);
             } else {
               console.error("❌ DATABASE SAVE FAILED:", dbSaveResult.error);
             }
             
-            console.log("Member removal proposal created successfully:", result);
             resolve(result);
           } else {
-            console.log("Transaction reverted");
             reject(new Error("Transaction reverted by the blockchain"));
           }
         })

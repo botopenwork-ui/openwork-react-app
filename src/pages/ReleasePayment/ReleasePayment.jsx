@@ -99,7 +99,6 @@ export default function ReleasePayment() {
   useEffect(() => {
     async function fetchJobDetails() {
       try {
-        console.log("🔍 Fetching job details for jobId:", jobId);
 
         // Use NOWJC contract on Arbitrum (dynamic based on network mode)
         const nativeChain = getNativeChain();
@@ -209,7 +208,6 @@ export default function ReleasePayment() {
         // Set the current milestone number (already 1-indexed from contract, 0 means no milestone)
         setCurrentMilestoneNumber(currentMilestone);
 
-        console.log("✅ Job details loaded successfully");
         setLoading(false);
       } catch (error) {
         console.error("❌ Error fetching job details:", error);
@@ -413,7 +411,6 @@ export default function ReleasePayment() {
         maxFeePerGas: gasPrice
       });
 
-      console.log(`✅ Payment release initiated on ${jobChainConfig.name}:`, releasePaymentTx.transactionHash);
 
       // ── Client-side cross-chain monitoring (no backend needed) ────────────
       const srcTxHash    = releasePaymentTx.transactionHash;
@@ -676,7 +673,6 @@ export default function ReleasePayment() {
         gas: 100000 // Set reasonable gas limit for approve
       });
 
-      console.log("✅ USDC approval successful");
       
       // Prepare LayerZero options and fee for lockNextMilestone
       setTransactionStatus("🔒 Getting LayerZero quote...");
@@ -729,7 +725,6 @@ export default function ReleasePayment() {
         maxFeePerGas: gasPriceLock
       });
 
-      console.log("✅ Milestone locked:", lockTx.transactionHash);
 
       // ── Client-side monitoring for lock milestone ─────────────────────────
       const lockTxHash = lockTx.transactionHash;

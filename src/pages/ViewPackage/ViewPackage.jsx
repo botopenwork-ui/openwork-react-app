@@ -13,7 +13,7 @@ export default function ViewPackage() {
         id: packageId,
         title: 'UX/UI Package',
         listedBy: {
-            username: 'molliehall2504',
+            username: '',
             avatar: '/assets/avatar-profile.png',
             profileUrl: '/profile'
         },

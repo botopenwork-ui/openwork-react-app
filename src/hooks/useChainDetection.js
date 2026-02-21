@@ -76,6 +76,13 @@ export function useChainDetection() {
 
     detectChain();
 
+    // Re-run detection if ethereum becomes available after mount (e.g. injected provider)
+    const handleEthereumInitialized = () => {
+      setIsLoading(true);
+      detectChain();
+    };
+    window.addEventListener('ethereum#initialized', handleEthereumInitialized);
+
     // Listen for chain changes
     if (window.ethereum) {
       const handleChainChanged = () => {

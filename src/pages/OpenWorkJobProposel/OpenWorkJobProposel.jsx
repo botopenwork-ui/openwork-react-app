@@ -137,7 +137,7 @@ export default function OpenWorkJobProposel() {
                                     type="text"
                                     value={walletAddress}
                                     onChange={(e) => setWalletAddress(e.target.value)}
-                                    placeholder="0xDEAF...fB8B"
+                                    placeholder="Enter wallet address (0x...)"
                                 />
                             </div>
                         </div>

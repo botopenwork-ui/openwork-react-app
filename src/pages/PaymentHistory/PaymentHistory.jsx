@@ -193,10 +193,10 @@ export default function PaymentHistory() {
           <Link className="goBack" to={`/payments/${jobId}`} style={{visibility:'hidden'}}><img className="goBackImage" src="/back.svg" alt="Back Button" /></Link>  
          </div>
          <div className="titleBottom"><p>  Contract ID:{" "}
-         {formatWalletAddress("0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d")}
+         {formatWalletAddress(walletAddress)}
          </p><img src="/copy.svg" className="copyImage" onClick={() =>
                  handleCopyToClipboard(
-                   "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d"
+                   walletAddress
                  )
                }
                /></div>
@@ -208,9 +208,9 @@ export default function PaymentHistory() {
             <span id="rel-title">Payment History</span>
           </div>
           <div className="release-payment-body payment-history-body">
-            <Milestone amount={25} title="Payment 2" content={"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."} editable={false}/>
-            <Milestone amount={25} title="Payment 1" content={"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."} editable={false}/>
-            <TransactionItem title={"transaction id"} address={"0xDEAFkqjfh0q8701fB8B"} icon={true}/>
+            <Milestone amount={25} title="Payment 2" content={""} editable={false}/>
+            <Milestone amount={25} title="Payment 1" content={""} editable={false}/>
+            {job && job.employer && <TransactionItem title={"transaction id"} address={job.employer} icon={true}/>}
           </div>
         </div>
       </div>

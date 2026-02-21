@@ -118,14 +118,14 @@ export default function ProfilePortfolioOwner() {
           <Link className="goBack" to={`/profile`}>
             <img className="goBackImage" src="/back.svg" alt="Back Button" />
           </Link>  
-          <div className="titleText">molliehall2504</div>
+          <div className="titleText">{formatWalletAddress(walletAddress)}</div>
         </div>
         <div className="titleBottom">
-          <p>Contract ID: {formatWalletAddress("0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d")}</p>
+          <p>Contract ID: {formatWalletAddress(walletAddress)}</p>
           <img 
             src="/copy.svg" 
             className="copyImage" 
-            onClick={() => handleCopyToClipboard("0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d")}
+            onClick={() => handleCopyToClipboard(walletAddress)}
           />
         </div>
       </div>

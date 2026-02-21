@@ -232,7 +232,7 @@ export default function Payments() {
               {" "}
               Contract ID:{" "}
               {formatWalletAddress(
-                "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d",
+                walletAddress,
               )}
             </p>
             <img
@@ -240,7 +240,7 @@ export default function Payments() {
               className="copyImage"
               onClick={() =>
                 handleCopyToClipboard(
-                  "0xdEF4B440acB1B11FDb23AF24e099F6cAf3209a8d",
+                  walletAddress,
                 )
               }
             />
