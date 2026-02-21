@@ -9,7 +9,7 @@ import StatusButton from "../../components/StatusButton/StatusButton";
 import DetailButton from "../../components/DetailButton/DetailButton";
 
 // Mainnet mode detection
-const IS_MAINNET = import.meta.env.VITE_MAINNET_MODE === 'true';
+const IS_MAINNET = import.meta.env.VITE_NETWORK_MODE === 'mainnet';
 
 // Contracts on Arbitrum (mainnet vs testnet)
 const CONTRACT_ADDRESS = IS_MAINNET
