@@ -506,3 +506,4 @@ export function getSupportedChainIds() {
 }
 
 export default CHAIN_CONFIG;
+// build: 20260221025451
