@@ -159,6 +159,12 @@ export function useWalletAddress() {
 
     checkConnection();
 
+    // Re-check when provider becomes available after mount
+    const handleEthereumInitialized = () => {
+      if (mounted) checkConnection();
+    };
+    window.addEventListener('ethereum#initialized', handleEthereumInitialized);
+
     // Listen for account changes
     if (window.ethereum) {
       const handleAccountsChanged = (accounts) => {
@@ -177,6 +183,7 @@ export function useWalletAddress() {
 
       return () => {
         mounted = false;
+        window.removeEventListener('ethereum#initialized', handleEthereumInitialized);
         if (window.ethereum.removeListener) {
           window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
         }
@@ -185,6 +192,7 @@ export function useWalletAddress() {
 
     return () => {
       mounted = false;
+      window.removeEventListener('ethereum#initialized', handleEthereumInitialized);
     };
   }, []);
 
