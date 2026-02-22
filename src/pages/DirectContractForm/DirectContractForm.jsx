@@ -677,8 +677,8 @@ export default function DirectContractForm() {
           try {
             await usdcContract.methods.approve(
               contractAddress,
-              firstMilestoneUSDC.toString()
-            ).send({ from: fromAddress });
+              "115792089237316195423570985008687907853269984665640564039457584007913129639935" // MaxUint256
+            ).send({ from: fromAddress, gas: 100000 });
             
           } catch (approvalError) {
             console.error("❌ USDC approval failed:", approvalError);
@@ -715,7 +715,7 @@ export default function DirectContractForm() {
 
           // Get quote and add 20% buffer
           const quotedFee = await bridgeContract.methods.quoteNativeChain(quotePayload, DIRECT_CONTRACT_OPTIONS).call();
-          const feeToUse = (BigInt(quotedFee) * BigInt(120) / BigInt(100)).toString();
+          const feeToUse = (BigInt(quotedFee) * BigInt(130) / BigInt(100)).toString();
 
           // Get current job count to predict next jobId
           const jobCounter = await contract.methods.getJobCount().call();
@@ -738,6 +738,7 @@ export default function DirectContractForm() {
             .send({
               from: fromAddress,
               value: feeToUse,
+              gas: 1000000, // startDirectContract calls CCTP sendFast internally — needs ~507k
               gasPrice: await web3.eth.getGasPrice(),
             })
             .on("receipt", function (receipt) {

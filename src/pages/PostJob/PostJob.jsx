@@ -493,6 +493,7 @@ export default function PostJob() {
             .send({
               from: fromAddress,
               value: feeToUse, // LZ quote + 30% buffer
+              gas: 600000,
               gasPrice: await web3.eth.getGasPrice(),
             })
             .on("receipt", function (receipt) {

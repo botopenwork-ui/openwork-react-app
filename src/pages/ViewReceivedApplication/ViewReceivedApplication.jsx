@@ -566,11 +566,13 @@ export default function ViewReceivedApplication() {
         ['startJob', walletAddress, jobId, parseInt(applicationId), useAppMilestones]
       );
 
-      // Get quote from bridge and add 20% buffer
+      // Get quote from bridge and add 30% buffer + CCTP buffer
       const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, lzOptions).call();
-      const lzFee = BigInt(quotedFee) * BigInt(120) / BigInt(100); // +20% buffer
+      const lzFee = BigInt(quotedFee) * BigInt(130) / BigInt(100); // +30% buffer
+      const cctpBuffer = BigInt(web3.utils.toWei('0.0003', 'ether')); // safety buffer for CCTP relay
+      const totalFee = lzFee + cctpBuffer;
       console.log(`💰 LayerZero quote: ${web3.utils.fromWei(quotedFee.toString(), 'ether')} ETH`);
-      console.log(`💰 With 20% buffer: ${web3.utils.fromWei(lzFee.toString(), 'ether')} ETH`);
+      console.log(`💰 Total (LZ+30%+buffer): ${web3.utils.fromWei(totalFee.toString(), 'ether')} ETH`);
 
       // Get current gas price for EIP-1559
       const gasPrice = await web3.eth.getGasPrice();
@@ -584,7 +586,7 @@ export default function ViewReceivedApplication() {
         lzOptions
       ).send({
         from: walletAddress,
-        value: lzFee.toString(),
+        value: totalFee.toString(),
         gas: 1000000, // Higher gas for USDC transfer + LZ + CCTP
         maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
         maxFeePerGas: gasPrice

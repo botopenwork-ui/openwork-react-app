@@ -388,11 +388,13 @@ export default function ReleasePayment() {
         ['releasePaymentCrossChain', jobId, walletAddress, destinationDomain, job.selectedApplicant]
       );
 
-      // Get quote and add 20% buffer
+      // Get quote and add 30% buffer + 0.0003 ETH for CCTP fast-path fee
       const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, nativeOptions).call();
-      const lzFee = BigInt(quotedFee) * BigInt(120) / BigInt(100); // +20% buffer
+      const lzFee = BigInt(quotedFee) * BigInt(130) / BigInt(100); // +30% buffer
+      const cctpBuffer = BigInt(web3.utils.toWei('0.0003', 'ether')); // CCTP sendFast fee
+      const totalFee = lzFee + cctpBuffer;
       console.log(`💰 LayerZero quote: ${web3.utils.fromWei(quotedFee.toString(), 'ether')} ETH`);
-      console.log(`💰 With 20% buffer: ${web3.utils.fromWei(lzFee.toString(), 'ether')} ETH`);
+      console.log(`💰 Total (LZ+30%+CCTP buffer): ${web3.utils.fromWei(totalFee.toString(), 'ether')} ETH`);
 
       setTransactionStatus(`💰 Releasing payment on ${jobChainConfig.name} - Please confirm in MetaMask`);
 
@@ -405,7 +407,7 @@ export default function ReleasePayment() {
         nativeOptions
       ).send({
         from: walletAddress,
-        value: lzFee.toString(),
+        value: totalFee.toString(),
         gas: 800000,
         maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
         maxFeePerGas: gasPrice
@@ -705,7 +707,7 @@ export default function ReleasePayment() {
 
       // Get quote and add 20% buffer
       const quotedFeeLock = await bridgeContractLock.methods.quoteNativeChain(payloadLock, nativeOptions).call();
-      const lzFeeLock = BigInt(quotedFeeLock) * BigInt(120) / BigInt(100); // +20% buffer
+      const lzFeeLock = BigInt(quotedFeeLock) * BigInt(130) / BigInt(100); // +30% buffer
       console.log(`💰 LayerZero quote: ${web3.utils.fromWei(quotedFeeLock.toString(), 'ether')} ETH`);
       console.log(`💰 With 20% buffer: ${web3.utils.fromWei(lzFeeLock.toString(), 'ether')} ETH`);
 

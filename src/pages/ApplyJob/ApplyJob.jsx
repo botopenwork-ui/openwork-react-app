@@ -282,7 +282,7 @@ export default function ApplyJob() {
 
       // Get quote and add 20% buffer
       const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, lzOptions).call();
-      const lzFee = BigInt(quotedFee) * BigInt(120) / BigInt(100); // +20% buffer
+      const lzFee = BigInt(quotedFee) * BigInt(130) / BigInt(100); // +30% buffer
 
       // Get current application count before submitting (to detect when new one syncs)
       setTransactionStatus(`Checking current application count...`);
@@ -307,7 +307,7 @@ export default function ApplyJob() {
       ).send({
         from: walletAddress,
         value: lzFee.toString(),
-        gas: 500000,
+        gas: 600000,
         maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
         maxFeePerGas: gasPrice
       });

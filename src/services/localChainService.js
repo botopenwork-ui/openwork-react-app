@@ -77,12 +77,12 @@ export async function getAthenaClientContract(chainId) {
 
 /**
  * Estimate LayerZero fee by calling quoteNativeChain() on the LocalBridge.
- * Adds a 20% buffer on top of the quote for safety.
+ * Adds a 30% buffer on top of the quote for safety.
  *
  * @param {number} chainId       - Source chain ID
  * @param {string} operationKey  - Key from DESTINATION_GAS_ESTIMATES (e.g. "POST_JOB")
  * @param {object} [extraPayload] - Optional extra params to encode into the quote payload
- * @returns {Promise<string>} Fee in wei (with 20% buffer)
+ * @returns {Promise<string>} Fee in wei (with 30% buffer)
  */
 export async function estimateLayerZeroFee(chainId, operationKey, extraPayload = {}) {
   // Safe fallback — never let a quote failure block the user
@@ -118,10 +118,10 @@ export async function estimateLayerZeroFee(chainId, operationKey, extraPayload =
     const rawFee = await bridgeContract.methods.quoteNativeChain(encodedPayload, nativeOptions).call();
 
     // +20% safety buffer
-    const feeWithBuffer = (BigInt(rawFee) * BigInt(120)) / BigInt(100);
+    const feeWithBuffer = (BigInt(rawFee) * BigInt(130)) / BigInt(100); // +30% buffer (not 20%)
     console.log(
       `[LZ quote] ${operationKey}: ${web3.utils.fromWei(rawFee.toString(), "ether")} ETH → ` +
-      `+20% buffer = ${web3.utils.fromWei(feeWithBuffer.toString(), "ether")} ETH`
+      `+30% buffer = ${web3.utils.fromWei(feeWithBuffer.toString(), "ether")} ETH`
     );
 
     return feeWithBuffer.toString();
@@ -327,7 +327,7 @@ export async function raiseDispute(chainId, userAddress, disputeData, onStatus) 
       disputeData.feeAmount,
       disputeData.disputedAmount,
       nativeOptions
-    ).send({ from: userAddress, value: lzFee });
+    ).send({ from: userAddress, value: lzFee, gas: 600000 });
 
     emit(`Dispute submitted: ${tx.transactionHash}`);
     console.log(`[raiseDispute] confirmed on ${config.name}:`, tx.transactionHash);
@@ -361,7 +361,7 @@ export async function createProfile(chainId, userAddress, profileData, onStatus)
       profileData.ipfsHash,
       profileData.referrerAddress || "0x0000000000000000000000000000000000000000",
       nativeOptions
-    ).send({ from: userAddress, value: lzFee });
+    ).send({ from: userAddress, value: lzFee, gas: 400000 });
 
     emit(`Profile created: ${tx.transactionHash}`);
     console.log(`[createProfile] confirmed on ${config.name}:`, tx.transactionHash);
@@ -392,7 +392,7 @@ export async function addPortfolio(chainId, userAddress, portfolioHash, onStatus
     const tx = await contract.methods.addPortfolio(
       portfolioHash,
       nativeOptions
-    ).send({ from: userAddress, value: lzFee });
+    ).send({ from: userAddress, value: lzFee, gas: 400000 });
 
     emit(`Portfolio added: ${tx.transactionHash}`);
     console.log(`[addPortfolio] confirmed on ${config.name}:`, tx.transactionHash);
