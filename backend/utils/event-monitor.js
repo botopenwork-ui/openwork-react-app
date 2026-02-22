@@ -49,10 +49,10 @@ async function waitForNOWJCEvent(eventName, jobId, timeout = config.EVENT_DETECT
     try {
       const latestBlock = await web3.eth.getBlockNumber();
       
-      // 500 blocks per scan — Alchemy free tier supports up to 2000 for eth_getLogs.
-      // 5 was way too conservative: 7500÷5=1500 API calls just to catch up (≥6 min of CU burn).
-      // 500 blocks per call: 7500÷500=15 calls to catch up; lookback=100 is just 1 call.
-      const maxBlockRange = 500;
+      // 10 blocks per scan — Alchemy free tier hard limit for eth_getLogs block range.
+      // The real speedup comes from lookbackBlocks=200 (vs old 7500):
+      //   Old: 7500÷5=1500 calls. New: 200÷10=20 calls. 75x faster.
+      const maxBlockRange = 10;
       const toBlock = Math.min(
         Number(latestBlock),
         Number(currentBlock) + maxBlockRange
