@@ -396,7 +396,7 @@ export default function ReleasePayment() {
       console.log(`💰 LayerZero quote: ${web3.utils.fromWei(quotedFee.toString(), 'ether')} ETH`);
       console.log(`💰 Total (LZ+30%+CCTP buffer): ${web3.utils.fromWei(totalFee.toString(), 'ether')} ETH`);
 
-      setTransactionStatus(`💰 Releasing payment on ${jobChainConfig.name} - Please confirm in MetaMask`);
+      setTransactionStatus(`💰 Network fee: ~${parseFloat(web3.utils.fromWei(totalFee.toString(), 'ether')).toFixed(5)} ETH — Please confirm in MetaMask`);
 
       const gasPrice = await web3.eth.getGasPrice();
 
@@ -516,8 +516,8 @@ export default function ReleasePayment() {
 
     const checkStatus = async () => {
       if (attempts >= maxAttempts) {
-        setTransactionStatus("⏱️ Still processing... Check back later");
-        setIsProcessing(false);
+        setTransactionStatus("⏱️ Cross-chain transfer is taking longer than expected (~5 min). The payment is being processed — check the LayerZero tracker above or refresh in a few minutes.");
+          setIsProcessing(false);
         return;
       }
 
@@ -528,6 +528,7 @@ export default function ReleasePayment() {
         if (status.status === 'completed') {
           setTransactionStatus("🎉 Milestone payment released successfully to the applicant!");
           setIsProcessing(false);
+          setTimeout(() => window.location.reload(), 3000);
           return;
         } else if (status.status === 'failed') {
           setTransactionStatus(`❌ Payment failed: ${status.error || status.message || 'Unknown error'}`);

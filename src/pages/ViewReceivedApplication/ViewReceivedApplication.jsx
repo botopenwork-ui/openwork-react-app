@@ -577,7 +577,7 @@ export default function ViewReceivedApplication() {
       // Get current gas price for EIP-1559
       const gasPrice = await web3.eth.getGasPrice();
 
-      setTransactionStatus(`🔧 Step 2/3: Starting job on ${jobChainConfig.name} - Please confirm in MetaMask`);
+      setTransactionStatus(`🔧 Step 2/3: Network fee ~${parseFloat(web3.utils.fromWei(totalFee.toString(), 'ether')).toFixed(5)} ETH — Please confirm in MetaMask`);
 
       const startJobTx = await lowjcContract.methods.startJob(
         jobId,

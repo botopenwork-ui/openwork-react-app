@@ -59,6 +59,7 @@ export default function PostJob() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [transactionStatus, setTransactionStatus] = useState("Job posting requires blockchain transaction fees");
   const [crossChainSteps, setCrossChainSteps] = useState(null); // null = not started
+  const [isProcessing, setIsProcessing] = useState(false);
   const [milestones, setMilestones] = useState([
     {
       title: "Milestone 1",
@@ -374,6 +375,7 @@ export default function PostJob() {
 
     if (window.ethereum) {
       try {
+        setIsProcessing(true);
         setLoadingT(true);
         setTransactionStatus("Preparing transaction...");
 
@@ -480,8 +482,9 @@ export default function PostJob() {
           // Dynamic fee from LayerZero quote — add +30% buffer for safety
           const feeToUse = (BigInt(quotedFee) * BigInt(130) / BigInt(100)).toString();
           
-          // Step 6: Call postJob function with milestone hashes as descriptions
-          setTransactionStatus(`Sending transaction on ${chainConfig.name}...`);
+          // Show fee estimate before MetaMask opens
+          const feeEth = parseFloat(web3.utils.fromWei(feeToUse, 'ether')).toFixed(5);
+          setTransactionStatus(`💰 Network fee: ~${feeEth} ETH — Please confirm in MetaMask`);
           
           contract.methods
             .postJob(
@@ -598,14 +601,17 @@ export default function PostJob() {
           console.error("Failed to pin job details to IPFS");
           setTransactionStatus("❌ Failed to upload job details to IPFS");
           setLoadingT(false);
+          setIsProcessing(false);
         }
       } catch (error) {
         console.error("Error in handleSubmit:", error);
         setLoadingT(false);
+        setIsProcessing(false);
       }
     } else {
       console.error("MetaMask not detected");
       setLoadingT(false);
+      setIsProcessing(false);
     }
   };
 
@@ -768,9 +774,10 @@ export default function PostJob() {
               </div>
             </div>
             <BlueButton
-              label="Post Job"
+              label={isProcessing ? 'Posting...' : 'Post Job'}
               style={{ width: "100%", justifyContent: "center" }}
               onClick={handleSubmit}
+              disabled={isProcessing}
             />
             <div className="warning-form">
               <Warning content={transactionStatus} />
