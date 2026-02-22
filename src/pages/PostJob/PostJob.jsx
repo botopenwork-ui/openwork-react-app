@@ -477,8 +477,8 @@ export default function PostJob() {
           
           const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, layerzeroOptions).call();
           
-          // Dynamic fee from LayerZero quote
-          const feeToUse = quotedFee;
+          // Dynamic fee from LayerZero quote — add +30% buffer for safety
+          const feeToUse = (BigInt(quotedFee) * BigInt(130) / BigInt(100)).toString();
           
           // Step 6: Call postJob function with milestone hashes as descriptions
           setTransactionStatus(`Sending transaction on ${chainConfig.name}...`);
@@ -492,7 +492,7 @@ export default function PostJob() {
             )
             .send({
               from: fromAddress,
-              value: feeToUse, // Using fixed 0.001 ETH (switch to quotedFee for dynamic)
+              value: feeToUse, // LZ quote + 30% buffer
               gasPrice: await web3.eth.getGasPrice(),
             })
             .on("receipt", function (receipt) {

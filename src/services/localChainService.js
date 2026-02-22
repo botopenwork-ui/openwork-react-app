@@ -156,7 +156,7 @@ export async function postJob(chainId, userAddress, jobData, onStatus) {
       jobData.descriptions,
       jobData.amounts,
       nativeOptions
-    ).send({ from: userAddress, value: lzFee });
+    ).send({ from: userAddress, value: lzFee, gas: 600000 });
 
     emit(`Transaction confirmed: ${tx.transactionHash}`);
     console.log(`[postJob] confirmed on ${config.name}:`, tx.transactionHash);
@@ -192,7 +192,7 @@ export async function applyToJob(chainId, userAddress, applicationData, onStatus
       applicationData.preferredChainDomain || 3,
       applicationData.preferredPaymentAddress || userAddress,
       nativeOptions
-    ).send({ from: userAddress, value: lzFee });
+    ).send({ from: userAddress, value: lzFee, gas: 600000 });
 
     emit(`Application submitted: ${tx.transactionHash}`);
     console.log(`[applyToJob] confirmed on ${config.name}:`, tx.transactionHash);
@@ -225,7 +225,7 @@ export async function startJob(chainId, userAddress, startData, onStatus) {
       startData.applicationId,
       startData.useAppMilestones || false,
       nativeOptions
-    ).send({ from: userAddress, value: lzFee });
+    ).send({ from: userAddress, value: lzFee, gas: 1000000 });
 
     emit(`Job started: ${tx.transactionHash}`);
     console.log(`[startJob] confirmed on ${config.name}:`, tx.transactionHash);
@@ -257,7 +257,7 @@ export async function submitWork(chainId, userAddress, workData, onStatus) {
       workData.jobId,
       workData.submissionHash,
       nativeOptions
-    ).send({ from: userAddress, value: lzFee });
+    ).send({ from: userAddress, value: lzFee, gas: 600000 });
 
     emit(`Work submitted: ${tx.transactionHash}`);
     console.log(`[submitWork] confirmed on ${config.name}:`, tx.transactionHash);
@@ -290,7 +290,7 @@ export async function releasePaymentCrossChain(chainId, userAddress, paymentData
       paymentData.targetChainDomain,
       paymentData.targetRecipient,
       nativeOptions
-    ).send({ from: userAddress, value: lzFee });
+    ).send({ from: userAddress, value: lzFee, gas: 800000 });
 
     emit(`Payment release confirmed: ${tx.transactionHash}`);
     console.log(`[releasePayment] confirmed on ${config.name}:`, tx.transactionHash);
@@ -438,7 +438,8 @@ export async function approveUSDC(chainId, userAddress, spender, amount) {
     const usdcContract = new web3.eth.Contract(erc20ABI, config.contracts.usdc);
     
     const tx = await usdcContract.methods.approve(spender, amount).send({
-      from: userAddress
+      from: userAddress,
+      gas: 100000
     });
     
     console.log(`USDC approved on ${config.name}:`, tx.transactionHash);
