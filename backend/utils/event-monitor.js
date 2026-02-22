@@ -10,18 +10,18 @@ const processedEventTxHashes = new Set();
  * @param {string} eventName - Event name ('JobStarted' or 'PaymentReleased')
  * @param {string} jobId - Job ID to filter by
  * @param {number} timeout - Timeout in milliseconds
+ * @param {number} lookbackBlocks - How many blocks to look back from current (default 7500 for cold starts; pass 100 for API-triggered flows where event is imminent)
  * @returns {Promise<string>} Transaction hash of the event
  */
-async function waitForNOWJCEvent(eventName, jobId, timeout = config.EVENT_DETECTION_TIMEOUT) {
+async function waitForNOWJCEvent(eventName, jobId, timeout = config.EVENT_DETECTION_TIMEOUT, lookbackBlocks = 7500) {
   console.log(`🔍 Monitoring NOWJC contract for ${eventName} event (jobId: ${jobId})...`);
-  console.log(`   Network Mode: ${config.NETWORK_MODE}`);
+  console.log(`   Network Mode: ${config.NETWORK_MODE}, lookback: ${lookbackBlocks} blocks`);
 
   const web3 = new Web3(config.ARBITRUM_RPC);
   const nowjcContract = new web3.eth.Contract(config.ABIS.NOWJC_EVENTS, config.NOWJC_ADDRESS);
   
-  // Look back 7500 blocks (~30 min on Arbitrum @4 blocks/sec) — handles Cloud Run cold starts
   const latestBlockInitial = await web3.eth.getBlockNumber();
-  const startBlock = BigInt(latestBlockInitial) - 7500n; 
+  const startBlock = BigInt(latestBlockInitial) - BigInt(lookbackBlocks); 
   const startTime = Date.now();
   const endTime = startTime + timeout;
   
@@ -49,8 +49,10 @@ async function waitForNOWJCEvent(eventName, jobId, timeout = config.EVENT_DETECT
     try {
       const latestBlock = await web3.eth.getBlockNumber();
       
-      // Limit block range to 5 for free-tier RPC (safer than 10)
-      const maxBlockRange = 5;
+      // 500 blocks per scan — Alchemy free tier supports up to 2000 for eth_getLogs.
+      // 5 was way too conservative: 7500÷5=1500 API calls just to catch up (≥6 min of CU burn).
+      // 500 blocks per call: 7500÷500=15 calls to catch up; lookback=100 is just 1 call.
+      const maxBlockRange = 500;
       const toBlock = Math.min(
         Number(latestBlock),
         Number(currentBlock) + maxBlockRange

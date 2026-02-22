@@ -46,7 +46,7 @@ async function processReleasePayment(jobId, statusMap, statusKey) {
     console.log('⏳ Waiting 30 seconds for LayerZero message propagation...');
     await new Promise(resolve => setTimeout(resolve, 30000)); // 30 second delay
     
-    const nowjcTxHash = await waitForNOWJCEvent('PaymentReleased', jobId);
+    const nowjcTxHash = await waitForNOWJCEvent('PaymentReleased', jobId, undefined, 200);
     console.log(`✅ PaymentReleased detected: ${nowjcTxHash}`);
     
     // Save to database - use dynamic chain name based on network mode

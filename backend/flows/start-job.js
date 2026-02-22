@@ -30,7 +30,7 @@ async function processStartJob(jobId, sourceTxHash) {
   try {
     // STEP 1: Monitor NOWJC for JobStarted event
     console.log('\n📍 STEP 1/3: Monitoring for JobStarted event on Arbitrum...');
-    const nowjcTxHash = await waitForNOWJCEvent('JobStarted', jobId);
+    const nowjcTxHash = await waitForNOWJCEvent('JobStarted', jobId, undefined, 200);
     console.log(`✅ JobStarted detected: ${nowjcTxHash}`);
     
     // STEP 2: Poll Circle API for CCTP attestation
