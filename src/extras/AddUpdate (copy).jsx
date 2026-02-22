@@ -5,7 +5,7 @@ import JobContractABI from "./JobContractABI.json";
 import "./AddUpdate.css";
 
 const pinataApiKey = "44d5fb3f1681a0c9a9d7";
-const pinataSecretApiKey = "REDACTED_PINATA_SECRET";
+const pinataSecretApiKey = process.env.VITE_PINATA_SECRET_KEY;
 const contractAddress = "0xc2871b49565020e66E8dEa4a8763ee4924a6819b";
 
 export default function AddUpdate() {

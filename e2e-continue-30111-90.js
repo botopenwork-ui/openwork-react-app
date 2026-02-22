@@ -26,8 +26,8 @@ const CONTRACTS = {
 const CCTP_DOMAIN_ARBITRUM = 3;
 const LZ_OPTIONS = '0x0003010011010000000000000000000000000007a120';
 
-const WALLET1_PK = '0xREDACTED_W1_PRIVATE_KEY';
-const WALLET2_PK = '0xREDACTED_W2_PRIVATE_KEY';
+const WALLET1_PK = process.env.WALLET1_PRIVATE_KEY;
+const WALLET2_PK = process.env.WALLET2_PRIVATE_KEY;
 
 const LOWJC_ABI = [
   'function applyToJob(string _jobId, string _appHash, string[] _descriptions, uint256[] _amounts, uint32 _preferredChainDomain, bytes _nativeOptions) payable',
