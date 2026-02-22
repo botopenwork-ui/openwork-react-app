@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import "./ChainSelector.css";
 import { useChainDetection } from "../../functions/useChainDetection";
 
@@ -8,7 +8,21 @@ import { useChainDetection } from "../../functions/useChainDetection";
  */
 const ChainSelector = ({ walletAddress }) => {
   const [showDropdown, setShowDropdown] = useState(false);
-  
+  const wrapperRef = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    if (showDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showDropdown]);
+
   // Get all chain state and functions from the hook
   const {
     currentChainId,
@@ -44,7 +58,6 @@ const ChainSelector = ({ walletAddress }) => {
           onClick={async () => {
             try {
               await window.ethereum?.request({ method: 'eth_requestAccounts' });
-              // Re-trigger detection by reloading (hook will pick up new accounts)
               window.location.reload();
             } catch (err) {
               console.warn('Wallet connection rejected:', err);
@@ -57,41 +70,29 @@ const ChainSelector = ({ walletAddress }) => {
     );
   }
 
-  // Get current chain info (or default to first supported chain if unknown)
   const currentChain = supportedChains[currentChainId] || Object.values(supportedChains)[0];
   const isUnknownChain = !supportedChains[currentChainId];
 
-  // Handle chain selection
   const handleChainClick = async (chainId) => {
-    console.log('🎯 handleChainClick called for chain:', chainId);
     setShowDropdown(false);
     await switchToChain(chainId);
   };
 
   return (
-    <div className="chain-selector-wrapper">
+    <div className="chain-selector-wrapper" ref={wrapperRef}>
       <div
         className="chain-selector-button"
         onClick={() => !isSwitching && setShowDropdown(!showDropdown)}
         style={{ cursor: isSwitching ? 'wait' : 'pointer' }}
       >
-        <img
-          src={currentChain.icon}
-          alt={currentChain.name}
-          className="chain-icon"
-        />
+        <img src={currentChain.icon} alt={currentChain.name} className="chain-icon" />
         <span>
           {isSwitching ? "Switching..." : currentChain.name}
           {isUnknownChain && " (Unknown)"}
         </span>
-        <img
-          src="/chevron-down-small.svg"
-          alt="dropdown"
-          className="dropdown-icon"
-        />
+        <img src="/chevron-down-small.svg" alt="dropdown" className="dropdown-icon" />
       </div>
 
-      {/* Chain Dropdown */}
       {showDropdown && !isSwitching && (
         <div className="chain-dropdown-tooltip">
           <div className="tooltip-arrow"></div>
@@ -101,23 +102,14 @@ const ChainSelector = ({ walletAddress }) => {
               {Object.entries(supportedChains).map(([chainId, chain]) => {
                 const chainIdNum = parseInt(chainId);
                 const isSelected = currentChainId === chainIdNum;
-                
                 return (
-                  <div
-                    key={chainId}
-                    className="chain-option"
-                    onClick={() => handleChainClick(chainIdNum)}
-                  >
+                  <div key={chainId} className="chain-option" onClick={() => handleChainClick(chainIdNum)}>
                     <img
                       src={isSelected ? "/radio-button-checked.svg" : "/radio-button-unchecked.svg"}
                       alt="radio"
                       className="radio-icon"
                     />
-                    <img 
-                      src={chain.icon} 
-                      alt={chain.name} 
-                      className="chain-icon" 
-                    />
+                    <img src={chain.icon} alt={chain.name} className="chain-icon" />
                     <span>{chain.name}</span>
                   </div>
                 );
