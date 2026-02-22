@@ -259,6 +259,19 @@ export function useChainDetection(walletAddress) {
     };
   }, [detectCurrentChain]);
 
+  // Effect: Handle late-arriving ethereum provider (MetaMask loads after React, or mock injection)
+  useEffect(() => {
+    const handleEthereumInitialized = () => {
+      if (walletAddress) {
+        console.log('🔄 ethereum#initialized — re-detecting chain');
+        setIsDetecting(true);
+        setTimeout(() => detectCurrentChain(), 100);
+      }
+    };
+    window.addEventListener('ethereum#initialized', handleEthereumInitialized);
+    return () => window.removeEventListener('ethereum#initialized', handleEthereumInitialized);
+  }, [walletAddress, detectCurrentChain]);
+
   return {
     currentChainId,
     isDetecting,
