@@ -510,12 +510,14 @@ export default function ViewReceivedApplication() {
       console.log(`📊 Current allowance: ${parseFloat(currentAllowance) / 1000000} USDC, Required: ${firstMilestoneAmount} USDC`);
 
       if (BigInt(currentAllowance) < BigInt(amountInUSDCUnits)) {
-        setTransactionStatus(`💰 Step 1/3: Approving ${firstMilestoneAmount} USDC spending - Please confirm in MetaMask`);
+        setTransactionStatus(`💰 Step 1/3: Approving USDC spending (MaxUint256) - Please confirm in MetaMask`);
 
+        // Approve MaxUint256 so the contract never needs re-approval
+        const MAX_UINT256 = "115792089237316195423570985008687907853269984665640564039457584007913129639935";
         const approveTx = await usdcContract.methods.approve(
           lowjcAddress,
-          amountInUSDCUnits.toString()
-        ).send({ from: walletAddress });
+          MAX_UINT256
+        ).send({ from: walletAddress, gas: 100000 });
 
         if (!approveTx || !approveTx.transactionHash) {
           throw new Error("Approval transaction failed");
@@ -583,7 +585,7 @@ export default function ViewReceivedApplication() {
       ).send({
         from: walletAddress,
         value: lzFee.toString(),
-        gas: 800000, // Higher gas for USDC transfer + LZ + CCTP
+        gas: 1000000, // Higher gas for USDC transfer + LZ + CCTP
         maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
         maxFeePerGas: gasPrice
       });

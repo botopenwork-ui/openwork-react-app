@@ -24,11 +24,34 @@ const ChainSelector = ({ walletAddress }) => {
   }
 
   // Show loading state while detecting
-  if (isDetecting || currentChainId === null) {
+  if (isDetecting) {
     return (
       <div className="chain-selector-wrapper">
         <div className="chain-selector-button">
           <span>Detecting...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Detection done but no chain found — prompt wallet connection
+  if (currentChainId === null) {
+    return (
+      <div className="chain-selector-wrapper">
+        <div
+          className="chain-selector-button"
+          style={{ cursor: 'pointer' }}
+          onClick={async () => {
+            try {
+              await window.ethereum?.request({ method: 'eth_requestAccounts' });
+              // Re-trigger detection by reloading (hook will pick up new accounts)
+              window.location.reload();
+            } catch (err) {
+              console.warn('Wallet connection rejected:', err);
+            }
+          }}
+        >
+          <span>Connect Wallet</span>
         </div>
       </div>
     );

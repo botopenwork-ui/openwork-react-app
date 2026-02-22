@@ -406,7 +406,7 @@ export default function ReleasePayment() {
       ).send({
         from: walletAddress,
         value: lzFee.toString(),
-        gas: 500000,
+        gas: 800000,
         maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
         maxFeePerGas: gasPrice
       });
