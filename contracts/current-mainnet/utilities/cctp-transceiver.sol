@@ -131,7 +131,7 @@ contract CCTPTransceiver {
             address(usdc),
             bytes32(0),
             maxFee,
-            0   // minFinalityThreshold=0 → fast transfer (instant Circle attestation when maxFee > 0)
+            1000
         );
         
         emit FastTransferSent(amount, destinationDomain, mintRecipient, maxFee);
