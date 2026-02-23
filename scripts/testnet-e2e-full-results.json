@@ -1,0 +1,20 @@
+{
+  "testedAt": "2026-02-23T15:53:00.415Z",
+  "contracts": {
+    "mockGenesis": "0x80AA520dB868dc234ea852fC23Fa7c03e217Dad2",
+    "nowjcProxy": "0xA4e66E865D6569dc1b9fD5979e132e17Fe99580C",
+    "lowjcProxy": "0xD1198FAA17EBbaBcdF01D7F225A18953A37cB734"
+  },
+  "jobId": "421614-1",
+  "links": {
+    "postJob": "https://sepolia.arbiscan.io/tx/0x66ba86c9fda4b09caa3200173c7d07faef1b947cdf7f7767936686d4fc28cf1c",
+    "applyToJob": "https://sepolia.arbiscan.io/tx/0xbf81740a7952067320cb106a4b703e2c90da52985072b45bb2bc3c6966dc4c91",
+    "startJob": "https://sepolia.arbiscan.io/tx/0x0836e2f19db6f26904cb49397226384690670b93346eaa1e08d309154d06224e",
+    "submitWork": "https://sepolia.arbiscan.io/tx/0x3969bedae057f07fa66aef989e378ced04ccfdcdae70d0b7b29cf235462c98f9",
+    "releasePayment": "https://sepolia.arbiscan.io/tx/0xc6cdfae13f874798f7ad4fd1e0ec413581ae79e439b1f0c2fcb7f1c0cd17877b"
+  },
+  "wallets": {
+    "w1": "0xb8dC69937e745Fd02661BC4333f3852166eF2026",
+    "w2": "0xc7dE65fB904397bc123618F03eA04267bC6be82B"
+  }
+}
