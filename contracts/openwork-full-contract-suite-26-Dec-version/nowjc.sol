@@ -224,7 +224,6 @@ contract NativeOpenWorkJobContract is
     
     event ProfileCreated(address indexed user, string ipfsHash, address referrer);
     event ProfileUpdated(address indexed user, string newIpfsHash);
-    event PortfolioAdded(address indexed user, string portfolioHash);
     event JobPosted(string indexed jobId, address indexed jobGiver, string jobDetailHash);
     event JobApplication(string indexed jobId, uint256 indexed applicationId, address indexed applicant, string applicationHash);
     event JobStarted(string indexed jobId, uint256 indexed applicationId, address indexed selectedApplicant, bool useApplicantMilestones);
