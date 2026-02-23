@@ -1,0 +1,25 @@
+{
+  "testedAt": "2026-02-23T19:32:20.478Z",
+  "contracts": {
+    "genesisProxy": "0x84465Dc27D73d9ED7BCb2602C449e66F39db90A3",
+    "nowjcProxy": "0x33e660d4b4e4585c80f04b7843db54Dcb514EE6f",
+    "lowjcProxy": "0x66E47575Ba69e5CCb8bF393B659d1294F51FeEa2",
+    "athenaProxy": "0x246003840dde5B835E4b5e4E134eb7fC634FA60D"
+  },
+  "flow1": {
+    "jobId": "421614-1",
+    "createProfileW1": "https://sepolia.arbiscan.io/tx/0x193d9864f3ddf4cd1dd92ad0d44f18e4fcd8c9f940c94f38ba1deb3a31777a54",
+    "createProfileW2": "https://sepolia.arbiscan.io/tx/0x69e79a8d09db8c092f711de199da4b540ac0751a839541d1e83d37eeb5271d38",
+    "postJob": "https://sepolia.arbiscan.io/tx/0xb04b156ad9627f05f1d63e172e97fc333a33afab0e4a855214ff25e08e3a264d",
+    "applyToJob": "https://sepolia.arbiscan.io/tx/0x904a1f89468f198949edfe603f8c3d2b9f05307e70e1c49791c5efd3e1da8aa2",
+    "startJob": "https://sepolia.arbiscan.io/tx/0xfebb9808b6b2d52d5bc13bf1a16ca54c46e8d5912d83398d84f5e4834e174766",
+    "submitWork": "https://sepolia.arbiscan.io/tx/0xb9c63699f4d78361d8ef55f3e3a1a680f37e721f673e97e929015b4390ad38ad",
+    "releasePayment": "https://sepolia.arbiscan.io/tx/0x56a903329428e6f1834861ada5c2f7f6114c2dfb3029e99914c97d01628e21ba"
+  },
+  "flow2": {
+    "jobId": "421614-2",
+    "startDirectContract": "https://sepolia.arbiscan.io/tx/0x4cdc5b0f63f5375764e5ad38de48467f3ca3b80ae9480fbdcb5a663825636822",
+    "submitWork": "https://sepolia.arbiscan.io/tx/0x421f8e786a8fff0ec0a66b1d714049c4184dabe57d2ed572d44d336412d444e9",
+    "releasePayment": "https://sepolia.arbiscan.io/tx/0xf55c2de0ad5d654e2530e8a779659fc3d23a7a7764946113c4933e8edf3bd5eb"
+  }
+}

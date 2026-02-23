@@ -602,7 +602,12 @@ contract NativeOpenWorkJobContract is
     }*/
 
     // ==================== JOB MANAGEMENT FUNCTIONS ====================
-    
+
+    /// @notice Profile stub — LOWJC sets its own hasProfile; no Genesis sync needed
+    function createProfile(address, string memory, address) external {
+        require(authorizedContracts[msg.sender], "Not authorized");
+    }
+
     /* COMMENTED OUT TO SAVE CONTRACT SIZE - Use Genesis directly for profiles
     function createProfile(address _user, string memory _ipfsHash, address _referrerAddress) external {
         require(!genesis.hasProfile(_user), "Profile exists");
