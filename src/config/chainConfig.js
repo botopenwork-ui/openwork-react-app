@@ -14,9 +14,10 @@
 
 // Chain Types
 export const CHAIN_TYPES = {
-  NATIVE: "native",   // Arbitrum - Central hub, read-only
-  LOCAL: "local",     // OP, etc. - User transactions
-  MAIN: "main"        // Governance only
+  NATIVE: "native",         // Arbitrum - Central hub, read-only data
+  LOCAL: "local",           // OP, etc. - Cross-chain job transactions (needs LZ + CCTP)
+  LOCAL_NATIVE: "local_native", // Arbitrum - Direct job transactions (no LZ, no CCTP)
+  MAIN: "main"              // Governance only
 };
 
 /**
@@ -221,13 +222,13 @@ export const MAINNET_CHAIN_CONFIG = {
     cctpDomain: 2 // Optimism mainnet CCTP domain
   },
 
-  // Arbitrum One - Native Chain (Read-Only, Data Hub)
+  // Arbitrum One - Native Data Hub + Native Local Chain (direct job transactions)
   42161: {
     name: "Arbitrum One",
-    type: CHAIN_TYPES.NATIVE,
-    allowed: false,
+    type: CHAIN_TYPES.LOCAL_NATIVE, // Both data hub AND write-capable (no LZ/CCTP needed)
+    allowed: !!import.meta.env.VITE_NATIVE_ARB_LOWJC_ADDRESS, // Enabled once native contracts are deployed
     isTestnet: false,
-    reason: "Native chain - read only. Use Optimism for transactions.",
+    reason: "Native Arb contracts not yet deployed. Use Optimism for now.",
     nativeCurrency: {
       name: "Ether",
       symbol: "ETH",
@@ -236,6 +237,7 @@ export const MAINNET_CHAIN_CONFIG = {
     rpcUrl: import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL || 'https://arb-mainnet.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ',
     blockExplorer: "https://arbiscan.io",
     contracts: {
+      // Native data contracts (existing — do not change)
       genesis: "0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294",
       genesisReaderHelper: "0x72ee091C288512f0ee9eB42B8C152fbB127Dc782",
       profileGenesis: "0x794809471215cBa5cE56c7d9F402eDd85F9eBa2E",
@@ -243,18 +245,24 @@ export const MAINNET_CHAIN_CONFIG = {
       nowjc: "0x8EfbF240240613803B9c9e716d4b5AD1388aFd99",
       nativeAthena: "0xE6B9d996b56162cD7eDec3a83aE72943ee7C46Bf",
       nativeDAO: "0x24af98d763724362DC920507b351cC99170a5aa4",
-      nativeRewards: "0x5E80B57E1C465498F3E0B4360397c79A64A67Ce9", // V2 (Jan 23) - Graceful referrer fix
+      nativeRewards: "0x5E80B57E1C465498F3E0B4360397c79A64A67Ce9",
       oracleManager: "0xEdF3Bcf87716bE05e35E12bA7C0Fc6e1879c0f15",
       activityTracker: "0x8C04840c3f5b5a8c44F9187F9205ca73509690EA",
       contractRegistry: "0x29D61B1a9E2837ABC0810925429Df641CBed58c3",
-      nativeBridge: "0x1bC57d93eC9F9214EDe2e81281A26Ac0E01A9A5F", // V2 (Jan 24) - User refund address fix
+      nativeBridge: "0x1bC57d93eC9F9214EDe2e81281A26Ac0E01A9A5F",
       cctp: "0x765D70496Ef775F6ba1cB7465c2e0B296eB50d87",
-      usdc: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"
+      usdc: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+      // Native Arb job contracts — set after deployment via env vars
+      // TODO: populate VITE_NATIVE_ARB_LOWJC_ADDRESS + VITE_NATIVE_ARB_ATHENA_ADDRESS in Cloud Run
+      lowjc: import.meta.env.VITE_NATIVE_ARB_LOWJC_ADDRESS || null,
+      athenaClient: import.meta.env.VITE_NATIVE_ARB_ATHENA_ADDRESS || null,
     },
     layerzero: {
       eid: 30110
     },
-    cctpDomain: 3 // Arbitrum One CCTP domain
+    cctpDomain: 3, // Arbitrum One CCTP domain
+    // No LayerZero fee required — calls go directly to NOWJC on the same chain
+    requiresLzFee: false
   },
 
   // Ethereum Mainnet - Main Chain (Governance + Token)
@@ -347,7 +355,7 @@ export function isChainAllowed(chainId) {
 export function getLocalChains() {
   const config = getActiveChainConfig();
   return Object.entries(config)
-    .filter(([_, cfg]) => cfg.type === CHAIN_TYPES.LOCAL && cfg.allowed)
+    .filter(([_, cfg]) => (cfg.type === CHAIN_TYPES.LOCAL || cfg.type === CHAIN_TYPES.LOCAL_NATIVE) && cfg.allowed)
     .map(([chainId, cfg]) => ({
       chainId: parseInt(chainId),
       ...cfg
@@ -356,12 +364,13 @@ export function getLocalChains() {
 
 /**
  * Get native chain configuration (Arbitrum - data source)
+ * Matches both NATIVE and LOCAL_NATIVE types since Arb is the data hub in both cases.
  * @returns {object} Native chain config
  */
 export function getNativeChain() {
   const config = getActiveChainConfig();
   const entry = Object.entries(config).find(
-    ([_, cfg]) => cfg.type === CHAIN_TYPES.NATIVE
+    ([_, cfg]) => cfg.type === CHAIN_TYPES.NATIVE || cfg.type === CHAIN_TYPES.LOCAL_NATIVE
   );
   if (!entry) return null;
   return {

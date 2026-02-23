@@ -16,8 +16,9 @@
  */
 
 import Web3 from "web3";
-import { getChainConfig, isChainAllowed, getLocalChains, buildLzOptions, DESTINATION_GAS_ESTIMATES } from "../config/chainConfig";
+import { getChainConfig, isChainAllowed, getLocalChains, buildLzOptions, DESTINATION_GAS_ESTIMATES, CHAIN_TYPES } from "../config/chainConfig";
 import LOWJC_ABI from "../ABIs/lowjc-lite_ABI.json";
+import NATIVE_ARB_LOWJC_ABI from "../ABIs/native-arb-lowjc_ABI.json";
 import ATHENA_CLIENT_ABI from "../ABIs/athena-client_ABI.json";
 
 // Minimal ABI for LocalBridge quoting
@@ -35,24 +36,31 @@ const BRIDGE_QUOTE_ABI = [
 ];
 
 /**
- * Get LOWJC contract instance for a specific chain
- * @param {number} chainId - Chain ID
- * @returns {object} Web3 contract instance
- * @throws {Error} If chain not allowed or contracts not found
+ * Returns true if this chain uses the native Arb LOWJC (no LZ, no CCTP, no msg.value).
+ */
+function isNativeArbChain(chainId) {
+  const config = getChainConfig(chainId);
+  return config?.type === CHAIN_TYPES.LOCAL_NATIVE;
+}
+
+/**
+ * Get LOWJC contract instance for a specific chain.
+ * Uses native-arb ABI for LOCAL_NATIVE chains (no _nativeOptions params).
  */
 export async function getLOWJCContract(chainId) {
   if (!isChainAllowed(chainId)) {
     const config = getChainConfig(chainId);
     throw new Error(config?.reason || "Transactions not allowed on this chain");
   }
-  
+
   const config = getChainConfig(chainId);
   if (!config || !config.contracts.lowjc) {
     throw new Error(`LOWJC contract not configured for chain ${chainId}`);
   }
-  
+
   const web3 = new Web3(window.ethereum);
-  return new web3.eth.Contract(LOWJC_ABI, config.contracts.lowjc);
+  const abi = isNativeArbChain(chainId) ? NATIVE_ARB_LOWJC_ABI : LOWJC_ABI;
+  return new web3.eth.Contract(abi, config.contracts.lowjc);
 }
 
 /**
@@ -85,6 +93,9 @@ export async function getAthenaClientContract(chainId) {
  * @returns {Promise<string>} Fee in wei (with 30% buffer)
  */
 export async function estimateLayerZeroFee(chainId, operationKey, extraPayload = {}) {
+  // Native Arb chain — no LayerZero, no fee
+  if (isNativeArbChain(chainId)) return "0";
+
   // Safe fallback — never let a quote failure block the user
   const FALLBACK_FEE = Web3.utils.toWei("0.001", "ether");
 
@@ -144,19 +155,21 @@ export async function estimateLayerZeroFee(chainId, operationKey, extraPayload =
 export async function postJob(chainId, userAddress, jobData, onStatus) {
   const emit = onStatus || (() => {});
   try {
-    emit("Estimating LayerZero fee...");
     const contract = await getLOWJCContract(chainId);
     const config   = getChainConfig(chainId);
-    const lzFee    = await estimateLayerZeroFee(chainId, "POST_JOB", { userAddress });
-    const nativeOptions = buildLzOptions(DESTINATION_GAS_ESTIMATES.POST_JOB);
+    const native   = isNativeArbChain(chainId);
+
+    if (!native) emit("Estimating LayerZero fee...");
+    const lzFee         = await estimateLayerZeroFee(chainId, "POST_JOB", { userAddress });
+    const nativeOptions = native ? null : buildLzOptions(DESTINATION_GAS_ESTIMATES.POST_JOB);
 
     emit(`Submitting job post on ${config.name} — confirm in wallet...`);
-    const tx = await contract.methods.postJob(
-      jobData.jobDetailHash,
-      jobData.descriptions,
-      jobData.amounts,
-      nativeOptions
-    ).send({ from: userAddress, value: lzFee, gas: 600000 });
+
+    const method = native
+      ? contract.methods.postJob(jobData.jobDetailHash, jobData.descriptions, jobData.amounts)
+      : contract.methods.postJob(jobData.jobDetailHash, jobData.descriptions, jobData.amounts, nativeOptions);
+
+    const tx = await method.send({ from: userAddress, value: lzFee, gas: 600000 });
 
     emit(`Transaction confirmed: ${tx.transactionHash}`);
     console.log(`[postJob] confirmed on ${config.name}:`, tx.transactionHash);
@@ -177,23 +190,35 @@ export async function postJob(chainId, userAddress, jobData, onStatus) {
 export async function applyToJob(chainId, userAddress, applicationData, onStatus) {
   const emit = onStatus || (() => {});
   try {
-    emit("Estimating LayerZero fee...");
     const contract = await getLOWJCContract(chainId);
     const config   = getChainConfig(chainId);
-    const lzFee    = await estimateLayerZeroFee(chainId, "APPLY_JOB", { userAddress });
-    const nativeOptions = buildLzOptions(DESTINATION_GAS_ESTIMATES.APPLY_JOB);
+    const native   = isNativeArbChain(chainId);
+
+    if (!native) emit("Estimating LayerZero fee...");
+    const lzFee         = await estimateLayerZeroFee(chainId, "APPLY_JOB", { userAddress });
+    const nativeOptions = native ? null : buildLzOptions(DESTINATION_GAS_ESTIMATES.APPLY_JOB);
 
     emit(`Submitting application on ${config.name} — confirm in wallet...`);
-    const tx = await contract.methods.applyToJob(
-      applicationData.jobId,
-      applicationData.applicationHash,
-      applicationData.descriptions,
-      applicationData.amounts,
-      applicationData.preferredChainDomain || 3,
-      applicationData.preferredPaymentAddress || userAddress,
-      nativeOptions
-    ).send({ from: userAddress, value: lzFee, gas: 600000 });
 
+    const method = native
+      ? contract.methods.applyToJob(
+          applicationData.jobId,
+          applicationData.applicationHash,
+          applicationData.descriptions,
+          applicationData.amounts,
+          applicationData.preferredChainDomain || 3
+        )
+      : contract.methods.applyToJob(
+          applicationData.jobId,
+          applicationData.applicationHash,
+          applicationData.descriptions,
+          applicationData.amounts,
+          applicationData.preferredChainDomain || 3,
+          applicationData.preferredPaymentAddress || userAddress,
+          nativeOptions
+        );
+
+    const tx = await method.send({ from: userAddress, value: lzFee, gas: 600000 });
     emit(`Application submitted: ${tx.transactionHash}`);
     console.log(`[applyToJob] confirmed on ${config.name}:`, tx.transactionHash);
     return tx;
@@ -213,20 +238,21 @@ export async function applyToJob(chainId, userAddress, applicationData, onStatus
 export async function startJob(chainId, userAddress, startData, onStatus) {
   const emit = onStatus || (() => {});
   try {
-    emit("Estimating LayerZero fee...");
     const contract = await getLOWJCContract(chainId);
     const config   = getChainConfig(chainId);
-    const lzFee    = await estimateLayerZeroFee(chainId, "START_JOB", { userAddress });
-    const nativeOptions = buildLzOptions(DESTINATION_GAS_ESTIMATES.START_JOB);
+    const native   = isNativeArbChain(chainId);
+
+    if (!native) emit("Estimating LayerZero fee...");
+    const lzFee         = await estimateLayerZeroFee(chainId, "START_JOB", { userAddress });
+    const nativeOptions = native ? null : buildLzOptions(DESTINATION_GAS_ESTIMATES.START_JOB);
 
     emit(`Starting job on ${config.name} — confirm in wallet...`);
-    const tx = await contract.methods.startJob(
-      startData.jobId,
-      startData.applicationId,
-      startData.useAppMilestones || false,
-      nativeOptions
-    ).send({ from: userAddress, value: lzFee, gas: 1000000 });
 
+    const method = native
+      ? contract.methods.startJob(startData.jobId, startData.applicationId, startData.useAppMilestones || false)
+      : contract.methods.startJob(startData.jobId, startData.applicationId, startData.useAppMilestones || false, nativeOptions);
+
+    const tx = await method.send({ from: userAddress, value: lzFee, gas: 1000000 });
     emit(`Job started: ${tx.transactionHash}`);
     console.log(`[startJob] confirmed on ${config.name}:`, tx.transactionHash);
     return tx;
@@ -246,19 +272,21 @@ export async function startJob(chainId, userAddress, startData, onStatus) {
 export async function submitWork(chainId, userAddress, workData, onStatus) {
   const emit = onStatus || (() => {});
   try {
-    emit("Estimating LayerZero fee...");
     const contract = await getLOWJCContract(chainId);
     const config   = getChainConfig(chainId);
-    const lzFee    = await estimateLayerZeroFee(chainId, "DEFAULT", { userAddress });
-    const nativeOptions = buildLzOptions(DESTINATION_GAS_ESTIMATES.DEFAULT);
+    const native   = isNativeArbChain(chainId);
+
+    if (!native) emit("Estimating LayerZero fee...");
+    const lzFee         = await estimateLayerZeroFee(chainId, "DEFAULT", { userAddress });
+    const nativeOptions = native ? null : buildLzOptions(DESTINATION_GAS_ESTIMATES.DEFAULT);
 
     emit(`Submitting work on ${config.name} — confirm in wallet...`);
-    const tx = await contract.methods.submitWork(
-      workData.jobId,
-      workData.submissionHash,
-      nativeOptions
-    ).send({ from: userAddress, value: lzFee, gas: 600000 });
 
+    const method = native
+      ? contract.methods.submitWork(workData.jobId, workData.submissionHash)
+      : contract.methods.submitWork(workData.jobId, workData.submissionHash, nativeOptions);
+
+    const tx = await method.send({ from: userAddress, value: lzFee, gas: 600000 });
     emit(`Work submitted: ${tx.transactionHash}`);
     console.log(`[submitWork] confirmed on ${config.name}:`, tx.transactionHash);
     return tx;
@@ -278,20 +306,28 @@ export async function submitWork(chainId, userAddress, workData, onStatus) {
 export async function releasePaymentCrossChain(chainId, userAddress, paymentData, onStatus) {
   const emit = onStatus || (() => {});
   try {
-    emit("Estimating LayerZero fee...");
     const contract = await getLOWJCContract(chainId);
     const config   = getChainConfig(chainId);
-    const lzFee    = await estimateLayerZeroFee(chainId, "RELEASE_PAYMENT", { userAddress });
-    const nativeOptions = buildLzOptions(DESTINATION_GAS_ESTIMATES.RELEASE_PAYMENT);
+    const native   = isNativeArbChain(chainId);
+
+    if (!native) emit("Estimating LayerZero fee...");
+    const lzFee         = await estimateLayerZeroFee(chainId, "RELEASE_PAYMENT", { userAddress });
+    const nativeOptions = native ? null : buildLzOptions(DESTINATION_GAS_ESTIMATES.RELEASE_PAYMENT);
 
     emit(`Releasing payment on ${config.name} — confirm in wallet...`);
-    const tx = await contract.methods.releasePaymentCrossChain(
-      paymentData.jobId,
-      paymentData.targetChainDomain,
-      paymentData.targetRecipient,
-      nativeOptions
-    ).send({ from: userAddress, value: lzFee, gas: 800000 });
 
+    // Native Arb: call unified releasePayment(jobId) — NOWJC auto-routes to applicant
+    // Cross-chain: call releasePaymentCrossChain with target domain + recipient
+    const method = native
+      ? contract.methods.releasePayment(paymentData.jobId)
+      : contract.methods.releasePaymentCrossChain(
+          paymentData.jobId,
+          paymentData.targetChainDomain,
+          paymentData.targetRecipient,
+          nativeOptions
+        );
+
+    const tx = await method.send({ from: userAddress, value: lzFee, gas: 800000 });
     emit(`Payment release confirmed: ${tx.transactionHash}`);
     console.log(`[releasePayment] confirmed on ${config.name}:`, tx.transactionHash);
     return tx;
@@ -313,22 +349,34 @@ export async function releasePaymentCrossChain(chainId, userAddress, paymentData
 export async function raiseDispute(chainId, userAddress, disputeData, onStatus) {
   const emit = onStatus || (() => {});
   try {
-    emit("Estimating LayerZero fee...");
     const contract = await getAthenaClientContract(chainId);
     const config   = getChainConfig(chainId);
-    const lzFee    = await estimateLayerZeroFee(chainId, "DEFAULT", { userAddress });
-    const nativeOptions = buildLzOptions(DESTINATION_GAS_ESTIMATES.DEFAULT);
+    const native   = isNativeArbChain(chainId);
+
+    if (!native) emit("Estimating LayerZero fee...");
+    const lzFee         = await estimateLayerZeroFee(chainId, "DEFAULT", { userAddress });
+    const nativeOptions = native ? null : buildLzOptions(DESTINATION_GAS_ESTIMATES.DEFAULT);
 
     emit(`Raising dispute on ${config.name} — confirm in wallet...`);
-    const tx = await contract.methods.raiseDispute(
-      disputeData.jobId,
-      disputeData.disputeHash,
-      disputeData.oracleName,
-      disputeData.feeAmount,
-      disputeData.disputedAmount,
-      nativeOptions
-    ).send({ from: userAddress, value: lzFee, gas: 600000 });
 
+    const method = native
+      ? contract.methods.raiseDispute(
+          disputeData.jobId,
+          disputeData.disputeHash,
+          disputeData.oracleName,
+          disputeData.feeAmount,
+          disputeData.disputedAmount
+        )
+      : contract.methods.raiseDispute(
+          disputeData.jobId,
+          disputeData.disputeHash,
+          disputeData.oracleName,
+          disputeData.feeAmount,
+          disputeData.disputedAmount,
+          nativeOptions
+        );
+
+    const tx = await method.send({ from: userAddress, value: lzFee, gas: 600000 });
     emit(`Dispute submitted: ${tx.transactionHash}`);
     console.log(`[raiseDispute] confirmed on ${config.name}:`, tx.transactionHash);
     return tx;
