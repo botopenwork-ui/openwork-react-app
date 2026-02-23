@@ -79,10 +79,8 @@ export default function BrowseTalent() {
                 setError(null);
                 
                 const web3 = new Web3(import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL);
-                const contractAddress = "0xC37A9dFbb57837F74725AAbEe068f07A1155c394";
+                const contractAddress = import.meta.env.VITE_PROFILE_GENESIS_ADDRESS || "0xC37A9dFbb57837F74725AAbEe068f07A1155c394";
                 const contract = new web3.eth.Contract(ProfileGenesisABI, contractAddress);
-                
-                console.log("Fetching all profile addresses...");
                 
                 // Use the new getAllProfileAddresses() method - instant!
                 const userAddresses = await contract.methods.getAllProfileAddresses().call();
@@ -90,17 +88,12 @@ export default function BrowseTalent() {
                 // Fetch profile data for each user
                 const profilePromises = userAddresses.map(async (address, index) => {
                     try {
-                        console.log(`[${index + 1}/${userAddresses.length}] Fetching profile for ${address}...`);
-                        
                         const profile = await contract.methods.getProfile(address).call();
                         const ipfsHash = profile.ipfsHash;
                         
                         if (!ipfsHash || ipfsHash === "") {
-                            console.warn(`[${index + 1}/${userAddresses.length}] No IPFS hash for ${address}`);
                             return null;
                         }
-                        
-                        console.log(`[${index + 1}/${userAddresses.length}] Fetching IPFS data: ${ipfsHash}`);
                         
                         // Fetch profile data from IPFS with timeout
                         const response = await fetchWithTimeout(
@@ -109,7 +102,6 @@ export default function BrowseTalent() {
                         );
                         
                         if (!response.ok) {
-                            console.warn(`[${index + 1}/${userAddresses.length}] Failed to fetch IPFS (${response.status}) for ${address}`);
                             return null;
                         }
                         
@@ -137,7 +129,7 @@ export default function BrowseTalent() {
                             profilePhoto: profileData.profilePhotoHash 
                                 ? `https://gateway.lighthouse.storage/ipfs/${profileData.profilePhotoHash}`
                                 : '/user.png',
-                            hourlyRate: '30' // TODO: Add hourly rate to profile data
+                            hourlyRate: profileData.hourlyRate || null
                         };
                     } catch (err) {
                         console.error(`Error fetching profile for ${address}:`, err);
@@ -148,7 +140,6 @@ export default function BrowseTalent() {
                 const fetchedProfiles = await Promise.all(profilePromises);
                 const validProfiles = fetchedProfiles.filter(p => p !== null);
                 
-                console.log(`Successfully fetched ${validProfiles.length} profiles`);
                 setProfiles(validProfiles);
                 
             } catch (err) {
@@ -231,7 +222,7 @@ export default function BrowseTalent() {
             const displayRating = user.rating || '0.0';
             const displaySkills = Array.isArray(user.skills) ? user.skills : [user.skills || 'N/A'];
             const displayExperience = user.experience || 'N/A';
-            const displayRate = user.hourlyRate || user.hourly_rate || '30';
+            const displayRate = user.hourlyRate || user.hourly_rate || null;
             const profilePhoto = user.profilePhoto || '/user.png';
             const userAddress = user.address || '';
 
@@ -281,8 +272,9 @@ export default function BrowseTalent() {
                 ),
                 hourlyRate: (
                     <div className="hourly-rate">
-                        <span>{displayRate} / Hr</span>
-                        <img src="/xdc.svg" alt="Budget" />
+                        {displayRate
+                            ? <><span>{displayRate} / Hr</span><img src="/xdc.svg" alt="Budget" /></>
+                            : <span style={{ color: '#888' }}>—</span>}
                     </div>
                 ),
                 actions: (

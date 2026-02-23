@@ -29,7 +29,6 @@ const fetchFromIPFS = async (hash, timeout = 5000) => {
     // Check cache first
     const cached = ipfsCache.get(hash);
     if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
-        console.log(`✅ Using cached IPFS data for ${hash}`);
         return cached.data;
     }
 
@@ -59,7 +58,6 @@ const fetchFromIPFS = async (hash, timeout = 5000) => {
                     data,
                     timestamp: Date.now()
                 });
-                console.log(`📦 Cached IPFS data for ${hash}`);
                 return data;
             }
         } catch (error) {
@@ -127,12 +125,14 @@ export default function JobInfo() {
   const [loading, setLoading] = useState(true);
   const [walletAddress, setWalletAddress] = useState("");
   const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState(null);
 
   const handleCopyToClipboard = (address) => {
     navigator.clipboard
       .writeText(address)
       .then(() => {
-        alert("Address copied to clipboard");
+        setCopiedAddress(address);
+        setTimeout(() => setCopiedAddress(null), 2000);
       })
       .catch((err) => {
         console.error("Failed to copy: ", err);
@@ -170,7 +170,7 @@ export default function JobInfo() {
         console.error("Failed to connect wallet:", error);
       }
     } else {
-      alert("MetaMask is not installed. Please install it to use this app.");
+      console.error("MetaMask is not installed.");
     }
   };
 
@@ -197,9 +197,6 @@ export default function JobInfo() {
         setLoading(true);
         const rpcUrl = getArbitrumRpc();
         const genesisAddress = getGenesisAddress();
-        const networkMode = isMainnet() ? "mainnet" : "testnet";
-
-        console.log(`🔧 JobDeepView - RPC: ${rpcUrl} Contract: ${genesisAddress} (${networkMode})`);
 
         const web3 = new Web3(rpcUrl);
         const contract = new web3.eth.Contract(contractABI, genesisAddress);
@@ -225,21 +222,13 @@ export default function JobInfo() {
             }
           }
         }
-        console.log("🔍 Job data from NOWJC contract (Arbitrum):", jobData);
-        console.log("📋 Selected applicant:", jobData.selectedApplicant);
-        console.log("🔢 Selected application ID:", jobData.selectedApplicationId);
-        console.log("👥 Applicants array:", jobData.applicants);
-        console.log("💼 Job status:", jobData.status);
-        console.log("⏰ Job created at:", new Date(Number(jobData.createdAt) * 1000).toLocaleString());
         
         // Debug cross-chain state
         const isSelectedApplicantSet = jobData.selectedApplicant && 
           jobData.selectedApplicant !== "0x0000000000000000000000000000000000000000";
-        console.log("✅ Is selected applicant set?", isSelectedApplicantSet);
         
         if (!isSelectedApplicantSet) {
           console.warn("⚠️ No selected applicant found - possible cross-chain sync issue");
-          console.log("🔄 Try refreshing in a few moments if job was just started");
         }
 
         // Fetch job details from IPFS
@@ -292,7 +281,6 @@ export default function JobInfo() {
         const currentMilestoneNum = Number(jobData.currentMilestone);
         const jobStatus = Number(jobData.status); // 0=Open, 1=InProgress, 2=Completed, 3=Cancelled
 
-        console.log("📊 Milestone debug:", { currentMilestoneNum, jobStatus, totalMilestones: jobData.finalMilestones?.length });
 
         const processedMilestones = [];
         if (jobData.finalMilestones && jobData.finalMilestones.length > 0) {
@@ -344,11 +332,13 @@ export default function JobInfo() {
           }
         }
 
-        // Extract skills from job details
-        const skills = jobDetails.skills || ["General"];
-        const primarySkill = Array.isArray(skills) ? skills[0] : skills;
-        const additionalSkillsCount =
-          Array.isArray(skills) && skills.length > 1 ? skills.length - 1 : 0;
+        // Extract skills from job details — guard against empty array
+        const rawSkills = jobDetails.skills;
+        const skills = (Array.isArray(rawSkills) && rawSkills.filter(s => s && s.trim()).length > 0)
+          ? rawSkills.filter(s => s && s.trim())
+          : (rawSkills && !Array.isArray(rawSkills) ? [rawSkills] : ["General"]);
+        const primarySkill = skills[0] || "General";
+        const additionalSkillsCount = skills.length > 1 ? skills.length - 1 : 0;
 
         // Calculate completed milestones count from processed milestones
         const completedMilestonesCount = processedMilestones.filter(m => m.status === "Completed").length;
@@ -493,6 +483,9 @@ export default function JobInfo() {
                 className="copyImage"
                 onClick={() => handleCopyToClipboard(job.contractId)}
               />
+              {copiedAddress === job.contractId && (
+                <span style={{ fontSize: '12px', color: '#38a169', marginLeft: '4px' }}>Copied!</span>
+              )}
             </div>
           </div>
 

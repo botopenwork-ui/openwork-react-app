@@ -65,6 +65,8 @@ export default function SingleJobDetails() {
     MILESTONETOOLTIPITEMS,
   );
 
+  const [copiedAddress, setCopiedAddress] = useState(null);
+
   function formatWalletAddressH(address) {
     if (!address) return "";
     const start = address.substring(0, 4);
@@ -74,7 +76,7 @@ export default function SingleJobDetails() {
 
   useEffect(() => {
     if (buttonFlex2) {
-      console.log("buttonFlex2 is now true");
+      // buttonFlex2 activated
     }
   }, [buttonFlex2]);
 
@@ -112,7 +114,8 @@ export default function SingleJobDetails() {
     navigator.clipboard
       .writeText(address)
       .then(() => {
-        alert("Address copied to clipboard");
+        setCopiedAddress(address);
+        setTimeout(() => setCopiedAddress(null), 2000);
       })
       .catch((err) => {
         console.error("Failed to copy: ", err);
@@ -130,7 +133,7 @@ export default function SingleJobDetails() {
         console.error("Failed to connect wallet:", error);
       }
     } else {
-      alert("MetaMask is not installed. Please install it to use this app.");
+      console.error("MetaMask is not installed.");
     }
   };
 
@@ -149,22 +152,17 @@ export default function SingleJobDetails() {
         setLoading(true);
         const rpcUrl = getArbitrumRpc();
         const genesisAddress = getGenesisAddress();
-        const networkMode = isMainnet() ? "mainnet" : "testnet";
-
-        console.log(`🔧 SingleJobDetails - RPC: ${rpcUrl} Contract: ${genesisAddress} (${networkMode})`);
 
         const web3 = new Web3(rpcUrl);
         const contract = new web3.eth.Contract(contractABI, genesisAddress);
 
         // Fetch job details from the contract
         const jobData = await contract.methods.getJob(jobId).call();
-        console.log("Job data from contract:", jobData);
 
         // Fetch job details from IPFS
         let jobDetails = {};
         try {
           if (jobData.jobDetailHash) {
-            console.log("📄 Fetching IPFS data from hash:", jobData.jobDetailHash);
             // Try multiple IPFS gateways in case of rate limiting
             const gateways = [
               `https://ipfs.io/ipfs/${jobData.jobDetailHash}`,
@@ -176,31 +174,20 @@ export default function SingleJobDetails() {
             let ipfsResponse = null;
             for (const gateway of gateways) {
               try {
-                console.log("🔗 Trying gateway:", gateway);
                 ipfsResponse = await fetch(gateway);
                 if (ipfsResponse.ok) {
-                  console.log("✅ Gateway successful:", gateway);
                   break;
                 }
               } catch (e) {
-                console.log("❌ Gateway failed:", gateway, e.message);
                 continue;
               }
             }
-            if (ipfsResponse.ok) {
+            if (ipfsResponse && ipfsResponse.ok) {
               jobDetails = await ipfsResponse.json();
-              console.log("📋 IPFS jobDetails received:", jobDetails);
-              console.log("📝 Job title from IPFS:", jobDetails.title);
-              console.log("📄 Job description from IPFS:", jobDetails.description);
-              console.log("💰 Job skills from IPFS:", jobDetails.skills);
-            } else {
-              console.log("❌ IPFS response not ok:", ipfsResponse.status);
             }
-          } else {
-            console.log("❌ No jobDetailHash found in contract data");
           }
         } catch (ipfsError) {
-          console.warn("❌ Failed to fetch IPFS data:", ipfsError);
+          console.warn("Failed to fetch IPFS data:", ipfsError);
         }
 
         // Fetch job giver and job taker profiles
@@ -247,8 +234,6 @@ export default function SingleJobDetails() {
         const completedMilestones = jobStatus === 2
           ? jobData.finalMilestones.length
           : Math.max(0, currentMilestone - 1);
-
-        console.log("📊 Milestone status:", { currentMilestone, jobStatus, completedMilestones, total: jobData.finalMilestones?.length });
 
         // Calculate locked amount (only current milestone is locked on-chain, one at a time)
         let lockedAmount = 0;
@@ -312,7 +297,6 @@ export default function SingleJobDetails() {
 
         setLoading(false);
         setIsElementReady(true);
-        console.log("Job details loaded successfully");
       } catch (error) {
         console.error("Error fetching job details:", error);
         setLoading(false);
@@ -440,6 +424,9 @@ export default function SingleJobDetails() {
               className="copyImage"
               onClick={() => handleCopyToClipboard(job.contractId)}
             />
+            {copiedAddress === job.contractId && (
+              <span style={{ fontSize: '12px', color: '#38a169', marginLeft: '4px' }}>Copied!</span>
+            )}
           </div>
           <div className="feeContent" style={{ fontWeight: "400 !important" }}>
             {hovered ? (
@@ -500,7 +487,7 @@ export default function SingleJobDetails() {
               title="Click to copy"
               onClick={() => handleCopyToClipboard(job.jobGiver)}
             >
-              {formatWalletAddress(job.jobGiver)}
+              {copiedAddress === job.jobGiver ? <span style={{ color: '#38a169' }}>Copied!</span> : formatWalletAddress(job.jobGiver)}
             </div>
           </div>
           <div
@@ -567,10 +554,12 @@ export default function SingleJobDetails() {
                 )
               }
             >
-              {formatWalletAddress(
-                job.selectedApplicant ||
-                  "0x0000000000000000000000000000000000000000",
-              )}
+              {copiedAddress === (job.selectedApplicant || "0x0000000000000000000000000000000000000000")
+                ? <span style={{ color: '#38a169' }}>Copied!</span>
+                : formatWalletAddress(
+                    job.selectedApplicant ||
+                      "0x0000000000000000000000000000000000000000",
+                  )}
             </div>
           </div>
           <div

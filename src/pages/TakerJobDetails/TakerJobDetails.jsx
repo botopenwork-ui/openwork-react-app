@@ -34,7 +34,7 @@ function FileUpload() {
 export default function TakerJobDetails() {
   const { jobId } = useParams();
   const [job, setJob] = useState(null);
-
+  const [copiedAddress, setCopiedAddress] = useState(null);
   const [walletAddress, setWalletAddress] = useState("");
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
@@ -43,7 +43,8 @@ export default function TakerJobDetails() {
     navigator.clipboard
       .writeText(address)
       .then(() => {
-        alert("Address copied to clipboard");
+        setCopiedAddress(address);
+        setTimeout(() => setCopiedAddress(null), 2000);
       })
       .catch((err) => {
         console.error("Failed to copy: ", err);
@@ -79,7 +80,7 @@ export default function TakerJobDetails() {
         console.error("Failed to connect wallet:", error);
       }
     } else {
-      alert("MetaMask is not installed. Please install it to use this app.");
+      console.error("MetaMask is not installed.");
     }
   };
 

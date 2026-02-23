@@ -177,6 +177,7 @@ export default function ViewJobs() {
             {loading ? (
               <div className="loading-animation">
                 <img src="/OWIcon.svg" alt="Loading" className="loading-icon" />
+                <p style={{ color: '#888', fontSize: '14px', marginTop: '12px' }}>Loading your jobs…</p>
               </div>
             ) : (
               <>

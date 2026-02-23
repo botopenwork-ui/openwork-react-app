@@ -68,6 +68,8 @@ export default function PostJob() {
     },
   ]);
 
+  const [errors, setErrors] = useState({});
+
   const navigate = useNavigate();
   
   // Update transaction status when chain changes
@@ -273,9 +275,10 @@ export default function PostJob() {
   const handleDeleteMilestone = (index) => {
     // Prevent deletion if only 1 milestone remains (for Multiple Milestones mode)
     if (selectedOption === "Multiple Milestones" && milestones.length <= 1) {
-      alert("You must have at least one milestone for multiple milestone jobs");
+      setErrors(prev => ({ ...prev, milestones: "You must have at least one milestone for multiple milestone jobs" }));
       return;
     }
+    setErrors(prev => { const e = { ...prev }; delete e.milestones; return e; });
     
     const updatedMilestones = milestones.filter((_, i) => i !== index);
     
@@ -363,15 +366,18 @@ export default function PostJob() {
     e.preventDefault();
 
     // Validate required fields
+    const newErrors = {};
     if (!jobTitle.trim()) {
-      alert("Please enter a job title");
-      return;
+      newErrors.jobTitle = "Please enter a job title";
     }
-
     if (!jobDescription.trim()) {
-      alert("Please enter job requirements/description");
+      newErrors.jobDescription = "Please enter job requirements/description";
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+    setErrors({});
 
     if (window.ethereum) {
       try {
@@ -384,9 +390,14 @@ export default function PostJob() {
         
         // Multi-chain validation - check if user is on an allowed chain
         if (!isAllowed) {
-          alert(`Cannot post jobs on ${chainConfig?.name || 'this network'}.\n\n${chainError}\n\nSupported chains: ${getLocalChains().map(c => c.name).join(', ')}`);
+          const supportedNames = getLocalChains().map(c => c.name).join(', ');
+          setErrors(prev => ({
+            ...prev,
+            chain: `Cannot post jobs on ${chainConfig?.name || 'this network'}. ${chainError} Supported chains: ${supportedNames}`
+          }));
           setLoadingT(false);
           setTransactionStatus(`❌ ${chainError}`);
+          setIsProcessing(false);
           return;
         }
         
@@ -445,8 +456,6 @@ export default function PostJob() {
             JobContractABI,
             lowjcAddress,
           );
-
-          // DEBUG: Log all transaction data
 
           // Step 5: Get LayerZero fee quote
           setTransactionStatus("Getting LayerZero fee quote...");
@@ -644,20 +653,56 @@ export default function PostJob() {
               marginTop: "12px",
             }}
           >
+            {/* Chain unsupported banner */}
+            {errors.chain && (
+              <div style={{
+                background: '#fff3cd',
+                border: '1px solid #ffc107',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                marginBottom: '16px',
+                color: '#856404',
+                fontSize: '14px',
+                lineHeight: '1.5',
+              }}>
+                ⚠️ {errors.chain}
+              </div>
+            )}
+            {/* Chain status indicator */}
+            {chainConfig && (
+              <div style={{
+                background: isAllowed ? 'rgba(0,200,100,0.08)' : 'rgba(255,100,0,0.08)',
+                border: `1px solid ${isAllowed ? '#38a169' : '#e53e3e'}`,
+                borderRadius: '8px',
+                padding: '8px 14px',
+                marginBottom: '14px',
+                color: isAllowed ? '#276749' : '#c53030',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+                {isAllowed ? '🟢' : '🔴'} {chainConfig.name} {isAllowed ? '— ready to post' : '— not supported for job posting'}
+              </div>
+            )}
             <div className="form-groupDC">
               <input
                 type="text"
                 placeholder="Job Title"
                 value={jobTitle}
-                onChange={(e) => setJobTitle(e.target.value)}
+                onChange={(e) => { setJobTitle(e.target.value); setErrors(prev => { const e2 = {...prev}; delete e2.jobTitle; return e2; }); }}
+                style={errors.jobTitle ? { borderColor: '#e53e3e' } : {}}
               />
+              {errors.jobTitle && <p style={{ color: '#e53e3e', fontSize: '13px', marginTop: '4px' }}>{errors.jobTitle}</p>}
             </div>
             <div className="form-groupDC">
               <textarea
                 placeholder="Job Requirements"
                 value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
+                onChange={(e) => { setJobDescription(e.target.value); setErrors(prev => { const e2 = {...prev}; delete e2.jobDescription; return e2; }); }}
+                style={errors.jobDescription ? { borderColor: '#e53e3e' } : {}}
               ></textarea>
+              {errors.jobDescription && <p style={{ color: '#e53e3e', fontSize: '13px', marginTop: '4px' }}>{errors.jobDescription}</p>}
             </div>
             <div className="form-groupDC skill-box">
               {selectedSkills.map((skill, index) => (
@@ -762,7 +807,7 @@ export default function PostJob() {
                 </button>
               )}
             </div>
-
+            {errors.milestones && <p style={{ color: '#e53e3e', fontSize: '13px', marginTop: '4px', marginBottom: '4px' }}>{errors.milestones}</p>}
             <div className="form-groupDC form-platformFee">
               <div className="platform-fee">
                 <span>total compensation</span>

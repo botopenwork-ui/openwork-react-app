@@ -15,8 +15,21 @@ import { switchToChain } from "../../utils/switchNetwork";
 import { getLOWJCContract } from "../../services/localChainService";
 import CrossChainStatus, { buildLZSteps } from "../../components/CrossChainStatus/CrossChainStatus";
 import { monitorLZMessage, STATUS } from "../../utils/crossChainMonitor";
+import genesisABI from "../../ABIs/genesis_ABI.json";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+
+// Maps LayerZero EIDs to EVM chain IDs (mirrors EID_TO_CHAIN_ID in chainConfig)
+const LZ_EID_TO_CHAIN_ID = {
+  40232: 11155420, // OP Sepolia
+  40161: 11155111, // ETH Sepolia
+  40231: 421614,   // ARB Sepolia
+  40245: 84532,    // Base Sepolia
+  30111: 10,       // OP Mainnet
+  30110: 42161,    // ARB Mainnet
+  30101: 1,        // ETH Mainnet
+  30184: 8453,     // Base Mainnet
+};
 
 export default function AddUpdate() {
   const { jobId } = useParams();
@@ -31,6 +44,7 @@ export default function AddUpdate() {
   const [crossChainSteps, setCrossChainSteps] = useState(null);
   const [applicationData, setApplicationData] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [applierOriginChainId, setApplierOriginChainId] = useState(null);
   
   // Multi-chain hooks
   const { chainId: userChainId, chainConfig: userChainConfig } = useChainDetection();
@@ -39,6 +53,8 @@ export default function AddUpdate() {
   // Get job posting chain
   const jobChainId = jobId ? extractChainIdFromJobId(jobId) : null;
   const isMobile = useMobileDetection();
+
+  const [copiedAddress, setCopiedAddress] = useState(null);
 
   function formatWalletAddressH(address) {
     if (!address) return "";
@@ -50,6 +66,13 @@ export default function AddUpdate() {
  
   const toggleDropdown = () => {
     setDropdownVisible(!dropdownVisible);
+  };
+
+  const handleCopyToClipboard = (address) => {
+    navigator.clipboard.writeText(address).then(() => {
+      setCopiedAddress(address);
+      setTimeout(() => setCopiedAddress(null), 2000);
+    }).catch(err => console.error("Failed to copy:", err));
   };
 
   const handleUpdateChange = (e) => {
@@ -69,10 +92,10 @@ export default function AddUpdate() {
       return;
     }
 
-    // CRITICAL: For SubmitWork, we need to check APPLICATION chain
-    // For now, we'll use posting chain as a fallback
-    // TODO: Retrieve application chain from application data
-    const requiredChainId = jobChainId;
+    // Determine the chain for work submission:
+    // Prefer the applier's origin chain (stored in Genesis contract) if known.
+    // Fall back to the job's posting chain.
+    const requiredChainId = applierOriginChainId || jobChainId;
     const requiredChainConfig = requiredChainId ? getChainConfig(requiredChainId) : null;
 
     if (!requiredChainId || !requiredChainConfig) {
@@ -150,8 +173,6 @@ export default function AddUpdate() {
         throw new Error("Bridge contract not configured on LOWJC");
       }
       
-      console.log("Bridge address:", bridgeAddress);
-      
       // Bridge ABI for quoteNativeChain function
       const bridgeABI = [{
         "inputs": [
@@ -173,7 +194,6 @@ export default function AddUpdate() {
       );
       
       const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, lzOptions).call();
-      console.log(`💰 LayerZero quoted fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH`);
 
       // Submit work
       setTransactionStatus(`📝 Submitting work on ${requiredChainConfig.name} - Please confirm in MetaMask`);
@@ -239,15 +259,26 @@ export default function AddUpdate() {
       if (!jobId) return;
       
       try {
-        // Fetch from Arbitrum Genesis (read-only)
+        // Fetch from Arbitrum Genesis (read-only) using full ABI for proper decoding
         const ARBITRUM_SEPOLIA_RPC = import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
-        const NOWJC_CONTRACT = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS || "0x9E39B37275854449782F1a2a4524405cE79d6C1e";
+        const NOWJC_CONTRACT = import.meta.env.VITE_NOWJC_CONTRACT_ADDRESS
+          || import.meta.env.VITE_ARBITRUM_GENESIS_ADDRESS
+          || "0x9E39B37275854449782F1a2a4524405cE79d6C1e";
         
         const web3 = new Web3(ARBITRUM_SEPOLIA_RPC);
-        const nowjcABI = [{"inputs": [{"type": "string"}], "name": "getJob", "outputs": [{"type": "tuple"}], "stateMutability": "view", "type": "function"}];
-        const contract = new web3.eth.Contract(nowjcABI, NOWJC_CONTRACT);
+        const contract = new web3.eth.Contract(genesisABI, NOWJC_CONTRACT);
 
         const jobData = await contract.methods.getJob(jobId).call();
+
+        // Extract the applier's origin chain from the job data (set when job is started)
+        // applierOriginChainDomain is a LayerZero EID — convert to EVM chain ID
+        if (jobData.applierOriginChainDomain && Number(jobData.applierOriginChainDomain) !== 0) {
+          const lzEid = Number(jobData.applierOriginChainDomain);
+          const mappedChainId = LZ_EID_TO_CHAIN_ID[lzEid];
+          if (mappedChainId) {
+            setApplierOriginChainId(mappedChainId);
+          }
+        }
         
         // Fetch job details from IPFS
         let jobDetails = {};
@@ -322,6 +353,9 @@ export default function AddUpdate() {
                 )
               }
             />
+            {copiedAddress === walletAddress && (
+              <span style={{ fontSize: '12px', color: '#38a169', marginLeft: '4px' }}>Copied!</span>
+            )}
           </div>
         </div>
       )}

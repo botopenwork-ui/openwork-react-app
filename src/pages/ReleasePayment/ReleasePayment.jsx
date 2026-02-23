@@ -61,6 +61,8 @@ export default function ReleasePayment() {
   const jobChainId = jobId ? extractChainIdFromJobId(jobId) : null;
   const jobChainConfig = jobChainId ? getChainConfig(jobChainId) : null;
 
+  const [copiedAddress, setCopiedAddress] = useState(null);
+
   function formatWalletAddressH(address) {
     if (!address) return "";
     const start = address.substring(0, 4);
@@ -73,7 +75,8 @@ export default function ReleasePayment() {
     navigator.clipboard
       .writeText(address)
       .then(() => {
-        alert("Address copied to clipboard");
+        setCopiedAddress(address);
+        setTimeout(() => setCopiedAddress(null), 2000);
       })
       .catch((err) => {
         console.error("Failed to copy: ", err);
@@ -107,14 +110,12 @@ export default function ReleasePayment() {
           : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
         const contractAddress = nativeChain.contracts.nowjc;
 
-        console.log(`📡 Network mode: ${isMainnet() ? 'mainnet' : 'testnet'}, NOWJC: ${contractAddress}`);
 
         const web3 = new Web3(rpcUrl);
         const contract = new web3.eth.Contract(contractABI, contractAddress);
 
         // Fetch job details from NOWJC contract
         const jobData = await contract.methods.getJob(jobId).call();
-        console.log("📋 Job data from NOWJC:", jobData);
         
         // Check if job exists (id should not be empty)
         if (!jobData.id || jobData.id === "") {
@@ -182,7 +183,6 @@ export default function ReleasePayment() {
           try {
             applicantChainDomain = await contract.methods.jobApplicantChainDomain(jobId, jobData.selectedApplicant).call();
             applicantChainDomain = Number(applicantChainDomain);
-            console.log(`📍 Selected applicant's preferred chain domain: ${applicantChainDomain}`);
           } catch (err) {
             console.warn('Could not fetch applicant chain domain, defaulting to Optimism (2):', err.message);
           }
@@ -361,11 +361,9 @@ export default function ReleasePayment() {
       // Build LZ options with appropriate destination gas for RELEASE_PAYMENT
       const destGas = DESTINATION_GAS_ESTIMATES.RELEASE_PAYMENT;
       const nativeOptions = buildLzOptions(destGas);
-      console.log(`⛽ Destination gas (Arbitrum): ${destGas} for RELEASE_PAYMENT`);
 
       // Get the applicant's preferred chain domain (fetched from NOWJC)
       const destinationDomain = job.applicantChainDomain || 2; // Default to Optimism if not set
-      console.log(`📍 Destination CCTP domain: ${destinationDomain}`);
 
       // Get bridge contract for quoting
       setTransactionStatus("💰 Getting LayerZero quote...");
@@ -393,8 +391,6 @@ export default function ReleasePayment() {
       const lzFee = BigInt(quotedFee) * BigInt(130) / BigInt(100); // +30% buffer
       const cctpBuffer = BigInt(web3.utils.toWei('0.0003', 'ether')); // CCTP sendFast fee
       const totalFee = lzFee + cctpBuffer;
-      console.log(`💰 LayerZero quote: ${web3.utils.fromWei(quotedFee.toString(), 'ether')} ETH`);
-      console.log(`💰 Total (LZ+30%+CCTP buffer): ${web3.utils.fromWei(totalFee.toString(), 'ether')} ETH`);
 
       setTransactionStatus(`💰 Network fee: ~${parseFloat(web3.utils.fromWei(totalFee.toString(), 'ether')).toFixed(5)} ETH — Please confirm in MetaMask`);
 
@@ -684,7 +680,6 @@ export default function ReleasePayment() {
       // Build LZ options with appropriate destination gas for LOCK_MILESTONE
       const destGasLock = DESTINATION_GAS_ESTIMATES.LOCK_MILESTONE;
       const nativeOptions = buildLzOptions(destGasLock);
-      console.log(`⛽ Destination gas (Arbitrum): ${destGasLock} for LOCK_MILESTONE`);
 
       // Get bridge contract for quoting
       const bridgeAddressLock = await lowjcContract.methods.bridge().call();
@@ -709,8 +704,6 @@ export default function ReleasePayment() {
       // Get quote and add 20% buffer
       const quotedFeeLock = await bridgeContractLock.methods.quoteNativeChain(payloadLock, nativeOptions).call();
       const lzFeeLock = BigInt(quotedFeeLock) * BigInt(130) / BigInt(100); // +30% buffer
-      console.log(`💰 LayerZero quote: ${web3.utils.fromWei(quotedFeeLock.toString(), 'ether')} ETH`);
-      console.log(`💰 With 20% buffer: ${web3.utils.fromWei(lzFeeLock.toString(), 'ether')} ETH`);
 
       setTransactionStatus("🔒 Locking milestone - Please confirm in MetaMask");
 
@@ -780,7 +773,6 @@ export default function ReleasePayment() {
           body: JSON.stringify({ jobId, txHash: lockTxHash })
         });
         const relayResult = await relayRes.json();
-        console.log("📡 Backend CCTP relay started:", relayResult);
         lockStatusKey = relayResult.statusKey;
       } catch (err) {
         console.warn("⚠️ Backend CCTP relay request failed:", err.message);
@@ -862,7 +854,11 @@ export default function ReleasePayment() {
                    jobId
                  )
                }
-               /></div>
+               />
+               {copiedAddress === jobId && (
+                 <span style={{ fontSize: '12px', color: '#38a169', marginLeft: '4px' }}>Copied!</span>
+               )}
+               </div>
        </div>
 
       <div className="release-payment-container">

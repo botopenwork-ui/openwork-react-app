@@ -10,12 +10,14 @@ export default function ViewWork () {
     const [job, setJob] = useState(null);
     const [workSubmissions, setWorkSubmissions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [copiedAddress, setCopiedAddress] = useState(null);
 
     const handleCopyToClipboard = (address) => {
       navigator.clipboard
         .writeText(address)
         .then(() => {
-          alert("Job ID copied to clipboard");
+          setCopiedAddress(address);
+          setTimeout(() => setCopiedAddress(null), 2000);
         })
         .catch((err) => {
           console.error("Failed to copy: ", err);
@@ -133,6 +135,9 @@ export default function ViewWork () {
                             className="copyImage"
                             onClick={() => handleCopyToClipboard(jobId)}
                         />
+                        {copiedAddress === jobId && (
+                            <span style={{ fontSize: '12px', color: '#38a169', marginLeft: '4px' }}>Copied!</span>
+                        )}
                     </div>
                 </div>
             )}

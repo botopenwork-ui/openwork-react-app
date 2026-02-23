@@ -74,6 +74,8 @@ export default function ProfileOwnerView() {
     const [transactionStatus, setTransactionStatus] = useState("");
     const [crossChainSteps, setCrossChainSteps] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [photoError, setPhotoError] = useState("");
+    const [copiedAddress, setCopiedAddress] = useState(null);
 
     // Profile field states - initialize with empty values
     const [username, setUsername] = useState("");
@@ -135,20 +137,21 @@ export default function ProfileOwnerView() {
     const handlePhotoChange = async (event) => {
         const file = event.target.files?.[0];
         if (file) {
+            setPhotoError("");
             // Validate file type
             if (!file.type.startsWith('image/')) {
-                alert('Please select an image file');
+                setPhotoError('Please select an image file');
                 return;
             }
             // Validate file size (max 5MB)
             if (file.size > 5 * 1024 * 1024) {
-                alert('Image size should be less than 5MB');
+                setPhotoError('Image size should be less than 5MB');
                 return;
             }
             try {
                 await uploadPhotoToIPFS(file);
             } catch (error) {
-                alert('Failed to upload photo. Please try again.');
+                setPhotoError('Failed to upload photo. Please try again.');
             }
         }
     };
@@ -442,7 +445,8 @@ export default function ProfileOwnerView() {
       navigator.clipboard
         .writeText(addr)
         .then(() => {
-          alert("Address copied to clipboard");
+          setCopiedAddress(addr);
+          setTimeout(() => setCopiedAddress(null), 2000);
         })
         .catch((err) => {
           console.error("Failed to copy: ", err);
@@ -486,7 +490,11 @@ export default function ProfileOwnerView() {
                 </p><img src="/copy.svg" className="copyImage" onClick={() =>
                         handleCopyToClipboard(address)
                     }
-                    /></div>
+                    />
+                    {copiedAddress === address && (
+                      <span style={{ fontSize: '12px', color: '#38a169', marginLeft: '4px' }}>Copied!</span>
+                    )}
+                    </div>
             </div>
             <div className="form-containerDC" style={{marginTop: '0px'}}>
                 <div className="form-container-release">
@@ -555,6 +563,9 @@ export default function ProfileOwnerView() {
                                     onClick={handleEditPictureClick}
                                     disabled={uploadingPhoto}
                                 />
+                            )}
+                            {photoError && (
+                                <p style={{ color: '#e53e3e', fontSize: '13px', marginTop: '6px' }}>{photoError}</p>
                             )}
                         </div>
                         <div className="profile-item">
