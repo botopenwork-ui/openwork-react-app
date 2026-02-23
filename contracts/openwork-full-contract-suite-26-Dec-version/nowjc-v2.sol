@@ -223,6 +223,7 @@ contract NativeOpenWorkJobContract is
     // ==================== EVENTS ====================
     
     event ProfileCreated(address indexed user, string ipfsHash, address referrer);
+    event ProfileUpdated(address indexed user, string newIpfsHash);
     event JobPosted(string indexed jobId, address indexed jobGiver, string jobDetailHash);
     event JobApplication(string indexed jobId, uint256 indexed applicationId, address indexed applicant, string applicationHash);
     event JobStarted(string indexed jobId, uint256 indexed applicationId, address indexed selectedApplicant, bool useApplicantMilestones);
@@ -286,6 +287,55 @@ contract NativeOpenWorkJobContract is
 
     function isAuthorizedContract(address contractAddress) external view returns (bool) {
         return authorizedContracts[contractAddress];
+    }
+
+    // ==================== PROFILE PASSTHROUGH (for native chain clients) ====================
+
+    /**
+     * @dev Create a profile on behalf of a user. Called by authorized contracts (e.g. NativeArbLOWJC)
+     * that are already on Arbitrum and don't need a bridge message.
+     */
+    function createProfile(
+        address _user,
+        string memory _ipfsHash,
+        address _referrerAddress
+    ) external {
+        require(authorizedContracts[msg.sender] || msg.sender == bridge, "Not authorized");
+        require(!genesis.hasProfile(_user), "Profile already exists");
+        require(bytes(_ipfsHash).length > 0, "IPFS hash cannot be empty");
+
+        genesis.setProfile(_user, _ipfsHash, _referrerAddress);
+        emit ProfileCreated(_user, _ipfsHash, _referrerAddress);
+    }
+
+    /**
+     * @dev Update a user's profile IPFS hash. Called by authorized contracts.
+     */
+    function updateProfile(
+        address _user,
+        string memory _newIpfsHash
+    ) external {
+        require(authorizedContracts[msg.sender] || msg.sender == bridge, "Not authorized");
+        require(genesis.hasProfile(_user), "Profile does not exist");
+        require(bytes(_newIpfsHash).length > 0, "IPFS hash cannot be empty");
+
+        genesis.setProfile(_user, _newIpfsHash, genesis.getUserReferrer(_user));
+        emit ProfileUpdated(_user, _newIpfsHash);
+    }
+
+    /**
+     * @dev Add a portfolio item for a user. Called by authorized contracts.
+     */
+    function addPortfolioItem(
+        address _user,
+        string memory _portfolioHash
+    ) external {
+        require(authorizedContracts[msg.sender] || msg.sender == bridge, "Not authorized");
+        require(genesis.hasProfile(_user), "Profile does not exist");
+        require(bytes(_portfolioHash).length > 0, "Portfolio hash cannot be empty");
+
+        genesis.addPortfolio(_user, _portfolioHash);
+        emit PortfolioAdded(_user, _portfolioHash);
     }
 
     function _authorizeUpgrade(address /* newImplementation */) internal view override {
@@ -683,7 +733,7 @@ contract NativeOpenWorkJobContract is
         uint256[] memory _amounts,
         uint32 _jobTakerChainDomain
     ) external {
-        require(msg.sender == bridge, "Only bridge can call");
+        require(msg.sender == bridge || authorizedContracts[msg.sender], "Only bridge or authorized");
         require(!genesis.jobExists(_jobId), "Job already exists");
         require(_descriptions.length == _amounts.length, "Length mismatch");
         require(_descriptions.length > 0, "Must have milestones");
@@ -856,6 +906,66 @@ contract NativeOpenWorkJobContract is
         // Note: USDC sent directly to target recipient via CCTP
         emit PaymentReleased(_jobId, _jobGiver, _targetRecipient, netAmount, job.currentMilestone);
     }
+
+    /**
+     * @dev Unified releasePayment — called by NativeArbLOWJC (authorized) for same-chain or cross-chain releases.
+     * Reads milestone amount from Genesis, routes payment based on the applicant's registered preferred chain domain:
+     *   - domain == 3 (Arb) or 0 (unset)  →  direct safeTransfer on Arbitrum
+     *   - any other domain                 →  CCTP sendFast to target chain
+     * This avoids the caller needing to pass an amount or target domain — NOWJC resolves it autonomously.
+     */
+    function releasePayment(string memory _jobId) external {
+        require(authorizedContracts[msg.sender] || msg.sender == bridge, "Not authorized");
+
+        IOpenworkGenesis.Job memory job = genesis.getJob(_jobId);
+        require(job.selectedApplicant != address(0), "No applicant selected");
+        require(job.status == IOpenworkGenesis.JobStatus.InProgress, "Job not in progress");
+        require(
+            job.currentMilestone > 0 && job.currentMilestone <= job.finalMilestones.length,
+            "Invalid milestone state"
+        );
+
+        // Read amount directly from genesis — no trust required from caller
+        uint256 milestoneIndex = job.currentMilestone - 1;
+        uint256 grossAmount = job.finalMilestones[milestoneIndex].amount;
+
+        // Commission
+        uint256 commission = calculateCommission(grossAmount);
+        uint256 netAmount = grossAmount - commission;
+        accumulatedCommission += commission;
+
+        // Route based on applicant's registered preferred chain domain
+        uint32 targetDomain = jobApplicantChainDomain[_jobId][job.selectedApplicant];
+
+        if (targetDomain == 3 || targetDomain == 0) {
+            // Same-chain (Arbitrum) or domain not set — direct transfer
+            usdtToken.safeTransfer(job.selectedApplicant, netAmount);
+        } else {
+            // Cross-chain via CCTP to applicant's preferred domain
+            require(cctpTransceiver != address(0), "CCTP transceiver not set");
+            usdtToken.approve(cctpTransceiver, netAmount);
+            ICCTPTransceiver(cctpTransceiver).sendFast(
+                netAmount,
+                targetDomain,
+                bytes32(uint256(uint160(job.selectedApplicant))),
+                1000
+            );
+        }
+
+        // Rewards + genesis updates
+        _processRewardsForPayment(job.jobGiver, _jobId, netAmount);
+        genesis.updateJobTotalPaid(_jobId, netAmount);
+        genesis.setJobCurrentMilestone(_jobId, job.currentMilestone + 1);
+
+        // Complete job if last milestone
+        if (job.currentMilestone + 1 > job.finalMilestones.length) {
+            genesis.updateJobStatus(_jobId, IOpenworkGenesis.JobStatus.Completed);
+            emit JobStatusChanged(_jobId, JobStatus.Completed);
+        }
+
+        emit CommissionDeducted(_jobId, grossAmount, commission, netAmount);
+        emit PaymentReleased(_jobId, job.jobGiver, job.selectedApplicant, netAmount, job.currentMilestone);
+    }
     
     function lockNextMilestone(address /* _caller */, string memory _jobId, uint256 _lockedAmount) external {
         IOpenworkGenesis.Job memory job = genesis.getJob(_jobId);
@@ -866,7 +976,7 @@ contract NativeOpenWorkJobContract is
     }
     
     function releasePaymentAndLockNext(address _jobGiver, string memory _jobId, uint256 _releasedAmount, uint256 _lockedAmount) external {
-      require(msg.sender == bridge, "Only bridge");
+      require(msg.sender == bridge || authorizedContracts[msg.sender], "Only bridge or authorized");
         
         IOpenworkGenesis.Job memory job = genesis.getJob(_jobId);
         require(job.selectedApplicant != address(0), "No applicant");
@@ -918,8 +1028,12 @@ contract NativeOpenWorkJobContract is
         emit PaymentReleasedAndNextMilestoneLocked(_jobId, netAmount, _lockedAmount, job.currentMilestone);
     }
     
-    /* COMMENTED OUT TO SAVE CONTRACT SIZE - Use Genesis directly for ratings
+    /**
+     * @dev Record a rating for a job participant.
+     * Callable by authorized contracts (e.g. NativeArbLOWJC) or the bridge.
+     */
     function rate(address _rater, string memory _jobId, address _userToRate, uint256 _rating) external {
+        require(authorizedContracts[msg.sender] || msg.sender == bridge, "Not authorized");
         IOpenworkGenesis.Job memory job = genesis.getJob(_jobId);
         bool isAuthorized = false;
         
@@ -929,12 +1043,11 @@ contract NativeOpenWorkJobContract is
             isAuthorized = true;
         }
         
-        require(isAuthorized, "Not authorized");
+        require(isAuthorized, "Not authorized to rate");
         
         genesis.setJobRating(_jobId, _userToRate, _rating);
         emit UserRated(_jobId, _rater, _userToRate, _rating);
     }
-    */
 
     /* COMMENTED OUT TO SAVE CONTRACT SIZE - Use Genesis directly for portfolio
     function addPortfolio(address _user, string memory _portfolioHash) external {
