@@ -46,9 +46,7 @@ interface IOpenworkGenesis {
         uint256 selectedApplicationId;
     }
 
-    // Job and profile management
-    function setProfile(address user, string memory ipfsHash, address referrer) external;
-    function addPortfolio(address user, string memory portfolioHash) external;
+    // Job management
     function setJob(string memory jobId, address jobGiver, string memory jobDetailHash, string[] memory descriptions, uint256[] memory amounts) external;
     function addJobApplicant(string memory jobId, address applicant) external;
     function setJobApplication(string memory jobId, uint256 applicationId, address applicant, string memory applicationHash, string[] memory descriptions, uint256[] memory amounts, uint32 preferredPaymentChainDomain, address preferredPaymentAddress) external;
@@ -75,8 +73,6 @@ interface IOpenworkGenesis {
     function getJobApplicationCount(string memory jobId) external view returns (uint256);
     function getUserRatings(address user) external view returns (uint256[] memory);
     function jobExists(string memory jobId) external view returns (bool);
-    function hasProfile(address user) external view returns (bool);
-    function getUserReferrer(address user) external view returns (address);
     function getUserEarnedTokens(address user) external view returns (uint256);
     function getUserGovernanceActionsInBand(address user, uint256 band) external view returns (uint256);
     function getUserGovernanceActions(address user) external view returns (uint256); // Change from getUserTotalGovernanceActions
@@ -222,8 +218,6 @@ contract NativeOpenWorkJobContract is
 
     // ==================== EVENTS ====================
     
-    event ProfileCreated(address indexed user, string ipfsHash, address referrer);
-    event ProfileUpdated(address indexed user, string newIpfsHash);
     event JobPosted(string indexed jobId, address indexed jobGiver, string jobDetailHash);
     event JobApplication(string indexed jobId, uint256 indexed applicationId, address indexed applicant, string applicationHash);
     event JobStarted(string indexed jobId, uint256 indexed applicationId, address indexed selectedApplicant, bool useApplicantMilestones);
@@ -231,7 +225,6 @@ contract NativeOpenWorkJobContract is
     event PaymentReleased(string indexed jobId, address indexed jobGiver, address indexed applicant, uint256 amount, uint256 milestone);
     event MilestoneLocked(string indexed jobId, uint256 newMilestone, uint256 lockedAmount);
     event UserRated(string indexed jobId, address indexed rater, address indexed rated, uint256 rating);
-    event PortfolioAdded(address indexed user, string portfolioHash);
     event JobStatusChanged(string indexed jobId, JobStatus newStatus);
     event PaymentReleasedAndNextMilestoneLocked(string indexed jobId, uint256 releasedAmount, uint256 lockedAmount, uint256 milestone);
     event BridgeUpdated(address indexed oldBridge, address indexed newBridge);
@@ -300,55 +293,6 @@ contract NativeOpenWorkJobContract is
 
     function isAuthorizedContract(address contractAddress) external view returns (bool) {
         return authorizedContracts[contractAddress];
-    }
-
-    // ==================== PROFILE PASSTHROUGH (for native chain clients) ====================
-
-    /**
-     * @dev Create a profile on behalf of a user. Called by authorized contracts (e.g. NativeArbLOWJC)
-     * that are already on Arbitrum and don't need a bridge message.
-     */
-    function createProfile(
-        address _user,
-        string memory _ipfsHash,
-        address _referrerAddress
-    ) external {
-        require(authorizedContracts[msg.sender] || msg.sender == bridge, "Not authorized");
-        require(!genesis.hasProfile(_user), "Profile already exists");
-        require(bytes(_ipfsHash).length > 0, "IPFS hash cannot be empty");
-
-        genesis.setProfile(_user, _ipfsHash, _referrerAddress);
-        emit ProfileCreated(_user, _ipfsHash, _referrerAddress);
-    }
-
-    /**
-     * @dev Update a user's profile IPFS hash. Called by authorized contracts.
-     */
-    function updateProfile(
-        address _user,
-        string memory _newIpfsHash
-    ) external {
-        require(authorizedContracts[msg.sender] || msg.sender == bridge, "Not authorized");
-        require(genesis.hasProfile(_user), "Profile does not exist");
-        require(bytes(_newIpfsHash).length > 0, "IPFS hash cannot be empty");
-
-        genesis.setProfile(_user, _newIpfsHash, genesis.getUserReferrer(_user));
-        emit ProfileUpdated(_user, _newIpfsHash);
-    }
-
-    /**
-     * @dev Add a portfolio item for a user. Called by authorized contracts.
-     */
-    function addPortfolioItem(
-        address _user,
-        string memory _portfolioHash
-    ) external {
-        require(authorizedContracts[msg.sender] || msg.sender == bridge, "Not authorized");
-        require(genesis.hasProfile(_user), "Profile does not exist");
-        require(bytes(_portfolioHash).length > 0, "Portfolio hash cannot be empty");
-
-        genesis.addPortfolio(_user, _portfolioHash);
-        emit PortfolioAdded(_user, _portfolioHash);
     }
 
     function _authorizeUpgrade(address /* newImplementation */) internal view override {
