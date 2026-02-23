@@ -65,9 +65,9 @@ async function main() {
   console.log('W1 ETH :', ethers.formatEther(await provider.getBalance(w1.address)));
   console.log('W1 USDC:', ethers.formatUnits(await usdc.balanceOf(w1.address), 6));
 
-  // Fund W2 for gas
-  console.log('\n[0] Funding W2 with 0.001 ETH...');
-  const fundTx = await (await w1.sendTransaction({ to: w2.address, value: ethers.parseEther('0.001') })).wait();
+  // Fund W2 for gas — minimal amount (Arb Sepolia ~0.02 gwei, 5 txs × 300k gas = 0.00003 ETH max)
+  console.log('\n[0] Funding W2 with 0.0001 ETH (gas only)...');
+  const fundTx = await (await w1.sendTransaction({ to: w2.address, value: ethers.parseEther('0.0001') })).wait();
   console.log(`  ✅ ${link(fundTx.hash)}`);
 
   const links = {};
@@ -163,6 +163,15 @@ async function main() {
   for (const [k, v] of Object.entries(links)) console.log(`  ${k.padEnd(20)}: ${v}`);
   console.log(`\n  W1 → NOWJC (startJob):     ${ethers.formatUnits(w1Before - w1After, 6)} USDC ✅`);
   console.log(`  NOWJC → W2 (release):      ${ethers.formatUnits(received, 6)} USDC ✅`);
+
+  // Recover USDC from W2 back to W1 (avoid wasting testnet USDC)
+  const w2UsdcBal = await usdcRO.balanceOf(w2.address);
+  if (w2UsdcBal > 0n) {
+    console.log('\n[8] Recovering USDC from W2 back to W1...');
+    const usdcW2 = new ethers.Contract(USDC_ADDR, ['function transfer(address,uint256) returns (bool)'], w2);
+        const recoverTx = await (await usdcW2.transfer(w1.address, w2UsdcBal)).wait();
+    console.log(`  ✅ Recovered ${ethers.formatUnits(w2UsdcBal, 6)} USDC: ${link(recoverTx.hash)}`);
+  }
 }
 
 main().catch(e => { console.error('\n❌ FAILED:', e.message); if (e.info?.error) console.error(JSON.stringify(e.info.error)); process.exit(1); });
