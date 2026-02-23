@@ -71,11 +71,10 @@ img#connectButtonVJ {
 }
 
 .title-section .backButton {
-  width: 40px; /* Set the width to 35px */
-  height: 40px; /* Set the height to 35px */
-  /* margin-left: 33px; */
-  margin-right: -45px;
-  padding-top:2px;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  padding-top: 2px;
 }
 
 .title-section .tableTitleV {
