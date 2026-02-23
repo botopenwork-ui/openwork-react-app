@@ -280,6 +280,19 @@ contract NativeOpenWorkJobContract is
         emit AuthorizedContractAdded(contractAddress);
     }
 
+    /**
+     * @dev Authorize multiple contracts in a single call.
+     *      Used during proxy upgrades via upgradeToAndCall to register all native
+     *      contracts in the same transaction as the upgrade (1 tx for Anas).
+     */
+    function batchAddAuthorizedContracts(address[] calldata contracts) external onlyOwner {
+        for (uint256 i = 0; i < contracts.length; i++) {
+            require(contracts[i] != address(0), "Invalid address");
+            authorizedContracts[contracts[i]] = true;
+            emit AuthorizedContractAdded(contracts[i]);
+        }
+    }
+
     function removeAuthorizedContract(address contractAddress) external onlyOwner {
         authorizedContracts[contractAddress] = false;
         emit AuthorizedContractRemoved(contractAddress);
