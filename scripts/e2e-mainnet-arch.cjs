@@ -30,7 +30,7 @@ function art(solFile, contractName) {
   return JSON.parse(fs.readFileSync(p));
 }
 
-const proxyArt = art('proxy.sol', 'UUPSProxy');
+const proxyArt = art('UUPSProxy.sol', 'UUPSProxy');
 
 async function deployProxy(wallet, artifact, initArgs, label) {
   const Impl  = new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet);
@@ -81,30 +81,31 @@ async function main() {
   console.log('W1 ETH:', ethers.formatEther(ethBal));
   console.log('W1 USDC:', ethers.formatUnits(usdcBal, 6));
 
-  if (ethBal < ethers.parseEther('0.005')) throw new Error('W1 needs at least 0.005 ETH');
-  if (usdcBal < BigInt(5_000_000)) throw new Error('W1 needs at least 5 USDC');
+  if (ethBal < ethers.parseEther('0.003')) throw new Error('W1 needs at least 0.003 ETH');
+  if (usdcBal < BigInt(400_000)) throw new Error('W1 needs at least 0.4 USDC');
 
   // ── Fund W2 ──
-  await (await w1.sendTransaction({ to: w2.address, value: ethers.parseEther('0.002') })).wait();
-  await (await usdc.connect(w1).transfer(w2.address, BigInt(2_000_000))).wait();
-  console.log('W2 funded: 0.002 ETH + 2 USDC');
+  await (await w1.sendTransaction({ to: w2.address, value: ethers.parseEther('0.001') })).wait();
+  console.log('W2 funded: 0.001 ETH (USDC given per-flow as needed)');
 
   // ── Load artifacts ──
-  const genesisArt      = art('native-openwork-genesis.sol', 'NativeOpenworkGenesis');
-  const nowjcArt        = art('native-openwork-job-contract-v2.sol', 'NativeOpenWorkJobContract');
-  const profileMgrArt   = art('native-profile-manager.sol', 'NativeProfileManager');
-  const athenaArt       = art('native-athena-mainnet-v2.sol', 'NativeAthena');
-  const lowjcArt        = art('native-arb-lowjc-v2.sol', 'NativeArbOpenWorkJobContract');
-  const athenaClientArt = art('native-arb-athena-client.sol', 'NativeArbAthenaClient');
+  const genesisArt        = art('native-openwork-genesis.sol', 'NativeOpenworkGenesis');
+  const profileGenesisArt = art('native-profile-genesis.sol', 'NativeProfileGenesis');
+  const nowjcArt          = art('native-openwork-job-contract-v2.sol', 'NativeOpenWorkJobContract');
+  const profileMgrArt     = art('native-profile-manager.sol', 'NativeProfileManager');
+  const athenaArt         = art('native-athena-mainnet-v2.sol', 'NativeAthena');
+  const lowjcArt          = art('native-arb-lowjc-v2.sol', 'NativeArbOpenWorkJobContract');
+  const athenaClientArt   = art('native-arb-athena-client.sol', 'NativeArbAthenaClient');
 
   // ── Deploy or load cache ──
-  let genesisAddr, nowjcAddr, profileMgrAddr, athenaAddr, lowjcAddr, athenaClientAddr;
+  let genesisAddr, profileGenesisAddr, nowjcAddr, profileMgrAddr, athenaAddr, lowjcAddr, athenaClientAddr;
 
   if (!FORCE && fs.existsSync(CACHE)) {
     const c = JSON.parse(fs.readFileSync(CACHE, 'utf8'));
-    ({ genesis: genesisAddr, nowjc: nowjcAddr, profileManager: profileMgrAddr, athena: athenaAddr, lowjc: lowjcAddr, athenaClient: athenaClientAddr } = c);
+    ({ genesis: genesisAddr, profileGenesis: profileGenesisAddr, nowjc: nowjcAddr, profileManager: profileMgrAddr, athena: athenaAddr, lowjc: lowjcAddr, athenaClient: athenaClientAddr } = c);
     console.log('\n═══ Reusing cached contracts ═══');
     console.log('  Genesis:', genesisAddr);
+    console.log('  ProfileGenesis:', profileGenesisAddr);
     console.log('  NOWJC v2:', nowjcAddr);
     console.log('  ProfileManager:', profileMgrAddr);
     console.log('  NativeAthena v2:', athenaAddr);
@@ -113,50 +114,61 @@ async function main() {
   } else {
     console.log('\n═══ Deploying fresh contract suite ═══');
 
-    // 1. Genesis
+    // 1. Genesis (jobs/oracles/disputes)
     console.log('\n[1] NativeOpenworkGenesis...');
     genesisAddr = await deployProxy(w1, genesisArt, [w1.address], 'Genesis');
 
-    // 2. NOWJC v2 (bridge=0, rewardsContract=0, cctpReceiver=0)
-    console.log('\n[2] NOWJC v2...');
+    // 2. ProfileGenesis (profiles only)
+    console.log('\n[2] NativeProfileGenesis...');
+    profileGenesisAddr = await deployProxy(w1, profileGenesisArt, [w1.address], 'ProfileGenesis');
+
+    // 3. NOWJC v2 (bridge=0, rewardsContract=0, cctpReceiver=0)
+    console.log('\n[3] NOWJC v2...');
     nowjcAddr = await deployProxy(w1, nowjcArt,
       [w1.address, ethers.ZeroAddress, genesisAddr, ethers.ZeroAddress, USDC, ethers.ZeroAddress],
       'NOWJC-v2');
 
-    // 3. ProfileManager (bridge=0 initially, set after LOWJC deploy)
-    console.log('\n[3] ProfileManager...');
-    profileMgrAddr = await deployProxy(w1, profileMgrArt, [w1.address, ethers.ZeroAddress, genesisAddr], 'ProfileManager');
+    // 4. ProfileManager (bridge=0 initially, genesis=profileGenesisAddr)
+    console.log('\n[4] ProfileManager...');
+    profileMgrAddr = await deployProxy(w1, profileMgrArt, [w1.address, ethers.ZeroAddress, profileGenesisAddr], 'ProfileManager');
 
-    // 4. NativeAthena v2 (dao=0)
-    console.log('\n[4] NativeAthena v2...');
+    // 5. NativeAthena v2 (dao=0)
+    console.log('\n[5] NativeAthena v2...');
     athenaAddr = await deployProxy(w1, athenaArt,
       [w1.address, ethers.ZeroAddress, genesisAddr, nowjcAddr, USDC],
       'NativeAthena-v2');
 
-    // 5. LOWJC v2
-    console.log('\n[5] LOWJC v2...');
+    // 6. LOWJC v2
+    console.log('\n[6] LOWJC v2...');
     lowjcAddr = await deployProxy(w1, lowjcArt, [w1.address, USDC, nowjcAddr], 'LOWJC-v2');
 
-    // 6. AthenaClient
-    console.log('\n[6] AthenaClient...');
+    // 7. AthenaClient
+    console.log('\n[7] AthenaClient...');
     athenaClientAddr = await deployProxy(w1, athenaClientArt,
       [w1.address, USDC, athenaAddr, lowjcAddr],
       'AthenaClient');
 
     // ── Wire-up ──
-    console.log('\n[7] Wire-up...');
-    const genesis    = new ethers.Contract(genesisAddr, genesisArt.abi, w1);
-    const nowjc      = new ethers.Contract(nowjcAddr, nowjcArt.abi, w1);
-    const profileMgr = new ethers.Contract(profileMgrAddr, profileMgrArt.abi, w1);
-    const athena     = new ethers.Contract(athenaAddr, athenaArt.abi, w1);
-    const lowjc      = new ethers.Contract(lowjcAddr, lowjcArt.abi, w1);
-    const athenaClient = new ethers.Contract(athenaClientAddr, athenaClientArt.abi, w1);
+    console.log('\n[8] Wire-up...');
+    const genesis        = new ethers.Contract(genesisAddr, genesisArt.abi, w1);
+    const profileGenesis = new ethers.Contract(profileGenesisAddr, profileGenesisArt.abi, w1);
+    const nowjc          = new ethers.Contract(nowjcAddr, nowjcArt.abi, w1);
+    const profileMgr     = new ethers.Contract(profileMgrAddr, profileMgrArt.abi, w1);
+    const athena         = new ethers.Contract(athenaAddr, athenaArt.abi, w1);
+    const lowjc          = new ethers.Contract(lowjcAddr, lowjcArt.abi, w1);
+    const athenaClient   = new ethers.Contract(athenaClientAddr, athenaClientArt.abi, w1);
 
-    // Genesis authorizations
+    // Main Genesis: authorize NOWJC + Athena (NOT ProfileManager — it uses profileGenesis)
     await (await genesis.authorizeContract(nowjcAddr, true)).wait();
-    await (await genesis.authorizeContract(profileMgrAddr, true)).wait();
     await (await genesis.authorizeContract(athenaAddr, true)).wait();
-    console.log('    Genesis: authorized NOWJC + ProfileManager + Athena');
+    console.log('    Genesis: authorized NOWJC + Athena');
+
+    // ProfileGenesis: authorize ProfileManager
+    await (await profileGenesis.authorizeContract(profileMgrAddr, true)).wait();
+    console.log('    ProfileGenesis: authorized ProfileManager');
+
+    // NOWJC: owner must first grant admin to self (initialize() doesn't set admins[owner])
+    await (await nowjc.setAdmin(w1.address, true)).wait();
 
     // NOWJC authorizations
     await (await nowjc.addAuthorizedContract(lowjcAddr)).wait();
@@ -193,7 +205,7 @@ async function main() {
     console.log('    Genesis: oracle "test-oracle" created');
 
     // Save cache
-    fs.writeFileSync(CACHE, JSON.stringify({ genesis: genesisAddr, nowjc: nowjcAddr, profileManager: profileMgrAddr, athena: athenaAddr, lowjc: lowjcAddr, athenaClient: athenaClientAddr }, null, 2));
+    fs.writeFileSync(CACHE, JSON.stringify({ genesis: genesisAddr, profileGenesis: profileGenesisAddr, nowjc: nowjcAddr, profileManager: profileMgrAddr, athena: athenaAddr, lowjc: lowjcAddr, athenaClient: athenaClientAddr }, null, 2));
     console.log('\n    ✅ All deployed and wired');
   }
 
@@ -207,7 +219,7 @@ async function main() {
   const athenaClient = new ethers.Contract(athenaClientAddr, athenaClientArt.abi, w1);
   const athenaClientW2 = athenaClient.connect(w2);
 
-  const M = BigInt(1_000_000); // 1 USDC
+  const M = BigInt(100_000); // 0.1 USDC
 
   // ════════════════════════════════════════════════════════════════════════════
   // F1: Application flow
