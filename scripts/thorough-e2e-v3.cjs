@@ -595,6 +595,9 @@ async function main() {
   console.log('F4: Dispute flow — applicant wins');
   console.log('═'.repeat(60));
   try {
+    // Re-fund W2 USDC for dispute fee (drained by earlier flows)
+    await (await usdc.connect(w1).transfer(w2.address, BigInt(200_000))).wait(); // 0.2 USDC
+    console.log('  F4-0: W2 refunded 0.2 USDC for dispute fee');
     const f4JobId = `${(await provider.getNetwork()).chainId}-${Number(await lowjc.jobCounter()) + 1}`;
     await (await usdc.connect(w1).approve(lowjcAddr, M)).wait();
     await withRetry(() => lowjcW1.postJob('ipfs://job-f4', ['M1'], [M]).then(t => t.wait()), 'F4 postJob');
@@ -640,6 +643,9 @@ async function main() {
   console.log('F5: Dispute flow — job giver wins');
   console.log('═'.repeat(60));
   try {
+    // Re-fund W2 USDC for dispute fee
+    await (await usdc.connect(w1).transfer(w2.address, BigInt(200_000))).wait(); // 0.2 USDC
+    console.log('  F5-0: W2 refunded 0.2 USDC for dispute fee');
     const f5JobId = `${(await provider.getNetwork()).chainId}-${Number(await lowjc.jobCounter()) + 1}`;
     await (await usdc.connect(w1).approve(lowjcAddr, M)).wait();
     await withRetry(() => lowjcW1.postJob('ipfs://job-f5', ['M1'], [M]).then(t => t.wait()), 'F5 postJob');
