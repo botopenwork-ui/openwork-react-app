@@ -84,7 +84,7 @@ interface INativeNOWJC {
     ) external;
 
     // Payment — unified routing (same-chain or cross-chain determined by NOWJC)
-    function releasePayment(string memory _jobId) external;
+    function releasePayment(address _jobGiver, string memory _jobId, uint256 _amount) external;
 
     function lockNextMilestone(
         address _caller,
@@ -126,6 +126,8 @@ interface IProfileManager {
     function createProfile(address user, string memory ipfsHash, address referrer) external;
     function updateProfile(address user, string memory newIpfsHash) external;
     function addPortfolio(address user, string memory portfolioHash) external;
+    function updatePortfolioItem(address user, uint256 index, string memory newPortfolioHash) external;
+    function removePortfolioItem(address user, uint256 index) external;
     function rate(address rater, string memory jobId, address userToRate, uint256 rating) external;
     function hasProfile(address user) external view returns (bool);
 }
@@ -299,6 +301,16 @@ contract NativeArbOpenWorkJobContract is
         require(profileManager != address(0), "ProfileManager not set");
         IProfileManager(profileManager).addPortfolio(msg.sender, _portfolioHash);
         emit PortfolioAdded(msg.sender, _portfolioHash);
+    }
+
+    function updatePortfolioItem(uint256 _index, string memory _newPortfolioHash) external nonReentrant {
+        require(profileManager != address(0), "ProfileManager not set");
+        IProfileManager(profileManager).updatePortfolioItem(msg.sender, _index, _newPortfolioHash);
+    }
+
+    function removePortfolioItem(uint256 _index) external nonReentrant {
+        require(profileManager != address(0), "ProfileManager not set");
+        IProfileManager(profileManager).removePortfolioItem(msg.sender, _index);
     }
 
     // NOTE: getProfile removed in v2 — query ProfileManager directly.
@@ -534,7 +546,7 @@ contract NativeArbOpenWorkJobContract is
         }
 
         // NOWJC reads amount from genesis and routes payment autonomously
-        nowjc.releasePayment(_jobId);
+        nowjc.releasePayment(msg.sender, _jobId, amount);
 
         emit PaymentReleased(_jobId, msg.sender, job.selectedApplicant, amount, job.currentMilestone);
         emit PlatformTotalUpdated(totalPlatformPayments);

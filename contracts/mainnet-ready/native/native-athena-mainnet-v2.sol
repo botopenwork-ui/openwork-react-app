@@ -553,7 +553,7 @@ contract NativeAthena is
     /// @param disputedAmount Amount being disputed
     /// @param disputeRaiser Address of the party raising the dispute
     function handleRaiseDispute(string memory jobId, string memory disputeHash, string memory oracleName, uint256 fee, uint256 disputedAmount, address disputeRaiser) external {
-        require(msg.sender == bridge, "Only bridge");
+        require(msg.sender == bridge || msg.sender == athenaClient, "Not authorized");
 
         // NEW: Check if oracle is active before accepting dispute
         require(isOracleActive(oracleName), "Oracle inactive");
@@ -583,7 +583,7 @@ contract NativeAthena is
     /// @param feeAmount Fee paid for verification
     /// @param targetOracleName Oracle to verify the skill
     function handleSubmitSkillVerification(address applicant, string memory applicationHash, uint256 feeAmount, string memory targetOracleName) external {
-        require(msg.sender == bridge, "Only bridge");
+        require(msg.sender == bridge || msg.sender == athenaClient, "Not authorized");
 
         // NEW: Check oracle must be active before accepting skill verification
         require(isOracleActive(targetOracleName), "Oracle inactive");
