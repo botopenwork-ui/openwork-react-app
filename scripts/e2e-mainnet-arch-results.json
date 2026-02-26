@@ -1,0 +1,65 @@
+{
+  "tests": [
+    {
+      "name": "F1.w1-has-profile",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "F1.w2-has-profile",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "F1.job-counter-incremented",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "F1.w2-received-payment",
+      "status": "PASS",
+      "detail": "0.099 USDC"
+    },
+    {
+      "name": "F1.flow-complete",
+      "status": "PASS",
+      "detail": "W2 received 0.099 USDC"
+    },
+    {
+      "name": "F2.w2-received-payment",
+      "status": "PASS",
+      "detail": "0.099 USDC"
+    },
+    {
+      "name": "F2.flow-complete",
+      "status": "PASS",
+      "detail": "W2 received 0.099 USDC"
+    },
+    {
+      "name": "F3.addPortfolio",
+      "status": "PASS",
+      "detail": "added without revert"
+    },
+    {
+      "name": "F3.updatePortfolioItem",
+      "status": "PASS",
+      "detail": "updated without revert"
+    },
+    {
+      "name": "F3.removePortfolioItem",
+      "status": "PASS",
+      "detail": "removed without revert"
+    },
+    {
+      "name": "F4.dispute-flow-complete",
+      "status": "FAIL",
+      "detail": "execution reverted: \"Only authorized\" (action=\"estimateGas\", data=\"0x08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "summary": {
+    "total": 11,
+    "passed": 10,
+    "failed": 1
+  },
+  "testedAt": "2026-02-25T19:41:16.913Z"
+}

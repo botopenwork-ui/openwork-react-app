@@ -55,10 +55,11 @@ async function getKey() {
   return JSON.parse(r.toString()).spec.template.spec.containers[0].env?.find(e => e.name === 'WALL2_PRIVATE_KEY')?.value;
 }
 
-const results = { tests: [], summary: { total: 0, passed: 0, failed: 0 } };
+const results = { tests: [], txLinks: {}, summary: { total: 0, passed: 0, failed: 0 } };
 function pass(name, detail = '') { results.tests.push({ name, status: 'PASS', detail }); results.summary.total++; results.summary.passed++; console.log(`  ✅ ${name}${detail ? ' — ' + detail : ''}`); }
 function fail(name, detail = '') { results.tests.push({ name, status: 'FAIL', detail }); results.summary.total++; results.summary.failed++; console.error(`  ❌ ${name}${detail ? ' — ' + detail : ''}`); }
 function expect(cond, name, detail = '') { cond ? pass(name, detail) : fail(name, detail); }
+function tx(key, hash) { results.txLinks[key] = lnk(hash); console.log(`    🔗 ${key}: ${lnk(hash)}`); }
 
 // ─── MAIN ────────────────────────────────────────────────────────────────────
 async function main() {
@@ -96,13 +97,17 @@ async function main() {
   const athenaArt         = art('native-athena-mainnet-v2.sol', 'NativeAthena');
   const lowjcArt          = art('native-arb-lowjc-v2.sol', 'NativeArbOpenWorkJobContract');
   const athenaClientArt   = art('native-arb-athena-client.sol', 'NativeArbAthenaClient');
+  const actTrackerArt     = art('native-athena-activity-tracker.sol', 'NativeAthenaActivityTracker');
+  const mockDaoArt        = art('MockDAO.sol', 'MockDAO');
 
   // ── Deploy or load cache ──
   let genesisAddr, profileGenesisAddr, nowjcAddr, profileMgrAddr, athenaAddr, lowjcAddr, athenaClientAddr;
+  let actTrackerAddr, mockDaoAddr;
 
   if (!FORCE && fs.existsSync(CACHE)) {
     const c = JSON.parse(fs.readFileSync(CACHE, 'utf8'));
-    ({ genesis: genesisAddr, profileGenesis: profileGenesisAddr, nowjc: nowjcAddr, profileManager: profileMgrAddr, athena: athenaAddr, lowjc: lowjcAddr, athenaClient: athenaClientAddr } = c);
+    ({ genesis: genesisAddr, profileGenesis: profileGenesisAddr, nowjc: nowjcAddr, profileManager: profileMgrAddr, athena: athenaAddr, lowjc: lowjcAddr, athenaClient: athenaClientAddr,
+       activityTracker: actTrackerAddr, mockDao: mockDaoAddr } = c);
     console.log('\n═══ Reusing cached contracts ═══');
     console.log('  Genesis:', genesisAddr);
     console.log('  ProfileGenesis:', profileGenesisAddr);
@@ -111,6 +116,43 @@ async function main() {
     console.log('  NativeAthena v2:', athenaAddr);
     console.log('  LOWJC v2:', lowjcAddr);
     console.log('  AthenaClient:', athenaClientAddr);
+    console.log('  ActivityTracker:', actTrackerAddr || '(not cached — will deploy)');
+    console.log('  MockDAO:', mockDaoAddr || '(not cached — will deploy)');
+
+    // Deploy missing ActivityTracker / MockDAO even when reusing other cached contracts
+    if (!actTrackerAddr) {
+      console.log('\n[+] Deploying ActivityTracker (not in cache)...');
+      actTrackerAddr = await deployProxy(w1, actTrackerArt, [w1.address], 'ActivityTracker');
+    }
+    if (!mockDaoAddr) {
+      console.log('\n[+] Deploying MockDAO (not in cache)...');
+      const F = new ethers.ContractFactory(mockDaoArt.abi, mockDaoArt.bytecode.object, w1);
+      const c = await F.deploy(); await c.deploymentTransaction().wait();
+      mockDaoAddr = await c.getAddress();
+      console.log('    MockDAO:', mockDaoAddr);
+    }
+    // Update cache with new addresses
+    { const existing = JSON.parse(fs.readFileSync(CACHE, 'utf8'));
+      fs.writeFileSync(CACHE, JSON.stringify({ ...existing, activityTracker: actTrackerAddr, mockDao: mockDaoAddr }, null, 2)); }
+
+    // Wire ActivityTracker + MockDAO into NativeAthena (idempotent)
+    { const athena = new ethers.Contract(athenaAddr, athenaArt.abi, w1);
+      await (await athena.setActivityTracker(actTrackerAddr)).wait();
+      await (await athena.setDAOContract(mockDaoAddr)).wait();
+      console.log('    NativeAthena: activityTracker + mockDAO wired'); }
+
+    // Authorize NativeAthena in NOWJC (needed for incrementGovernanceAction during voting)
+    { const nowjc = new ethers.Contract(nowjcAddr, nowjcArt.abi, w1);
+      await (await nowjc.setAdmin(w1.address, true)).wait();
+      await (await nowjc.addAuthorizedContract(athenaAddr)).wait();
+      console.log('    NOWJC: NativeAthena authorized'); }
+
+    // Authorize NativeAthena in ActivityTracker
+    { const at = new ethers.Contract(actTrackerAddr, actTrackerArt.abi, w1);
+      await (await at.setAuthorizedCaller(athenaAddr, true)).wait();
+      // Mark oracle active (owner override)
+      await (await at.setOracleActiveStatusOverride('test-oracle', true)).wait();
+      console.log('    ActivityTracker: NativeAthena authorized, test-oracle active'); }
   } else {
     console.log('\n═══ Deploying fresh contract suite ═══');
 
@@ -173,6 +215,7 @@ async function main() {
     // NOWJC authorizations
     await (await nowjc.addAuthorizedContract(lowjcAddr)).wait();
     await (await nowjc.addAuthorizedContract(athenaClientAddr)).wait();
+    await (await nowjc.addAuthorizedContract(athenaAddr)).wait(); // needed for incrementGovernanceAction during voting
     await (await nowjc.setNativeAthena(athenaAddr)).wait();
     await (await nowjc.setTreasury(w1.address)).wait();
     await (await nowjc.setCommissionPercentage(100)).wait(); // 1%
@@ -191,6 +234,27 @@ async function main() {
     await (await athena.updateMinStakeRequired(0)).wait();
     console.log('    NativeAthena: athenaClient set, votingPeriod=1min');
 
+    // 8b. ActivityTracker (UUPS proxy)
+    console.log('\n[8b] ActivityTracker...');
+    actTrackerAddr = await deployProxy(w1, actTrackerArt, [w1.address], 'ActivityTracker');
+
+    // 8c. MockDAO (plain deploy — no proxy needed)
+    console.log('\n[8c] MockDAO...');
+    { const F = new ethers.ContractFactory(mockDaoArt.abi, mockDaoArt.bytecode.object, w1);
+      const c = await F.deploy(); await c.deploymentTransaction().wait();
+      mockDaoAddr = await c.getAddress();
+      console.log('    MockDAO:', mockDaoAddr); }
+
+    // Wire ActivityTracker + MockDAO into NativeAthena
+    await (await athena.setActivityTracker(actTrackerAddr)).wait();
+    await (await athena.setDAOContract(mockDaoAddr)).wait();
+    console.log('    NativeAthena: activityTracker + mockDAO wired');
+
+    // Authorize NativeAthena in ActivityTracker (so it can call updateMemberActivity on votes)
+    { const at = new ethers.Contract(actTrackerAddr, actTrackerArt.abi, w1);
+      await (await at.setAuthorizedCaller(athenaAddr, true)).wait(); }
+    console.log('    ActivityTracker: NativeAthena authorized');
+
     // LOWJC: set profileManager + athenaClient
     await (await lowjc.setProfileManager(profileMgrAddr)).wait();
     await (await lowjc.setAthenaClientContract(athenaClientAddr)).wait();
@@ -204,8 +268,13 @@ async function main() {
     await (await genesis.setOracle('test-oracle', [w1.address], 'Test Oracle', 'ipfs://test', [w1.address])).wait();
     console.log('    Genesis: oracle "test-oracle" created');
 
+    // Mark oracle active in ActivityTracker (owner override — bypasses activity threshold for tests)
+    { const at = new ethers.Contract(actTrackerAddr, actTrackerArt.abi, w1);
+      await (await at.setOracleActiveStatusOverride('test-oracle', true)).wait(); }
+    console.log('    ActivityTracker: test-oracle marked active');
+
     // Save cache
-    fs.writeFileSync(CACHE, JSON.stringify({ genesis: genesisAddr, profileGenesis: profileGenesisAddr, nowjc: nowjcAddr, profileManager: profileMgrAddr, athena: athenaAddr, lowjc: lowjcAddr, athenaClient: athenaClientAddr }, null, 2));
+    fs.writeFileSync(CACHE, JSON.stringify({ genesis: genesisAddr, profileGenesis: profileGenesisAddr, nowjc: nowjcAddr, profileManager: profileMgrAddr, athena: athenaAddr, lowjc: lowjcAddr, athenaClient: athenaClientAddr, activityTracker: actTrackerAddr, mockDao: mockDaoAddr }, null, 2));
     console.log('\n    ✅ All deployed and wired');
   }
 
@@ -231,12 +300,14 @@ async function main() {
     // createProfile W1
     const w1HasProf = await profileMgr.hasProfile(w1.address);
     if (!w1HasProf) {
-      await (await lowjc.createProfile('ipfs://w1-profile', ethers.ZeroAddress)).wait();
+      const r = await (await lowjc.createProfile('ipfs://w1-profile', ethers.ZeroAddress)).wait();
+      tx('F1.createProfile-W1', r.hash);
       console.log('  F1-1: W1 profile created');
     } else { console.log('  F1-1: W1 profile already exists'); }
 
     // createProfile W2
-    await (await lowjcW2.createProfile('ipfs://w2-profile', ethers.ZeroAddress)).wait();
+    { const r = await (await lowjcW2.createProfile('ipfs://w2-profile', ethers.ZeroAddress)).wait();
+      tx('F1.createProfile-W2', r.hash); }
     console.log('  F1-2: W2 profile created');
 
     // Verify
@@ -249,27 +320,32 @@ async function main() {
     const jobCountBefore = await lowjc.jobCounter();
     const chainId = (await provider.getNetwork()).chainId;
     await (await usdc.connect(w1).approve(lowjcAddr, M)).wait();
-    await (await lowjc.postJob('ipfs://job-f1', ['Milestone 1'], [M])).wait();
+    { const r = await (await lowjc.postJob('ipfs://job-f1', ['Milestone 1'], [M])).wait();
+      tx('F1.postJob', r.hash); }
     const f1JobId = `${chainId}-${Number(await lowjc.jobCounter())}`;
     console.log('  F1-3: job posted:', f1JobId);
     expect(Number(await lowjc.jobCounter()) === Number(jobCountBefore) + 1, 'F1.job-counter-incremented');
 
     // applyToJob
-    await (await lowjcW2.applyToJob(f1JobId, 'ipfs://app-f1', ['Milestone 1'], [M], 3)).wait();
+    { const r = await (await lowjcW2.applyToJob(f1JobId, 'ipfs://app-f1', ['Milestone 1'], [M], 3)).wait();
+      tx('F1.applyToJob', r.hash); }
     console.log('  F1-4: W2 applied');
 
     // startJob
     await (await usdc.connect(w1).approve(lowjcAddr, M)).wait();
-    await (await lowjc.startJob(f1JobId, 1, false)).wait();
+    { const r = await (await lowjc.startJob(f1JobId, 1, false)).wait();
+      tx('F1.startJob', r.hash); }
     console.log('  F1-5: job started');
 
     // submitWork
-    await (await lowjcW2.submitWork(f1JobId, 'ipfs://work-f1')).wait();
+    { const r = await (await lowjcW2.submitWork(f1JobId, 'ipfs://work-f1')).wait();
+      tx('F1.submitWork', r.hash); }
     console.log('  F1-6: work submitted');
 
     // releasePayment
     const w2Before = await usdc.balanceOf(w2.address);
-    await (await lowjc.releasePayment(f1JobId)).wait();
+    { const r = await (await lowjc.releasePayment(f1JobId)).wait();
+      tx('F1.releasePayment', r.hash); }
     const w2After = await usdc.balanceOf(w2.address);
     const received = w2After - w2Before;
     expect(received > 0n, 'F1.w2-received-payment', `${ethers.formatUnits(received, 6)} USDC`);
@@ -293,15 +369,18 @@ async function main() {
     const chainId = (await provider.getNetwork()).chainId;
     const jobCountBefore = await lowjc.jobCounter();
     await (await usdc.connect(w1).approve(lowjcAddr, M)).wait();
-    await (await lowjc.startDirectContract(w2.address, 'ipfs://job-f2', ['M1'], [M], 3)).wait();
+    { const r = await (await lowjc.startDirectContract(w2.address, 'ipfs://job-f2', ['M1'], [M], 3)).wait();
+      tx('F2.startDirectContract', r.hash); }
     const f2JobId = `${chainId}-${Number(await lowjc.jobCounter())}`;
     console.log('  F2-1: direct contract started:', f2JobId);
 
-    await (await lowjcW2.submitWork(f2JobId, 'ipfs://work-f2')).wait();
+    { const r = await (await lowjcW2.submitWork(f2JobId, 'ipfs://work-f2')).wait();
+      tx('F2.submitWork', r.hash); }
     console.log('  F2-2: work submitted');
 
     const w2Before = await usdc.balanceOf(w2.address);
-    await (await lowjc.releasePayment(f2JobId)).wait();
+    { const r = await (await lowjc.releasePayment(f2JobId)).wait();
+      tx('F2.releasePayment', r.hash); }
     const received = (await usdc.balanceOf(w2.address)) - w2Before;
     expect(received > 0n, 'F2.w2-received-payment', `${ethers.formatUnits(received, 6)} USDC`);
     pass('F2.flow-complete', `W2 received ${ethers.formatUnits(received, 6)} USDC`);
@@ -320,13 +399,16 @@ async function main() {
   console.log('F3: Portfolio functions');
   console.log('═'.repeat(60));
   try {
-    await (await lowjc.addPortfolio('ipfs://portfolio-1')).wait();
+    { const r = await (await lowjc.addPortfolio('ipfs://portfolio-1')).wait();
+      tx('F3.addPortfolio', r.hash); }
     pass('F3.addPortfolio', 'added without revert');
 
-    await (await lowjc.updatePortfolioItem(0, 'ipfs://portfolio-1-updated')).wait();
+    { const r = await (await lowjc.updatePortfolioItem(0, 'ipfs://portfolio-1-updated')).wait();
+      tx('F3.updatePortfolioItem', r.hash); }
     pass('F3.updatePortfolioItem', 'updated without revert');
 
-    await (await lowjc.removePortfolioItem(0)).wait();
+    { const r = await (await lowjc.removePortfolioItem(0)).wait();
+      tx('F3.removePortfolioItem', r.hash); }
     pass('F3.removePortfolioItem', 'removed without revert');
   } catch (e) {
     fail('F3.portfolio-functions', e.message?.slice(0, 200));
@@ -345,31 +427,38 @@ async function main() {
 
     const chainId = (await provider.getNetwork()).chainId;
     await (await usdc.connect(w1).approve(lowjcAddr, M)).wait();
-    await (await lowjc.postJob('ipfs://job-f4', ['M1'], [M])).wait();
+    { const r = await (await lowjc.postJob('ipfs://job-f4', ['M1'], [M])).wait();
+      tx('F4.postJob', r.hash); }
     const f4JobId = `${chainId}-${Number(await lowjc.jobCounter())}`;
 
-    await (await lowjcW2.applyToJob(f4JobId, 'ipfs://app-f4', ['M1'], [M], 3)).wait();
+    { const r = await (await lowjcW2.applyToJob(f4JobId, 'ipfs://app-f4', ['M1'], [M], 3)).wait();
+      tx('F4.applyToJob', r.hash); }
     await (await usdc.connect(w1).approve(lowjcAddr, M)).wait();
-    await (await lowjc.startJob(f4JobId, 1, false)).wait();
-    await (await lowjcW2.submitWork(f4JobId, 'ipfs://work-f4')).wait();
+    { const r = await (await lowjc.startJob(f4JobId, 1, false)).wait();
+      tx('F4.startJob', r.hash); }
+    { const r = await (await lowjcW2.submitWork(f4JobId, 'ipfs://work-f4')).wait();
+      tx('F4.submitWork', r.hash); }
 
     // Raise dispute from W2
     const DISPUTE_FEE = BigInt(10_000);
     await (await usdc.connect(w2).approve(athenaClientAddr, DISPUTE_FEE)).wait();
-    await (await athenaClientW2.raiseDispute(f4JobId, 'ipfs://dispute-f4', 'test-oracle', DISPUTE_FEE, M)).wait();
+    { const r = await (await athenaClientW2.raiseDispute(f4JobId, 'ipfs://dispute-f4', 'test-oracle', DISPUTE_FEE, M)).wait();
+      tx('F4.raiseDispute', r.hash); }
     const f4DisputeId = `${f4JobId}-1`;
     console.log('  F4: dispute raised:', f4DisputeId);
 
     // Vote FOR applicant (W2 wins)
-    await (await athena.connect(w1).vote(0, f4DisputeId, true, w1.address)).wait();
+    { const r = await (await athena.connect(w1).vote(0, f4DisputeId, true, w1.address)).wait();
+      tx('F4.voteOnDispute', r.hash); }
     console.log('  F4: voted FOR applicant, waiting 65s...');
     await sleep(65_000);
 
     const w2Before = await usdc.balanceOf(w2.address);
-    await (await athena.settleDispute(f4DisputeId)).wait();
+    { const r = await (await athena.settleDispute(f4DisputeId)).wait();
+      tx('F4.settleDispute', r.hash); }
     const received = (await usdc.balanceOf(w2.address)) - w2Before;
     expect(received > 0n, 'F4.applicant-received-funds', `W2 got ${ethers.formatUnits(received, 6)} USDC`);
-    pass('F4.dispute-flow-complete', 'applicant wins ✅');
+    pass('F4.dispute-flow-complete', `applicant wins ✅ — W2 received ${ethers.formatUnits(received, 6)} USDC`);
 
     const w2Bal = await usdc.balanceOf(w2.address);
     if (w2Bal > 0n) await (await usdc.connect(w2).transfer(w1.address, w2Bal)).wait();
@@ -390,7 +479,11 @@ async function main() {
   if (results.summary.failed === 0) console.log('🎉 ALL TESTS PASSED');
   else console.log(`⚠️  ${results.summary.failed} FAILED`);
 
-  fs.writeFileSync(path.join(__dirname, 'e2e-mainnet-arch-results.json'), JSON.stringify({ ...results, testedAt: new Date().toISOString() }, null, 2));
+  fs.writeFileSync(path.join(__dirname, 'e2e-mainnet-arch-results.json'), JSON.stringify({
+    ...results,
+    contracts: { genesis: genesisAddr, profileGenesis: profileGenesisAddr, nowjc: nowjcAddr, profileManager: profileMgrAddr, athena: athenaAddr, lowjc: lowjcAddr, athenaClient: athenaClientAddr },
+    testedAt: new Date().toISOString()
+  }, null, 2));
 }
 
 main().catch(e => { console.error('FATAL:', e.message); process.exit(1); });

@@ -1,0 +1,135 @@
+{
+  "tests": [
+    {
+      "name": "F1.nowjc.hasNowjcProfile(W1)",
+      "status": "PASS",
+      "detail": "returned true"
+    },
+    {
+      "name": "F1.nowjc.hasNowjcProfile(W2)",
+      "status": "PASS",
+      "detail": "returned true"
+    },
+    {
+      "name": "F1.nowjc-holds-usdc",
+      "status": "PASS",
+      "detail": "NOWJC holds 0.308 USDC"
+    },
+    {
+      "name": "F1.w2-received-usdc",
+      "status": "PASS",
+      "detail": "received 0.099 USDC (expected 0.099)"
+    },
+    {
+      "name": "F1.flow-complete",
+      "status": "PASS",
+      "detail": "Application flow end-to-end"
+    },
+    {
+      "name": "F2.w2-received-usdc",
+      "status": "PASS",
+      "detail": "received 0.099 USDC"
+    },
+    {
+      "name": "F2.flow-complete",
+      "status": "PASS",
+      "detail": "Direct contract flow end-to-end"
+    },
+    {
+      "name": "F3.milestone1-received",
+      "status": "PASS",
+      "detail": "received 0.099 USDC"
+    },
+    {
+      "name": "F3.milestone2-received",
+      "status": "PASS",
+      "detail": "received 0.099 USDC"
+    },
+    {
+      "name": "F3.total-received-correct",
+      "status": "PASS",
+      "detail": "total 0.198 USDC"
+    },
+    {
+      "name": "F3.flow-complete",
+      "status": "PASS",
+      "detail": "Multi-milestone flow end-to-end"
+    },
+    {
+      "name": "S1.releaseDisputedFunds-unauthorized",
+      "status": "PASS",
+      "detail": "Correctly reverted: !Athena"
+    },
+    {
+      "name": "S2.handleAskAthena-unauthorized",
+      "status": "PASS",
+      "detail": "Correctly reverted: Only bridge or athenaClient"
+    },
+    {
+      "name": "S3.createProfile-unauthorized",
+      "status": "PASS",
+      "detail": "Correctly reverted: !"
+    },
+    {
+      "name": "S4.first-call-creates-profile",
+      "status": "PASS",
+      "detail": "nowjc.hasNowjcProfile=true"
+    },
+    {
+      "name": "S4.second-call-idempotent",
+      "status": "PASS",
+      "detail": "Did NOT revert — idempotent behavior confirmed"
+    },
+    {
+      "name": "S4.no-revert-on-second-call",
+      "status": "PASS",
+      "detail": "NOWJC.createProfile is idempotent"
+    },
+    {
+      "name": "S4.lowjc-double-profile-protection",
+      "status": "PASS",
+      "detail": "LOWJC correctly prevents duplicate profiles"
+    },
+    {
+      "name": "S4.test-complete",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "F4.applicant-received-funds",
+      "status": "PASS",
+      "detail": "W2 received 0.099 USDC"
+    },
+    {
+      "name": "F4.flow-complete",
+      "status": "PASS",
+      "detail": "Dispute applicant-wins flow ✅ W2 got 0.099 USDC"
+    },
+    {
+      "name": "F5.applicant-did-not-receive",
+      "status": "PASS",
+      "detail": "W2 received 0.0 USDC (should be 0)"
+    },
+    {
+      "name": "F5.flow-complete",
+      "status": "PASS",
+      "detail": "Dispute job-giver-wins flow ✅ W2 received 0 USDC"
+    },
+    {
+      "name": "F6.askAthena-no-revert",
+      "status": "PASS",
+      "detail": "askAthena call succeeded via AthenaClient → NativeAthena-v3 ✅"
+    },
+    {
+      "name": "F7.skillVerification-no-revert",
+      "status": "PASS",
+      "detail": "submitSkillVerification succeeded via AthenaClient → NativeAthena-v3 ✅"
+    }
+  ],
+  "summary": {
+    "total": 25,
+    "passed": 25,
+    "failed": 0
+  },
+  "testedAt": "2026-02-24T16:54:26.150Z"
+}
