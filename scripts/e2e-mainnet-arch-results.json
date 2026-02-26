@@ -51,15 +51,51 @@
       "detail": "removed without revert"
     },
     {
+      "name": "F4.applicant-received-funds",
+      "status": "PASS",
+      "detail": "W2 got 0.099 USDC"
+    },
+    {
       "name": "F4.dispute-flow-complete",
-      "status": "FAIL",
-      "detail": "execution reverted: \"Only authorized\" (action=\"estimateGas\", data=\"0x08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000"
+      "status": "PASS",
+      "detail": "applicant wins ✅ — W2 received 0.099 USDC"
     }
   ],
-  "summary": {
-    "total": 11,
-    "passed": 10,
-    "failed": 1
+  "txLinks": {
+    "F1.createProfile-W1": "https://sepolia.arbiscan.io/tx/0xf65e401fce60c16fdd5e1fc9b0a50c13894d239f9c45c14614cfad82551bef3c",
+    "F1.createProfile-W2": "https://sepolia.arbiscan.io/tx/0x3bc85ac9f8501c59b00401a87fc41a70abbc12cda97896bbe1c9a8652fea1a5c",
+    "F1.postJob": "https://sepolia.arbiscan.io/tx/0x2b91769194283aa29df364500933e02eaa3be5e5e25bfbf538025aa699cd1d90",
+    "F1.applyToJob": "https://sepolia.arbiscan.io/tx/0x42a199cbdb86d22ef1f82b4133f2eb839489282f0b5e0810e95cad41ecf39a09",
+    "F1.startJob": "https://sepolia.arbiscan.io/tx/0x32a909b77bc3044d44751082fa288eaedba49d214385ca612fc8382794dc53e6",
+    "F1.submitWork": "https://sepolia.arbiscan.io/tx/0x58a65d5f3d0a4b05db6351e1b4fcc1fe1cfd0c23629fd5430bfac68bf4fb6dbd",
+    "F1.releasePayment": "https://sepolia.arbiscan.io/tx/0xc55650f8771fa77d937bd14da38559452dd20bc8c5811fffee6283f3ac5ae8fd",
+    "F2.startDirectContract": "https://sepolia.arbiscan.io/tx/0x790375550605a5120d8b1f680bdc9a84f86d33c4ceb4aa3ef20b31da7c8f4694",
+    "F2.submitWork": "https://sepolia.arbiscan.io/tx/0x3e9a2ce0c2a07b8899170a6035a9950c739b4d53d135438b1ebf556df40218a0",
+    "F2.releasePayment": "https://sepolia.arbiscan.io/tx/0x7f6e8926d6cb898000eefdd9c92d2ee9853ae1f3ce0f158f848f6019d4f68fb7",
+    "F3.addPortfolio": "https://sepolia.arbiscan.io/tx/0x0cbd27bd824d49c1f59f430fa4aa5e1d9d4061209eeaf6906de5b054e598d6f8",
+    "F3.updatePortfolioItem": "https://sepolia.arbiscan.io/tx/0x7cf57d2a3e9d2cb9188252153824be18a76f2f0ba44383aa1b338bc8396de7fe",
+    "F3.removePortfolioItem": "https://sepolia.arbiscan.io/tx/0xb2e5522e28985afe9727fecd39056fd9c5ed8d7d7b787d4b328d5d7aaa7f03b2",
+    "F4.postJob": "https://sepolia.arbiscan.io/tx/0xc682782f93343da4cffac0be71bedba3580d9fabf67edee7aaeafd57f6ca3a70",
+    "F4.applyToJob": "https://sepolia.arbiscan.io/tx/0xc53829ac066a261a0da73121bc26e140dd53421bb9dafe73ce470e69658f6719",
+    "F4.startJob": "https://sepolia.arbiscan.io/tx/0x45dc19fab2955b9dac9c3539047c402bb929061df812a4d4a29a2bda496a9ca1",
+    "F4.submitWork": "https://sepolia.arbiscan.io/tx/0xd4ef59092eb698eaf12309604bc217e8acc55f915baafebe9ce3560fe7bcfa43",
+    "F4.raiseDispute": "https://sepolia.arbiscan.io/tx/0x87f0f685d436a1c74276df94eee5852d0651659c65210b1c6b7c1a682389cf0e",
+    "F4.voteOnDispute": "https://sepolia.arbiscan.io/tx/0x3e41cad3ecb20811795b6f11481a373445fe03eb9bd036e33451ce1a086dcc82",
+    "F4.settleDispute": "https://sepolia.arbiscan.io/tx/0x6d9d21495ef72e71773aa7a0a286890fc3f3f340d90b3a5a212a4f1a0de403db"
   },
-  "testedAt": "2026-02-25T19:41:16.913Z"
+  "summary": {
+    "total": 12,
+    "passed": 12,
+    "failed": 0
+  },
+  "contracts": {
+    "genesis": "0xA152cBA58E6c7262fb1aeE42588c15b9d141F5b7",
+    "profileGenesis": "0xeA0b03017f2eFD11E997a1d482Fda14E680bdBD8",
+    "nowjc": "0x50B525C9A6ba31D97476Db0D5dc3bBBbb19200dE",
+    "profileManager": "0xF9D278598C637CEad3bD8a31c746ba564472a6c5",
+    "athena": "0x36eE60BC589AaEb48F8D4C65B6390ee29C52B5F1",
+    "lowjc": "0xfAD2C0B4de938Bc673ac3878CEC9389521330DF3",
+    "athenaClient": "0x2ce83406F6dbcb1BEe6B610187D7d7f0B4f80031"
+  },
+  "testedAt": "2026-02-26T18:56:00.983Z"
 }
