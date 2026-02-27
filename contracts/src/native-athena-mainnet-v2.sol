@@ -241,7 +241,9 @@ contract NativeAthena is
     address public bridge;
 
     // Direct athena client (allows same-chain calls without bridge)
-    address public athenaClient;
+    // NOTE: Replaced by authorizedContracts mapping for extensibility
+    // address public athenaClient; // DEPRECATED — slot preserved as authorizedContracts
+    mapping(address => bool) public authorizedContracts;
 
     // ActivityTracker contract for member activity and oracle status
     IActivityTracker public activityTracker;
@@ -298,6 +300,7 @@ contract NativeAthena is
     event MemberActivityThresholdUpdated(uint256 newThresholdDays);
     event AdminUpdated(address indexed admin, bool status);
     event RewardsContractUpdated(address indexed oldRewards, address indexed newRewards);
+    event AuthorizedContractUpdated(address indexed contractAddress, bool status);
 
     modifier onlyDAO() {
         require(msg.sender == daoContract, "DAO");
@@ -432,11 +435,13 @@ contract NativeAthena is
         emit BridgeUpdated(oldBridge, _bridge);
     }
 
-    /// @notice Set the athenaClient contract for same-chain AskAthena calls
-    /// @param _athenaClient Address of the athenaClient contract
-    function setAthenaClient(address _athenaClient) external onlyOwner {
-        require(_athenaClient != address(0), "Invalid address");
-        athenaClient = _athenaClient;
+    /// @notice Add or remove an authorized contract (e.g. AthenaClient) that can call handle* functions
+    /// @param _contract Address to authorize or deauthorize
+    /// @param _status True to authorize, false to revoke
+    function addAuthorizedContract(address _contract, bool _status) external onlyOwner {
+        require(_contract != address(0), "Invalid address");
+        authorizedContracts[_contract] = _status;
+        emit AuthorizedContractUpdated(_contract, _status);
     }
 
     /// @notice Set the ActivityTracker contract
@@ -553,7 +558,7 @@ contract NativeAthena is
     /// @param disputedAmount Amount being disputed
     /// @param disputeRaiser Address of the party raising the dispute
     function handleRaiseDispute(string memory jobId, string memory disputeHash, string memory oracleName, uint256 fee, uint256 disputedAmount, address disputeRaiser) external {
-        require(msg.sender == bridge || msg.sender == athenaClient, "Not authorized");
+        require(msg.sender == bridge || authorizedContracts[msg.sender], "Not authorized");
 
         // NEW: Check if oracle is active before accepting dispute
         require(isOracleActive(oracleName), "Oracle inactive");
@@ -583,7 +588,7 @@ contract NativeAthena is
     /// @param feeAmount Fee paid for verification
     /// @param targetOracleName Oracle to verify the skill
     function handleSubmitSkillVerification(address applicant, string memory applicationHash, uint256 feeAmount, string memory targetOracleName) external {
-        require(msg.sender == bridge || msg.sender == athenaClient, "Not authorized");
+        require(msg.sender == bridge || authorizedContracts[msg.sender], "Not authorized");
 
         // NEW: Check oracle must be active before accepting skill verification
         require(isOracleActive(targetOracleName), "Oracle inactive");
@@ -601,7 +606,7 @@ contract NativeAthena is
     /// @param targetOracle Oracle to answer the question
     /// @param fees Fee for the question
     function handleAskAthena(address applicant, string memory description, string memory hash, string memory targetOracle, string memory fees) external {
-        require(msg.sender == address(bridge) || msg.sender == athenaClient, "Not authorized");
+        require(msg.sender == bridge || authorizedContracts[msg.sender], "Not authorized");
 
         uint256 athenaId = genesis.askAthenaCounter();
         genesis.setAskAthenaApplication(athenaId, applicant, description, hash, targetOracle, fees);

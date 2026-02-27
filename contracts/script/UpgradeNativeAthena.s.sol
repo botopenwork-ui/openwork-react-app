@@ -34,8 +34,8 @@ interface IUUPSProxy {
 }
 
 interface INativeAthenaV2 {
-    function setAthenaClient(address _athenaClient) external;
-    function athenaClient() external view returns (address);
+    function addAuthorizedContract(address _contract, bool _status) external;
+    function authorizedContracts(address _contract) external view returns (bool);
 }
 
 contract UpgradeNativeAthena is Script {
@@ -71,18 +71,18 @@ contract UpgradeNativeAthena is Script {
         IUUPSProxy(NATIVE_ATHENA_PROXY).upgradeToAndCall(newImpl, "");
         console.log("Proxy upgraded to v2");
 
-        // 3. Wire AthenaClient so dispute calls are accepted
-        INativeAthenaV2(NATIVE_ATHENA_PROXY).setAthenaClient(ATHENA_CLIENT);
+        // 3. Authorize AthenaClient so dispute/skill/askAthena calls are accepted
+        INativeAthenaV2(NATIVE_ATHENA_PROXY).addAuthorizedContract(ATHENA_CLIENT, true);
         require(
-            INativeAthenaV2(NATIVE_ATHENA_PROXY).athenaClient() == ATHENA_CLIENT,
-            "AthenaClient wiring failed"
+            INativeAthenaV2(NATIVE_ATHENA_PROXY).authorizedContracts(ATHENA_CLIENT),
+            "AthenaClient authorization failed"
         );
-        console.log("AthenaClient wired  : OK");
+        console.log("AthenaClient authorized  : OK");
 
         vm.stopBroadcast();
 
         console.log("");
         console.log("=== DONE ===");
-        console.log("NativeAthena upgraded. Dispute flow will now work via AthenaClient.");
+        console.log("NativeAthena upgraded. handle* functions now accept bridge + authorizedContracts.");
     }
 }

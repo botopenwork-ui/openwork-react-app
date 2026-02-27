@@ -47,8 +47,11 @@ contract NativeProfileManager is
     mapping(address => bool) public admins;
     address public nativeDAO;
 
-    // Storage gap for upgrade safety
-    uint256[50] private __gap;
+    // Authorized contracts (bridge + any contract granted access by owner)
+    mapping(address => bool) public authorizedContracts;
+
+    // Storage gap for upgrade safety (reduced by 1 for authorizedContracts slot)
+    uint256[49] private __gap;
 
     // ==================== EVENTS ====================
     
@@ -62,6 +65,7 @@ contract NativeProfileManager is
     event PortfolioItemRemoved(address indexed user, uint256 index);
     event AdminUpdated(address indexed admin, bool status);
     event NativeDAOUpdated(address indexed oldDAO, address indexed newDAO);
+    event AuthorizedContractUpdated(address indexed contractAddress, bool status);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -82,11 +86,11 @@ contract NativeProfileManager is
     }
 
     function _authorizeUpgrade(address /* newImplementation */) internal view override {
-        require(owner() == _msgSender() || address(bridge) == _msgSender(), "Unauthorized");
+        require(owner() == _msgSender() || _isAuthorized(), "Unauthorized");
     }
 
     function upgradeFromDAO(address newImplementation) external {
-        require(msg.sender == address(bridge), "Only bridge");
+        require(_isAuthorized(), "Not authorized");
         upgradeToAndCall(newImplementation, "");
     }
     
@@ -96,6 +100,17 @@ contract NativeProfileManager is
         address oldBridge = bridge;
         bridge = _bridge;
         emit BridgeUpdated(oldBridge, _bridge);
+    }
+
+    function addAuthorizedContract(address _contract, bool _status) external onlyOwner {
+        require(_contract != address(0), "Invalid address");
+        authorizedContracts[_contract] = _status;
+        emit AuthorizedContractUpdated(_contract, _status);
+    }
+
+    /// @dev Returns true if caller is the bridge or an authorized contract
+    function _isAuthorized() internal view returns (bool) {
+        return msg.sender == bridge || authorizedContracts[msg.sender];
     }
     
     function setGenesis(address _genesis) external onlyOwner {
@@ -129,7 +144,7 @@ contract NativeProfileManager is
         string memory _ipfsHash, 
         address _referrerAddress
     ) external {
-        require(msg.sender == bridge, "Only bridge");
+        require(_isAuthorized(), "Not authorized");
         require(_user != address(0), "Invalid user address");
         require(!genesis.hasProfile(_user), "Profile already exists");
         
@@ -149,7 +164,7 @@ contract NativeProfileManager is
      * @param _portfolioHash IPFS hash of portfolio item
      */
     function addPortfolio(address _user, string memory _portfolioHash) external {
-        require(msg.sender == bridge, "Only bridge");
+        require(_isAuthorized(), "Not authorized");
         require(_user != address(0), "Invalid user address");
         require(genesis.hasProfile(_user), "Profile does not exist");
         
@@ -164,7 +179,7 @@ contract NativeProfileManager is
      * @param _newIpfsHash New IPFS hash of profile data
      */
     function updateProfile(address _user, string memory _newIpfsHash) external {
-        require(msg.sender == bridge, "Only bridge");
+        require(_isAuthorized(), "Not authorized");
         require(_user != address(0), "Invalid user address");
         require(genesis.hasProfile(_user), "Profile does not exist");
         require(bytes(_newIpfsHash).length > 0, "IPFS hash cannot be empty");
@@ -181,7 +196,7 @@ contract NativeProfileManager is
      * @param _newPortfolioHash New IPFS hash of portfolio item
      */
     function updatePortfolioItem(address _user, uint256 _index, string memory _newPortfolioHash) external {
-        require(msg.sender == bridge, "Only bridge");
+        require(_isAuthorized(), "Not authorized");
         require(_user != address(0), "Invalid user address");
         require(genesis.hasProfile(_user), "Profile does not exist");
         require(bytes(_newPortfolioHash).length > 0, "Portfolio hash cannot be empty");
@@ -197,7 +212,7 @@ contract NativeProfileManager is
      * @param _index Index of portfolio item to remove
      */
     function removePortfolioItem(address _user, uint256 _index) external {
-        require(msg.sender == bridge, "Only bridge");
+        require(_isAuthorized(), "Not authorized");
         require(_user != address(0), "Invalid user address");
         require(genesis.hasProfile(_user), "Profile does not exist");
         
@@ -221,7 +236,7 @@ contract NativeProfileManager is
         address _userToRate,
         uint256 _rating
     ) external {
-        require(msg.sender == bridge, "Only bridge");
+        require(_isAuthorized(), "Not authorized");
         require(_rating > 0 && _rating <= 5, "Rating must be 1-5");
         require(_userToRate != address(0), "Invalid user");
 
