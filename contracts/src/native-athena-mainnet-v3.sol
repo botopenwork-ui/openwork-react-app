@@ -1,0 +1,1197 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+// Interface to get staker info from Native DAO
+interface INativeOpenworkDAO {
+    function getStakerInfo(address staker) external view returns (uint256 amount, uint256 unlockTime, uint256 durationMinutes, bool isActive);
+}
+
+// Enhanced Interface for Native OpenWork Job Contract with CCTP support
+interface INativeOpenWorkJobContract {
+    function getUserEarnedTokens(address user) external view returns (uint256);
+    function getJob(string memory _jobId) external view returns (
+        string memory id,
+        address jobGiver,
+        address[] memory applicants,
+        string memory jobDetailHash,
+        uint8 status, // JobStatus enum as uint8
+        string[] memory workSubmissions,
+        uint256 totalPaid,
+        uint256 currentMilestone,
+        address selectedApplicant,
+        uint256 selectedApplicationId
+    );
+    function jobExists(string memory _jobId) external view returns (bool);
+    function incrementGovernanceAction(address user) external;
+    
+    // NEW: CCTP dispute resolution support
+    function releaseDisputedFunds(address _recipient, uint256 _amount, uint32 _targetChainDomain) external;
+}
+
+// Interface for Oracle Manager contract
+interface IOracleManager {
+    function addOrUpdateOracle(
+        string[] memory _names,
+        address[][] memory _members,
+        string[] memory _shortDescriptions,
+        string[] memory _hashOfDetails,
+        address[][] memory _skillVerifiedAddresses
+    ) external;
+    
+    function addSingleOracle(
+        string memory _name,
+        address[] memory _members,
+        string memory _shortDescription,
+        string memory _hashOfDetails,
+        address[] memory _skillVerifiedAddresses
+    ) external;
+    
+    function addMembers(address[] memory _members, string memory _oracleName) external;
+    function removeMemberFromOracle(string memory _oracleName, address _memberToRemove) external;
+    function removeOracle(string[] memory _oracleNames) external;
+}
+
+// Interface for OpenworkGenesis storage contract with Job struct support
+interface IOpenworkGenesis {
+    enum JobStatus { Open, InProgress, Completed, Cancelled }
+    
+    struct VoterData {
+        address voter;
+        address claimAddress;
+        uint256 votingPower;
+        bool voteFor;
+    }
+    
+    struct Oracle {
+        string name;
+        address[] members;
+        string shortDescription;
+        string hashOfDetails;
+        address[] skillVerifiedAddresses;
+    }
+    
+    struct SkillVerificationApplication {
+        uint256 id;
+        address applicant;
+        string applicationHash;
+        uint256 feeAmount;
+        string targetOracleName;
+        uint256 votesFor;
+        uint256 votesAgainst;
+        bool isVotingActive;
+        uint256 timeStamp;
+        bool result;
+        bool isFinalized;
+    }
+    
+    struct AskAthenaApplication {
+        uint256 id;
+        address applicant;
+        string description;
+        string hash;
+        string targetOracle;
+        string fees;
+        uint256 votesFor;
+        uint256 votesAgainst;
+        bool isVotingActive;
+        uint256 timeStamp;
+        bool result;
+        bool isFinalized;
+    }
+    
+    struct Dispute {
+        string jobId;
+        uint256 disputedAmount;
+        string hash;
+        address disputeRaiserAddress;
+        uint256 votesFor;
+        uint256 votesAgainst;
+        bool result;
+        bool isVotingActive;
+        bool isFinalized;
+        uint256 timeStamp;
+        uint256 fees;
+    }
+
+    // NEW: Job struct support (Genesis struct fix)
+    struct Job {
+        string id;
+        address jobGiver;
+        address[] applicants;
+        string jobDetailHash;
+        uint8 status;
+        string[] workSubmissions;
+        uint256 totalPaid;
+        uint256 currentMilestone;
+        address selectedApplicant;
+        uint256 selectedApplicationId;
+    }
+
+    struct MilestonePayment {
+        string descriptionHash;
+        uint256 amount;
+    }
+
+    struct Application {
+        uint256 id;
+        string jobId;
+        address applicant;
+        string applicationHash;
+        MilestonePayment[] proposedMilestones;
+        uint32 preferredPaymentChainDomain;
+        address preferredPaymentAddress;
+    }
+
+    // Oracle setters
+    function setOracle(string memory name, address[] memory members, string memory shortDescription, string memory hashOfDetails, address[] memory skillVerifiedAddresses) external;
+    function addOracleMember(string memory oracleName, address member) external;
+    function removeOracleMember(string memory oracleName, address memberToRemove) external;
+    function addSkillVerifiedAddress(string memory oracleName, address user) external;
+    function setMemberStakeAmount(string memory oracleName, address member, uint256 amount) external;
+    
+    // Dispute/Voting setters
+    function setDispute(string memory jobId, uint256 disputedAmount, string memory hash, address disputeRaiser, uint256 fees) external;
+    function updateDisputeVotes(string memory disputeId, uint256 votesFor, uint256 votesAgainst) external;
+    function finalizeDispute(string memory disputeId, bool result) external;
+    function finalizeAskAthena(uint256 athenaId, bool result) external;
+    function finalizeSkillVerification(uint256 applicationId, bool result) external;
+    function setDisputeVote(string memory disputeId, address voter) external;
+    function setSkillApplication(uint256 applicationId, address applicant, string memory applicationHash, uint256 feeAmount, string memory targetOracleName) external;
+    function updateSkillApplicationVotes(uint256 applicationId, uint256 votesFor, uint256 votesAgainst) external;
+    function setSkillApplicationVote(uint256 applicationId, address voter) external;
+    function setAskAthenaApplication(uint256 athenaId, address applicant, string memory description, string memory hash, string memory targetOracle, string memory fees) external;
+    function updateAskAthenaVotes(uint256 athenaId, uint256 votesFor, uint256 votesAgainst) external;
+    function setAskAthenaVote(uint256 athenaId, address voter) external;
+    
+    // Voter data setters
+    function addDisputeVoter(string memory disputeId, address voter, address claimAddress, uint256 votingPower, bool voteFor) external;
+    function addSkillVerificationVoter(uint256 applicationId, address voter, address claimAddress, uint256 votingPower, bool voteFor) external;
+    function addAskAthenaVoter(uint256 athenaId, address voter, address claimAddress, uint256 votingPower, bool voteFor) external;
+    
+    // Getters
+    function getJob(string memory jobId) external view returns (Job memory);
+    function getJobApplication(string memory jobId, uint256 applicationId) external view returns (Application memory);
+    function getOracle(string memory oracleName) external view returns (Oracle memory);
+    function getOracleMembers(string memory oracleName) external view returns (address[] memory);
+    function getSkillVerificationDate(string memory oracleName, address user) external view returns (uint256);
+    function getDispute(string memory disputeId) external view returns (Dispute memory);
+    function getSkillApplication(uint256 applicationId) external view returns (SkillVerificationApplication memory);
+    function getAskAthenaApplication(uint256 athenaId) external view returns (AskAthenaApplication memory);
+    function hasUserVotedOnDispute(string memory disputeId, address user) external view returns (bool);
+    function hasUserVotedOnSkillApplication(uint256 applicationId, address user) external view returns (bool);
+    function hasUserVotedOnAskAthena(uint256 athenaId, address user) external view returns (bool);
+    function applicationCounter() external view returns (uint256);
+    function askAthenaCounter() external view returns (uint256);
+    
+    // Voter data getters
+    function getDisputeVoters(string memory disputeId) external view returns (VoterData[] memory);
+    function getSkillVerificationVoters(uint256 applicationId) external view returns (VoterData[] memory);
+    function getAskAthenaVoters(uint256 athenaId) external view returns (VoterData[] memory);
+    function getDisputeVoterClaimAddress(string memory disputeId, address voter) external view returns (address);
+    
+}
+
+// Interface for ActivityTracker contract (separated from Genesis due to size limits)
+interface IActivityTracker {
+    function memberLastActivity(address member) external view returns (uint256);
+    function oracleActiveStatus(string memory oracleName) external view returns (bool);
+    function updateMemberActivity(address member) external;
+    function setOracleActiveStatus(string memory oracleName, bool isActive) external;
+}
+
+// NEW: Interface for NativeRewardsContract - Single source of truth for reward-based voting power
+interface IOpenWorkRewards {
+    function getRewardBasedVotingPower(address user) external view returns (uint256);
+}
+
+// NEW v3: Interface for local LOWJC dispute resolution
+interface ILocalJobContract {
+    function resolveDispute(string memory _jobId, bool _jobGiverWins) external;
+}
+
+/// @title NativeAthena (v3)
+/// @notice Dispute resolution and oracle management contract for the Openwork platform
+/// @dev Handles job disputes, skill verification voting, and oracle membership. Uses weighted voting
+///      based on stake amount and earned tokens. Supports cross-chain fund release via CCTP.
+contract NativeAthena is
+    Initializable,
+    OwnableUpgradeable,
+    UUPSUpgradeable
+{
+    using SafeERC20 for IERC20;
+    
+    // DAO Integration (from production contract)
+    address public daoContract;
+    
+    // CCTP Integration (from testable contract)
+    IERC20 public usdcToken;
+    uint256 public accumulatedFees;
+    
+    // Genesis storage contract
+    IOpenworkGenesis public genesis;
+    
+    // Oracle Manager contract
+    IOracleManager public oracleManager;
+    
+    // Native OpenWork Job Contract for earned tokens check and CCTP
+    INativeOpenWorkJobContract public nowjContract;
+    
+    // Bridge for cross-chain communication
+    address public bridge;
+
+    // Direct athena client (allows same-chain calls without bridge)
+    // NOTE: Replaced by authorizedContracts mapping for extensibility
+    // address public athenaClient; // DEPRECATED — slot preserved as authorizedContracts
+    mapping(address => bool) public authorizedContracts;
+
+    // ActivityTracker contract for member activity and oracle status
+    IActivityTracker public activityTracker;
+
+    // Admin pattern (matches NOWJC)
+    mapping(address => bool) public admins;
+    address public nativeDAO;
+
+    // NEW: Rewards Contract - Single source of truth for reward-based voting power
+    IOpenWorkRewards public rewardsContract;
+
+    // Add voting type enum
+    enum VotingType {
+        Dispute,
+        SkillVerification,
+        AskAthena
+    }
+
+    // Configuration parameters
+    uint256 public minOracleMembers;
+    uint256 public votingPeriodMinutes;
+    uint256 public minStakeRequired;
+    
+    // NEW: Activity tracking parameters
+    uint256 public memberActivityThresholdDays = 90; // Members must vote within 90 days to be considered active
+    
+    // Multi-dispute support
+    mapping(string => uint256) public jobDisputeCounters;
+    mapping(string => uint256) public disputeStartTimes;
+
+    // v3: Local LOWJC for dispute resolution state sync
+    address public localLOWJC;
+
+    // Storage gap for upgrade safety (reduced by 1 for localLOWJC)
+    uint256[49] private __gap;
+
+    // Events
+    event NOWJContractUpdated(address indexed oldContract, address indexed newContract);
+    event GenesisUpdated(address indexed oldGenesis, address indexed newGenesis);
+    event DAOContractUpdated(address indexed oldDAO, address indexed newDAO);
+    event USDCTokenUpdated(address indexed oldToken, address indexed newToken);
+    event BridgeUpdated(address indexed oldBridge, address indexed newBridge);
+    event EarnedTokensUsedForVoting(address indexed user, uint256 earnedTokens, string votingType);
+    event CrossContractCallFailed(address indexed account, string reason);
+    event DisputeFinalized(string indexed disputeId, bool winningSide, uint256 totalVotesFor, uint256 totalVotesAgainst);
+    event DisputeRaised(string indexed jobId, address indexed disputeRaiser, uint256 fees);
+    event SkillVerificationSubmitted(address indexed applicant, string targetOracleName, uint256 feeAmount, uint256 indexed applicationId);
+    event AskAthenaSubmitted(address indexed applicant, string targetOracle, string fees);
+    event FeesWithdrawn(address indexed owner, uint256 amount);
+    event FeeDistributed(string indexed disputeId, address indexed recipient, uint256 amount);
+    event DisputeFeeRefunded(string indexed disputeId, address indexed disputeRaiser, uint256 amount, uint32 targetChain);
+    event AskAthenaSettled(uint256 indexed athenaId, bool result, uint256 totalVotesFor, uint256 totalVotesAgainst);
+    event SkillVerificationSettled(uint256 indexed applicationId, bool result, uint256 totalVotesFor, uint256 totalVotesAgainst);
+    
+    // NEW: Oracle activity events
+    event OracleStatusUpdated(string indexed oracleName, bool isActive, uint256 activeMemberCount);
+    event MemberActivityThresholdUpdated(uint256 newThresholdDays);
+    event AdminUpdated(address indexed admin, bool status);
+    event RewardsContractUpdated(address indexed oldRewards, address indexed newRewards);
+    event AuthorizedContractUpdated(address indexed contractAddress, bool status);
+
+    modifier onlyDAO() {
+        require(msg.sender == daoContract, "DAO");
+        _;
+    }
+    
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+    
+    /// @notice Initialize the contract with required dependencies
+    /// @param _owner Address of contract owner
+    /// @param _daoContract Address of NativeDAO for stake verification
+    /// @param _genesis Address of OpenworkGenesis storage contract
+    /// @param _nowjContract Address of NativeOpenWorkJobContract
+    /// @param _usdcToken Address of USDC token for fee distribution
+    function initialize(
+        address _owner,
+        address _daoContract,
+        address _genesis,
+        address _nowjContract,
+        address _usdcToken
+    ) public initializer {
+        __Ownable_init(_owner);
+        __UUPSUpgradeable_init();
+
+        daoContract = _daoContract;
+        genesis = IOpenworkGenesis(_genesis);
+        nowjContract = INativeOpenWorkJobContract(_nowjContract);
+
+        // CCTP Integration
+        if (_usdcToken != address(0)) {
+            usdcToken = IERC20(_usdcToken);
+        }
+
+        // Initialize default values
+        minOracleMembers = 3;
+        votingPeriodMinutes = 60; // 1 hour default
+        minStakeRequired = 100;
+        admins[_owner] = true;
+    }
+
+    /// @dev Authorize upgrade to new implementation (admin or bridge only)
+    function _authorizeUpgrade(address /* newImplementation */) internal view override {
+        require(admins[_msgSender()] || address(bridge) == _msgSender(), "Auth");
+    }
+
+    /// @notice Upgrade contract implementation via bridge/DAO
+    /// @param newImplementation Address of new implementation contract
+    function upgradeFromDAO(address newImplementation) external {
+        require(msg.sender == address(bridge), "Bridge");
+        upgradeToAndCall(newImplementation, "");
+    }
+
+    // ==================== ADMIN FUNCTIONS ====================
+
+    /// @notice Set admin status for an address
+    /// @param _admin Address to modify
+    /// @param _status True to grant admin, false to revoke
+    function setAdmin(address _admin, bool _status) external {
+        require(msg.sender == owner() || msg.sender == nativeDAO, "Auth");
+        admins[_admin] = _status;
+        emit AdminUpdated(_admin, _status);
+    }
+
+    /// @notice Set the NativeDAO governance contract
+    /// @param _nativeDAO Address of NativeDAO contract
+    function setNativeDAO(address _nativeDAO) external {
+        require(msg.sender == owner(), "Auth");
+        nativeDAO = _nativeDAO;
+    }
+
+    /// @notice Set the genesis storage contract
+    /// @param _genesis Address of OpenworkGenesis contract
+    function setGenesis(address _genesis) external {
+        require(admins[msg.sender], "Auth");
+        address oldGenesis = address(genesis);
+        genesis = IOpenworkGenesis(_genesis);
+        emit GenesisUpdated(oldGenesis, _genesis);
+    }
+
+    /// @notice Set the NOWJ contract for rewards and fund release
+    /// @param _nowjContract Address of NativeOpenWorkJobContract
+    function setNOWJContract(address _nowjContract) external {
+        require(admins[msg.sender], "Auth");
+        address oldContract = address(nowjContract);
+        nowjContract = INativeOpenWorkJobContract(_nowjContract);
+        emit NOWJContractUpdated(oldContract, _nowjContract);
+    }
+
+    /// @notice Set the OracleManager contract for oracle operations
+    /// @param _oracleManager Address of IOracleManager contract
+    function setOracleManager(address _oracleManager) external {
+        require(admins[msg.sender], "Auth");
+        oracleManager = IOracleManager(_oracleManager);
+    }
+
+    /// @notice Set the DAO contract for stake verification
+    /// @param _daoContract Address of NativeDAO contract
+    function setDAOContract(address _daoContract) external {
+        require(admins[msg.sender], "Auth");
+        address oldDAO = daoContract;
+        daoContract = _daoContract;
+        emit DAOContractUpdated(oldDAO, _daoContract);
+    }
+
+    /// @notice Set the Rewards contract for centralized voting power calculation
+    /// @param _rewardsContract Address of NativeRewardsContract
+    function setRewardsContract(address _rewardsContract) external {
+        require(admins[msg.sender], "Auth");
+        address oldRewards = address(rewardsContract);
+        rewardsContract = IOpenWorkRewards(_rewardsContract);
+        emit RewardsContractUpdated(oldRewards, _rewardsContract);
+    }
+
+    /// @notice Set the USDC token address for fee distribution
+    /// @param _usdcToken Address of USDC token contract
+    function setUSDCToken(address _usdcToken) external {
+        require(admins[msg.sender], "Auth");
+        address oldToken = address(usdcToken);
+        usdcToken = IERC20(_usdcToken);
+        emit USDCTokenUpdated(oldToken, _usdcToken);
+    }
+
+    /// @notice Set the bridge contract for cross-chain messaging
+    /// @param _bridge Address of NativeLZOpenworkBridge contract
+    function setBridge(address _bridge) external {
+        require(admins[msg.sender], "Auth");
+        address oldBridge = bridge;
+        bridge = _bridge;
+        emit BridgeUpdated(oldBridge, _bridge);
+    }
+
+    /// @notice Add or remove an authorized contract (e.g. AthenaClient) that can call handle* functions
+    /// @param _contract Address to authorize or deauthorize
+    /// @param _status True to authorize, false to revoke
+    function addAuthorizedContract(address _contract, bool _status) external onlyOwner {
+        require(_contract != address(0), "Invalid address");
+        authorizedContracts[_contract] = _status;
+        emit AuthorizedContractUpdated(_contract, _status);
+    }
+
+    /// @notice Set the ActivityTracker contract
+    /// @param _activityTracker Address of ActivityTracker contract
+    function setActivityTracker(address _activityTracker) external {
+        require(admins[msg.sender], "Auth");
+        activityTracker = IActivityTracker(_activityTracker);
+    }
+
+    /// @notice Set the local LOWJC contract for dispute resolution state sync
+    /// @param _localLOWJC Address of NativeArbLOWJC contract
+    function setLocalLOWJC(address _localLOWJC) external {
+        require(admins[msg.sender], "Auth");
+        require(_localLOWJC != address(0), "Invalid address");
+        localLOWJC = _localLOWJC;
+    }
+
+    /// @notice Update minimum oracle members required for voting
+    /// @param _newMinMembers New minimum member count
+    function updateMinOracleMembers(uint256 _newMinMembers) external {
+        require(admins[msg.sender], "Auth");
+        minOracleMembers = _newMinMembers;
+    }
+
+    /// @notice Update the voting period duration
+    /// @param _newPeriodMinutes New voting period in minutes
+    function updateVotingPeriod(uint256 _newPeriodMinutes) external {
+        require(admins[msg.sender], "Auth");
+        votingPeriodMinutes = _newPeriodMinutes;
+    }
+
+    /// @notice Update minimum stake required for voting eligibility
+    /// @param _newMinStake New minimum stake amount
+    function updateMinStakeRequired(uint256 _newMinStake) external {
+        require(admins[msg.sender], "Auth");
+        minStakeRequired = _newMinStake;
+    }
+
+    /// @notice Update member activity threshold for oracle status
+    /// @param _newThresholdDays New threshold in days
+    function updateMemberActivityThreshold(uint256 _newThresholdDays) external {
+        require(admins[msg.sender], "Auth");
+        memberActivityThresholdDays = _newThresholdDays;
+        emit MemberActivityThresholdUpdated(_newThresholdDays);
+    }
+    
+    // ==================== ORACLE ACTIVE STATUS FUNCTIONS ====================
+
+    /**
+     * @notice Update the active status of an oracle by counting active members
+     * @dev Only admins or OracleManager can call. Expensive operation - only call periodically.
+     * @param _oracleName Name of the oracle to update
+     */
+    function updateOracleActiveStatus(string memory _oracleName) external {
+        require(admins[msg.sender] || msg.sender == address(oracleManager), "Auth");
+        address[] memory members = genesis.getOracleMembers(_oracleName);
+        uint256 activeCount = 0;
+        uint256 threshold = memberActivityThresholdDays * 1 days;
+
+        for (uint256 i = 0; i < members.length; i++) {
+            uint256 lastActivity = activityTracker.memberLastActivity(members[i]);
+            if (lastActivity > 0 && (block.timestamp - lastActivity) <= threshold) {
+                activeCount++;
+            }
+        }
+
+        bool isActive = activeCount >= minOracleMembers;
+        activityTracker.setOracleActiveStatus(_oracleName, isActive);
+
+        emit OracleStatusUpdated(_oracleName, isActive, activeCount);
+    }
+
+    /**
+     * @notice Check if an oracle is active (cheap read from cache)
+     * @param _oracleName Name of the oracle to check
+     * @return bool True if oracle is active
+     */
+    function isOracleActive(string memory _oracleName) public view returns (bool) {
+        return activityTracker.oracleActiveStatus(_oracleName);
+    }
+    
+    /**
+     * @notice Check if an address is a member of a specific oracle
+     * @param _account Address to check
+     * @param _oracleName Name of the oracle
+     * @return bool True if address is an oracle member
+     */
+    function isOracleMember(address _account, string memory _oracleName) public view returns (bool) {
+        address[] memory members = genesis.getOracleMembers(_oracleName);
+        for (uint256 i = 0; i < members.length; i++) {
+            if (members[i] == _account) return true;
+        }
+        return false;
+    }
+    
+    // getOracleActiveMemberCount removed in v3 for size (use updateOracleActiveStatus instead)
+    
+    // ==================== MESSAGE HANDLERS ====================
+
+    /// @notice Handle dispute raised via cross-chain message
+    /// @param jobId Job identifier being disputed
+    /// @param disputeHash IPFS hash of dispute details
+    /// @param oracleName Name of oracle to handle the dispute
+    /// @param fee Fee amount for the dispute
+    /// @param disputedAmount Amount being disputed
+    /// @param disputeRaiser Address of the party raising the dispute
+    function handleRaiseDispute(string memory jobId, string memory disputeHash, string memory oracleName, uint256 fee, uint256 disputedAmount, address disputeRaiser) external {
+        require(msg.sender == bridge || authorizedContracts[msg.sender], "Not authorized");
+
+        // NEW: Check if oracle is active before accepting dispute
+        require(isOracleActive(oracleName), "Oracle inactive");
+
+        // Check if oracle has minimum required members
+        IOpenworkGenesis.Oracle memory oracle = genesis.getOracle(oracleName);
+        require(oracle.members.length >= minOracleMembers, "Min members");
+
+        // Increment dispute counter for this job
+        jobDisputeCounters[jobId]++;
+
+        // Create dispute ID: jobId-disputeNumber
+        string memory disputeId = string(abi.encodePacked(jobId, "-", uint2str(jobDisputeCounters[jobId])));
+
+        // Set start time in separate mapping
+        disputeStartTimes[disputeId] = block.timestamp;
+
+        // Create new dispute in genesis
+        genesis.setDispute(disputeId, disputedAmount, disputeHash, disputeRaiser, fee);
+
+        emit DisputeRaised(disputeId, disputeRaiser, fee);
+    }
+
+    /// @notice Handle skill verification application from cross-chain
+    /// @param applicant Address applying for skill verification
+    /// @param applicationHash IPFS hash of application details
+    /// @param feeAmount Fee paid for verification
+    /// @param targetOracleName Oracle to verify the skill
+    function handleSubmitSkillVerification(address applicant, string memory applicationHash, uint256 feeAmount, string memory targetOracleName) external {
+        require(msg.sender == bridge || authorizedContracts[msg.sender], "Not authorized");
+
+        // NEW: Check oracle must be active before accepting skill verification
+        require(isOracleActive(targetOracleName), "Oracle inactive");
+
+        uint256 applicationId = genesis.applicationCounter();
+        genesis.setSkillApplication(applicationId, applicant, applicationHash, feeAmount, targetOracleName);
+
+        emit SkillVerificationSubmitted(applicant, targetOracleName, feeAmount, applicationId);
+    }
+
+    /// @notice Handle AskAthena question submission from cross-chain
+    /// @param applicant Address asking the question
+    /// @param description Question description
+    /// @param hash IPFS hash of detailed question
+    /// @param targetOracle Oracle to answer the question
+    /// @param fees Fee for the question
+    function handleAskAthena(address applicant, string memory description, string memory hash, string memory targetOracle, string memory fees) external {
+        require(msg.sender == bridge || authorizedContracts[msg.sender], "Not authorized");
+
+        uint256 athenaId = genesis.askAthenaCounter();
+        genesis.setAskAthenaApplication(athenaId, applicant, description, hash, targetOracle, fees);
+
+        emit AskAthenaSubmitted(applicant, targetOracle, fees);
+    }
+    
+    // ==================== VOTING ELIGIBILITY FUNCTIONS (from production) ====================
+
+    /// @notice Check if an account is eligible to vote
+    /// @param account Address to check
+    /// @return True if account can vote (has stake or reward-based voting power)
+    function canVote(address account) public view returns (bool) {
+        // First check if user has sufficient active stake
+        if (daoContract != address(0)) {
+            (uint256 stakeAmount, , , bool isActive) = INativeOpenworkDAO(daoContract).getStakerInfo(account);
+            if (isActive && stakeAmount >= minStakeRequired) {
+                return true;
+            }
+        }
+
+        // VOTING-POWER-FIX: Use centralized voting power from rewardsContract (earned + team tokens)
+        if (address(rewardsContract) != address(0)) {
+            uint256 rewardBasedPower = rewardsContract.getRewardBasedVotingPower(account);
+            return rewardBasedPower >= minStakeRequired;
+        }
+
+        return false;
+    }
+
+    /// @notice Get the voting power of an account
+    /// @param account Address to query
+    /// @return Total voting power (stake * duration + reward-based power)
+    function getUserVotingPower(address account) public view returns (uint256) {
+        uint256 totalVotingPower = 0;
+
+        // Get stake-based voting power
+        if (daoContract != address(0)) {
+            (uint256 stakeAmount, , uint256 durationMinutes, bool isActive) = INativeOpenworkDAO(daoContract).getStakerInfo(account);
+            if (isActive && stakeAmount > 0) {
+                totalVotingPower += stakeAmount * durationMinutes;
+            }
+        }
+
+        // VOTING-POWER-FIX: Use centralized voting power from rewardsContract (earned + team tokens)
+        if (address(rewardsContract) != address(0)) {
+            totalVotingPower += rewardsContract.getRewardBasedVotingPower(account);
+        }
+
+        return totalVotingPower;
+    }
+
+    // ==================== ORACLE MANAGEMENT (from production) ====================
+
+    /// @notice Add or update multiple oracles (admin only)
+    /// @param _names Array of oracle names
+    /// @param _members Array of member address arrays
+    /// @param _shortDescriptions Array of short descriptions
+    /// @param _hashOfDetails Array of IPFS hashes for detailed info
+    /// @param _skillVerifiedAddresses Array of skill-verified address arrays
+    function addOrUpdateOracle(
+        string[] memory _names,
+        address[][] memory _members,
+        string[] memory _shortDescriptions,
+        string[] memory _hashOfDetails,
+        address[][] memory _skillVerifiedAddresses
+    ) external {
+        require(admins[msg.sender], "Auth");
+        require(address(oracleManager) != address(0), "No OracleMgr");
+        oracleManager.addOrUpdateOracle(_names, _members, _shortDescriptions, _hashOfDetails, _skillVerifiedAddresses);
+    }
+
+    /// @notice Add a single oracle (DAO only)
+    /// @param _name Oracle name
+    /// @param _members Array of member addresses
+    /// @param _shortDescription Short description of oracle
+    /// @param _hashOfDetails IPFS hash of detailed info
+    /// @param _skillVerifiedAddresses Addresses already verified by this oracle
+    function addSingleOracle(
+        string memory _name,
+        address[] memory _members,
+        string memory _shortDescription,
+        string memory _hashOfDetails,
+        address[] memory _skillVerifiedAddresses
+    ) external onlyDAO {
+        require(address(oracleManager) != address(0), "No OracleMgr");
+        oracleManager.addSingleOracle(_name, _members, _shortDescription, _hashOfDetails, _skillVerifiedAddresses);
+    }
+
+    /// @notice Add members to an existing oracle (DAO only)
+    /// @param _members Array of member addresses to add
+    /// @param _oracleName Name of the oracle
+    function addMembers(address[] memory _members, string memory _oracleName) external onlyDAO {
+        require(address(oracleManager) != address(0), "No OracleMgr");
+        oracleManager.addMembers(_members, _oracleName);
+    }
+
+    /// @notice Get all members of an oracle
+    /// @param _oracleName Name of the oracle
+    /// @return Array of member addresses
+    function getOracleMembers(string memory _oracleName) external view returns (address[] memory) {
+        IOpenworkGenesis.Oracle memory oracle = genesis.getOracle(_oracleName);
+        require(bytes(oracle.name).length > 0, "Oracle not found");
+        return genesis.getOracleMembers(_oracleName);
+    }
+
+    /// @notice Remove a member from an oracle (DAO only)
+    /// @param _oracleName Name of the oracle
+    /// @param _memberToRemove Address to remove
+    function removeMemberFromOracle(string memory _oracleName, address _memberToRemove) external onlyDAO {
+        require(address(oracleManager) != address(0), "No OracleMgr");
+        oracleManager.removeMemberFromOracle(_oracleName, _memberToRemove);
+    }
+
+    /// @notice Remove multiple oracles (DAO only)
+    /// @param _oracleNames Array of oracle names to remove
+    function removeOracle(string[] memory _oracleNames) external onlyDAO {
+        require(address(oracleManager) != address(0), "No OracleMgr");
+        oracleManager.removeOracle(_oracleNames);
+    }
+    
+    // ==================== SKILL VERIFICATION (from production) ====================
+
+    /// @notice Finalize a skill verification vote after voting period ends
+    /// @param _applicationId ID of the skill verification application
+    function finalizeSkillVerification(uint256 _applicationId) external {
+        IOpenworkGenesis.SkillVerificationApplication memory application = genesis.getSkillApplication(_applicationId);
+        require(application.applicant != address(0), "No app");
+        require(!application.isFinalized, "Finalized");
+        require(application.isVotingActive, "Voting not active");
+        require(block.timestamp > application.timeStamp + (votingPeriodMinutes * 60), "Wait");
+
+        bool result = application.votesFor > application.votesAgainst;
+        genesis.finalizeSkillVerification(_applicationId, result);
+
+        // Only add skill verification if approved
+        if (result) {
+            genesis.addSkillVerifiedAddress(application.targetOracleName, application.applicant);
+        }
+
+        // Distribute fees to winning voters
+        _distributeFeeToWinningVoters(VotingType.SkillVerification, uint2str(_applicationId), result, application.feeAmount);
+
+        emit SkillVerificationSettled(_applicationId, result, application.votesFor, application.votesAgainst);
+    }
+
+    // ==================== VOTING FUNCTIONS (from production) ====================
+
+    /// @notice Cast a vote on a dispute, skill verification, or AskAthena
+    /// @param _votingType Type of vote (Dispute, SkillVerification, or AskAthena)
+    /// @param _disputeId ID of the item being voted on
+    /// @param _voteFor True to vote in favor, false to vote against
+    /// @param _claimAddress Address to receive fee rewards if voting wins
+    function vote(
+        VotingType _votingType,
+        string memory _disputeId,
+        bool _voteFor,
+        address _claimAddress
+    ) external {
+        require(canVote(msg.sender), "No stake");
+        require(_claimAddress != address(0), "No claim");
+        
+        uint256 voteWeight = getUserVotingPower(msg.sender);
+        require(voteWeight > 0, "No power");
+        
+        // STORE VOTER DATA IN GENESIS - before routing
+        if (_votingType == VotingType.Dispute) {
+            genesis.addDisputeVoter(_disputeId, msg.sender, _claimAddress, voteWeight, _voteFor);
+        } else if (_votingType == VotingType.SkillVerification) {
+            uint256 applicationId = stringToUint(_disputeId);
+            genesis.addSkillVerificationVoter(applicationId, msg.sender, _claimAddress, voteWeight, _voteFor);
+        } else if (_votingType == VotingType.AskAthena) {
+            uint256 athenaId = stringToUint(_disputeId);
+            genesis.addAskAthenaVoter(athenaId, msg.sender, _claimAddress, voteWeight, _voteFor);
+        }
+        
+        // Route to individual functions (existing logic)
+        if (_votingType == VotingType.Dispute) {
+            _voteOnDispute(_disputeId, _voteFor, _claimAddress, voteWeight);
+        } else if (_votingType == VotingType.SkillVerification) {
+            _voteOnSkillVerification(_disputeId, _voteFor, _claimAddress, voteWeight);
+        } else if (_votingType == VotingType.AskAthena) {
+            _voteOnAskAthena(_disputeId, _voteFor, _claimAddress, voteWeight);
+        }
+    }
+    
+    function _voteOnDispute(
+        string memory _disputeId, 
+        bool _voteFor, 
+        address /* _claimAddress */,
+        uint256 voteWeight
+    ) internal {
+        IOpenworkGenesis.Dispute memory dispute = genesis.getDispute(_disputeId);
+        require(dispute.timeStamp > 0, "No dispute");
+        require(!genesis.hasUserVotedOnDispute(_disputeId, msg.sender), "Voted");
+        require(dispute.isVotingActive, "No voting");
+        require(block.timestamp <= dispute.timeStamp + (votingPeriodMinutes * 60), "Expired");
+        
+        genesis.setDisputeVote(_disputeId, msg.sender);
+        
+        // NEW: Record member activity
+        activityTracker.updateMemberActivity(msg.sender);
+        
+        if (_voteFor) {
+            genesis.updateDisputeVotes(_disputeId, dispute.votesFor + voteWeight, dispute.votesAgainst);
+        } else {
+            genesis.updateDisputeVotes(_disputeId, dispute.votesFor, dispute.votesAgainst + voteWeight);
+        }
+        
+        if (address(nowjContract) != address(0)) {
+            nowjContract.incrementGovernanceAction(msg.sender);
+        }
+    }
+    
+    function _voteOnSkillVerification(
+        string memory _disputeId, 
+        bool _voteFor, 
+        address /* _claimAddress */, 
+        uint256 voteWeight
+    ) internal {
+        uint256 applicationId = stringToUint(_disputeId);
+        
+        // Get application from genesis
+        IOpenworkGenesis.SkillVerificationApplication memory application = genesis.getSkillApplication(applicationId);
+        require(application.applicant != address(0), "No app");
+        require(!genesis.hasUserVotedOnSkillApplication(applicationId, msg.sender), "Already voted");
+        require(application.isVotingActive, "Voting not active");
+        require(block.timestamp <= application.timeStamp + (votingPeriodMinutes * 60), "Voting expired");
+        
+        // NEW: Check if oracle is active and voter is a member
+        if (isOracleActive(application.targetOracleName)) {
+            require(
+                isOracleMember(msg.sender, application.targetOracleName),
+                "Oracle member"
+            );
+        }
+        // If oracle is inactive, existing canVote() check allows all DAO members
+        
+        // Record vote in genesis
+        genesis.setSkillApplicationVote(applicationId, msg.sender);
+        
+        // NEW: Record member activity
+        activityTracker.updateMemberActivity(msg.sender);
+        
+        // Update vote counts in genesis
+        if (_voteFor) {
+            genesis.updateSkillApplicationVotes(applicationId, application.votesFor + voteWeight, application.votesAgainst);
+        } else {
+            genesis.updateSkillApplicationVotes(applicationId, application.votesFor, application.votesAgainst + voteWeight);
+        }
+        
+        if (address(nowjContract) != address(0)) {
+            nowjContract.incrementGovernanceAction(msg.sender);
+        }
+    }
+    
+    function _voteOnAskAthena(
+        string memory _disputeId, 
+        bool _voteFor, 
+        address /* _claimAddress */, 
+        uint256 voteWeight
+    ) internal {
+        uint256 athenaId = stringToUint(_disputeId);
+        
+        // Get askAthena application from genesis
+        IOpenworkGenesis.AskAthenaApplication memory athenaApp = genesis.getAskAthenaApplication(athenaId);
+        require(athenaApp.applicant != address(0), "No app");
+        require(!genesis.hasUserVotedOnAskAthena(athenaId, msg.sender), "Voted");
+        require(athenaApp.isVotingActive, "No voting");
+        require(block.timestamp <= athenaApp.timeStamp + (votingPeriodMinutes * 60), "Expired");
+        
+        // Record vote in genesis
+        genesis.setAskAthenaVote(athenaId, msg.sender);
+        
+        // NEW: Record member activity
+        activityTracker.updateMemberActivity(msg.sender);
+        
+        // Update vote counts in genesis
+        if (_voteFor) {
+            genesis.updateAskAthenaVotes(athenaId, athenaApp.votesFor + voteWeight, athenaApp.votesAgainst);
+        } else {
+            genesis.updateAskAthenaVotes(athenaId, athenaApp.votesFor, athenaApp.votesAgainst + voteWeight);
+        }
+        
+        if (address(nowjContract) != address(0)) {
+            nowjContract.incrementGovernanceAction(msg.sender);
+        }
+    }
+    
+    // ==================== NEW: CCTP DISPUTE SETTLEMENT ====================
+
+    /// @dev Distribute fees proportionally to voters on the winning side
+    function _distributeFeeToWinningVoters(VotingType _votingType, string memory _disputeId, bool _winningSide, uint256 _totalFees) internal {
+        if (_totalFees == 0 || address(usdcToken) == address(0)) {
+            return;
+        }
+        
+        // Get all voters based on voting type
+        IOpenworkGenesis.VoterData[] memory voters;
+        if (_votingType == VotingType.Dispute) {
+            voters = genesis.getDisputeVoters(_disputeId);
+        } else if (_votingType == VotingType.SkillVerification) {
+            voters = genesis.getSkillVerificationVoters(stringToUint(_disputeId));
+        } else if (_votingType == VotingType.AskAthena) {
+            voters = genesis.getAskAthenaVoters(stringToUint(_disputeId));
+        }
+        
+        if (voters.length == 0) {
+            return;
+        }
+        
+        // Calculate total voting power of winning side
+        uint256 totalWinningVotingPower = 0;
+        for (uint256 i = 0; i < voters.length; i++) {
+            if (voters[i].voteFor == _winningSide) {
+                totalWinningVotingPower += voters[i].votingPower;
+            }
+        }
+        
+        if (totalWinningVotingPower == 0) {
+            return;
+        }
+        
+        // Distribute fees proportionally to winning voters
+        for (uint256 i = 0; i < voters.length; i++) {
+            if (voters[i].voteFor == _winningSide && voters[i].claimAddress != address(0)) {
+                uint256 voterFeeShare = (_totalFees * voters[i].votingPower) / totalWinningVotingPower;
+                
+                if (voterFeeShare > 0) {
+                    usdcToken.safeTransfer(voters[i].claimAddress, voterFeeShare);
+                    emit FeeDistributed(_disputeId, voters[i].claimAddress, voterFeeShare);
+                }
+            }
+        }
+    }
+    
+    /// @notice Settle a dispute after voting period ends, releasing funds and distributing fees
+    /// @param _disputeId ID of the dispute to settle
+    function settleDispute(string memory _disputeId) external {
+        // Validate dispute state
+        require(disputeStartTimes[_disputeId] > 0, "No dispute");
+        require(block.timestamp >= disputeStartTimes[_disputeId] + (votingPeriodMinutes * 60), "Not ended");
+
+        IOpenworkGenesis.Dispute memory dispute = genesis.getDispute(_disputeId);
+        require(dispute.timeStamp > 0, "No dispute");
+        require(!dispute.isFinalized, "Finalized");
+
+        // Determine outcome and finalize
+        bool disputeRaiserWins = dispute.votesFor > dispute.votesAgainst;
+        genesis.finalizeDispute(_disputeId, disputeRaiserWins);
+
+        // Release disputed funds to winner (if applicable)
+        _releaseDisputedFunds(_disputeId, dispute, disputeRaiserWins);
+
+        // v3: Sync LOWJC state
+        if (localLOWJC != address(0)) {
+            string memory originalJobId = _extractJobIdFromDisputeId(_disputeId);
+            IOpenworkGenesis.Job memory job = genesis.getJob(originalJobId);
+            bool jobGiverWins = (dispute.disputeRaiserAddress == job.jobGiver) ? disputeRaiserWins : !disputeRaiserWins;
+            ILocalJobContract(localLOWJC).resolveDispute(originalJobId, jobGiverWins);
+        }
+
+        // Handle fees: refund if no votes, otherwise distribute to winning voters
+        _handleDisputeFees(_disputeId, dispute, disputeRaiserWins);
+
+        emit DisputeFinalized(_disputeId, disputeRaiserWins, dispute.votesFor, dispute.votesAgainst);
+    }
+
+    /// @dev Determine fund recipient and release disputed funds
+    function _releaseDisputedFunds(
+        string memory _disputeId,
+        IOpenworkGenesis.Dispute memory dispute,
+        bool disputeRaiserWins
+    ) internal {
+        if (address(nowjContract) == address(0)) return;
+        if (!disputeRaiserWins) return; // Loser doesn't get funds
+
+        string memory originalJobId = _extractJobIdFromDisputeId(_disputeId);
+        IOpenworkGenesis.Job memory job = genesis.getJob(originalJobId);
+
+        address fundRecipient;
+        uint32 targetChainDomain;
+
+        if (dispute.disputeRaiserAddress == job.jobGiver) {
+            // Job giver raised and won - funds go to job giver
+            fundRecipient = job.jobGiver;
+            targetChainDomain = _parseJobIdForChainDomain(originalJobId);
+        } else {
+            // Applicant raised and won - funds go to applicant
+            fundRecipient = dispute.disputeRaiserAddress;
+            IOpenworkGenesis.Application memory app = genesis.getJobApplication(originalJobId, job.selectedApplicationId);
+            targetChainDomain = app.preferredPaymentChainDomain;
+        }
+
+        if (fundRecipient != address(0)) {
+            nowjContract.releaseDisputedFunds(fundRecipient, dispute.disputedAmount, targetChainDomain);
+        }
+    }
+
+    /// @dev Handle dispute fees: refund if no votes, distribute to winners otherwise
+    function _handleDisputeFees(
+        string memory _disputeId,
+        IOpenworkGenesis.Dispute memory dispute,
+        bool disputeRaiserWins
+    ) internal {
+        IOpenworkGenesis.VoterData[] memory voters = genesis.getDisputeVoters(_disputeId);
+
+        // No votes cast - refund fees to dispute raiser
+        if (voters.length == 0 && dispute.fees > 0 && address(usdcToken) != address(0)) {
+            _refundDisputeFees(_disputeId, dispute);
+            return;
+        }
+
+        // Normal case: distribute fees to winning voters
+        _distributeFeeToWinningVoters(VotingType.Dispute, _disputeId, disputeRaiserWins, dispute.fees);
+    }
+
+    /// @dev Refund dispute fees to raiser when no votes were cast
+    function _refundDisputeFees(
+        string memory _disputeId,
+        IOpenworkGenesis.Dispute memory dispute
+    ) internal {
+        uint32 preferredChain = _getDisputeRaiserPreferredChain(_disputeId, dispute.disputeRaiserAddress);
+
+        // Same chain or no cross-chain: transfer directly
+        if (preferredChain == 3 || address(nowjContract) == address(0)) { // 3 = Arbitrum Sepolia
+            usdcToken.safeTransfer(dispute.disputeRaiserAddress, dispute.fees);
+        } else {
+            // Cross-chain transfer through job contract
+            nowjContract.releaseDisputedFunds(dispute.disputeRaiserAddress, dispute.fees, preferredChain);
+        }
+
+        emit DisputeFeeRefunded(_disputeId, dispute.disputeRaiserAddress, dispute.fees, preferredChain);
+    }
+    
+    /// @notice Settle an AskAthena question after voting period ends
+    /// @param _athenaId ID of the AskAthena application
+    function settleAskAthena(uint256 _athenaId) external {
+        IOpenworkGenesis.AskAthenaApplication memory athenaApp = genesis.getAskAthenaApplication(_athenaId);
+        require(athenaApp.applicant != address(0), "No app");
+        require(!athenaApp.isFinalized, "Finalized");
+        require(athenaApp.isVotingActive, "Voting not active");
+        require(block.timestamp > athenaApp.timeStamp + (votingPeriodMinutes * 60), "Wait");
+
+        bool result = athenaApp.votesFor > athenaApp.votesAgainst;
+        genesis.finalizeAskAthena(_athenaId, result);
+
+        // Distribute fees to winning voters
+        uint256 feeAmount = stringToUint(athenaApp.fees);
+        _distributeFeeToWinningVoters(VotingType.AskAthena, uint2str(_athenaId), result, feeAmount);
+
+        emit AskAthenaSettled(_athenaId, result, athenaApp.votesFor, athenaApp.votesAgainst);
+    }
+    
+    // ==================== CCTP FEE MANAGEMENT ====================
+    
+    
+    // ==================== UTILITY FUNCTIONS ====================
+
+    /// @dev Convert string to uint256
+    function stringToUint(string memory s) internal pure returns (uint256) {
+        bytes memory b = bytes(s);
+        uint256 result = 0;
+        for (uint256 i = 0; i < b.length; i++) {
+            if (b[i] >= 0x30 && b[i] <= 0x39) {
+                result = result * 10 + (uint256(uint8(b[i])) - 48);
+            }
+        }
+        return result;
+    }
+    
+    /// @dev Convert uint256 to string
+    function uint2str(uint256 _i) internal pure returns (string memory) {
+        if (_i == 0) {
+            return "0";
+        }
+        uint256 j = _i;
+        uint256 len;
+        while (j != 0) {
+            len++;
+            j /= 10;
+        }
+        bytes memory bstr = new bytes(len);
+        uint256 k = len;
+        while (_i != 0) {
+            k = k - 1;
+            uint8 temp = (48 + uint8(_i - _i / 10 * 10));
+            bytes1 b1 = bytes1(temp);
+            bstr[k] = b1;
+            _i /= 10;
+        }
+        return string(bstr);
+    }
+    
+    function _parseJobIdForChainDomain(string memory _jobId) internal pure returns (uint32) {
+        bytes memory jobIdBytes = bytes(_jobId);
+        uint256 dashIndex = 0;
+        
+        // Find the dash position in job ID like "40232-57"
+        for (uint256 i = 0; i < jobIdBytes.length; i++) {
+            if (jobIdBytes[i] == '-') {
+                dashIndex = i;
+                break;
+            }
+        }
+        
+        if (dashIndex == 0) return 0; // No dash found
+        
+        // Extract the EID part before the dash
+        bytes memory eidBytes = new bytes(dashIndex);
+        for (uint256 i = 0; i < dashIndex; i++) {
+            eidBytes[i] = jobIdBytes[i];
+        }
+        
+        uint256 eid = stringToUint(string(eidBytes));
+        
+        // Convert EID to CCTP domain
+        if (eid == 40161) return 0;      // Ethereum Sepolia
+        else if (eid == 40232) return 2; // OP Sepolia  
+        else if (eid == 40231) return 3; // Arbitrum Sepolia
+        else return 0; // Default to Ethereum
+    }
+    
+    function _extractJobIdFromDisputeId(string memory _disputeId) internal pure returns (string memory) {
+        bytes memory disputeIdBytes = bytes(_disputeId);
+        
+        // Find the last dash in the dispute ID
+        int256 lastDashIndex = -1;
+        for (uint256 i = disputeIdBytes.length; i > 0; i--) {
+            if (disputeIdBytes[i-1] == '-') {
+                // Check if everything after this dash is numeric (dispute counter)
+                bool isNumeric = true;
+                for (uint256 j = i; j < disputeIdBytes.length; j++) {
+                    if (disputeIdBytes[j] < '0' || disputeIdBytes[j] > '9') {
+                        isNumeric = false;
+                        break;
+                    }
+                }
+                if (isNumeric) {
+                    lastDashIndex = int256(i-1);
+                    break;
+                }
+            }
+        }
+        
+        if (lastDashIndex == -1) {
+            // No dispute counter found, return original ID
+            return _disputeId;
+        }
+        
+        // Extract job ID (everything before the last dash)
+        bytes memory jobIdBytes = new bytes(uint256(lastDashIndex));
+        for (uint256 i = 0; i < uint256(lastDashIndex); i++) {
+            jobIdBytes[i] = disputeIdBytes[i];
+        }
+        
+        return string(jobIdBytes);
+    }
+    
+    function _getDisputeRaiserPreferredChain(string memory _disputeId, address _disputeRaiser) internal view returns (uint32) {
+        // Extract original job ID from dispute ID
+        string memory originalJobId = _extractJobIdFromDisputeId(_disputeId);
+        IOpenworkGenesis.Job memory job = genesis.getJob(originalJobId);
+        
+        // If dispute raiser is the selected applicant, get their preferred payment chain
+        if (_disputeRaiser == job.selectedApplicant && job.selectedApplicationId > 0) {
+            IOpenworkGenesis.Application memory app = genesis.getJobApplication(originalJobId, job.selectedApplicationId);
+            return app.preferredPaymentChainDomain;
+        }
+        
+        // If dispute raiser is the job giver or we can't determine preference, 
+        // use the job's original chain (parsed from job ID)
+        return _parseJobIdForChainDomain(originalJobId);
+    }
+    
+    // ==================== EMERGENCY FUNCTIONS ====================
+
+    /// @notice Emergency withdraw ETH from contract (admin only)
+    function withdraw() external {
+        require(admins[msg.sender], "Auth");
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No balance");
+        (bool success, ) = payable(msg.sender).call{value: balance}("");
+        require(success, "Failed");
+    }
+
+    /// @notice Receive ETH for paying LayerZero fees
+    receive() external payable {}
+}
