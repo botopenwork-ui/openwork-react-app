@@ -16,7 +16,7 @@
 
 'use strict';
 
-require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
+require('../backend/node_modules/dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const { ethers } = require('../backend/node_modules/ethers');
 
 // ── Addresses ────────────────────────────────────────────────────────────────
