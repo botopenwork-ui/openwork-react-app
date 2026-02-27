@@ -481,6 +481,7 @@ contract NativeArbOpenWorkJobContract is
         require(job.status == JobStatus.Open, "Job is not open");
 
         job.selectedApplicationId = _appId;
+        job.selectedApplicant = jobApplications[_jobId][_appId].applicant;
         job.status = JobStatus.InProgress;
         job.currentMilestone = 0;
 

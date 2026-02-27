@@ -59,43 +59,48 @@
       "name": "F4.dispute-flow-complete",
       "status": "PASS",
       "detail": "applicant wins ✅ — W2 received 0.099 USDC"
+    },
+    {
+      "name": "F5.rate-complete",
+      "status": "FAIL",
+      "detail": "execution reverted: \"Not authorized to rate\" (action=\"estimateGas\", data=\"0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000"
     }
   ],
   "txLinks": {
-    "F1.createProfile-W1": "https://sepolia.arbiscan.io/tx/0xf65e401fce60c16fdd5e1fc9b0a50c13894d239f9c45c14614cfad82551bef3c",
-    "F1.createProfile-W2": "https://sepolia.arbiscan.io/tx/0x3bc85ac9f8501c59b00401a87fc41a70abbc12cda97896bbe1c9a8652fea1a5c",
-    "F1.postJob": "https://sepolia.arbiscan.io/tx/0x2b91769194283aa29df364500933e02eaa3be5e5e25bfbf538025aa699cd1d90",
-    "F1.applyToJob": "https://sepolia.arbiscan.io/tx/0x42a199cbdb86d22ef1f82b4133f2eb839489282f0b5e0810e95cad41ecf39a09",
-    "F1.startJob": "https://sepolia.arbiscan.io/tx/0x32a909b77bc3044d44751082fa288eaedba49d214385ca612fc8382794dc53e6",
-    "F1.submitWork": "https://sepolia.arbiscan.io/tx/0x58a65d5f3d0a4b05db6351e1b4fcc1fe1cfd0c23629fd5430bfac68bf4fb6dbd",
-    "F1.releasePayment": "https://sepolia.arbiscan.io/tx/0xc55650f8771fa77d937bd14da38559452dd20bc8c5811fffee6283f3ac5ae8fd",
-    "F2.startDirectContract": "https://sepolia.arbiscan.io/tx/0x790375550605a5120d8b1f680bdc9a84f86d33c4ceb4aa3ef20b31da7c8f4694",
-    "F2.submitWork": "https://sepolia.arbiscan.io/tx/0x3e9a2ce0c2a07b8899170a6035a9950c739b4d53d135438b1ebf556df40218a0",
-    "F2.releasePayment": "https://sepolia.arbiscan.io/tx/0x7f6e8926d6cb898000eefdd9c92d2ee9853ae1f3ce0f158f848f6019d4f68fb7",
-    "F3.addPortfolio": "https://sepolia.arbiscan.io/tx/0x0cbd27bd824d49c1f59f430fa4aa5e1d9d4061209eeaf6906de5b054e598d6f8",
-    "F3.updatePortfolioItem": "https://sepolia.arbiscan.io/tx/0x7cf57d2a3e9d2cb9188252153824be18a76f2f0ba44383aa1b338bc8396de7fe",
-    "F3.removePortfolioItem": "https://sepolia.arbiscan.io/tx/0xb2e5522e28985afe9727fecd39056fd9c5ed8d7d7b787d4b328d5d7aaa7f03b2",
-    "F4.postJob": "https://sepolia.arbiscan.io/tx/0xc682782f93343da4cffac0be71bedba3580d9fabf67edee7aaeafd57f6ca3a70",
-    "F4.applyToJob": "https://sepolia.arbiscan.io/tx/0xc53829ac066a261a0da73121bc26e140dd53421bb9dafe73ce470e69658f6719",
-    "F4.startJob": "https://sepolia.arbiscan.io/tx/0x45dc19fab2955b9dac9c3539047c402bb929061df812a4d4a29a2bda496a9ca1",
-    "F4.submitWork": "https://sepolia.arbiscan.io/tx/0xd4ef59092eb698eaf12309604bc217e8acc55f915baafebe9ce3560fe7bcfa43",
-    "F4.raiseDispute": "https://sepolia.arbiscan.io/tx/0x87f0f685d436a1c74276df94eee5852d0651659c65210b1c6b7c1a682389cf0e",
-    "F4.voteOnDispute": "https://sepolia.arbiscan.io/tx/0x3e41cad3ecb20811795b6f11481a373445fe03eb9bd036e33451ce1a086dcc82",
-    "F4.settleDispute": "https://sepolia.arbiscan.io/tx/0x6d9d21495ef72e71773aa7a0a286890fc3f3f340d90b3a5a212a4f1a0de403db"
+    "F1.createProfile-W1": "https://sepolia.arbiscan.io/tx/0xe3bd2beb59b33e2f0c7005343c16d52bdeeb2894b66bb5f195f9cf3942fab007",
+    "F1.createProfile-W2": "https://sepolia.arbiscan.io/tx/0x0f29e5f070fad047b0904ca35480e6fb34fcf60b1c36028ed93dd4d8f2f88524",
+    "F1.postJob": "https://sepolia.arbiscan.io/tx/0x04597da091d9cdc5dd9f55d50e5ebc6f06da799411bf063ca070f3a8b6500a95",
+    "F1.applyToJob": "https://sepolia.arbiscan.io/tx/0x6d25049f29590731117e51e226c420a1c0da8206373ca9e7de5a6a76e7038754",
+    "F1.startJob": "https://sepolia.arbiscan.io/tx/0xe427887052a5954597c8125aaef0181e493695be3374c8e656feeed3f23ca626",
+    "F1.submitWork": "https://sepolia.arbiscan.io/tx/0x54e892384d6dfe5a33e5b77b8b213b610d01fdca18d321fd94c2d458408e4d1d",
+    "F1.releasePayment": "https://sepolia.arbiscan.io/tx/0x13a0c789e6336905c4101a968ef63b822141671c3b378f3597039cfdf12ea711",
+    "F2.startDirectContract": "https://sepolia.arbiscan.io/tx/0xc8ab84af935c2e1217bf453cec5328b3669e5e41ae182f41581a7e1d0a853e97",
+    "F2.submitWork": "https://sepolia.arbiscan.io/tx/0xd62aad7350ad7cfeeec7de1ecf48c5373e8aa8fe74670cf889fc081d120ae68f",
+    "F2.releasePayment": "https://sepolia.arbiscan.io/tx/0x2cfe72d4ec5e9f4044fe7ddb369db95fb69e4505eac14ea2f62d2dfc0ed6dbd4",
+    "F3.addPortfolio": "https://sepolia.arbiscan.io/tx/0xe9f7f802c9c6f31d61c682c96d6769eb894e98cb89177b426dd169cece15037e",
+    "F3.updatePortfolioItem": "https://sepolia.arbiscan.io/tx/0x33a991232cdf161460cd21f67eaf36345e6444875aa3323f8789c4c52f6a88d9",
+    "F3.removePortfolioItem": "https://sepolia.arbiscan.io/tx/0x66ee58ee1e66be4742c61bc669d406a997f32fd5e858fc4ec1d41a4033e33726",
+    "F4.postJob": "https://sepolia.arbiscan.io/tx/0xf4bae663ab82c519f810d7d7fa5bc11a876c7fe67a2d0c9744c9fc00d75cabd6",
+    "F4.applyToJob": "https://sepolia.arbiscan.io/tx/0xe46e4ee04007361e9988b6f7fcab3e90c8f6d12c217d7e64fd75525db387d585",
+    "F4.startJob": "https://sepolia.arbiscan.io/tx/0xe0eee868de7a1313c58a4b5334ae354dd1789f2330f36fded51f4061af776455",
+    "F4.submitWork": "https://sepolia.arbiscan.io/tx/0x9096fa61617af6c4cacf10bcc807a60a599347e93f36d4e7833de696008e6a81",
+    "F4.raiseDispute": "https://sepolia.arbiscan.io/tx/0x2c7aa6e6a0981f5da3b255b371fd12310922d5d974a5eadef8554281e6502767",
+    "F4.voteOnDispute": "https://sepolia.arbiscan.io/tx/0xe3e6572ad5134f2d3ede611c41f1e9d6fd6acf342d9ab31fc51d5f2809498a7a",
+    "F4.settleDispute": "https://sepolia.arbiscan.io/tx/0xab01bf171e039124df31a2788aa7dd6a3aff5b766e8f01729757b29512a5ccdb"
   },
   "summary": {
-    "total": 12,
+    "total": 13,
     "passed": 12,
-    "failed": 0
+    "failed": 1
   },
   "contracts": {
-    "genesis": "0xA152cBA58E6c7262fb1aeE42588c15b9d141F5b7",
-    "profileGenesis": "0xeA0b03017f2eFD11E997a1d482Fda14E680bdBD8",
-    "nowjc": "0x50B525C9A6ba31D97476Db0D5dc3bBBbb19200dE",
-    "profileManager": "0xF9D278598C637CEad3bD8a31c746ba564472a6c5",
-    "athena": "0x36eE60BC589AaEb48F8D4C65B6390ee29C52B5F1",
-    "lowjc": "0xfAD2C0B4de938Bc673ac3878CEC9389521330DF3",
-    "athenaClient": "0x2ce83406F6dbcb1BEe6B610187D7d7f0B4f80031"
+    "genesis": "0x8cAe2a80eD95C4a05E88F4c54ABe18cB0147A9a5",
+    "profileGenesis": "0x0092dBA99b24d18D8477Fbf26d703b0480951c5c",
+    "nowjc": "0xDe317C0637fbf084625B848ef1dA1815E061cD48",
+    "profileManager": "0xa321Fd7f5AE48F2248f0944CcF2f92fe2b1b9E62",
+    "athena": "0xaC7A70Eea7aCb34145be1E8Bb8987028Ad355FC8",
+    "lowjc": "0xb10b7a761D93cc29611C76913BC4902a66Adc3e5",
+    "athenaClient": "0x71f0815545dA517A5ecBCB26F102933479505499"
   },
-  "testedAt": "2026-02-26T18:56:00.983Z"
+  "testedAt": "2026-02-27T15:22:11.935Z"
 }
