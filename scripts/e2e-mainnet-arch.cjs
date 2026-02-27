@@ -289,6 +289,8 @@ async function main() {
   const athenaClientW2 = athenaClient.connect(w2);
 
   const M = BigInt(100_000); // 0.1 USDC
+  const chainId = (await provider.getNetwork()).chainId;
+  let firstJobId = ''; // set after F1 postJob, used by F5 (rate)
 
   // ════════════════════════════════════════════════════════════════════════════
   // F1: Application flow
@@ -318,11 +320,11 @@ async function main() {
 
     // postJob
     const jobCountBefore = await lowjc.jobCounter();
-    const chainId = (await provider.getNetwork()).chainId;
     await (await usdc.connect(w1).approve(lowjcAddr, M)).wait();
     { const r = await (await lowjc.postJob('ipfs://job-f1', ['Milestone 1'], [M])).wait();
       tx('F1.postJob', r.hash); }
     const f1JobId = `${chainId}-${Number(await lowjc.jobCounter())}`;
+    firstJobId = f1JobId;
     console.log('  F1-3: job posted:', f1JobId);
     expect(Number(await lowjc.jobCounter()) === Number(jobCountBefore) + 1, 'F1.job-counter-incremented');
 
@@ -366,7 +368,6 @@ async function main() {
   console.log('F2: Direct contract flow');
   console.log('═'.repeat(60));
   try {
-    const chainId = (await provider.getNetwork()).chainId;
     const jobCountBefore = await lowjc.jobCounter();
     await (await usdc.connect(w1).approve(lowjcAddr, M)).wait();
     { const r = await (await lowjc.startDirectContract(w2.address, 'ipfs://job-f2', ['M1'], [M], 3)).wait();
@@ -425,7 +426,6 @@ async function main() {
     // Refund W2 for dispute fee
     await (await usdc.connect(w1).transfer(w2.address, BigInt(200_000))).wait();
 
-    const chainId = (await provider.getNetwork()).chainId;
     await (await usdc.connect(w1).approve(lowjcAddr, M)).wait();
     { const r = await (await lowjc.postJob('ipfs://job-f4', ['M1'], [M])).wait();
       tx('F4.postJob', r.hash); }
@@ -467,7 +467,21 @@ async function main() {
     console.error(e);
   }
 
-  // ── Summary ──
+  // ════════════════════════════════════════════════════════════════════════════
+  // F5: Rate (profile manager rating fix)
+  // ════════════════════════════════════════════════════════════════════════════
+  console.log('\n' + '═'.repeat(60));
+  console.log('F5: Rate function');
+  console.log('═'.repeat(60));
+  try {
+    // W1 (job giver) rates W2 (taker) on the completed F1 job
+    const r = await (await lowjc.rate(firstJobId, w2.address, 5)).wait();
+    tx('F5.rate-giver-rates-taker', r.hash);
+    pass('F5.rate-complete', 'job giver rated taker without revert ✅');
+  } catch (e) {
+    fail('F5.rate-complete', e.message?.slice(0, 200));
+    console.error(e);
+  }
   console.log('\n' + '═'.repeat(60));
   console.log('SUMMARY');
   console.log('═'.repeat(60));
