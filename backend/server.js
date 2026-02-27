@@ -1086,7 +1086,12 @@ const PORT = config.PORT;
 const { initDatabase } = require('./db/init');
 
 async function startServer() {
-  await initDatabase();
+  try {
+    await initDatabase();
+  } catch (dbErr) {
+    console.warn(`⚠️  Database unavailable — starting without DB persistence: ${dbErr.message}`);
+    console.warn('   CCTP transfer state will not persist across restarts.');
+  }
 
   app.listen(PORT, () => {
     console.log(`🌐 OpenWork Backend Server running on http://localhost:${PORT}`);
@@ -1228,3 +1233,4 @@ process.on('SIGTERM', async () => {
   await pool.end();
   process.exit(0);
 });
+// build-stamp: 2026-02-27
