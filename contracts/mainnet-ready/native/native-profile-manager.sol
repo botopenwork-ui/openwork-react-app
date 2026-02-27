@@ -5,28 +5,14 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-// Interface for OpenworkGenesis storage contract
+// Interface for NativeProfileGenesis storage contract
+// Note: profile-only genesis — does NOT store job data
 interface IOpenworkGenesis {
-    enum JobStatus { Open, InProgress, Completed, Cancelled }
-    
     struct Profile {
         address userAddress;
         string ipfsHash;
         address referrerAddress;
         string[] portfolioHashes;
-    }
-    
-    struct Job {
-        string id;
-        address jobGiver;
-        address[] applicants;
-        string jobDetailHash;
-        JobStatus status;
-        string[] workSubmissions;
-        uint256 totalPaid;
-        uint256 currentMilestone;
-        address selectedApplicant;
-        uint256 selectedApplicationId;
     }
 
     // Profile management
@@ -36,10 +22,9 @@ interface IOpenworkGenesis {
     function updateProfileIpfsHash(address user, string memory newIpfsHash) external;
     function updatePortfolioItem(address user, uint256 index, string memory newPortfolioHash) external;
     function removePortfolioItem(address user, uint256 index) external;
-    
+
     // Getters
     function getProfile(address user) external view returns (Profile memory);
-    function getJob(string memory jobId) external view returns (Job memory);
     function getUserRatings(address user) external view returns (uint256[] memory);
     function hasProfile(address user) external view returns (bool);
 }
@@ -238,24 +223,13 @@ contract NativeProfileManager is
     ) external {
         require(msg.sender == bridge, "Only bridge");
         require(_rating > 0 && _rating <= 5, "Rating must be 1-5");
-        
-        // Get job from Genesis
-        IOpenworkGenesis.Job memory job = genesis.getJob(_jobId);
-        require(bytes(job.id).length != 0, "Job does not exist");
-        
-        // Verify authorization
-        bool isAuthorized = false;
-        if (_rater == job.jobGiver && _userToRate == job.selectedApplicant) {
-            isAuthorized = true; // Job giver rating job taker
-        } else if (_rater == job.selectedApplicant && _userToRate == job.jobGiver) {
-            isAuthorized = true; // Job taker rating job giver
-        }
-        
-        require(isAuthorized, "Not authorized to rate");
-        
-        // Store rating in Genesis
+        require(_userToRate != address(0), "Invalid user");
+
+        // Authorization is validated by the bridge (LOWJC) before calling here.
+        // LOWJC checks: caller is jobGiver rating applicant, or applicant rating jobGiver.
+        // ProfileManager trusts the bridge and simply writes the rating.
         genesis.setJobRating(_jobId, _userToRate, _rating);
-        
+
         emit UserRated(_jobId, _rater, _userToRate, _rating);
     }
     
