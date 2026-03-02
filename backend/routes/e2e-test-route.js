@@ -243,3 +243,92 @@ router.post('/release', async (req, res) => {
 
 
 module.exports = router;
+
+// ── POST /api/e2e-test/recover — find stuck CCTP burn and complete OP mint ────
+router.post('/recover', async (req, res) => {
+  const { jobId, lookbackBlocks } = req.body;
+  const LOOKBACK = lookbackBlocks || 20000;
+  const log = [];
+  const step = (msg) => { log.push(`[${new Date().toISOString()}] ${msg}`); console.log('🔧 Recover:', msg); };
+
+  step(`=== CCTP RECOVERY — scanning ${LOOKBACK} ARB blocks for PaymentReleased ===`);
+
+  const arbWeb3 = new Web3(config.ARBITRUM_RPC);
+  const opWeb3  = new Web3(config.OPTIMISM_RPC);
+  const NOWJC   = '0x8EfbF240240613803B9c9e716d4b5AD1388aFd99';
+  const payRelTopic = arbWeb3.utils.keccak256('PaymentReleased(string,address,address,uint256,uint256)');
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const fetch = require('node-fetch');
+
+  try {
+    const latest = Number(await arbWeb3.eth.getBlockNumber());
+    step(`Latest ARB block: ${latest}`);
+
+    // Scan in 10-block chunks with rate-limit delay
+    let found = [];
+    for (let b = latest; b >= latest - LOOKBACK && found.length === 0; b -= 10) {
+      await sleep(300);
+      try {
+        const logs = await arbWeb3.eth.getPastLogs({
+          address: NOWJC, topics: [payRelTopic],
+          fromBlock: Math.max(b - 9, 0), toBlock: b
+        });
+        if (logs.length > 0) {
+          logs.forEach(l => {
+            step(`Found PaymentReleased | Block: ${l.blockNumber} | TX: ${l.transactionHash}`);
+            found.push(l.transactionHash);
+          });
+        }
+      } catch(e) { await sleep(800); }
+    }
+
+    if (found.length === 0) {
+      return res.json({ success: false, error: `No PaymentReleased found in last ${LOOKBACK} ARB blocks`, log });
+    }
+
+    // For each found tx, check Circle API and complete OP mint
+    const results = [];
+    for (const arbTxHash of found) {
+      step(`Checking Circle API for ARB tx: ${arbTxHash}`);
+      const circleUrl = `https://iris-api.circle.com/v2/messages/3?transactionHash=${arbTxHash}`;
+      const resp = await fetch(circleUrl);
+      const data = await resp.json();
+
+      if (!data.messages || data.messages.length === 0) {
+        step(`No Circle messages for ${arbTxHash} — may not be CCTP burn`);
+        results.push({ arbTxHash, status: 'not_cctp' });
+        continue;
+      }
+
+      const msg = data.messages[0];
+      step(`Circle status: ${msg.status}`);
+
+      if (msg.status !== 'complete') {
+        results.push({ arbTxHash, status: `circle_${msg.status}` });
+        continue;
+      }
+
+      step('Attestation ready — calling OP CCTPTransceiver.receive()...');
+      const { executeReceiveOnOptimism } = require('../utils/tx-executor');
+      const result = await executeReceiveOnOptimism({
+        message: msg.message,
+        attestation: msg.attestation
+      });
+
+      if (result.alreadyCompleted) {
+        step(`Already completed (nonce used)`);
+        results.push({ arbTxHash, status: 'already_completed' });
+      } else {
+        step(`✅ OP mint completed: ${result.transactionHash}`);
+        results.push({ arbTxHash, opTxHash: result.transactionHash, status: 'completed' });
+      }
+    }
+
+    step('=== RECOVERY DONE ===');
+    return res.json({ success: true, results, log });
+
+  } catch (err) {
+    step(`Exception: ${err.message}`);
+    return res.json({ success: false, error: err.message, log });
+  }
+});
