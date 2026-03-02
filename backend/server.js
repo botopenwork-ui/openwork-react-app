@@ -847,6 +847,8 @@ async function processStartJobDirect(jobId, sourceTxHash) {
     throw error;
   }
 }
+
+/**
  * Process Lock Milestone CCTP relay: OP → Arbitrum
  * Same CCTP flow as startJob (source chain → Arbitrum via Transceiver receive())
  * but with separate status tracking per lock tx
