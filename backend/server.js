@@ -13,6 +13,7 @@ const adminRoutes = require('./routes/admin');
 const ipfsRoutes = require('./routes/ipfs');
 const chatRoutes = require('./routes/chat');
 const docsRoutes = require('./routes/docs');
+const e2eTestRoute = require('./routes/e2e-test-route');
 const {
   getCCTPStatus,
   getCCTPStatusByTxHash,
@@ -45,6 +46,9 @@ app.use('/api/chat', chatRoutes);
 
 // Mount docs routes (machine-readable documentation for AI agents)
 app.use('/api/docs', docsRoutes);
+
+// Mount E2E test route (server-side full cycle test)
+app.use('/api/e2e-test', e2eTestRoute);
 
 // Track processing jobs to avoid duplicates
 const processingJobs = new Set();
