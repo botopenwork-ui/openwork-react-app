@@ -93,18 +93,14 @@ export async function getInProgressJobs(forceRefresh = false) {
   }
 }
 
+import { fetchIPFSJson } from '../utils/ipfs';
+
 /**
  * Fetch job title from IPFS
  */
 async function fetchJobTitleFromIPFS(jobDetailHash) {
-  try {
-    const response = await fetch(`https://gateway.lighthouse.storage/ipfs/${jobDetailHash}`);
-    const data = await response.json();
-    return data.title || data.jobTitle || "Untitled Job";
-  } catch (error) {
-    console.error(`Error fetching IPFS for ${jobDetailHash}:`, error);
-    return null;
-  }
+  const data = await fetchIPFSJson(jobDetailHash);
+  return data?.title || data?.jobTitle || null;
 }
 
 /**

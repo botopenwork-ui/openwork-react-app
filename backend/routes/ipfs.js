@@ -87,3 +87,36 @@ router.post('/upload-json', async (req, res) => {
 });
 
 module.exports = router;
+
+// ── GET /api/ipfs/content/:hash ───────────────────────────────────────────────
+// Proxy IPFS reads through the local node. Returns 404 cleanly if not found.
+router.get('/content/:hash', async (req, res) => {
+  const { hash } = req.params;
+  if (!hash || hash.includes('<') || hash.length < 10) {
+    return res.status(400).json({ error: 'Invalid hash' });
+  }
+
+  const tryGateways = [
+    IPFS_API_URL ? `${IPFS_API_URL}/api/v0/cat?arg=${hash}` : null,
+    `https://ipfs.io/ipfs/${hash}`,
+  ].filter(Boolean);
+
+  for (const url of tryGateways) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000);
+      const method = url.includes('/api/v0/cat') ? 'POST' : 'GET';
+      const headers = url.includes(IPFS_API_URL) ? { 'Authorization': `Bearer ${IPFS_SECRET}` } : {};
+      const response = await fetch(url, { method, headers, signal: controller.signal });
+      clearTimeout(timeout);
+      if (response.ok) {
+        const ct = response.headers.get('content-type') || 'application/json';
+        const text = await response.text();
+        res.setHeader('Content-Type', ct);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.send(text);
+      }
+    } catch (e) { /* try next */ }
+  }
+  res.status(404).json({ error: 'Content not found on IPFS', hash });
+});
