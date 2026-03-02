@@ -11,47 +11,52 @@ const upload = multer({ storage: multer.memoryStorage() });
  * Upload a file to IPFS.
  *
  * Strategy (in priority order):
- *   1. Self-hosted IPFS proxy  — if IPFS_API_URL + IPFS_PROXY_SECRET are set
- *   2. Lighthouse SDK          — if LIGHTHOUSE_API_KEY is set
+ *   1. Pinata REST API         — if PINATA_JWT is set (preferred, no infra needed)
+ *   2. Self-hosted IPFS proxy  — if IPFS_API_URL + IPFS_PROXY_SECRET are set
  *   3. Error                   — neither configured
  *
- * Response format identical to the original Pinata integration:
- *   { success: true, IpfsHash: "Qm...", PinSize: 12345, Timestamp: "..." }
+ * Response format: { success: true, IpfsHash: "Qm...", PinSize: 12345, Timestamp: "..." }
  */
 async function uploadToIPFS(buffer, filename) {
-  const IPFS_API_URL    = process.env.IPFS_API_URL;
-  const IPFS_SECRET     = process.env.IPFS_PROXY_SECRET;
-  const LIGHTHOUSE_KEY  = process.env.LIGHTHOUSE_API_KEY;
+  const PINATA_JWT   = process.env.PINATA_JWT;
+  const IPFS_API_URL = process.env.IPFS_API_URL;
+  const IPFS_SECRET  = process.env.IPFS_PROXY_SECRET;
 
-  // ── Strategy 1: Self-hosted IPFS proxy ────────────────────────────────────
+  // ── Strategy 1: Pinata REST API ───────────────────────────────────────────
+  if (PINATA_JWT && !PINATA_JWT.startsWith('dummy')) {
+    const form = new FormData();
+    form.append('file', buffer, { filename: filename || 'upload' });
+    const resp = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${PINATA_JWT}`, ...form.getHeaders() },
+      body: form
+    });
+    if (!resp.ok) {
+      const text = await resp.text();
+      throw new Error(`Pinata error ${resp.status}: ${text}`);
+    }
+    const data = await resp.json();
+    return { IpfsHash: data.IpfsHash, PinSize: data.PinSize || 0 };
+  }
+
+  // ── Strategy 2: Self-hosted IPFS proxy (tunnel) ───────────────────────────
   if (IPFS_API_URL && IPFS_SECRET) {
     const form = new FormData();
     form.append('file', buffer, { filename: filename || 'upload' });
-
     const resp = await fetch(`${IPFS_API_URL}/api/v0/add`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${IPFS_SECRET}`, ...form.getHeaders() },
       body: form
     });
-
     if (!resp.ok) {
       const text = await resp.text();
       throw new Error(`IPFS proxy error ${resp.status}: ${text}`);
     }
-
     const data = await resp.json();
     return { IpfsHash: data.Hash, PinSize: parseInt(data.Size) || 0 };
   }
 
-  // ── Strategy 2: Lighthouse SDK ────────────────────────────────────────────
-  if (LIGHTHOUSE_KEY) {
-    const lighthouse = require('@lighthouse-web3/sdk');
-    const response = await lighthouse.uploadBuffer(buffer, LIGHTHOUSE_KEY, filename);
-    if (!response?.data?.Hash) throw new Error('Unexpected Lighthouse response: ' + JSON.stringify(response));
-    return { IpfsHash: response.data.Hash, PinSize: parseInt(response.data.Size) || 0 };
-  }
-
-  throw new Error('No IPFS provider configured (set IPFS_API_URL+IPFS_PROXY_SECRET or LIGHTHOUSE_API_KEY)');
+  throw new Error('No IPFS provider configured (set PINATA_JWT or IPFS_API_URL+IPFS_PROXY_SECRET)');
 }
 
 async function uploadTextToIPFS(content, name) {
