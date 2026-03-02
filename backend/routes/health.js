@@ -21,7 +21,8 @@ const ERC20    = ['function balanceOf(address) view returns (uint256)'];
 const LOWJC_ABI = ['function jobCounter() view returns (uint256)'];
 
 const HEALTH_SECRET = process.env.HEALTH_SECRET || 'ow-health-2026';
-const ETH_WARN  = 0.003;
+const ETH_WARN  = 0.003;  // yellow below this
+const ETH_CRIT  = 0.001;  // red below this
 
 function status(value, warn, critical) {
   if (value <= critical) return 'red';
@@ -45,8 +46,8 @@ async function checkWallets() {
   const opEthF  = parseFloat(ethers.formatEther(opEth));
 
   return {
-    arb_eth:  { value: arbEthF.toFixed(6),  status: status(arbEthF, ETH_WARN * 2, ETH_WARN) },
-    op_eth:   { value: opEthF.toFixed(6),   status: status(opEthF,  ETH_WARN * 2, ETH_WARN) },
+    arb_eth:  { value: arbEthF.toFixed(6),  status: status(arbEthF, ETH_WARN, ETH_CRIT) },
+    op_eth:   { value: opEthF.toFixed(6),   status: status(opEthF,  ETH_WARN, ETH_CRIT) },
     arb_usdc: { value: parseFloat(ethers.formatUnits(arbUsdc, 6)).toFixed(4), status: 'green' },
     op_usdc:  { value: parseFloat(ethers.formatUnits(opUsdc,  6)).toFixed(4), status: 'green' },
   };
