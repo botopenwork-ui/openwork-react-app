@@ -332,3 +332,16 @@ router.post('/recover', async (req, res) => {
     return res.json({ success: false, error: err.message, log });
   }
 });
+
+// ── GET /api/e2e-test/ipfs-debug — test IPFS connection from Cloud Run ────
+router.get('/ipfs-debug', async (req, res) => {
+  const IPFS_API_URL   = process.env.IPFS_API_URL;
+  const IPFS_SECRET    = process.env.IPFS_PROXY_SECRET;
+  const LIGHTHOUSE_KEY = process.env.LIGHTHOUSE_API_KEY;
+  res.json({
+    IPFS_API_URL: IPFS_API_URL || null,
+    IPFS_SECRET_SET: !!IPFS_SECRET,
+    LIGHTHOUSE_SET: !!LIGHTHOUSE_KEY,
+    will_use: (IPFS_API_URL && IPFS_SECRET) ? 'proxy' : LIGHTHOUSE_KEY ? 'lighthouse' : 'none'
+  });
+});
