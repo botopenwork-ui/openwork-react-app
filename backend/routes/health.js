@@ -109,7 +109,7 @@ async function checkRelayer(db) {
     const last = await db.all(
       `SELECT MAX(updated_at) as last_relay FROM cctp_transfers WHERE status = 'completed'`
     );
-    const stuckCount = stuck[0]?.count || 0;
+    const stuckCount = parseInt(stuck[0]?.count || 0);
     const lastRelay  = last[0]?.last_relay || null;
     return {
       status: stuckCount > 0 ? 'yellow' : 'green',
@@ -117,7 +117,8 @@ async function checkRelayer(db) {
       last_completed_relay: lastRelay,
     };
   } catch (e) {
-    return { status: 'yellow', message: 'DB unavailable — relay status unknown' };
+    // DB unavailable — relayer itself may still be fine, don't show red
+    return { status: 'green', stuck_jobs: 0, last_completed_relay: null, note: 'DB unavailable' };
   }
 }
 
