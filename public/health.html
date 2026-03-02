@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenWork Health</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f0f; color: #e0e0e0; padding: 24px; }
+  h1 { font-size: 1.4rem; font-weight: 600; margin-bottom: 4px; }
+  .meta { font-size: 0.8rem; color: #666; margin-bottom: 24px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; padding: 18px; }
+  .card h2 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #666; margin-bottom: 14px; }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #222; }
+  .row:last-child { border-bottom: none; }
+  .label { font-size: 0.85rem; color: #aaa; }
+  .val { font-size: 0.85rem; font-weight: 500; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .green { color: #4ade80; } .dot-green { background: #4ade80; }
+  .yellow { color: #facc15; } .dot-yellow { background: #facc15; }
+  .red { color: #f87171; } .dot-red { background: #f87171; }
+  .grey { color: #666; } .dot-grey { background: #444; }
+  .overall { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-bottom: 20px; }
+  .overall-green { background: #052e16; color: #4ade80; border: 1px solid #166534; }
+  .overall-yellow { background: #2a1f00; color: #facc15; border: 1px solid #713f12; }
+  .overall-red { background: #2a0000; color: #f87171; border: 1px solid #7f1d1d; }
+  .overall-loading { background: #1a1a1a; color: #666; border: 1px solid #333; }
+  button { background: #222; border: 1px solid #333; color: #aaa; padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; margin-left: 12px; }
+  button:hover { background: #2a2a2a; color: #eee; }
+  .header-row { display: flex; align-items: center; gap: 0; margin-bottom: 6px; }
+  .token-form { margin-bottom: 20px; display: flex; gap: 8px; align-items: center; }
+  .token-form input { background: #1a1a1a; border: 1px solid #333; color: #eee; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; width: 220px; }
+  .loading { color: #444; font-size: 0.85rem; }
+  .error-msg { color: #f87171; font-size: 0.8rem; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="header-row">
+  <h1>⬡ OpenWork Health</h1>
+  <button onclick="refresh()">↻ Refresh</button>
+</div>
+<div class="meta" id="meta">Enter token to load dashboard</div>
+
+<div class="token-form">
+  <input type="password" id="token" placeholder="Health token" onkeydown="if(event.key==='Enter')refresh()" />
+  <button onclick="refresh()">Load</button>
+</div>
+
+<div id="overall" class="overall overall-loading">● Loading...</div>
+
+<div class="grid" id="grid">
+  <div class="card"><div class="loading">Waiting for data...</div></div>
+</div>
+
+<div class="error-msg" id="err"></div>
+
+<script>
+let lastData = null;
+
+function getToken() {
+  return document.getElementById('token').value.trim() || localStorage.getItem('ow_health_token') || '';
+}
+
+function dot(s) {
+  return `<span class="dot dot-${s||'grey'}"></span>`;
+}
+
+function statusClass(s) {
+  return s === 'green' ? 'green' : s === 'yellow' ? 'yellow' : s === 'red' ? 'red' : 'grey';
+}
+
+function row(label, value, s) {
+  return `<div class="row"><span class="label">${label}</span><span class="val ${statusClass(s)}">${dot(s)}${value}</span></div>`;
+}
+
+function render(d) {
+  lastData = d;
+  const w = d.wallets || {};
+  const r = d.rpc || {};
+  const relayer = d.relayer || {};
+  const ipfs = d.ipfs || {};
+  const contracts = d.contracts || {};
+
+  document.getElementById('meta').textContent =
+    `Last updated: ${new Date(d.timestamp).toLocaleTimeString()} · ${d.elapsed_ms}ms · Auto-refresh every 2h`;
+
+  const ov = d.overall || 'grey';
+  const ovEl = document.getElementById('overall');
+  ovEl.className = `overall overall-${ov}`;
+  ovEl.innerHTML = `${dot(ov)} ${ov === 'green' ? 'ALL SYSTEMS GO' : ov === 'yellow' ? 'DEGRADED' : 'ACTION REQUIRED'}`;
+
+  const lastRelay = relayer.last_completed_relay
+    ? new Date(relayer.last_completed_relay).toLocaleString()
+    : 'unknown';
+
+  document.getElementById('grid').innerHTML = `
+    <div class="card">
+      <h2>Service Wallet</h2>
+      ${row('ARB ETH', (w.arb_eth?.value || '?') + ' ETH', w.arb_eth?.status)}
+      ${row('OP ETH',  (w.op_eth?.value  || '?') + ' ETH', w.op_eth?.status)}
+      ${row('ARB USDC', (w.arb_usdc?.value || '?') + ' USDC', 'green')}
+      ${row('OP USDC',  (w.op_usdc?.value  || '?') + ' USDC', 'green')}
+    </div>
+    <div class="card">
+      <h2>Auto-Relayer</h2>
+      ${row('Status', relayer.status === 'green' ? 'Healthy' : 'Check needed', relayer.status)}
+      ${row('Stuck jobs (>15m)', String(relayer.stuck_jobs ?? '?'), relayer.stuck_jobs > 0 ? 'yellow' : 'green')}
+      ${row('Last relay', lastRelay, relayer.status)}
+    </div>
+    <div class="card">
+      <h2>IPFS / Pinata</h2>
+      ${row('Status', ipfs.message || 'OK', ipfs.status)}
+      ${row('Response time', ipfs.ms ? ipfs.ms + 'ms' : '—', ipfs.status)}
+    </div>
+    <div class="card">
+      <h2>RPC Nodes</h2>
+      ${row('Arbitrum', r.arb ? 'Block ' + r.arb.block + ' · ' + r.arb.ms + 'ms' : 'Error', r.arb?.status)}
+      ${row('Optimism', r.op  ? 'Block ' + r.op.block  + ' · ' + r.op.ms  + 'ms' : 'Error', r.op?.status)}
+    </div>
+    <div class="card">
+      <h2>Contracts (ARB)</h2>
+      ${row('LOWJC', contracts.status === 'green' ? 'Responding · ' + contracts.job_count + ' jobs' : (contracts.message || 'Error'), contracts.status)}
+    </div>
+    <div class="card">
+      <h2>Backend</h2>
+      ${row('API', 'Healthy · ' + d.elapsed_ms + 'ms', 'green')}
+      ${row('IPFS Proxy', '/api/ipfs/content/:hash', 'green')}
+    </div>
+  `;
+}
+
+async function refresh() {
+  const token = getToken();
+  if (!token) { document.getElementById('err').textContent = 'Enter health token'; return; }
+  localStorage.setItem('ow_health_token', token);
+  document.getElementById('err').textContent = '';
+  document.getElementById('meta').textContent = 'Loading...';
+  try {
+    const resp = await fetch('/api/health?token=' + encodeURIComponent(token));
+    if (resp.status === 401) { document.getElementById('err').textContent = '401 Unauthorized — wrong token'; return; }
+    const d = await resp.json();
+    render(d);
+  } catch(e) {
+    document.getElementById('err').textContent = 'Error: ' + e.message;
+  }
+}
+
+// Auto-refresh every 2 hours
+setInterval(refresh, 2 * 60 * 60 * 1000);
+
+// Auto-load if token saved
+if (localStorage.getItem('ow_health_token')) {
+  document.getElementById('token').value = localStorage.getItem('ow_health_token');
+  refresh();
+}
+</script>
+</body>
+</html>

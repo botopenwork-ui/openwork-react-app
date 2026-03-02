@@ -16,6 +16,7 @@ const docsRoutes = require('./routes/docs');
 const e2eTestRoute = require('./routes/e2e-test-route');
 const arbSmokeRoute = require('./routes/arb-smoke-test');
 const jobTxRoutes  = require('./routes/job-transactions');
+const healthRoute  = require('./routes/health');
 const {
   getCCTPStatus,
   getCCTPStatusByTxHash,
@@ -53,6 +54,10 @@ app.use('/api/docs', docsRoutes);
 app.use('/api/e2e-test', e2eTestRoute);
 app.use('/api/arb-smoke', arbSmokeRoute);
 app.use('/api/jobs', jobTxRoutes);
+app.use('/api/health', healthRoute);
+
+// Health dashboard UI
+app.get('/health', (req, res) => res.sendFile(path.join(__dirname, '../public/health.html')));
 
 // Track processing jobs to avoid duplicates
 const processingJobs = new Set();
