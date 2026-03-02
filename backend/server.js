@@ -135,6 +135,31 @@ app.get('/stats', (req, res) => {
   });
 });
 
+/**
+ * Payment Log — tx hash recovery endpoint
+ * Returns all recorded payment tx hashes so users/operators can recover
+ * if the backend fails mid-CCTP. No auth required (hashes are public).
+ *
+ * GET /api/payment-log          → all records
+ * GET /api/payment-log/:jobId   → single job
+ * GET /api/payment-log/pending  → jobs with pending/failed CCTP steps
+ */
+const paymentStore = require('./utils/payment-store');
+
+app.get('/api/payment-log', (req, res) => {
+  res.json({ success: true, records: paymentStore.getAllRecords() });
+});
+
+app.get('/api/payment-log/pending', (req, res) => {
+  res.json({ success: true, pending: paymentStore.getPendingRecovery() });
+});
+
+app.get('/api/payment-log/:jobId', (req, res) => {
+  const record = paymentStore.getRecord(req.params.jobId);
+  if (!record) return res.status(404).json({ success: false, error: 'No record for ' + req.params.jobId });
+  res.json({ success: true, record });
+});
+
 // Start job endpoint - accepts tx hash from frontend
 app.post('/api/start-job', async (req, res) => {
   const { jobId, txHash } = req.body;
@@ -729,11 +754,12 @@ async function processStartJobDirect(jobId, sourceTxHash) {
     console.log('\n🚀 ========== START JOB DIRECT FLOW ==========');
     console.log(`Job ID: ${jobId}`);
     console.log(`Source TX: ${sourceTxHash}`);
-    
+
     // Import utilities
     const { getDomainFromJobId, getChainNameFromJobId } = require('./utils/chain-utils');
     const { saveCCTPTransfer, updateCCTPStatus } = require('./utils/cctp-storage');
-    
+    const { recordTx, updateTxStatus } = require('./utils/payment-store');
+
     // Detect source chain from job ID
     let sourceChain, sourceDomain;
     try {
@@ -744,90 +770,83 @@ async function processStartJobDirect(jobId, sourceTxHash) {
       console.error(`❌ Failed to detect chain from job ID: ${error.message}`);
       throw error;
     }
-    
+
+    // 📝 Persist OP burn tx hash immediately
+    recordTx(jobId, 'startJob_burn', sourceTxHash, {
+      chain: sourceChain, domain: sourceDomain,
+      note: 'USDC burned on ' + sourceChain + ' via CCTP. If relay fails, poll iris-api.circle.com/v2/messages/' + sourceDomain + '?transactionHash=' + sourceTxHash + ' then call ARB MessageTransmitter.receiveMessage()'
+    });
+
     // Save to database
     await saveCCTPTransfer('startJob', jobId, sourceTxHash, sourceChain, sourceDomain);
-    
+
     // Update in-memory status
     jobStatuses.set(jobId, {
       status: 'polling_attestation',
       message: `Polling Circle API for CCTP attestation from ${sourceChain}...`,
       txHash: sourceTxHash
     });
-    
-    // Update DB
+
     await updateCCTPStatus(jobId, 'startJob', { step: 'polling_attestation' });
-    
+
     // Import CCTP utilities
     const { pollCCTPAttestation } = require('./utils/cctp-poller');
     const { executeReceiveOnArbitrum } = require('./utils/tx-executor');
-    
+
     // STEP 1: Poll Circle API for CCTP attestation
     console.log(`\n📍 STEP 1/2: Polling Circle API for CCTP attestation (Domain ${sourceDomain})...`);
-    const attestation = await pollCCTPAttestation(
-      sourceTxHash, 
-      sourceDomain  // Dynamic domain based on job ID
-    );
+    const attestation = await pollCCTPAttestation(sourceTxHash, sourceDomain);
     console.log(`✅ Attestation received from ${sourceChain}`);
-    
-    // Update status - attestation received
+
     await updateCCTPStatus(jobId, 'startJob', {
       step: 'executing_receive',
       attestationMessage: attestation.message,
       attestationSignature: attestation.attestation
     });
-    
+
     jobStatuses.set(jobId, {
       status: 'executing_receive',
       message: 'Executing receive() on Arbitrum CCTP Transceiver...',
       txHash: sourceTxHash
     });
-    
+
     // STEP 2: Execute receive() on Arbitrum
     console.log('\n📍 STEP 2/2: Executing receive() on Arbitrum...');
     const result = await executeReceiveOnArbitrum(attestation);
-    
+
     if (result.alreadyCompleted) {
       console.log('✅ USDC already transferred to NOWJC (completed by CCTP)');
     } else {
       console.log(`✅ USDC transferred to NOWJC: ${result.transactionHash}`);
     }
-    
-    // Mark as completed in DB
+
+    // 📝 Record ARB mint tx
+    updateTxStatus(jobId, 'startJob_burn', 'completed', result.transactionHash);
+    if (result.transactionHash) {
+      recordTx(jobId, 'startJob_mint', result.transactionHash, { chain: 'Arbitrum', status: 'completed' });
+    }
+
     await updateCCTPStatus(jobId, 'startJob', {
       status: 'completed',
       completionTxHash: result.transactionHash || 'already_completed'
     });
-    
+
     console.log('\n🎉 ========== START JOB FLOW COMPLETED ==========\n');
-    
+
     return {
-      success: true,
-      jobId,
-      sourceTxHash,
-      sourceChain,
+      success: true, jobId, sourceTxHash, sourceChain,
       completionTxHash: result.transactionHash,
       alreadyCompleted: result.alreadyCompleted
     };
-    
+
   } catch (error) {
     console.error('\n❌ ========== START JOB FLOW FAILED ==========');
-    console.error(`Job ID: ${jobId}`);
-    console.error(`Error: ${error.message}`);
-    console.error('===============================================\n');
-    
-    // Mark as failed in DB
+    console.error(`Job ID: ${jobId} | Error: ${error.message}`);
     const { updateCCTPStatus } = require('./utils/cctp-storage');
-    await updateCCTPStatus(jobId, 'startJob', {
-      status: 'failed',
-      lastError: error.message
-    });
-    
+    await updateCCTPStatus(jobId, 'startJob', { status: 'failed', lastError: error.message });
     throw error;
   }
 }
-
-/**
  * Process Lock Milestone CCTP relay: OP → Arbitrum
  * Same CCTP flow as startJob (source chain → Arbitrum via Transceiver receive())
  * but with separate status tracking per lock tx

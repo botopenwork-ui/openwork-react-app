@@ -3,6 +3,7 @@ const { pollCCTPAttestation } = require('../utils/cctp-poller');
 const { executeReceiveMessage, executeReceiveOnOptimism } = require('../utils/tx-executor');
 const { getDomainFromJobId, getChainNameFromJobId } = require('../utils/chain-utils');
 const { saveCCTPTransfer, updateCCTPStatus } = require('../utils/cctp-storage');
+const { recordTx, updateTxStatus } = require('../utils/payment-store');
 const config = require('../config');
 
 /**
@@ -48,8 +49,14 @@ async function processReleasePayment(jobId, statusMap, statusKey) {
     
     const nowjcTxHash = await waitForNOWJCEvent('PaymentReleased', jobId, undefined, 200);
     console.log(`✅ PaymentReleased detected: ${nowjcTxHash}`);
-    
-    // Save to database - use dynamic chain name based on network mode
+
+    // 📝 Persist ARB tx hash immediately — user can recover manually if backend fails here
+    recordTx(jobId, 'release_burn', nowjcTxHash, {
+      chain: 'Arbitrum', domain: config.DOMAINS.ARBITRUM,
+      note: 'PaymentReleased on ARB NOWJC — CCTP burn pending. If backend fails, poll iris-api.circle.com/v2/messages/3?transactionHash=' + nowjcTxHash + ' then call OP CCTPTransceiver.receive() selector 0x7376ee1f'
+    });
+
+    // Save to database
     const sourceChainName = config.isMainnet() ? 'Arbitrum One' : 'Arbitrum Sepolia';
     await saveCCTPTransfer('releasePayment', jobId, nowjcTxHash, sourceChainName, config.DOMAINS.ARBITRUM);
 
@@ -113,11 +120,20 @@ async function processReleasePayment(jobId, statusMap, statusKey) {
     }
     
     if (result.alreadyCompleted) {
-      console.log(`✅ Payment already completed to applicant on ${destinationChain} (completed by CCTP)`);
+      console.log(`✅ Payment already completed to applicant on ${destinationChain}`);
     } else {
       console.log(`✅ Payment completed to applicant on ${destinationChain}: ${result.transactionHash}`);
     }
-    
+
+    // 📝 Record completion tx hash
+    updateTxStatus(jobId, 'release_burn', 'completed', result.transactionHash);
+    if (result.transactionHash) {
+      recordTx(jobId, 'release_mint', result.transactionHash, {
+        chain: destinationChain, status: 'completed',
+        note: 'USDC minted at taker on OP via CCTPTransceiver.receive()'
+      });
+    }
+
     // Mark as completed in DB
     await updateCCTPStatus(jobId, 'releasePayment', {
       status: 'completed',
