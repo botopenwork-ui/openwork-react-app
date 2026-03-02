@@ -15,6 +15,7 @@ const chatRoutes = require('./routes/chat');
 const docsRoutes = require('./routes/docs');
 const e2eTestRoute = require('./routes/e2e-test-route');
 const arbSmokeRoute = require('./routes/arb-smoke-test');
+const jobTxRoutes  = require('./routes/job-transactions');
 const {
   getCCTPStatus,
   getCCTPStatusByTxHash,
@@ -51,6 +52,7 @@ app.use('/api/docs', docsRoutes);
 // Mount E2E test route (server-side full cycle test)
 app.use('/api/e2e-test', e2eTestRoute);
 app.use('/api/arb-smoke', arbSmokeRoute);
+app.use('/api/jobs', jobTxRoutes);
 
 // Track processing jobs to avoid duplicates
 const processingJobs = new Set();

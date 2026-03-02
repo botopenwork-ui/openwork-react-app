@@ -113,6 +113,23 @@ async function initDatabase() {
   await db.exec('CREATE INDEX IF NOT EXISTS idx_created_at ON proposals(created_at DESC)');
   await db.exec('CREATE INDEX IF NOT EXISTS idx_proposer ON proposals(proposer_address)');
 
+  // Create job_transactions table — persists all job-level tx hashes
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS job_transactions (
+      id SERIAL PRIMARY KEY,
+      job_id TEXT NOT NULL,
+      action TEXT NOT NULL,
+      tx_hash TEXT NOT NULL UNIQUE,
+      chain_id INTEGER,
+      wallet_address TEXT,
+      metadata JSONB,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_jobtx_job_id ON job_transactions(job_id)');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_jobtx_wallet ON job_transactions(wallet_address)');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_jobtx_created ON job_transactions(created_at DESC)');
+
   console.log('✅ Database initialized successfully (PostgreSQL)');
 }
 

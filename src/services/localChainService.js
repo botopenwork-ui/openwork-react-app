@@ -21,6 +21,24 @@ import LOWJC_ABI from "../ABIs/lowjc-lite_ABI.json";
 import NATIVE_ARB_LOWJC_ABI from "../ABIs/native-arb-lowjc_ABI.json";
 import ATHENA_CLIENT_ABI from "../ABIs/athena-client_ABI.json";
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+
+/**
+ * Persist a tx hash to the backend so users can always retrieve it later.
+ * Fire-and-forget — never blocks the main flow.
+ */
+async function saveTxHash(action, txHash, jobId, chainId, walletAddress, metadata = {}) {
+  try {
+    await fetch(`${BACKEND_URL}/api/jobs/tx`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, txHash, jobId, chainId, walletAddress, metadata }),
+    });
+  } catch (e) {
+    console.warn('[saveTxHash] failed (non-blocking):', e.message);
+  }
+}
+
 // Minimal ABI for LocalBridge quoting
 const BRIDGE_QUOTE_ABI = [
   {
@@ -172,6 +190,7 @@ export async function postJob(chainId, userAddress, jobData, onStatus) {
     const tx = await method.send({ from: userAddress, value: lzFee, gas: 600000 });
 
     emit(`Transaction confirmed: ${tx.transactionHash}`);
+    saveTxHash('postJob', tx.transactionHash, null, chainId, userAddress);
     console.log(`[postJob] confirmed on ${config.name}:`, tx.transactionHash);
     return tx;
   } catch (error) {
@@ -220,6 +239,7 @@ export async function applyToJob(chainId, userAddress, applicationData, onStatus
 
     const tx = await method.send({ from: userAddress, value: lzFee, gas: 600000 });
     emit(`Application submitted: ${tx.transactionHash}`);
+    saveTxHash('applyToJob', tx.transactionHash, applicationData.jobId, chainId, userAddress);
     console.log(`[applyToJob] confirmed on ${config.name}:`, tx.transactionHash);
     return tx;
   } catch (error) {
@@ -254,6 +274,7 @@ export async function startJob(chainId, userAddress, startData, onStatus) {
 
     const tx = await method.send({ from: userAddress, value: lzFee, gas: 1000000 });
     emit(`Job started: ${tx.transactionHash}`);
+    saveTxHash('startJob', tx.transactionHash, startData.jobId, chainId, userAddress);
     console.log(`[startJob] confirmed on ${config.name}:`, tx.transactionHash);
     return tx;
   } catch (error) {
@@ -288,6 +309,7 @@ export async function submitWork(chainId, userAddress, workData, onStatus) {
 
     const tx = await method.send({ from: userAddress, value: lzFee, gas: 600000 });
     emit(`Work submitted: ${tx.transactionHash}`);
+    saveTxHash('submitWork', tx.transactionHash, workData.jobId, chainId, userAddress);
     console.log(`[submitWork] confirmed on ${config.name}:`, tx.transactionHash);
     return tx;
   } catch (error) {
@@ -329,6 +351,7 @@ export async function releasePaymentCrossChain(chainId, userAddress, paymentData
 
     const tx = await method.send({ from: userAddress, value: lzFee, gas: 800000 });
     emit(`Payment release confirmed: ${tx.transactionHash}`);
+    saveTxHash('releasePayment', tx.transactionHash, paymentData.jobId, chainId, userAddress);
     console.log(`[releasePayment] confirmed on ${config.name}:`, tx.transactionHash);
     return tx;
   } catch (error) {
@@ -378,6 +401,7 @@ export async function raiseDispute(chainId, userAddress, disputeData, onStatus) 
 
     const tx = await method.send({ from: userAddress, value: lzFee, gas: 600000 });
     emit(`Dispute submitted: ${tx.transactionHash}`);
+    saveTxHash('raiseDispute', tx.transactionHash, disputeData.jobId, chainId, userAddress);
     console.log(`[raiseDispute] confirmed on ${config.name}:`, tx.transactionHash);
     return tx;
   } catch (error) {

@@ -810,6 +810,14 @@ export default function DirectContractForm() {
                   setTransactionStatus("⚠️ Backend offline — tracking cross-chain status directly. Check progress below.");
                 });
 
+                // Persist tx hash for user history
+                fetch(`${backendUrl}/api/jobs/tx`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'startDirectContract', txHash: srcTxHash, jobId,
+                    chainId: currentChainConfig?.chainId, walletAddress: accounts[0] })
+                }).catch(() => {});
+
                 // Also poll Genesis for job sync visibility
                 pollForJobSync(jobId);
               } else {
