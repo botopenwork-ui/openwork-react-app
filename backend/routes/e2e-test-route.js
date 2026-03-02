@@ -241,3 +241,5 @@ router.post('/release', async (req, res) => {
   } catch (err) { step(`Exception: ${err.message}`); return fail(err.message); }
 });
 
+
+module.exports = router;
