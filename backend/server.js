@@ -957,78 +957,87 @@ async function startEventListener() {
   const web3 = new Web3(config.ARBITRUM_RPC);
   const nowjcContract = new web3.eth.Contract(config.ABIS.NOWJC_EVENTS, config.NOWJC_ADDRESS);
 
-  // Get current block to start listening from
   const currentBlock = await web3.eth.getBlockNumber();
-  console.log(`📍 Starting event listener from block: ${currentBlock}\n`);
-  console.log('👂 Listening for PaymentReleased events on NOWJC...\n');
 
+  // ── STARTUP LOOKBACK: scan past 5000 blocks for missed PaymentReleased events ──
+  // This catches any events missed during Cloud Run restarts / instance replacements.
+  // 5000 ARB blocks ≈ 22 minutes of lookback (at ~0.26s/block).
+  const STARTUP_LOOKBACK = 5000;
+  const startupFrom = BigInt(currentBlock) - BigInt(STARTUP_LOOKBACK);
+  console.log(`🔍 Startup scan: checking last ${STARTUP_LOOKBACK} blocks for missed PaymentReleased events...`);
+
+  try {
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    for (let b = startupFrom; b <= BigInt(currentBlock); b += 10n) {
+      await sleep(150); // rate limit
+      const to = b + 9n < BigInt(currentBlock) ? b + 9n : BigInt(currentBlock);
+      const events = await nowjcContract.getPastEvents('PaymentReleased', { fromBlock: b, toBlock: to });
+      for (const event of events) {
+        const jobId = event.returnValues.jobId;
+        const key = `payment-${jobId}`;
+        if (!processingJobs.has(key) && !completedJobs.has(key)) {
+          console.log(`🔄 Startup recovery: missed PaymentReleased for job ${jobId} (tx: ${event.transactionHash})`);
+          processingJobs.add(key);
+          processReleasePaymentFlow(jobId, jobStatuses, null, event.transactionHash)
+            .finally(() => {
+              processingJobs.delete(key);
+              completedJobs.set(key, Date.now());
+            });
+        }
+      }
+    }
+    console.log(`✅ Startup scan complete.`);
+  } catch (e) {
+    console.warn(`⚠️  Startup scan error: ${e.message}`);
+  }
+
+  console.log(`📍 Listening for new PaymentReleased events from block: ${currentBlock}\n`);
   eventListenerActive = true;
   let lastProcessedBlock = currentBlock;
 
   eventListenerInterval = setInterval(async () => {
     if (!eventListenerActive) return;
-    
     try {
       const latestBlock = await web3.eth.getBlockNumber();
-      
-      // Limit block range to 10 for free-tier RPC
       const maxBlockRange = 10;
-      const toBlock = Math.min(
-        Number(latestBlock),
-        Number(lastProcessedBlock) + maxBlockRange
-      );
-      
-      if (toBlock <= lastProcessedBlock) {
-        return; // No new blocks
-      }
+      const toBlock = Math.min(Number(latestBlock), Number(lastProcessedBlock) + maxBlockRange);
+      if (toBlock <= lastProcessedBlock) return;
 
-      // Check for PaymentReleased events only (with 10-block limit)
       const paymentReleasedEvents = await nowjcContract.getPastEvents('PaymentReleased', {
         fromBlock: lastProcessedBlock + 1n,
         toBlock: BigInt(toBlock)
       });
 
-      // Process PaymentReleased events
       for (const event of paymentReleasedEvents) {
         const jobId = event.returnValues.jobId;
         const key = `payment-${jobId}`;
-        
         if (!processingJobs.has(key) && !completedJobs.has(key)) {
-          console.log(`\n🔔 NEW EVENT: PaymentReleased detected!`);
-          console.log(`   Job ID: ${jobId}`);
-          console.log(`   Transaction: ${event.transactionHash}`);
-          console.log(`   Block: ${event.blockNumber}`);
-          console.log(`   Amount: ${event.returnValues.amount}`);
-          
+          console.log(`\n🔔 NEW EVENT: PaymentReleased for job ${jobId} | TX: ${event.transactionHash}`);
           processingJobs.add(key);
-          
-          // Process in background
-          processReleasePaymentFlow(jobId, jobStatuses)
+          // ✅ Pass known tx hash — skips redundant event scan in processReleasePayment
+          processReleasePaymentFlow(jobId, jobStatuses, null, event.transactionHash)
             .finally(() => {
               processingJobs.delete(key);
               completedJobs.set(key, Date.now());
-              if (completedJobs.size > 100) {
-                const firstKey = completedJobs.keys().next().value;
-                completedJobs.delete(firstKey);
-              }
+              if (completedJobs.size > 100) completedJobs.delete(completedJobs.keys().next().value);
             });
         }
       }
 
       lastProcessedBlock = latestBlock;
-      
     } catch (error) {
-      console.error('❌ Error in event polling:', error.message);
+      console.error('❌ Event polling error:', error.message);
     }
   }, config.EVENT_POLL_INTERVAL);
 }
 
 /**
  * Process Release Payment flow with error handling
+ * @param {string} knownTxHash - If provided, skip event scanning (pass to processReleasePayment)
  */
-async function processReleasePaymentFlow(jobId, statusMap, statusKey) {
+async function processReleasePaymentFlow(jobId, statusMap, statusKey, knownTxHash = null) {
   try {
-    await processReleasePayment(jobId, statusMap, statusKey);
+    await processReleasePayment(jobId, statusMap, statusKey, knownTxHash);
   } catch (error) {
     console.error(`Failed to process Release Payment for ${jobId}:`, error.message);
   }
