@@ -2,12 +2,19 @@ const { Web3 } = require('web3');
 const config = require('../config');
 
 /**
- * Execute receive() on CCTP Transceiver (Arbitrum) for Start Job flow
+ * Execute receiveMessage() on ARB MessageTransmitter for Start Job flow (OP → ARB)
+ *
+ * ⚠️ CRITICAL ROUTING RULE:
+ *   OP→ARB: call ARB MessageTransmitter.receiveMessage() DIRECTLY  ← this function
+ *   ARB→OP: call OP CCTPTransceiver.receive() selector 0x7376ee1f  ← executeReceiveOnOptimism()
+ *
+ * Confirmed working: job 30111-93 step 3 tx 0xfc8f9aa3... (ARB MT.receiveMessage)
+ *
  * @param {Object} attestationData - Attestation data from Circle API
  * @returns {Promise<{transactionHash: string, alreadyCompleted: boolean}>}
  */
 async function executeReceiveOnArbitrum(attestationData) {
-  console.log('🔗 Executing receive() on Arbitrum CCTP Transceiver...');
+  console.log('🔗 Executing receiveMessage() on ARB MessageTransmitter (OP→ARB startJob)...');
   console.log(`   Network Mode: ${config.NETWORK_MODE}`);
 
   const web3 = new Web3(config.ARBITRUM_RPC);
@@ -18,19 +25,20 @@ async function executeReceiveOnArbitrum(attestationData) {
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   web3.eth.accounts.wallet.add(account);
 
-  const cctpAddress = config.CCTP_ARB_ADDRESS;
-  const cctpContract = new web3.eth.Contract(config.ABIS.CCTP_TRANSCEIVER, cctpAddress);
+  // ✅ CORRECT: ARB MessageTransmitter (NOT ARB CCTPTransceiver)
+  const transmitterAddress = config.MESSAGE_TRANSMITTER_ARB; // 0x81D40F21F12A8F0E3252Bccb954D722d4c464B64
+  const transmitterContract = new web3.eth.Contract(config.ABIS.MESSAGE_TRANSMITTER, transmitterAddress);
 
   // Check service wallet balance before attempting
   const balance = await web3.eth.getBalance(account.address);
   const balanceEth = parseFloat(web3.utils.fromWei(balance, 'ether'));
   console.log(`   Service Wallet: ${account.address} (${balanceEth.toFixed(6)} ETH)`);
-  if (balanceEth < 0.001) {
+  if (balanceEth < 0.0001) {
     throw new Error(`Service wallet balance too low on Arbitrum: ${balanceEth.toFixed(6)} ETH. Top up required.`);
   }
 
   console.log('📋 Transaction parameters:', {
-    contract: cctpAddress,
+    contract: transmitterAddress,
     serviceWallet: account.address,
     messageLength: attestationData.message?.length,
     attestationLength: attestationData.attestation?.length
@@ -40,19 +48,18 @@ async function executeReceiveOnArbitrum(attestationData) {
     // Dynamic gas estimation with 30% buffer
     let gasLimit;
     try {
-      const gasEstimate = await cctpContract.methods.receive(
+      const gasEstimate = await transmitterContract.methods.receiveMessage(
         attestationData.message,
         attestationData.attestation
       ).estimateGas({ from: account.address });
       gasLimit = Math.ceil(Number(gasEstimate) * 1.3);
       console.log(`   Gas estimate: ${gasEstimate} → with 30% buffer: ${gasLimit}`);
     } catch (estimateErr) {
-      // If estimation fails (e.g. nonce already used), fall back to safe static value
       console.warn(`   Gas estimation failed: ${estimateErr.message} — using fallback 300000`);
       gasLimit = 300000;
     }
 
-    const tx = await cctpContract.methods.receive(
+    const tx = await transmitterContract.methods.receiveMessage(
       attestationData.message,
       attestationData.attestation
     ).send({
@@ -60,7 +67,7 @@ async function executeReceiveOnArbitrum(attestationData) {
       gas: gasLimit
     });
 
-    console.log('✅ Receive transaction completed:', {
+    console.log('✅ ARB receiveMessage completed:', {
       txHash: tx.transactionHash,
       blockNumber: tx.blockNumber,
       gasUsed: tx.gasUsed
@@ -69,12 +76,12 @@ async function executeReceiveOnArbitrum(attestationData) {
     return { transactionHash: tx.transactionHash, alreadyCompleted: false };
 
   } catch (error) {
-    console.log('⚠️ Receive execution failed:', error.message);
+    console.log('⚠️ ARB receiveMessage failed:', error.message);
     if (error.message.includes('Nonce already used')) {
-      console.log('✅ USDC transfer was already completed by CCTP (nonce already used).');
+      console.log('✅ USDC transfer already completed (nonce already used).');
       return { transactionHash: null, alreadyCompleted: true };
     }
-    throw new Error(`Arbitrum receive() failed: ${error.message}`);
+    throw new Error(`ARB MessageTransmitter.receiveMessage() failed: ${error.message}`);
   }
 }
 

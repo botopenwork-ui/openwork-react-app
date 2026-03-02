@@ -16,7 +16,9 @@ async function pollCCTPAttestation(txHash, sourceDomain, timeout = config.CCTP_A
   const endTime = startTime + timeout;
   let attempts = 0;
 
-  while (Date.now() < endTime && attempts < config.MAX_RETRY_ATTEMPTS) {
+  // Note: only timeout controls the loop — MAX_RETRY_ATTEMPTS is ignored here
+  // so slow attestations (>200s) don't fail prematurely
+  while (Date.now() < endTime) {
     attempts++;
     
     try {
@@ -50,12 +52,12 @@ async function pollCCTPAttestation(txHash, sourceDomain, timeout = config.CCTP_A
           };
         }
         
-        console.log(`⏳ CCTP status: ${message.status} (attempt ${attempts}/${config.MAX_RETRY_ATTEMPTS})`);
+        console.log(`⏳ CCTP status: ${message.status} (attempt ${attempts}, elapsed ${Math.round((Date.now()-startTime)/1000)}s/${timeout/1000}s)`);
         if (message.status === 'pending_confirmations') {
              console.log('   Note: Waiting for block confirmations on source chain...');
         }
       } else {
-        console.log(`📡 No CCTP messages indexed yet (attempt ${attempts}/${config.MAX_RETRY_ATTEMPTS})...`);
+        console.log(`📡 No CCTP messages indexed yet (attempt ${attempts}, elapsed ${Math.round((Date.now()-startTime)/1000)}s/${timeout/1000}s)...`);
       }
       
       // Wait before next poll
