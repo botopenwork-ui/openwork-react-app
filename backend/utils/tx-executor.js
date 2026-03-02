@@ -224,5 +224,74 @@ module.exports = {
   executeReceiveOnArbitrum,
   executeReceiveMessage,
   // Keep for backward compatibility
-  executeReceiveMessageOnOpSepolia: (attestation) => executeReceiveMessage(attestation, 'OP Sepolia')
+  executeReceiveMessageOnOpSepolia: (attestation) => executeReceiveMessage(attestation, 'OP Sepolia'),
+  // Correct OP mainnet receive — must use CCTPTransceiver.receive(), NOT MessageTransmitter.receiveMessage()
+  // Direct MT call fails with "Invalid signature: not attester" on OP mainnet (attester set mismatch)
+  executeReceiveOnOptimism: async function(attestationData) {
+    console.log('\n🔗 ========== EXECUTING RECEIVE ON OPTIMISM (CCTPTransceiver) ==========');
+    console.log(`   Network Mode: ${config.NETWORK_MODE}`);
+    const web3 = new Web3(config.OPTIMISM_RPC);
+    const privateKey = config.WALL2_PRIVATE_KEY.startsWith('0x')
+      ? config.WALL2_PRIVATE_KEY
+      : `0x${config.WALL2_PRIVATE_KEY}`;
+    const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+    web3.eth.accounts.wallet.add(account);
+
+    const balance = await web3.eth.getBalance(account.address);
+    const balanceEth = parseFloat(web3.utils.fromWei(balance, 'ether'));
+    console.log(`   Service Wallet: ${account.address} (${balanceEth.toFixed(6)} ETH)`);
+    if (balanceEth < 0.0005) {
+      throw new Error(`Service wallet ETH too low on Optimism: ${balanceEth.toFixed(6)} ETH`);
+    }
+
+    // ⚠️ CRITICAL: Must call CCTPTransceiver.receive(), NOT MessageTransmitter.receiveMessage()
+    // Direct MT call fails with "Invalid signature: not attester" on OP mainnet
+    // Selector: keccak256("receive(bytes,bytes)") = 0x7376ee1f
+    const cctpTransceiverAddress = config.CCTP_OP_ADDRESS; // 0x586C700ACFA1D129Ba2C6a6E673c55d586c32f15
+    const selector = '0x7376ee1f';
+    const encodedArgs = web3.eth.abi.encodeParameters(
+      ['bytes', 'bytes'],
+      [attestationData.message, attestationData.attestation]
+    );
+    const calldata = selector + encodedArgs.slice(2);
+
+    console.log(`   CCTPTransceiver: ${cctpTransceiverAddress}`);
+    console.log(`   selector: ${selector} (receive(bytes,bytes))`);
+
+    try {
+      // Static call first
+      await web3.eth.call({ to: cctpTransceiverAddress, from: account.address, data: calldata });
+      console.log('   Static call: ✅ would succeed');
+    } catch (staticErr) {
+      if (staticErr.message.includes('Nonce already used')) {
+        console.log('✅ Already completed (nonce already used)');
+        return { transactionHash: null, alreadyCompleted: true };
+      }
+      throw new Error(`CCTPTransceiver.receive() static call failed: ${staticErr.message}`);
+    }
+
+    try {
+      const gasEstimate = await web3.eth.estimateGas({ to: cctpTransceiverAddress, from: account.address, data: calldata });
+      const gasLimit = Math.ceil(Number(gasEstimate) * 1.3);
+      console.log(`   Gas: ${gasEstimate} → ${gasLimit} (with 30% buffer)`);
+
+      const nonce = await web3.eth.getTransactionCount(account.address, 'latest');
+      const gasPrice = await web3.eth.getGasPrice();
+      const signedTx = await web3.eth.accounts.signTransaction({
+        to: cctpTransceiverAddress, data: calldata, gas: gasLimit,
+        gasPrice, nonce
+      }, privateKey);
+      const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+      console.log(`✅ OP CCTPTransceiver.receive() completed:`, {
+        txHash: receipt.transactionHash, gasUsed: receipt.gasUsed
+      });
+      return { transactionHash: receipt.transactionHash, alreadyCompleted: false };
+    } catch (error) {
+      if (error.message.includes('Nonce already used')) {
+        console.log('✅ Already completed (nonce already used)');
+        return { transactionHash: null, alreadyCompleted: true };
+      }
+      throw new Error(`OP CCTPTransceiver.receive() failed: ${error.message}`);
+    }
+  }
 };

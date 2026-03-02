@@ -1,6 +1,6 @@
 const { waitForNOWJCEvent } = require('../utils/event-monitor');
 const { pollCCTPAttestation } = require('../utils/cctp-poller');
-const { executeReceiveMessage } = require('../utils/tx-executor');
+const { executeReceiveMessage, executeReceiveOnOptimism } = require('../utils/tx-executor');
 const { getDomainFromJobId, getChainNameFromJobId } = require('../utils/chain-utils');
 const { saveCCTPTransfer, updateCCTPStatus } = require('../utils/cctp-storage');
 const config = require('../config');
@@ -96,9 +96,21 @@ async function processReleasePayment(jobId, statusMap, statusKey) {
       });
     }
     
-    // STEP 3: Execute receiveMessage() on destination chain
-    console.log(`\n📍 STEP 3/3: Executing receiveMessage() on ${destinationChain}...`);
-    const result = await executeReceiveMessage(attestation, destinationChain);
+    // STEP 3: Execute CCTP receive on destination chain
+    // ⚠️ CRITICAL: For OP mainnet, must call CCTPTransceiver.receive() NOT MessageTransmitter.receiveMessage()
+    // Direct MT call fails with "Invalid signature: not attester" on OP mainnet
+    console.log(`\n📍 STEP 3/3: Executing CCTP receive on ${destinationChain}...`);
+    
+    let result;
+    const isOpMainnet = config.isMainnet() && 
+      (destinationChain.toLowerCase().includes('optimism') || destinationChain.toLowerCase() === 'op');
+    
+    if (isOpMainnet) {
+      console.log('   Using CCTPTransceiver.receive() for OP mainnet (selector 0x7376ee1f)');
+      result = await executeReceiveOnOptimism(attestation);
+    } else {
+      result = await executeReceiveMessage(attestation, destinationChain);
+    }
     
     if (result.alreadyCompleted) {
       console.log(`✅ Payment already completed to applicant on ${destinationChain} (completed by CCTP)`);

@@ -1027,7 +1027,7 @@ async function processSettleDisputeFlow(disputeId, arbitrumTxHash) {
     
     // Import utilities
     const { pollCCTPAttestation } = require('./utils/cctp-poller');
-    const { executeReceiveMessageOnOpSepolia } = require('./utils/tx-executor');
+    const { executeReceiveMessageOnOpSepolia, executeReceiveOnOptimism } = require('./utils/tx-executor');
     
     // STEP 1: Poll Circle API for CCTP attestation
     console.log('\n📍 STEP 1/2: Polling Circle API for CCTP attestation...');
@@ -1040,13 +1040,16 @@ async function processSettleDisputeFlow(disputeId, arbitrumTxHash) {
     // Update status
     jobStatuses.set(disputeId, {
       status: 'executing_receive',
-      message: 'Executing receiveMessage() on OP Sepolia MessageTransmitter...',
+      message: 'Executing CCTP receive on OP...',
       txHash: arbitrumTxHash
     });
     
-    // STEP 2: Execute receiveMessage() on OP Sepolia
-    console.log('\n📍 STEP 2/2: Executing receiveMessage() on OP Sepolia...');
-    const result = await executeReceiveMessageOnOpSepolia(attestation);
+    // STEP 2: Execute CCTP receive on OP
+    // ⚠️ On mainnet: must use CCTPTransceiver.receive() not MessageTransmitter.receiveMessage()
+    console.log('\n📍 STEP 2/2: Executing CCTP receive on OP...');
+    const result = config.isMainnet()
+      ? await executeReceiveOnOptimism(attestation)
+      : await executeReceiveMessageOnOpSepolia(attestation);
     
     if (result.alreadyCompleted) {
       console.log('✅ USDC already transferred to winner (completed by CCTP)');
