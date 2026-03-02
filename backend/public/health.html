@@ -105,9 +105,9 @@ function render(d) {
     </div>
     <div class="card">
       <h2>Auto-Relayer</h2>
-      ${row('Status', relayer.status === 'green' ? 'Healthy' : 'Check needed', relayer.status)}
-      ${row('Stuck jobs (>15m)', String(relayer.stuck_jobs ?? '?'), relayer.stuck_jobs > 0 ? 'yellow' : 'green')}
-      ${row('Last relay', lastRelay, relayer.status)}
+      ${row('Status', relayer.status === 'green' ? 'Healthy' : relayer.status === 'grey' ? 'Unknown (DB unavailable)' : 'Check needed', relayer.status)}
+      ${row('Stuck jobs (>15m)', String(relayer.stuck_jobs ?? '?'), relayer.stuck_jobs > 0 ? 'yellow' : relayer.stuck_jobs === '?' ? 'grey' : 'green')}
+      ${row('Last relay', lastRelay, relayer.status === 'grey' ? 'grey' : relayer.status)}
     </div>
     <div class="card">
       <h2>IPFS / Pinata</h2>

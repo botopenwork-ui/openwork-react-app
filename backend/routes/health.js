@@ -117,8 +117,8 @@ async function checkRelayer(db) {
       last_completed_relay: lastRelay,
     };
   } catch (e) {
-    // DB unavailable — relayer itself may still be fine, don't show red
-    return { status: 'green', stuck_jobs: 0, last_completed_relay: null, note: 'DB unavailable' };
+    // DB unavailable — be honest, show unknown not green
+    return { status: 'grey', stuck_jobs: '?', last_completed_relay: null, note: 'DB unavailable' };
   }
 }
 
