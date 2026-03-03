@@ -78,8 +78,8 @@ export default function BrowseTalent() {
                 setLoading(true);
                 setError(null);
                 
-                const web3 = new Web3(import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL);
-                const contractAddress = import.meta.env.VITE_PROFILE_GENESIS_ADDRESS || "0xC37A9dFbb57837F74725AAbEe068f07A1155c394";
+                const web3 = new Web3(import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL || 'https://arb1.arbitrum.io/rpc');
+                const contractAddress = import.meta.env.VITE_PROFILE_GENESIS_ADDRESS || "0x794809471215cBa5cE56c7d9F402eDd85F9eBa2E";
                 const contract = new web3.eth.Contract(ProfileGenesisABI, contractAddress);
                 
                 // Use the new getAllProfileAddresses() method - instant!
