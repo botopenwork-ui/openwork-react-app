@@ -8,7 +8,7 @@ const UserReferralSignIn = () => {
   const referrerAddress = searchParams.get('ref') || '';
 
   const formatReferrerAddress = (addr) => {
-    if (!addr) return 'Unknown referrer';
+    if (!addr) return 'No referrer';
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
   };
 

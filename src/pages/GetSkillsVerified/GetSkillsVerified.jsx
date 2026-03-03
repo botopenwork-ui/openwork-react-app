@@ -48,6 +48,12 @@ export default function GetSkillsVerified() {
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [loading, setLoading] = useState(true); // Initialize loading state
 
+  // Timeout guard: stop infinite spinner after 8s
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 8000);
+    return () => clearTimeout(t);
+  }, []);
+
   function formatWalletAddressH(address) {
     if (!address) return "";
     const start = address.substring(0, 4);

@@ -285,3 +285,10 @@
 .body-container {
   justify-content: flex-start !important;
 }
+
+/* Fix stat card title overflow */
+.box-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

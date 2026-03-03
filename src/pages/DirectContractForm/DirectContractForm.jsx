@@ -710,7 +710,7 @@ export default function DirectContractForm() {
           // Encode payload matching the contract's abi.encode for startDirectContract
           const quotePayload = web3.eth.abi.encodeParameters(
             ['string', 'address', 'address', 'string', 'string', 'string[]', 'uint256[]', 'uint32'],
-            ['startDirectContract', fromAddress, jobTaker, 'quote-placeholder', jobDetailHash, milestoneHashes, milestoneAmounts, jobTakerChainDomain]
+            ['startDirectContract', fromAddress, jobTaker, jobDetailHash, jobDetailHash, milestoneHashes, milestoneAmounts, jobTakerChainDomain]
           );
 
           // Get quote and add 20% buffer

@@ -171,7 +171,7 @@ export default function JobsTable({ title, tableData, currentPage, totalPages, o
                     )}
                     <div className="page-text">
                         <span style={{ color: "#868686" }}>
-                            Page {currentPage} of {totalPages}
+                            {totalPages === 0 ? "No results found" : `Page ${currentPage} of ${totalPages}`}
                         </span>
                     </div>
                     {currentPage < totalPages && (

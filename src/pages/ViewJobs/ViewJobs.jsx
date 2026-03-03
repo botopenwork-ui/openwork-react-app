@@ -1,273 +1,187 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Web3 from "web3";
-import L1ABI from "../../L1ABI.json"; // Import the L1 contract ABI
+import genesisABI from "../../ABIs/genesis_ABI.json";
 import "./ViewJobs.css";
+import { useWalletConnection } from "../../functions/useWalletConnection";
+import { getNativeChain } from "../../config/chainConfig";
+
+const STATUS_LABELS = { 0: "Open", 1: "In Progress", 2: "Completed", 3: "Disputed", 4: "Cancelled" };
+const STATUS_COLORS = { 0: "#22c55e", 1: "#3b82f6", 2: "#6366f1", 3: "#ef4444", 4: "#9ca3af" };
 
 export default function ViewJobs() {
+  const { walletAddress } = useWalletConnection();
   const [jobs, setJobs] = useState([]);
-  const [account, setAccount] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const jobsPerPage = 5; // Number of jobs per page
-
-  const [walletAddress, setWalletAddress] = useState("");
-  const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [loading, setLoading] = useState(true); // Loading state
-
+  const jobsPerPage = 10;
   const navigate = useNavigate();
 
-  function formatWalletAddress(address) {
-    if (!address) return "";
-    const start = address.substring(0, 4);
-    const end = address.substring(address.length - 4);
-    return `${start}....${end}`;
-  }
-
-  const connectWallet = async () => {
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({
-          method: "eth_requestAccounts",
-        });
-        setWalletAddress(accounts[0]);
-      } catch (error) {
-        console.error("Failed to connect wallet:", error);
-      }
-    } else {
-      console.warn("MetaMask not installed");
-    }
-  };
-
   useEffect(() => {
-    const checkWalletConnection = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({
-            method: "eth_accounts",
-          });
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-          }
-        } catch (error) {
-          console.error("Failed to check wallet connection:", error);
-        }
-      }
-    };
+    if (!walletAddress) return;
 
-    checkWalletConnection();
-  }, []);
-
-  const toggleDropdown = () => {
-    setDropdownVisible(!dropdownVisible);
-  };
-
-  const disconnectWallet = () => {
-    setWalletAddress("");
-    setDropdownVisible(false);
-  };
-
-  useEffect(() => {
     async function fetchJobs() {
       try {
-        const web3 = new Web3("https://erpc.xinfin.network"); // Replace with the desired RPC URL
-        const contractAddress = "0x00844673a088cBC4d4B4D0d63a24a175A2e2E637"; // Address of the OpenWorkL1 contract
-        const contract = new web3.eth.Contract(L1ABI, contractAddress);
+        setLoading(true);
+        setError(null);
 
-        const jobIds = await contract.methods.getAllJobIds().call();
+        const nativeChain = getNativeChain();
+        const rpcUrl = import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL || 'https://arb1.arbitrum.io/rpc';
+        const contractAddress = nativeChain?.contracts?.genesis || '0x794809471215cBa5cE56c7d9F402eDd85F9eBa2E';
 
+        const web3 = new Web3(rpcUrl);
+        const contract = new web3.eth.Contract(genesisABI, contractAddress);
+
+        // Fetch job IDs posted by this wallet
+        const jobIds = await contract.methods.getJobsByPoster(walletAddress).call();
+
+        if (!jobIds || jobIds.length === 0) {
+          setJobs([]);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch details for each job in parallel
         const jobsData = await Promise.all(
           jobIds.map(async (jobId) => {
-            const jobDetails = await contract.methods
-              .getJobDetails(jobId)
-              .call();
-            const ipfsHash = jobDetails.jobDetailHash;
-            const ipfsData = await fetchFromIPFS(ipfsHash);
+            try {
+              const jobData = await contract.methods.getJob(jobId).call();
+              const ipfsHash = jobData[2] || jobData.jobDetailHash;
+              let title = jobId;
+              let budget = '—';
 
-            // Fetch the proposed amount using getApplicationProposedAmount
-            const proposedAmountWei = await contract.methods
-              .getApplicationProposedAmount(jobId)
-              .call();
+              if (ipfsHash && !ipfsHash.includes('placeholder') && ipfsHash.length > 10) {
+                try {
+                  const res = await fetch(`/api/ipfs/content/${ipfsHash}`);
+                  if (res.ok) {
+                    const data = await res.json();
+                    title = data.title || data.jobTitle || jobId;
+                  }
+                } catch (_) {}
+              }
 
-            // Log the raw wei value
-            console.log("Proposed Amount (raw wei):", proposedAmountWei);
+              // Status: index 3, totalBudget: index 4
+              const statusIndex = Number(jobData[3] ?? jobData.status ?? 0);
+              const totalBudget = jobData[4] ?? jobData.totalBudget;
+              if (totalBudget) {
+                const budgetNum = Number(totalBudget) / 1e6;
+                budget = budgetNum.toFixed(2);
+              }
 
-            // Convert proposed amount from USDC units (6 decimals)
-            const escrowAmount = web3.utils.fromWei(proposedAmountWei, "mwei");
-
-            return {
-              jobId,
-              title: ipfsData.title || null,
-              employer: ipfsData.jobGiver || null,
-              jobTaker: ipfsData.jobTaker || null,
-              escrowAmount: escrowAmount,
-              isJobOpen: jobDetails.isOpen,
-            };
-          }),
+              return { jobId, title, status: statusIndex, budget };
+            } catch (e) {
+              return { jobId, title: jobId, status: 0, budget: '—' };
+            }
+          })
         );
 
         setJobs(jobsData);
-      } catch (error) {
-        console.error("Error fetching job details:", error);
+      } catch (err) {
+        console.error("Error fetching jobs:", err);
+        setError("Failed to load jobs. Please try again.");
+      } finally {
+        setLoading(false);
       }
     }
 
     fetchJobs();
-  }, [account]);
+  }, [walletAddress]);
 
-  const fetchFromIPFS = async (hash) => {
-    try {
-      const response = await fetch(`/api/ipfs/content/${hash}`);
+  const indexOfLast = currentPage * jobsPerPage;
+  const indexOfFirst = indexOfLast - jobsPerPage;
+  const currentJobs = jobs.slice(indexOfFirst, indexOfLast);
+  const totalPages = Math.ceil(jobs.length / jobsPerPage);
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch IPFS data");
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Error fetching data from IPFS:", error);
-      return { title: null, jobGiver: null, jobTaker: null };
-    }
-  };
-
-  const handleNavigation = () => {
-    window.open(
-      "https://drive.google.com/file/d/1tdpuAM3UqiiP_TKJMa5bFtxOG4bU_6ts/view",
-      "_blank",
+  if (!walletAddress) {
+    return (
+      <div className="body-container" style={{ padding: '40px' }}>
+        <p>Please connect your wallet to view your jobs.</p>
+      </div>
     );
-  };
-
-  const truncateAddress = (address) => {
-    if (!address) return "";
-    const start = address.substring(0, 6);
-    const end = address.substring(address.length - 4, address.length);
-    return `${start}...${end}`;
-  };
-
-  const indexOfLastJob = currentPage * jobsPerPage;
-  const indexOfFirstJob = indexOfLastJob - jobsPerPage;
-  const currentJobs = jobs.slice(indexOfFirstJob, indexOfLastJob);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  // This useEffect will be triggered after the jobs are rendered
-  useEffect(() => {
-    if (currentJobs.length > 0) {
-      // Timeout to allow the DOM to finish rendering
-      setTimeout(() => {
-        setLoading(false);
-      }, 0);
-    }
-  }, [currentJobs]);
+  }
 
   return (
-    <>
-      <div className="body-container">
-        <div className="view-jobs-container">
-          <div className="title-section">
-            <Link to="/" className="backButton">
-              <img src="/back.svg" alt="Back" className="backIconV" />
-            </Link>
-            <div className="tableTitleV">OpenWork Ledger</div>
-          </div>
-
-          <div className="table-section">
-            <div className="tableSubtitle">Initiated Jobs</div>
-            {loading ? (
-              <div className="loading-animation">
-                <img src="/OWIcon.svg" alt="Loading" className="loading-icon" />
-                <p style={{ color: '#888', fontSize: '14px', marginTop: '12px' }}>Loading your jobs…</p>
-              </div>
-            ) : (
-              <>
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Job Title</th>
-                      <th>From</th>
-                      <th></th>
-                      <th>To</th>
-                      <th>Amount Paid</th>
-                      <th>Status</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentJobs.map((job) => (
-                      <tr key={job.jobId}>
-                        <td>
-                          <img
-                            src="/doc.svg"
-                            alt="Document Icon"
-                            className="docIcon"
-                          />
-                          {job.title && <span>{job.title}</span>}
-                        </td>
-                        <td id="fromAdd">{truncateAddress(job.employer)}</td>
-                        <td className="from-to-icon-cell">
-                          <img
-                            src="/rightarrow.svg"
-                            alt="Arrow Icon"
-                            className="from-to-icon"
-                          />
-                        </td>
-                        <td id="toAdd">{truncateAddress(job.jobTaker)}</td>
-                        <td className="amount-cellVJ">
-                          <span className="amountV">{job.escrowAmount}</span>
-                        </td>
-                        <td>{job.isJobOpen ? "Open" : "Closed"}</td>
-                        <td className="view-icon-cell">
-                          <Link to={`/view-job-details/${job.jobId}`}>
-                            <img
-                              src="/view.svg"
-                              alt="View"
-                              className="viewIcon"
-                            />
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                <div className="pagination">
-                  {currentPage > 1 && (
-                    <button
-                      onClick={() => paginate(currentPage - 1)}
-                      className="page-link"
-                    >
-                      <img
-                        src="/back.svg"
-                        alt="Back"
-                        className="pagination-icon"
-                      />
-                    </button>
-                  )}
-                  <div className="page-text">
-                    <span style={{ color: "#868686" }}>
-                      Page {currentPage} of{" "}
-                      {Math.ceil(jobs.length / jobsPerPage)}
-                    </span>
-                  </div>
-                  {currentPage !== Math.ceil(jobs.length / jobsPerPage) && (
-                    <button
-                      onClick={() => paginate(currentPage + 1)}
-                      className="page-link"
-                    >
-                      <img
-                        src="/front.svg"
-                        alt="Forward"
-                        className="pagination-icon"
-                      />
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
+    <div className="body-container">
+      <div className="view-jobs-container">
+        <div className="newTitle">
+          <div className="titleTop">
+            <Link className="goBack" to="/"><img className="goBackImage" src="/back.svg" alt="Back" /></Link>
+            <div className="titleText">My Jobs</div>
           </div>
         </div>
+
+        {loading && (
+          <div className="loading-containerT" style={{ textAlign: 'center', padding: '40px' }}>
+            <img src="/OWIcon.svg" alt="Loading" className="loading-icon" style={{ width: '40px', animation: 'spin 1s linear infinite' }} />
+            <p style={{ marginTop: '12px', color: '#6b7280' }}>Loading your jobs from blockchain...</p>
+          </div>
+        )}
+
+        {error && (
+          <div style={{ padding: '24px', color: '#ef4444' }}>{error}</div>
+        )}
+
+        {!loading && !error && jobs.length === 0 && (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
+            <p>No jobs posted yet.</p>
+            <Link to="/post-job" style={{ color: '#3b82f6', marginTop: '8px', display: 'inline-block' }}>
+              Post your first job →
+            </Link>
+          </div>
+        )}
+
+        {!loading && !error && jobs.length > 0 && (
+          <div style={{ overflowX: 'auto', width: '100%' }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Job Title</th>
+                  <th>Status</th>
+                  <th>Budget (USDC)</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentJobs.map((job) => (
+                  <tr key={job.jobId} style={{ cursor: 'pointer' }}>
+                    <td>{job.title}</td>
+                    <td>
+                      <span style={{ color: STATUS_COLORS[job.status] || '#6b7280', fontWeight: 500 }}>
+                        {STATUS_LABELS[job.status] || 'Unknown'}
+                      </span>
+                    </td>
+                    <td>{job.budget}</td>
+                    <td>
+                      <button
+                        onClick={() => navigate(`/single-job-details/${job.jobId}`)}
+                        style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 14px', cursor: 'pointer' }}
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {totalPages > 1 && (
+              <div className="pagination">
+                {currentPage > 1 && (
+                  <button onClick={() => setCurrentPage(p => p - 1)} className="page-link">
+                    <img src="/back.svg" alt="Back" className="pagination-icon" />
+                  </button>
+                )}
+                <span className="page-info">Page {currentPage} of {totalPages}</span>
+                {currentPage < totalPages && (
+                  <button onClick={() => setCurrentPage(p => p + 1)} className="page-link">
+                    <img src="/next.svg" alt="Next" className="pagination-icon" />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
-    </>
+    </div>
   );
 }

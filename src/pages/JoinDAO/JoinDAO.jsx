@@ -173,15 +173,18 @@ export default function JoinDAO() {
         return 'can_complete';
     };
 
+    const [joinError, setJoinError] = React.useState('');
+
     // Handle Join DAO (2-step transaction)
     const handleJoinDAO = async () => {
+        setJoinError('');
         if (!walletAddress) {
-            alert("Please connect your wallet first");
+            setJoinError("Please connect your wallet first.");
             return;
         }
 
         if (alreadyStaked) {
-            alert("You are already a DAO member!");
+            setJoinError("You are already a DAO member.");
             return;
         }
 
@@ -190,7 +193,7 @@ export default function JoinDAO() {
         const validation = validateStake(amountInWei, duration, userBalance);
 
         if (!validation.isValid) {
-            alert(validation.errors.join('\n'));
+            setJoinError(validation.errors.join(' '));
             return;
         }
 
@@ -443,6 +446,13 @@ export default function JoinDAO() {
                                     <option value={3}>3 Minutes</option>
                                 </select>
                             </>
+                        )}
+
+                        {/* Inline error message */}
+                        {joinError && (
+                            <div style={{ color: '#ef4444', fontSize: '14px', marginBottom: '12px', padding: '8px 12px', background: '#fef2f2', borderRadius: '8px' }}>
+                                {joinError}
+                            </div>
                         )}
 
                         {/* Wrong network prompt */}

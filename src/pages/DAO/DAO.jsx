@@ -229,7 +229,7 @@ export default function DAO() {
         },
         {
             icon: '/OWToken.svg',
-            title: 'MY OW BALANCE',
+            title: 'MY BALANCE',
             number: daoStats ? daoStats.userTokenBalance : '0'
         },
         {
