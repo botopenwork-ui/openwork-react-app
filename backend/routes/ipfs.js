@@ -101,18 +101,17 @@ router.get('/content/:hash', async (req, res) => {
     return res.status(400).json({ error: 'Invalid hash' });
   }
 
-  const tryGateways = [
-    IPFS_API_URL ? `${IPFS_API_URL}/api/v0/cat?arg=${hash}` : null,
+  // Only use public IPFS gateways for reads — uploads go to Pinata
+  const gateways = [
     `https://ipfs.io/ipfs/${hash}`,
-  ].filter(Boolean);
+    `https://cloudflare-ipfs.com/ipfs/${hash}`,
+  ];
 
-  for (const url of tryGateways) {
+  for (const url of gateways) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 6000);
-      const method = url.includes('/api/v0/cat') ? 'POST' : 'GET';
-      const headers = url.includes(IPFS_API_URL) ? { 'Authorization': `Bearer ${IPFS_SECRET}` } : {};
-      const response = await fetch(url, { method, headers, signal: controller.signal });
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      const response = await fetch(url, { signal: controller.signal });
       clearTimeout(timeout);
       if (response.ok) {
         const ct = response.headers.get('content-type') || 'application/json';
