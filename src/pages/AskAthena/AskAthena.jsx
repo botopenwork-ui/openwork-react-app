@@ -8,6 +8,7 @@ import { formatWalletAddress } from "../../functions/formatWalletAddress";
 import BlueButton from "../../components/BlueButton/BlueButton";
 import Warning from "../../components/Warning/Warning";
 import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
+import { useWalletConnection } from "../../functions/useWalletConnection";
 import { getNativeChain } from "../../config/chainConfig";
 import { getAthenaClientContract } from "../../services/localChainService";
 
@@ -85,7 +86,7 @@ export default function AskAthena() {
   const navigate = useNavigate();
 
   const { chainId, chainConfig, isAllowed, error: chainError } = useChainDetection();
-  const { address: walletAddress } = useWalletAddress();
+  const { walletAddress } = useWalletConnection();
 
   const isOwner = walletAddress && address &&
     walletAddress.toLowerCase() === address.toLowerCase();
@@ -107,7 +108,7 @@ export default function AskAthena() {
 
   const handleCopyToClipboard = (addr) => {
     navigator.clipboard.writeText(addr).then(() => {
-      alert("Address copied to clipboard");
+      void 0 /* clipboard copy acknowledged */;
     }).catch((err) => {
       console.error("Failed to copy: ", err);
     });

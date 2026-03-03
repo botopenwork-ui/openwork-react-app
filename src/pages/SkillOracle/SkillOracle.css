@@ -154,3 +154,8 @@
 .skill-oracle-page .table tbody tr td:last-child {
   transform: translateX(-25px) !important;
 }
+
+/* Fix: body-container centers children — override to left-align */
+.body-container {
+  justify-content: flex-start !important;
+}

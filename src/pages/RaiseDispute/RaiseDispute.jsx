@@ -134,7 +134,7 @@ export default function RaiseDispute() {
     navigator.clipboard
       .writeText(address)
       .then(() => {
-        alert("Address copied to clipboard");
+        void 0 /* clipboard copy acknowledged */;
       })
       .catch((err) => {
         console.error("Failed to copy: ", err);
@@ -161,7 +161,6 @@ export default function RaiseDispute() {
 
         // Get all oracle names
         const oracleNames = await genesisContract.methods.getAllOracleNames().call();
-        console.log("📋 All oracle names:", oracleNames);
 
         // Check active status for each oracle
         const oracleDataPromises = oracleNames.map(async (name) => {
@@ -175,7 +174,6 @@ export default function RaiseDispute() {
         });
 
         const oracleData = await Promise.all(oracleDataPromises);
-        console.log("🏛️ Oracle data with active status:", oracleData);
 
         setOracles(oracleData);
 
@@ -212,12 +210,10 @@ export default function RaiseDispute() {
         const contract = new web3.eth.Contract(contractABI, nativeChain.contracts.nowjc);
 
         const jobData = await contract.methods.getJob(jobId).call();
-        console.log("Job data from contract:", jobData);
 
         let jobDetails = {};
         try {
           if (jobData.jobDetailHash) {
-            console.log("Fetching IPFS data from hash:", jobData.jobDetailHash);
             const gateways = [
               `https://ipfs.io/ipfs/${jobData.jobDetailHash}`,
               `/api/ipfs/content/${jobData.jobDetailHash}`,
@@ -238,7 +234,6 @@ export default function RaiseDispute() {
             }
             if (ipfsResponse && ipfsResponse.ok) {
               jobDetails = await ipfsResponse.json();
-              console.log("IPFS jobDetails received:", jobDetails);
             }
           }
         } catch (ipfsError) {
@@ -387,8 +382,6 @@ export default function RaiseDispute() {
         .getDisputeInfo(jobId)
         .call();
 
-      console.log("📋 Dispute info:", disputeInfo);
-
       // Check if dispute exists (totalFees > 0 means dispute was registered)
       const disputeExists = disputeInfo && parseFloat(disputeInfo.totalFees) > 0;
       return disputeExists;
@@ -408,7 +401,6 @@ export default function RaiseDispute() {
     const pollInterval = 5000;
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      console.log(`Polling attempt ${attempt}/${maxAttempts} for dispute ${jobId}`);
       
       const disputeExists = await checkDisputeExistsOnArbitrum(jobId);
       
@@ -527,7 +519,6 @@ export default function RaiseDispute() {
       // ============ STEP 2: UPLOAD DISPUTE EVIDENCE TO IPFS ============
       setTransactionStatus("📤 Step 2/3: Uploading dispute evidence to IPFS...");
       const disputeHash = await uploadDisputeToIPFS();
-      console.log("📦 Dispute IPFS hash:", disputeHash);
       setTransactionStatus(`✅ Step 2/3: Evidence uploaded to IPFS`);
 
       // ============ STEP 3: RAISE DISPUTE ON CHAIN ============

@@ -48,7 +48,7 @@ const ChainSelector = ({ walletAddress }) => {
     );
   }
 
-  // Detection done but no chain found — prompt wallet connection
+  // Detection done but no chain found — show wallet address instead of misleading "Connect Wallet"
   if (currentChainId === null) {
     return (
       <div className="chain-selector-wrapper">
@@ -64,7 +64,7 @@ const ChainSelector = ({ walletAddress }) => {
             }
           }}
         >
-          <span>Connect Wallet</span>
+          <span>Switch Network</span>
         </div>
       </div>
     );

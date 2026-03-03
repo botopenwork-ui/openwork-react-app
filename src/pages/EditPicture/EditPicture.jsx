@@ -46,7 +46,7 @@ export default function EditPicture() {
         navigator.clipboard
             .writeText(address)
             .then(() => {
-                alert("Address copied to clipboard");
+                void 0 /* clipboard copy acknowledged */;
             })
             .catch((err) => {
                 console.error("Failed to copy: ", err);

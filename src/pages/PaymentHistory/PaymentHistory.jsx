@@ -30,7 +30,7 @@ export default function PaymentHistory() {
     navigator.clipboard
       .writeText(address)
       .then(() => {
-        alert("Address copied to clipboard");
+        void 0 /* clipboard copy acknowledged */;
       })
       .catch((err) => {
         console.error("Failed to copy: ", err);
@@ -76,7 +76,7 @@ export default function PaymentHistory() {
         console.error("Failed to connect wallet:", error);
       }
     } else {
-      alert("MetaMask is not installed. Please install it to use this app.");
+      console.warn("MetaMask not installed");
     }
   };
 

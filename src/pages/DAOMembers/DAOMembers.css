@@ -130,3 +130,8 @@
   margin-left: 0 !important;
   overflow-x: auto;
 }
+
+/* Fix: body-container centers children — override to left-align */
+.body-container {
+  justify-content: flex-start !important;
+}

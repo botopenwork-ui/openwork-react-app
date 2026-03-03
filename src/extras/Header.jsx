@@ -15,7 +15,7 @@ export default function Header({ walletAddress, setWalletAddress }) {
         console.error("Failed to connect wallet:", error);
       }
     } else {
-      alert("MetaMask is not installed. Please install it to use this app.");
+      console.warn("MetaMask not installed");
     }
   };
 

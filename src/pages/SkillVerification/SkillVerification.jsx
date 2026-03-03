@@ -114,7 +114,7 @@ export default function SkillVerification() {
 
   const handleCopyToClipboard = (addr) => {
     navigator.clipboard.writeText(addr).then(() => {
-      alert("Address copied to clipboard");
+      void 0 /* clipboard copy acknowledged */;
     }).catch((err) => {
       console.error("Failed to copy: ", err);
     });

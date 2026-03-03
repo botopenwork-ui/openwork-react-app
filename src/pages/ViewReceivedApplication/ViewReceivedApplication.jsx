@@ -63,7 +63,6 @@ const fetchFromIPFS = async (hash, timeout = 5000) => {
   // Check cache first
   const cached = ipfsCache.get(hash);
   if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
-    console.log(`✅ Using cached IPFS data for ${hash}`);
     return cached.data;
   }
 
@@ -93,7 +92,6 @@ const fetchFromIPFS = async (hash, timeout = 5000) => {
           data,
           timestamp: Date.now()
         });
-        console.log(`📦 Cached IPFS data for ${hash}`);
         return data;
       }
     } catch (error) {
@@ -178,15 +176,11 @@ export default function ViewReceivedApplication() {
 
       try {
         setLoading(true);
-        console.log("Fetching application data for:", { jobId, applicationId });
         
         // Applications are stored on Arbitrum Genesis (native chain), not on local chain
         const nativeChain = getNativeChain();
         const ARBITRUM_RPC = nativeChain?.rpcUrl;
         const GENESIS_CONTRACT = nativeChain?.contracts?.genesis;
-
-        console.log(`🔗 Using ${isMainnet() ? 'MAINNET' : 'TESTNET'} - Genesis: ${GENESIS_CONTRACT}`);
-        console.log("Using RPC:", ARBITRUM_RPC);
 
         const web3 = new Web3(ARBITRUM_RPC);
         const genesisABI = [{
@@ -256,7 +250,6 @@ export default function ViewReceivedApplication() {
 
         // Fetch job data
         const jobData = await contract.methods.getJob(jobId).call();
-        console.log("Job data:", jobData);
         
         // Check if job exists
         if (!jobData || !jobData.jobGiver || jobData.jobGiver === '0x0000000000000000000000000000000000000000') {
@@ -270,7 +263,6 @@ export default function ViewReceivedApplication() {
 
         // Check application count first
         const appCount = await contract.methods.getJobApplicationCount(jobId).call();
-        console.log(`Total applications for job ${jobId}: ${appCount}`);
         
         const appIdNum = parseInt(applicationId);
         if (appIdNum > parseInt(appCount) || appIdNum < 1) {
@@ -282,7 +274,6 @@ export default function ViewReceivedApplication() {
 
         // Fetch application data from Genesis
         const appData = await contract.methods.getJobApplication(jobId, appIdNum).call();
-        console.log("Application data:", appData);
         
         // Check if application exists (application ID should be non-zero)
         if (!appData || !appData.applicant || appData.applicant === '0x0000000000000000000000000000000000000000') {
@@ -473,7 +464,6 @@ export default function ViewReceivedApplication() {
     try {
       setIsProcessing(true);
       setTransactionStatus(`🔄 Validating requirements on ${jobChainConfig.name}...`);
-      console.log("🚀 Starting job flow:", { jobId, applicationId, firstMilestoneAmount, chain: jobChainConfig.name });
       
       // Initialize Web3
       const web3 = new Web3(window.ethereum);
@@ -501,13 +491,10 @@ export default function ViewReceivedApplication() {
       if (parseFloat(userBalance) < amountInUSDCUnits) {
         throw new Error(`Insufficient USDC balance. Required: ${firstMilestoneAmount} USDC, Available: ${balanceInUSDC.toFixed(2)} USDC`);
       }
-      
-      console.log(`✅ USDC balance check passed: ${balanceInUSDC.toFixed(2)} USDC available`);
 
       // ============ STEP 1: CHECK ALLOWANCE & APPROVE IF NEEDED ============
       setTransactionStatus("🔍 Checking USDC allowance...");
       const currentAllowance = await usdcContract.methods.allowance(walletAddress, lowjcAddress).call();
-      console.log(`📊 Current allowance: ${parseFloat(currentAllowance) / 1000000} USDC, Required: ${firstMilestoneAmount} USDC`);
 
       if (BigInt(currentAllowance) < BigInt(amountInUSDCUnits)) {
         setTransactionStatus(`💰 Step 1/3: Approving USDC spending (MaxUint256) - Please confirm in MetaMask`);
@@ -522,14 +509,11 @@ export default function ViewReceivedApplication() {
         if (!approveTx || !approveTx.transactionHash) {
           throw new Error("Approval transaction failed");
         }
-
-        console.log("✅ USDC approval confirmed:", approveTx.transactionHash);
         setTransactionStatus(`✅ Step 1/3: USDC approval confirmed`);
 
         // Wait for transaction to be properly mined
         await new Promise(resolve => setTimeout(resolve, 2000));
       } else {
-        console.log("✅ Sufficient allowance already exists, skipping approval");
         setTransactionStatus(`✅ Step 1/3: USDC allowance already sufficient`);
       }
       
@@ -538,7 +522,6 @@ export default function ViewReceivedApplication() {
       
       // Get LayerZero fee quote from bridge
       const bridgeAddress = await lowjcContract.methods.bridge().call();
-      console.log("Bridge address:", bridgeAddress);
       
       // Bridge ABI for quoteNativeChain function
       const bridgeABI = [{
@@ -557,7 +540,6 @@ export default function ViewReceivedApplication() {
       // Build LZ options with appropriate destination gas for START_JOB
       const destGas = DESTINATION_GAS_ESTIMATES.START_JOB;
       const lzOptions = buildLzOptions(destGas);
-      console.log(`⛽ Destination gas (Arbitrum): ${destGas} for START_JOB`);
 
       // Encode payload matching LOWJC's internal encoding for startJob
       // LOWJC sends: abi.encode("startJob", msg.sender, _jobId, _applicationId, _useAppMilestones)
@@ -571,8 +553,6 @@ export default function ViewReceivedApplication() {
       const lzFee = BigInt(quotedFee) * BigInt(130) / BigInt(100); // +30% buffer
       const cctpBuffer = BigInt(web3.utils.toWei('0.0003', 'ether')); // safety buffer for CCTP relay
       const totalFee = lzFee + cctpBuffer;
-      console.log(`💰 LayerZero quote: ${web3.utils.fromWei(quotedFee.toString(), 'ether')} ETH`);
-      console.log(`💰 Total (LZ+30%+buffer): ${web3.utils.fromWei(totalFee.toString(), 'ether')} ETH`);
 
       // Get current gas price for EIP-1559
       const gasPrice = await web3.eth.getGasPrice();
@@ -595,8 +575,6 @@ export default function ViewReceivedApplication() {
       if (!startJobTx || !startJobTx.transactionHash) {
         throw new Error("Start job transaction failed");
       }
-      
-      console.log(`✅ Job started on ${jobChainConfig.name}:`, startJobTx.transactionHash);
       setTransactionStatus(`✅ Job started on ${jobChainConfig.name}. Tracking cross-chain progress...`);
 
       // ── Client-side cross-chain monitoring (works even if backend is down) ──
@@ -658,7 +636,6 @@ export default function ViewReceivedApplication() {
         });
         if (backendResponse.ok) {
           const backendData = await backendResponse.json();
-          console.log("✅ Backend accepted request:", backendData);
         }
       } catch (backendErr) {
         console.warn("⚠️ Backend unavailable, relying on client-side monitoring:", backendErr.message);
@@ -672,7 +649,6 @@ export default function ViewReceivedApplication() {
           
           if (statusResponse.ok) {
             const statusData = await statusResponse.json();
-            console.log("📊 Backend status:", statusData);
             
             // Update UI based on status
             if (statusData.status === 'polling_attestation') {
@@ -682,7 +658,6 @@ export default function ViewReceivedApplication() {
             } else if (statusData.status === 'completed') {
               clearInterval(pollInterval);
               setTransactionStatus("🎉 Cross-chain transfer completed! Redirecting...");
-              console.log("✅ Job fully synchronized across chains");
               
               setTimeout(() => {
                 window.location.href = `/job-deep-view/${jobId}`;

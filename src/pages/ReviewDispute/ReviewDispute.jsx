@@ -82,7 +82,7 @@ export default function ReviewDispute() {
     navigator.clipboard
       .writeText(address)
       .then(() => {
-        alert("Address copied to clipboard");
+        void 0 /* clipboard copy acknowledged */;
       })
       .catch((err) => {
         console.error("Failed to copy: ", err);
@@ -128,7 +128,7 @@ export default function ReviewDispute() {
         console.error("Failed to connect wallet:", error);
       }
     } else {
-      alert("MetaMask is not installed. Please install it to use this app.");
+      console.warn("MetaMask not installed");
     }
   };
 
@@ -164,7 +164,6 @@ export default function ReviewDispute() {
       }
 
       try {
-        console.log("Fetching dispute:", disputeId);
 
         // Get native chain config (Arbitrum) dynamically based on network mode
         const nativeChain = getNativeChain();
@@ -173,8 +172,6 @@ export default function ReviewDispute() {
           setLoading(false);
           return;
         }
-
-        console.log(`🔗 Using ${isMainnet() ? 'MAINNET' : 'TESTNET'} - Genesis: ${nativeChain.contracts.genesis}`);
 
         const web3 = new Web3(nativeChain.rpcUrl);
         const genesisAddress = nativeChain.contracts.genesis;
@@ -185,9 +182,6 @@ export default function ReviewDispute() {
         
         // Fetch voters
         const votersData = await genesisContract.methods.getDisputeVoters(disputeId).call();
-        
-        console.log("Dispute data:", disputeData);
-        console.log("Voters:", votersData);
 
         // Calculate vote percentages
         const totalVotes = Number(disputeData.votesFor) + Number(disputeData.votesAgainst);
@@ -220,11 +214,6 @@ export default function ReviewDispute() {
         setVoters(votersData);
         
         // Debug logging for button visibility
-        console.log("  isVotingActive:", disputeData.isVotingActive);
-        console.log("  isFinalized:", disputeData.isFinalized);
-        console.log("  remainingSeconds:", remainingSeconds);
-        console.log("  Should show vote buttons:", disputeData.isVotingActive && !disputeData.isFinalized);
-        console.log("  Should show settle button:", !disputeData.isVotingActive && !disputeData.isFinalized);
         
         setJobData({
           disputeId,
@@ -311,13 +300,6 @@ export default function ReviewDispute() {
       const nativeAthena = new web3.eth.Contract(NativeAthenaABI, nativeAthenaAddress);
 
       // Log vote parameters for debugging
-      console.log("🗳️ Vote parameters:", {
-        contract: nativeAthenaAddress,
-        votingType: 0,
-        disputeId: disputeId,
-        voteFor: voteFor,
-        claimAddress: fromAddress
-      });
 
       // Use Promise-based approach with proper event handling
       // Note: On Arbitrum, let MetaMask handle gas estimation
@@ -333,11 +315,9 @@ export default function ReviewDispute() {
             from: fromAddress
           })
           .on('transactionHash', (hash) => {
-            console.log("Vote transaction sent! Hash:", hash);
             setTxHash(hash);
           })
           .on('receipt', (receipt) => {
-            console.log("Vote receipt received:", receipt);
             setLoadingT("");
             
             if (receipt.status == 1 || receipt.status == "1") {
@@ -425,11 +405,6 @@ export default function ReviewDispute() {
       const nativeAthena = new web3.eth.Contract(NativeAthenaABI, nativeAthenaAddress);
 
       // Log settle parameters for debugging
-      console.log("⚖️ Settle Dispute parameters:", {
-        contract: nativeAthenaAddress,
-        disputeId: disputeId,
-        from: fromAddress
-      });
 
       // Use Promise-based approach with proper event handling
       // Note: On Arbitrum, let MetaMask handle gas estimation
@@ -440,11 +415,9 @@ export default function ReviewDispute() {
             from: fromAddress
           })
           .on('transactionHash', (hash) => {
-            console.log("Settle transaction sent! Hash:", hash);
             setLoadingT("Transaction submitted - waiting for confirmation...");
           })
           .on('receipt', (receipt) => {
-            console.log("Settle receipt received:", receipt);
             
             if (receipt.status == 1 || receipt.status == "1") {
               resolve(receipt);
@@ -588,7 +561,7 @@ export default function ReviewDispute() {
     //   }
     // } else {
     //   console.error("MetaMask not detected");
-    //   alert("MetaMask is not installed. Please install it to use this app.");
+    //   console.warn("MetaMask not installed");
     // }
   };
 
