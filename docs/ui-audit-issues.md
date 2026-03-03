@@ -55,7 +55,6 @@
 
 | # | Page | Issue | Notes |
 |---|------|-------|-------|
-| P5 | Governance `/governance` | Full page blank without wallet | Should show description or connect-wallet prompt |
 | P6 | DAO stat card | "MY OW BALAN..." still slightly clipped on some screens | CSS fix committed but may need viewport check |
 | P7 | Profile portfolio | "Failed to load portfolios" error — too technical | Should say "No portfolio items yet" |
 | P8 | Profile portfolio | "Contract ID: 0x5a79..." label — wrong, it's a wallet address | Mislabelled field |
