@@ -9,6 +9,7 @@ import BlueButton from "../../components/BlueButton/BlueButton";
 import Warning from "../../components/Warning/Warning";
 import ProfileGenesisABI from "../../ABIs/profile-genesis_ABI.json";
 import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
+import { useWalletConnection } from "../../functions/useWalletConnection";
 import { getLOWJCContract } from "../../services/localChainService";
 import { getNativeChain, isMainnet } from "../../config/chainConfig";
 import CrossChainStatus, { buildLZSteps } from "../../components/CrossChainStatus/CrossChainStatus";
@@ -67,7 +68,7 @@ export default function ProfileOwnerView() {
 
     // Multi-chain hooks
     const { chainId, chainConfig, isAllowed, error: chainError } = useChainDetection();
-    const { address: walletAddress, connect: connectWallet } = useWalletAddress();
+    const { walletAddress, connectWallet } = useWalletConnection();
 
     const [hasProfile, setHasProfile] = useState(false);
     const [profileLoading, setProfileLoading] = useState(true);

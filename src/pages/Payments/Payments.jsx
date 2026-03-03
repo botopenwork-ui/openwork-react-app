@@ -2,14 +2,14 @@ import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Link } from "react-router-dom";
 import Web3 from "web3";
-import L1ABI from "../../L1ABI.json"; // Import the L1 contract ABI
 import "./Payments.css";
+import { useWalletConnection } from "../../functions/useWalletConnection";
 
 export default function Payments() {
+  const { walletAddress } = useWalletConnection();
   const [buttonFlex2, setButtonFlex2] = useState(false);
   const { jobId } = useParams();
   const [job, setJob] = useState(null);
-  const [walletAddress, setWalletAddress] = useState("");
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [loading, setLoading] = useState(true); // State for loading animation
   const [amountPaid, setAmountPaid] = useState(0); // State for amount paid
@@ -103,55 +103,45 @@ export default function Payments() {
   useEffect(() => {
     async function fetchJobDetails() {
       try {
-        const web3 = new Web3("https://erpc.xinfin.network"); // Using the RPC URL
-        const contractAddress = "0x00844673a088cBC4d4B4D0d63a24a175A2e2E637"; // Address of the OpenWorkL1 contract
-        const contract = new web3.eth.Contract(L1ABI, contractAddress);
+        const rpcUrl = import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL || 'https://arb1.arbitrum.io/rpc';
+        const GENESIS = '0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294';
+        const genesisABI = [
+          { "inputs": [{"name":"jobId","type":"string"}], "name": "getJob", "outputs": [{"type":"tuple","components":[{"name":"jobId","type":"string"},{"name":"jobGiver","type":"address"},{"name":"jobDetailHash","type":"string"},{"name":"status","type":"uint8"},{"name":"totalBudget","type":"uint256"},{"name":"currentMilestone","type":"uint256"},{"name":"jobTaker","type":"address"},{"name":"totalPaid","type":"uint256"},{"name":"paymentChainDomain","type":"uint32"},{"name":"paymentAddress","type":"address"},{"name":"takerOriginChainDomain","type":"uint32"}]}], "stateMutability": "view", "type": "function" },
+          { "inputs": [{"name":"jobId","type":"string"}], "name": "getEscrowBalance", "outputs": [{"type":"uint256"}], "stateMutability": "view", "type": "function" }
+        ];
+        const web3 = new Web3(rpcUrl);
+        const contract = new web3.eth.Contract(genesisABI, GENESIS);
 
-        // Fetch job details
-        const jobDetails = await contract.methods.getJobDetails(jobId).call();
-        const ipfsHash = jobDetails.jobDetailHash;
-        const ipfsData = await fetchFromIPFS(ipfsHash);
+        const jobData = await contract.methods.getJob(jobId).call();
+        const ipfsHash = jobData.jobDetailHash || jobData[2];
+        const ipfsData = ipfsHash ? await fetchFromIPFS(ipfsHash) : {};
 
-        // Fetch proposed amount using getApplicationProposedAmount
-        const proposedAmountWei = await contract.methods
-          .getApplicationProposedAmount(jobId)
-          .call();
-        // Fetch escrow amount using getJobEscrowAmount
-        const escrowAmountWei = await contract.methods
-          .getJobEscrowAmount(jobId)
-          .call();
-
-        // Log the raw wei values
-        console.log("Proposed Amount (raw wei):", proposedAmountWei);
-        console.log("Escrow Amount (raw wei):", escrowAmountWei);
-
-        // Convert amounts from USDC units (6 decimals)
-        const proposedAmount = web3.utils.fromWei(proposedAmountWei, "mwei");
-        const currentEscrowAmount = web3.utils.fromWei(
-          escrowAmountWei,
-          "mwei",
-        );
-
-        const receivedAmount = proposedAmount - currentEscrowAmount;
+        let escrowBalance = 0;
+        let totalBudget = 0;
+        try {
+          const rawEscrow = await contract.methods.getEscrowBalance(jobId).call();
+          escrowBalance = Number(rawEscrow) / 1e6;
+        } catch (_) {}
+        totalBudget = Number(jobData.totalBudget || jobData[4] || 0) / 1e6;
+        const totalPaid = Number(jobData.totalPaid || jobData[7] || 0) / 1e6;
 
         setJob({
           jobId,
-          employer: jobDetails.employer,
-          jobTaker: jobDetails.jobTaker,
-          escrowAmount: currentEscrowAmount,
-          isJobOpen: jobDetails.isOpen,
+          employer: jobData.jobGiver || jobData[1],
+          jobTaker: jobData.jobTaker || jobData[6],
+          escrowAmount: escrowBalance,
+          isJobOpen: (jobData.status || jobData[3]) === '0' || (jobData.status || jobData[3]) === 0,
           ...ipfsData,
         });
 
-        setAmountPaid(proposedAmount);
-        setAmountReceived(receivedAmount);
+        setAmountPaid(totalBudget);
+        setAmountReceived(totalPaid);
 
-        setLoading(false); // Stop loading animation after fetching data
+        setLoading(false);
         setIsElementReady(true);
-         console.log("elements ready!!!!");
       } catch (error) {
         console.error("Error fetching job details:", error);
-        setLoading(false); // Ensure loading stops even if there is an error
+        setLoading(false);
       }
     }
 
@@ -211,7 +201,7 @@ export default function Payments() {
   }
 
   if (!job) {
-    return <div></div>; // Blank div while loading
+    return <div style={{ padding: "40px", color: "#6b7280", textAlign: "center" }}>Loading job data...</div>;
   }
 
   return (

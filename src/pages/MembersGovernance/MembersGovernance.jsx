@@ -3,7 +3,6 @@ import { Tooltip } from "react-tooltip";
 import { useParams } from "react-router-dom";
 import { Link } from "react-router-dom";
 import Web3 from "web3";
-import L1ABI from "../../L1ABI.json"; // Import the L1 contract ABI
 import "./MembersGovernance.css";
 import MenuItem from "../../components/MenuItem";
 import ToolTipContent from "../../components/ToolTipContent/ToolTipContent";
@@ -106,13 +105,15 @@ export default function MembersGovernance() {
   useEffect(() => {
     async function fetchJobDetails() {
       try {
-        const web3 = new Web3("https://erpc.xinfin.network"); // Using the RPC URL
-        const contractAddress = "0x00844673a088cBC4d4B4D0d63a24a175A2e2E637"; // Address of the OpenWorkL1 contract
-        const contract = new web3.eth.Contract(L1ABI, contractAddress);
+        const rpcUrl = import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL || 'https://arb1.arbitrum.io/rpc';
+        const web3 = new Web3(rpcUrl); // Using the RPC URL
+        const contractAddress = '0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294';
+        const genesisABI = [{ "inputs": [{"name":"jobId","type":"string"}], "name": "getJob", "outputs": [{"type":"tuple","components":[{"name":"jobId","type":"string"},{"name":"jobGiver","type":"address"},{"name":"jobDetailHash","type":"string"},{"name":"status","type":"uint8"},{"name":"totalBudget","type":"uint256"},{"name":"currentMilestone","type":"uint256"},{"name":"jobTaker","type":"address"},{"name":"totalPaid","type":"uint256"},{"name":"paymentChainDomain","type":"uint32"},{"name":"paymentAddress","type":"address"},{"name":"takerOriginChainDomain","type":"uint32"}]}], "stateMutability": "view", "type": "function" }];
+        const contract = new web3.eth.Contract(genesisABI, contractAddress);
 
         // Fetch job details
-        const jobDetails = await contract.methods.getJobDetails(jobId).call();
-        const ipfsHash = jobDetails.jobDetailHash;
+        const jobDetails = await contract.methods.getJob(jobId).call();
+        const ipfsHash = jobDetails[2] || jobDetails.jobDetailHash;
         const ipfsData = await fetchFromIPFS(ipfsHash);
 
         // Fetch proposed amount using getApplicationProposedAmount
@@ -139,10 +140,10 @@ export default function MembersGovernance() {
 
         setJob({
           jobId,
-          employer: jobDetails.employer,
-          jobTaker: jobDetails.jobTaker,
+          employer: jobDetails[1] || jobDetails.jobGiver,
+          jobTaker: jobDetails[6] || jobDetails.jobTaker,
           escrowAmount: currentEscrowAmount,
-          isJobOpen: jobDetails.isOpen,
+          isJobOpen: (Number(jobDetails[3] || jobDetails.status) === 0),
           ...ipfsData,
         });
 
@@ -214,7 +215,7 @@ export default function MembersGovernance() {
   }
 
   if (!job) {
-    return <div></div>; // Blank div while loading
+    return <div style={{ padding: "40px", color: "#6b7280", textAlign: "center" }}>Loading job data...</div>;
   }
 
   return (

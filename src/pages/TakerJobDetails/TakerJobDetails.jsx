@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import Web3 from "web3";
-import L1ABI from "../../L1ABI.json"; // Import the L1 contract ABI
 import "./TakerJobDetails.css";
 import SkillBox from "../../components/SkillBox/SkillBox";
 import Milestone from "../../components/Milestone/Milestone";
@@ -96,13 +95,17 @@ export default function TakerJobDetails() {
   useEffect(() => {
     async function fetchJobDetails() {
       try {
-        const web3 = new Web3("https://erpc.xinfin.network"); // Using the RPC URL
-        const contractAddress = "0x00844673a088cBC4d4B4D0d63a24a175A2e2E637"; // Address of the OpenWorkL1 contract
-        const contract = new web3.eth.Contract(L1ABI, contractAddress);
+        const rpcUrl = import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL || 'https://arb1.arbitrum.io/rpc';
+        const web3 = new Web3(rpcUrl); // Using the RPC URL
+        const contractAddress = '0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294';
+        const genesisABI = [
+          { "inputs": [{"name":"jobId","type":"string"}], "name": "getJob", "outputs": [{"type":"tuple","components":[{"name":"jobId","type":"string"},{"name":"jobGiver","type":"address"},{"name":"jobDetailHash","type":"string"},{"name":"status","type":"uint8"},{"name":"totalBudget","type":"uint256"},{"name":"currentMilestone","type":"uint256"},{"name":"jobTaker","type":"address"},{"name":"totalPaid","type":"uint256"},{"name":"paymentChainDomain","type":"uint32"},{"name":"paymentAddress","type":"address"},{"name":"takerOriginChainDomain","type":"uint32"}]}], "stateMutability": "view", "type": "function" }
+        ];
+        const contract = new web3.eth.Contract(genesisABI, contractAddress);
 
         // Fetch job details
-        const jobDetails = await contract.methods.getJobDetails(jobId).call();
-        const ipfsHash = jobDetails.jobDetailHash;
+        const jobDetails = await contract.methods.getJob(jobId).call();
+        const ipfsHash = jobDetails[2] || jobDetails.jobDetailHash;
 
         // Fetch the job taker's address using the selected application ID
         const selectedApplicationID = jobDetails.selectedApplicationID;
@@ -114,9 +117,9 @@ export default function TakerJobDetails() {
 
         setJob({
           jobId,
-          employer: jobDetails.employer,
+          employer: jobDetails[1] || jobDetails.jobGiver,
           escrowAmount: web3.utils.fromWei(jobDetails.escrowAmount, "mwei"),
-          isJobOpen: jobDetails.isOpen,
+          isJobOpen: (Number(jobDetails[3] || jobDetails.status) === 0),
           taker: jobTaker,
           ...ipfsData,
         });

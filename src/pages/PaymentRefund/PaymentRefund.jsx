@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Web3 from "web3";
-import L1ABI from "../../L1ABI.json";
 import "./PaymentRefund.css";
 import BlueButton from "../../components/BlueButton/BlueButton";
 import TransactionItem from "../../components/TransactionItem/TransactionItem";
@@ -92,13 +91,15 @@ export default function PaymentRefund() {
   useEffect(() => {
     async function fetchJobDetails() {
       try {
-        const web3 = new Web3("https://erpc.xinfin.network"); // Using the specified RPC endpoint
-        const contractAddress = "0x00844673a088cBC4d4B4D0d63a24a175A2e2E637";
-        const contract = new web3.eth.Contract(L1ABI, contractAddress);
+        const rpcUrl = import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL || 'https://arb1.arbitrum.io/rpc';
+        const web3 = new Web3(rpcUrl); // Using the specified RPC endpoint
+        const contractAddress = '0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294';
+        const genesisABI = [{ "inputs": [{"name":"jobId","type":"string"}], "name": "getJob", "outputs": [{"type":"tuple","components":[{"name":"jobId","type":"string"},{"name":"jobGiver","type":"address"},{"name":"jobDetailHash","type":"string"},{"name":"status","type":"uint8"},{"name":"totalBudget","type":"uint256"},{"name":"currentMilestone","type":"uint256"},{"name":"jobTaker","type":"address"},{"name":"totalPaid","type":"uint256"},{"name":"paymentChainDomain","type":"uint32"},{"name":"paymentAddress","type":"address"},{"name":"takerOriginChainDomain","type":"uint32"}]}], "stateMutability": "view", "type": "function" }];
+        const contract = new web3.eth.Contract(genesisABI, contractAddress);
 
         // Fetch job details
-        const jobDetails = await contract.methods.getJobDetails(jobId).call();
-        const ipfsHash = jobDetails.jobDetailHash;
+        const jobDetails = await contract.methods.getJob(jobId).call();
+        const ipfsHash = jobDetails[2] || jobDetails.jobDetailHash;
         const ipfsData = await fetchFromIPFS(ipfsHash);
 
         // Fetch proposed amount using getApplicationProposedAmount
@@ -119,9 +120,9 @@ export default function PaymentRefund() {
 
         setJob({
           jobId,
-          employer: jobDetails.employer,
+          employer: jobDetails[1] || jobDetails.jobGiver,
           escrowAmount: currentEscrowAmount,
-          isJobOpen: jobDetails.isOpen,
+          isJobOpen: (Number(jobDetails[3] || jobDetails.status) === 0),
           totalEscrowAmount: proposedAmount,
           amountLocked: currentEscrowAmount,
           amountReleased: amountReleased,
