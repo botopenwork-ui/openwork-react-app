@@ -47,7 +47,7 @@
 
 | # | Page | Issue | Notes |
 |---|------|-------|-------|
-| P4 | ContractUpdateProposelStep3, SkillOracleMemberRemovalStep2 | Use `eth_requestAccounts` + `window.ethereum` | ✅ Not broken — correct MetaMask behavior for signing pages; real users with MetaMask work fine |
+
 
 ---
 
@@ -89,4 +89,4 @@
 | `00166-s2n` | 8 pages wallet reads → useWalletConnection (251 lines deleted) |
 | `00167-4f5` | 12 more pages wallet source fixed |
 | `00168-tkb` | ViewJobs legacy status labels |
-| `00169-kcc` | P3 fixed: real person photos (user1.png, user.png) replaced with neutral user.svg in SingleJobDetails + JobUpdate; P1+P2 removed (design decisions) |
+| `00169-kcc` | P3 fixed: real person photos replaced with user.svg; P1+P2 removed (design decisions); P4 confirmed not broken (correct MetaMask signing flow) |
