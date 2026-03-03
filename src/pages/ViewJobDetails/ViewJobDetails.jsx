@@ -155,7 +155,7 @@ export default function ViewJobDetails() {
                 <span className="detail-label">POSTED BY</span>
                 <div className="detail-profile">
                   <span className="detail-value-address">
-                    <img src="/user.png" alt="JobGiver" className="Job" />
+                    <img src="/user.svg" alt="JobGiver" className="Job" />
                     <p title={job.jobGiver}>{job.jobGiver.slice(0, 6)}...{job.jobGiver.slice(-4)}</p>
                   </span>
                   <a href={`/profile/${job.jobGiver}`} className="view-profile">

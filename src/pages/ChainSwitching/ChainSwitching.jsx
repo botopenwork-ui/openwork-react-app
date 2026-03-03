@@ -77,7 +77,7 @@ const ChainSwitching = () => {
 
           {/* Left Side Avatar */}
           <div className="side-avatar side-avatar-left">
-            <img src="/avatar-profile.png" alt="Job Giver" className="avatar-image" />
+            <img src="/avatar-profile.svg" alt="Job Giver" className="avatar-image" />
             <img src="/person.svg" alt="icon" className="avatar-icon" />
           </div>
 
@@ -96,7 +96,7 @@ const ChainSwitching = () => {
 
           {/* Right Side Avatar */}
           <div className="side-avatar side-avatar-right">
-            <img src="/avatar-profile.png" alt="Job Taker" className="avatar-image" />
+            <img src="/avatar-profile.svg" alt="Job Taker" className="avatar-image" />
             <img src="/person.svg" alt="icon" className="avatar-icon" />
           </div>
 

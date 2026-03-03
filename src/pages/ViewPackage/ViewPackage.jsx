@@ -14,7 +14,7 @@ export default function ViewPackage() {
         title: 'UX/UI Package',
         listedBy: {
             username: '',
-            avatar: '/assets/avatar-profile.png',
+            avatar: '/assets/avatar-profile.svg',
             profileUrl: '/profile'
         },
         cost: '726.14',

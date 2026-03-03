@@ -238,7 +238,7 @@ export default function RemovalApplication() {
                     <span className="detail-label">PROPOSED BY</span>
                     <div className="detail-profile">
                     <span className="detail-value-address">
-                        <img src="/user.png" alt="JobGiver" className="Job" />
+                        <img src="/user.svg" alt="JobGiver" className="Job" />
                         <p>{job ? formatWalletAddress(job.employer) : "—"}</p>
                     </span>
                     <a href="/profile" className="view-profile">
@@ -253,7 +253,7 @@ export default function RemovalApplication() {
                     <span className="detail-label">REQUEST TO RECRUIT</span>
                     <div className="detail-profile">
                     <span className="detail-value-address">
-                        <img src="/user.png" alt="JobGiver" className="Job" />
+                        <img src="/user.svg" alt="JobGiver" className="Job" />
                         <p>{job ? formatWalletAddress(job.employer) : "—"}</p>
                     </span>
                     <a href="/profile" className="view-profile">

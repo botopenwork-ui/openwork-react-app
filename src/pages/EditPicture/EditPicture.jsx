@@ -92,7 +92,7 @@ export default function EditPicture() {
                     {/* Avatar and Edit Picture Button */}
                     <div className="edit-picture-avatar-section">
                         <div className="edit-picture-avatar">
-                            <img src="/assets/avatar-profile.png" alt="Profile" />
+                            <img src="/assets/avatar-profile.svg" alt="Profile" />
                         </div>
                         <Button 
                             label="Edit picture" 

@@ -211,8 +211,8 @@ export default function VotingHistory() {
             <ProgressBar percent={70} width={133}/>
           </div>
           <div className="release-payment-body payment-history-body">
-            <VoteItem imgSrc={'/user.png'} name='mollie2504' status={'favour'} date={'7 May, 2024'} content={'I think this person should be removed from the Skill Oracle because they are not at all active!'}/>
-            <VoteItem imgSrc={'/user.png'} name='mollie2504' status={'against'} date={'7 May, 2024'} content={'I think this person should be removed from the Skill Oracle because they are not at all active!'}/>          </div>
+            <VoteItem imgSrc={'/user.svg'} name='mollie2504' status={'favour'} date={'7 May, 2024'} content={'I think this person should be removed from the Skill Oracle because they are not at all active!'}/>
+            <VoteItem imgSrc={'/user.svg'} name='mollie2504' status={'against'} date={'7 May, 2024'} content={'I think this person should be removed from the Skill Oracle because they are not at all active!'}/>          </div>
         </div>
       </div>
     </>

@@ -145,7 +145,7 @@ export default function MembersSkillOracle() {
             const allColumnData = {
                 memberName: (
                     <div className="user">
-                        <img src="/user.png" alt="User Icon" className="userIcon" />
+                        <img src="/user.svg" alt="User Icon" className="userIcon" />
                         <span title={user.address}>
                             {isRealData ? formatAddress(user.address) : user.name}
                         </span>

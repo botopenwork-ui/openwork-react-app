@@ -163,7 +163,7 @@ export default function SkillOracle() {
             const allColumnData = {
                 memberName: (
                     <div className="user">
-                        <img src="/user.png" alt="User Icon" className="userIcon" />
+                        <img src="/user.svg" alt="User Icon" className="userIcon" />
                         <span title={member.address}>{formatAddress(member.address)}</span>
                     </div>
                 ),

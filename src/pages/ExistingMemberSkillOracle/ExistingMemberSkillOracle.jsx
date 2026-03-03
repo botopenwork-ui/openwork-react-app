@@ -67,7 +67,7 @@ export default function ExistingMemberSkillOracle() {
         return users.map((user) => {
             return [
                 <div className="user">
-                    <img src="/user.png" alt="User Icon" className="userIcon" />
+                    <img src="/user.svg" alt="User Icon" className="userIcon" />
                     {user.name && <span>{user.name}</span>}
                 </div>,
                 <div className="rating">

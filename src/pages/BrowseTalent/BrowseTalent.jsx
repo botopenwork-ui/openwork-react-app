@@ -128,7 +128,7 @@ export default function BrowseTalent() {
                             location: profileData.location || '',
                             profilePhoto: profileData.profilePhotoHash 
                                 ? `https://gateway.lighthouse.storage/ipfs/${profileData.profilePhotoHash}`
-                                : '/user.png',
+                                : '/user.svg',
                             hourlyRate: profileData.hourlyRate || null
                         };
                     } catch (err) {
@@ -223,7 +223,7 @@ export default function BrowseTalent() {
             const displaySkills = Array.isArray(user.skills) ? user.skills : [user.skills || 'N/A'];
             const displayExperience = user.experience || 'N/A';
             const displayRate = user.hourlyRate || user.hourly_rate || null;
-            const profilePhoto = user.profilePhoto || '/user.png';
+            const profilePhoto = user.profilePhoto || '/user.svg';
             const userAddress = user.address || '';
 
             // Create all possible column data

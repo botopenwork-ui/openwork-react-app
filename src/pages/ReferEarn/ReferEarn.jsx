@@ -614,7 +614,7 @@ export default function ReferEarn() {
           {earned > 0 ? (
             <div className="referral-history-item">
               <div className="referral-avatar">
-                <img src="/assets/avatar-placeholder.png" alt="User" />
+                <img src="/user.svg" alt="User" />
               </div>
               <div className="referral-history-details">
                 <div className="referral-history-text">

@@ -27,8 +27,8 @@ const FILTERITEMS = [
             <DropDown label={FILTERITEMS[0]} options={FILTERITEMS}/>
           </div>
           <div className="release-payment-body payment-history-body">
-            <VoteItem imgSrc={'/user.png'} name='mollie2504' status={'favour'} date={'7 May, 2024'} content={'I think this person should be removed from the Skill Oracle because they are not at all active!'}/>
-            <VoteItem imgSrc={'/user.png'} name='mollie2504' status={'against'} date={'7 May, 2024'} content={'I think this person should be removed from the Skill Oracle because they are not at all active!'}/>          </div>
+            <VoteItem imgSrc={'/user.svg'} name='mollie2504' status={'favour'} date={'7 May, 2024'} content={'I think this person should be removed from the Skill Oracle because they are not at all active!'}/>
+            <VoteItem imgSrc={'/user.svg'} name='mollie2504' status={'against'} date={'7 May, 2024'} content={'I think this person should be removed from the Skill Oracle because they are not at all active!'}/>          </div>
         </div>
       </div>
     </>

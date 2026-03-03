@@ -684,7 +684,7 @@ export default function ReviewDispute() {
                     <span className="detail-label">RAISED BY</span>
                     <div className="detail-profile">
                     <span className="detail-value-address">
-                        <img src="/user.png" alt="Dispute Raiser" className="Job" />
+                        <img src="/user.svg" alt="Dispute Raiser" className="Job" />
                         <p title={jobData.raiser}>{formatAddress(jobData.raiser)}</p>
                     </span>
                     <a href={`/profile/${jobData.raiser}`} className="view-profile">

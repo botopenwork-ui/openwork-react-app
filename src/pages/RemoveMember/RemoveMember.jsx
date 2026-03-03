@@ -219,7 +219,7 @@ export default function RemoveMember() {
           </div>
           <div className="release-payment-body payment-history-body">
                 <div className="remove-address">
-                    <img src="/user.png" alt="" />
+                    <img src="/user.svg" alt="" />
                     <span>—</span>
                 </div>
                 <DropDown label={SKILLITEMS[0]} options={SKILLITEMS} customCSS={'form-dropdown profile-dropdown'}/>

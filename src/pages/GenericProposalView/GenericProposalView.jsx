@@ -216,7 +216,7 @@ const GenericProposalView = () => {
           <span className="genericSectionLabel">PROPOSED BY</span>
           <div className="genericProposerInfo">
             <div className="genericProposerLeft">
-              <img src="/avatar-profile.png" alt="Proposer" className="genericProposerAvatar" />
+              <img src="/avatar-profile.svg" alt="Proposer" className="genericProposerAvatar" />
               <span className="genericProposerName">
                 {proposal.proposer.startsWith('0x') 
                   ? `${proposal.proposer.substring(0, 6)}...${proposal.proposer.substring(38)}`

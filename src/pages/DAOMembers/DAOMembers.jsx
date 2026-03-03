@@ -132,7 +132,7 @@ export default function DAOMembers() {
             const allColumnData = {
                 memberName: (
                     <div className="member-name">
-                        <img src="/avatar-profile.png" alt="User Icon" className="userIcon" />
+                        <img src="/avatar-profile.svg" alt="User Icon" className="userIcon" />
                         <span title={member.address}>
                             {isRealData ? formatAddress(member.address) : member.name}
                         </span>

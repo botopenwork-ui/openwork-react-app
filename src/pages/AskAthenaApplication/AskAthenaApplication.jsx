@@ -544,7 +544,7 @@ export default function AskAthenaApplication() {
                     <span className="detail-label">ASKED BY</span>
                     <div className="detail-profile">
                     <span className="detail-value-address">
-                        <img src="/user.png" alt="Applicant" className="Job" />
+                        <img src="/user.svg" alt="Applicant" className="Job" />
                         <p title={appData.applicant}>{formatAddress(appData.applicant)}</p>
                     </span>
                     <a href={`/profile/${appData.applicant}`} className="view-profile">

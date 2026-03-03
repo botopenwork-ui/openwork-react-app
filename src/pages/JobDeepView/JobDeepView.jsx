@@ -496,7 +496,7 @@ export default function JobInfo() {
                 <span className="detail-label">FROM</span>
                 <div className="detail-profile">
                   <span className="detail-value-address">
-                    <img src="/user.png" alt="JobGiver" className="Job" />
+                    <img src="/user.svg" alt="JobGiver" className="Job" />
                     <p>{formatWalletAddress(job.jobGiver)}</p>
                   </span>
                   <a href="/profile" className="view-profile">
@@ -512,7 +512,7 @@ export default function JobInfo() {
                     className="detail-value-address"
                     style={{ height: "47px" }}
                   >
-                    <img src="/user.png" alt="JobTaker" className="Job" />
+                    <img src="/user.svg" alt="JobTaker" className="Job" />
                     <p>
                       {job.selectedApplicant &&
                       job.selectedApplicant !==

@@ -98,7 +98,7 @@ const TreasuryProposalView = () => {
           <span className="sectionLabel">PROPOSED BY</span>
           <div className="proposerInfo">
             <div className="proposerLeft">
-              <img src="/avatar-profile.png" alt="Proposer" className="proposerAvatar" />
+              <img src="/avatar-profile.svg" alt="Proposer" className="proposerAvatar" />
               <span className="proposerName">{proposal.proposer.substring(0, 6)}...{proposal.proposer.substring(38)}</span>
             </div>
             <button className="viewProfileButton">
