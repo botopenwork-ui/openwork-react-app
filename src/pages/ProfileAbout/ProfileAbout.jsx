@@ -4,10 +4,12 @@ import Web3 from "web3";
 import L1ABI from "../../L1ABI.json";
 import "./ProfileAbout.css";
 import SkillBox from "../../components/SkillBox/SkillBox";
+import { useWalletConnection } from "../../functions/useWalletConnection";
 
 
 export default function ProfileAbout() {
     const { jobId } = useParams();
+    const { walletAddress } = useWalletConnection();
   
     const handleCopyToClipboard = (address) => {
       navigator.clipboard

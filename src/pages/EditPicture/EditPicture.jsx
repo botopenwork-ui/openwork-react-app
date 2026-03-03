@@ -5,18 +5,26 @@ import SkillBox from "../../components/SkillBox/SkillBox";
 import BackButtonProposal from "../../components/BackButtonProposal/BackButtonProposal";
 import BlueButton from "../../components/BlueButton/BlueButton";
 import Button from "../../components/Button/Button";
+import { useWalletConnection } from "../../functions/useWalletConnection";
 
 export default function EditPicture() {
     const navigate = useNavigate();
+    const { walletAddress } = useWalletConnection();
+
+    function formatWalletAddress(address) {
+        if (!address) return "";
+        return `${address.substring(0, 6)}....${address.substring(address.length - 4)}`;
+    }
+
     const [formData, setFormData] = useState({
-        username: formatWalletAddress(walletAddress) || "",
-        firstName: "Mollie",
-        lastName: "Hall",
-        location: "Melbourne, Australia",
-        languages: "English, Hindi",
-        experience: "4 Years",
-        hourlyRate: "76",
-        bio: "I'm a Product Designer based in Melbourne, Australia. I enjoy working on product design, design systems, and Webflow projects, but I don't take myself too seriously."
+        username: "",
+        firstName: "",
+        lastName: "",
+        location: "",
+        languages: "",
+        experience: "",
+        hourlyRate: "",
+        bio: ""
     });
 
     const SKILLITEMS = [

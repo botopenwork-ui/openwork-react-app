@@ -2,8 +2,15 @@ import React, { useState } from "react";
 import ProfilePackagesHeader from "../../components/ProfilePackagesHeader/ProfilePackagesHeader";
 import ProfilePackagesTable from "../../components/ProfilePackagesTable/ProfilePackagesTable";
 import "./ProfilePackages.css";
+import { useWalletConnection } from "../../functions/useWalletConnection";
 
 export default function ProfilePackages() {
+    const { walletAddress } = useWalletConnection();
+
+    function formatWalletAddress(address) {
+        if (!address) return '';
+        return `${address.substring(0, 6)}....${address.substring(address.length - 4)}`;
+    }
     const [currentPage, setCurrentPage] = useState(1);
     const packagesPerPage = 4; // Number of packages per page
     
