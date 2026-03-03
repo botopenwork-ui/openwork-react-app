@@ -411,6 +411,24 @@ export async function getAllDAOMembers(forceRefresh = false) {
     // Combine and get unique addresses
     const allAddresses = [...new Set([...nativeStakers, ...mainStakers])];
 
+    // Fetch all proposal IDs and count per proposer
+    let proposalCountByAddress = {};
+    try {
+      const proposalResult = await nativeDAOContract.methods.getAllProposalIds().call();
+      const proposalIds = Array.isArray(proposalResult[0]) ? proposalResult[0] : (proposalResult[0] ? [proposalResult[0]] : []);
+      const proposers = await Promise.all(
+        proposalIds.map(id => nativeDAOContract.methods.proposalProposer(id).call().catch(() => null))
+      );
+      proposers.forEach(p => {
+        if (p) {
+          const key = p.toLowerCase();
+          proposalCountByAddress[key] = (proposalCountByAddress[key] || 0) + 1;
+        }
+      });
+    } catch (e) {
+      console.warn('Could not fetch proposal counts:', e.message);
+    }
+
     // Fetch data for each member
     const memberData = await Promise.all(
       allAddresses.map(async (address) => {

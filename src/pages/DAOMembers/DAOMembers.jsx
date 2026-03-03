@@ -140,7 +140,7 @@ export default function DAOMembers() {
                 ),
                 proposalsCreated: (
                     <div className="proposals-created">
-                        <span>{isRealData ? "N/A" : member.proposalsCreated}</span>
+                        <span>{isRealData ? (member.proposalsCreated ?? 0) : member.proposalsCreated}</span>
                     </div>
                 ),
                 proposalsVoted: (
