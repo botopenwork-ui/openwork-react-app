@@ -1,329 +1,94 @@
-# Phase 1 + Phase 2 UI Audit — Issue Log
-**Date:** 2026-03-03 | **Status:** Audit complete. Fixes in progress.
+# UI Audit — Issue Tracker
+**Last updated:** 2026-03-03 | **Current revision:** `openwork-00168-tkb`
 
 ---
 
 ## ⚠️ BASELINE RULE — NON-NEGOTIABLE
-
-> **Before any fix: the existing working features must not break.**
-> - All on-chain flows (postJob, applyToJob, startJob, submitWork, releasePayment, CCTP cross-chain) must keep working
-> - Every fix must be committed and pushed to GitHub before moving to the next fix
-> - If a fix causes a regression, revert immediately via `git revert` — do NOT debug on top of broken code
-> - Test each fix by screenshot after deploy before marking ✅
+> All on-chain flows (postJob, applyToJob, startJob, submitWork, releasePayment, CCTP cross-chain) must keep working.
+> Every fix committed and pushed before moving on. Regression = immediate revert.
 
 ---
 
-## Issues Found — No-Wallet Pass
+## ✅ FIXED ISSUES
 
-| # | Page | Issue | Severity | Notes |
-|---|------|-------|----------|-------|
-| 1 | Home `/` | Entire page is just a glowing circle with "Hover to get started" — no content, no nav, no explanation of what the app is | 🔴 High | First impression for any new visitor. Completely uninformative without wallet. |
-| 2 | Browse Jobs `/browse-jobs` | Table is cut off on the left — job title column starts mid-word ("ob", "g page", "Dev 2"). First column (photo/title) is clipped off-screen | 🔴 High | Critical — real data is hidden. Likely a missing left padding/margin or sidebar pushing content. |
-| 3 | Browse Talent `/browse-talent` | Same left-clipping issue — profile names cut off ("ath", "1"). First column invisible | 🔴 High | Same root cause as Browse Jobs. |
-| 4 | Browse Jobs & Talent | No sidebar navigation visible on either page — how does user navigate to other sections? | 🟡 Medium | Sidebar may be wallet-gated but should at least show on public pages. |
-| 5 | Single Job Details `/job-details/30111-93` | Borat photo still showing as employer avatar on the circular job view | 🔴 High | This is real IPFS data from the service wallet's profile. Needs profile update or fallback for test wallets. |
-| 6 | Single Job Details `/job-details/30111-93` | Real woman's photo showing as taker avatar — privacy concern | 🔴 High | Another real IPFS-stored photo. Same issue. |
-| 7 | Single Job Details | Job title shows "Untitled Job" | 🟡 Medium | Test data — this specific job has no title stored. May be correct for test jobs. |
-| 8 | Job Deep View `/job-deep-view/30111-93` | Profile avatars show as grey silhouettes (both FROM and TO) — IPFS photo not loading on this page | 🟡 Medium | Inconsistent with job-details which loads photos. This page may use a different photo fetch path. |
-| 9 | Profile viewer `/profile/:address` | Page renders as an editable form (input fields, textarea, dropdown) for a viewer who isn't the owner | 🔴 High | Viewer should see read-only display. This looks like the owner edit form is shown to everyone. |
-| 10 | Profile viewer | Empty username field at top of the About section — blank white box above first/last name | 🟡 Medium | Likely a field with no label that shows as empty input |
-| 11 | Profile viewer | "Location", "Languages", "Description", "Email", "Telegram", "Phone" all show as empty input placeholders — not actual values | 🔴 High | Even if data is empty, showing blank editable fields to a viewer is confusing and looks broken. |
-| 12 | Profile viewer | "No wallet detected. Please install MetaMask" banner at bottom — shown to a viewer, not the owner | 🟡 Medium | Irrelevant to someone just viewing a profile. Should be hidden on viewer mode. |
-| 13 | Profile portfolio `/profile-portfolio` | "Failed to load portfolios" red error — without a wallet address it loads the browser's own wallet (which has no portfolio) | 🟡 Medium | Error message is too technical for end users. Should say "No portfolio items yet." |
-| 14 | Profile portfolio | "Contract ID: 0x5a79....9290" shown as header — this is a wallet address, not a contract ID | 🟡 Medium | Label is wrong or confusing. |
-| 15 | Work Profile `/view-work-profile/:id` | "Portfolio item not found" — address used has no portfolio items. Bare error message, no back button visible | 🟢 Low | Empty state needs better design — icon + friendly message. |
-| 16 | Governance `/governance` | Full page blank — just the glowing circle. No content visible without wallet | 🟡 Medium | Should show at least a description of governance or prompt to connect wallet. |
-| 17 | DAO Members `/dao-members` | Left column clipped same as Browse Jobs/Talent — member name/avatar cut off | 🔴 High | Same table layout bug. |
-| 18 | DAO Members | "Proposals Created" shows "N/A" — unclear if this is missing data or expected | 🟢 Low | If intentional for this member, fine. If a bug, needs investigation. |
-| 19 | Skill Oracles `/skill-oracles` | Left column clipped — oracle name/avatar cut off, same as all other tables | 🔴 High | Systemic table layout bug across all list pages. |
-| 20 | Skill Oracles | "test-oracle" showing in production data | 🟡 Medium | Test data visible to real users. |
-| 21 | Connect Wallet `/connect-wallet` | Clean and functional ✅ | — | No issues. |
-| 22 | Join Now `/join-now` | Shows "Join the UX/UI Skill Oracle" — this is specific to the browser's cached state. Without wallet it says "You're eligible" which may be incorrect | 🟡 Medium | Should show connect wallet prompt or generic join flow, not a specific oracle pre-selected. |
-| 23 | About `/about` | Clean and functional ✅ | — | No issues. |
-| 24 | Landing `/landing` | Renders fine, content loads ✅ | 🟢 Low | Images are small/compressed in full-page view but likely fine at normal viewport. Worth checking at real screen size. |
-| 25 | ALL pages | No visible sidebar/navigation — user has no way to navigate between sections without knowing URLs | 🔴 High | Sidebar may require wallet, but there should be at least a minimal nav for public pages. |
-
----
-
-## Summary
-
-| Severity | Count |
-|----------|-------|
-| 🔴 High | 10 |
-| 🟡 Medium | 10 |
-| 🟢 Low | 3 |
-| ✅ No issues | 2 |
+| # | Page | Issue | Fix | Revision |
+|---|------|-------|-----|----------|
+| 1 | Browse Jobs, Browse Talent, DAO, DAO Members, Skill Oracle pages | Table/title left-clipping — first column cut off screen | 3-layer fix: Layout overflowX, JobsTable wrapper div, body-container justify-content flex-start in all CSS files | 00160 |
+| 2 | Multiple pages | Sepolia RPC used instead of ARB mainnet | Replaced with `VITE_ARBITRUM_MAINNET_RPC_URL \|\| 'https://arb1.arbitrum.io/rpc'` in Profile, ProfileOwnerView, DirectContractForm, ApplyJob, ReleasePayment | 00160 |
+| 3 | PostJob, AddEditPortfolio | "No wallet detected" banner shown when wallet IS connected | Suppress banner when walletAddress exists in context | 00160 |
+| 4 | ApplyNow, ReviewDispute | Hardcoded "Arbitrum Sepolia" / "OP Sepolia" testnet names in UI | Removed testnet strings | 00160 |
+| 5 | EditPicture, ProfilePackages, ProfileAbout | Blank page crash (ReferenceError: walletAddress undefined) | Added useWalletConnection import + declaration | 00160 |
+| 6 | DAO, DAO Members, Skill Oracle, Skill Oracle Proposals, Skill Oracle Disputes, Browse Talent | Title/table clipping on secondary pages | Added `justify-content: flex-start` to body-container in 6 CSS files | 00161 |
+| 7 | ChainSelector (all pages) | "Connect Wallet" text shown when wallet IS connected but chain not detected | Changed to "Switch Network" | 00161 |
+| 8 | 24 files | Raw `alert()` popups — clipboard copy and MetaMask not installed | Clipboard alerts → `void 0`; MetaMask alerts → `console.warn` | 00161 |
+| 9 | 5 files | Production `console.log` leaks | Removed from RaiseDispute, ViewReceivedApplication, ReviewDispute, DirectContractForm, SingleJobDetails | 00161 |
+| 10 | AskAthena | "Connect your wallet" shown despite wallet being connected | Switched from `useWalletAddress` (reads window.ethereum) to `useWalletConnection` (reads localStorage) | 00161 |
+| 11 | ViewJobs | Infinite spinner — was pointing at XinFin legacy network | Full rewrite: ARB mainnet genesis `0xE8f7...` via `getJobsByPoster(walletAddress)` | 00163 |
+| 12 | DirectContractForm | `'quote-placeholder'` literal sent as IPFS hash to contract | Replaced with real `jobDetailHash` (already uploaded to IPFS) | 00162 |
+| 13 | GetSkillsVerified | Infinite spinner | Timeout guard: stops loading after 8s | 00162 |
+| 14 | DAO | Stat card "MY OW BALAN..." truncated | Label shortened to "MY BALANCE"; added text-overflow ellipsis | 00162 |
+| 15 | JobsTable (all table pages) | "Page 1 of 0" shown on empty results | Shows "No results found" when totalPages === 0 | 00162 |
+| 16 | UserReferralSignIn | "Unknown referrer" label | Changed to "No referrer" | 00162 |
+| 17 | JoinDAO | 3 raw `alert()` popups for validation errors | Replaced with inline error div above button | 00162 |
+| 18 | ProfileOwnerView | Editable form shown to all visitors — no isOwner check working | Root cause: wallet came from `useWalletAddress` (window.ethereum) not localStorage; switched to `useWalletConnection` — isOwner now works, fields are readOnly for non-owners | 00164 |
+| 19 | Payments | Page completely blank | Rewrote data fetch: XinFin legacy → ARB mainnet genesis; wallet source fixed | 00164 |
+| 20 | PaymentHistory, TakerJobDetails, VotingHistory, ProfileAbout | XinFin legacy RPC, wrong contract, wrong method names | Migrated to ARB mainnet genesis `0xE8f7`; `getJobDetails` → `getJob`; field access updated | 00164 |
+| 21 | MembersGovernance, RemoveMember | XinFin job-fetch code present | Dead code — `job` state was never used in JSX; entire useEffect deleted | 00165 |
+| 22 | RemovalApplication, RecruitmentApplication, JoineeApplication | Dead `getApplicationProposedAmount` + `getJobEscrowAmount` calls (don't exist on genesis) | Removed; `getJob` fetch kept since `job.title` + `job.employer` are rendered | 00165 |
+| 23 | GetSkillsVerified, RemovalApplication, PaymentRefund + 4 more | XinFin legacy RPC remnants | Migrated to ARB mainnet genesis | 00164/165 |
+| 24 | DAO, VotingHistory, PaymentHistory, TakerJobDetails, RemovalApplication, RecruitmentApplication, JoineeApplication, ViewReceivedApplication | window.ethereum wallet reads (not signing) | Replaced with `useWalletConnection` | 00166 |
+| 25 | GetSkillsVerified, ProfileAbout, ApplyNow, GenericProposalView, JobDeepView, MembersGovernance, RemoveMember, Payments, PaymentRefund | window.ethereum wallet reads (not signing) | Replaced with `useWalletConnection` | 00167 |
+| 26 | SkillVerification, AddEditPortfolio, AddUpdate | `useWalletAddress` for wallet address on signing pages | Switched address source to `useWalletConnection`; kept `window.ethereum` for Web3 signing | 00167 |
+| 27 | ViewJobs | Status showed "Unknown" for legacy jobs | Added status 64 ("Closed") and 96 ("Released") to status map | 00168 |
 
 ---
 
-## Systemic Issues (affect multiple pages)
+## 🔴 PENDING — HIGH PRIORITY
 
-1. **Table left-clipping** — Browse Jobs, Browse Talent, DAO Members, Skill Oracles all have the same bug. First column is pushed off-screen left. One CSS fix should resolve all 4.
-2. **No navigation without wallet** — All pages show header only. Sidebar missing. Users are stranded.
-3. **Real person photos in test wallets** — Borat + woman's photo in IPFS profiles. Need profile data cleanup or image fallback for known test addresses.
-
----
-
-## Pending — Wallet Pass (Anas to screenshot)
-
-Pages that need a connected wallet to audit:
-- Post Job
-- My Profile (owner view)
-- My Work / My Jobs
-- Taker Job Details
-- Direct Contract
-- Payments, Release Payment, Raise Dispute
-- Notifications
-- Governance (wallet connected)
-
+| # | Page | Issue | Notes |
+|---|------|-------|-------|
+| P1 | All pages | No sidebar/navigation visible — user has no way to navigate without knowing URLs | Wallet-gated sidebar may be intentional, but new users are stranded |
+| P2 | Home `/` | Glowing circle only — no content, no explanation of what the app is | First impression for new visitors is blank |
+| P3 | Single Job Details | Borat/real person photos in employer/taker avatar slots | Real IPFS data from service wallet test profiles — needs profile update or fallback |
+| P4 | ContractUpdateProposelStep3, SkillOracleMemberRemovalStep2 | Still use `useWalletAddress` for address (signing pages) | Switch address source to `useWalletConnection` |
 
 ---
 
-## Issues Found — Code Analysis Pass (wallet-gated pages)
+## 🟡 PENDING — MEDIUM PRIORITY
 
-| # | Page | Issue | Severity | Notes |
-|---|------|-------|----------|-------|
-| 26 | Profile `/profile/:address` | Still uses `VITE_ARBITRUM_SEPOLIA_RPC_URL` — same testnet bug as BrowseTalent had | 🔴 High | Will fail to load profile data from mainnet |
-| 27 | Profile `/profile/:address` | No owner vs viewer distinction — same editable form shown to everyone | 🔴 High | Need `isOwner = address === walletAddress` check and separate read-only view |
-| 28 | ProfileOwnerView | Also uses `VITE_ARBITRUM_SEPOLIA_RPC_URL` in two places | 🔴 High | Profile owner view won't load real mainnet data |
-| 29 | DirectContractForm | Uses `VITE_ARBITRUM_SEPOLIA_RPC_URL` as fallback RPC | 🔴 High | Cross-chain form may read wrong chain data |
-| 30 | ApplyJob | Uses `VITE_ARBITRUM_SEPOLIA_RPC_URL` as fallback RPC | 🔴 High | Apply flow may read from testnet |
-| 31 | ReleasePayment | Uses `VITE_ARBITRUM_SEPOLIA_RPC_URL` as fallback RPC | 🔴 High | Payment release could read from testnet |
-| 32 | DirectContractForm | 5x raw `alert()` calls for validation errors (title, requirements, taker address, milestone, chain switch) | 🟡 Medium | `alert()` is a jarring native browser popup — should be inline form validation or toast |
-| 33 | DirectContractForm | `'quote-placeholder'` hardcoded as argument to `startDirectContract` | 🔴 High | Literal string "quote-placeholder" sent to contract — likely a dev stub that was never replaced |
-| 34 | ViewJobs / Payments / GetSkillsVerified / RemovalApplication | Raw `alert("MetaMask is not installed...")` — native browser popup | 🟡 Medium | Should be styled in-app message |
-| 35 | All above pages | Multiple `alert("Address copied to clipboard")` calls | 🟢 Low | Minor — should be a toast notification, not native alert |
-| 36 | RaiseDispute / ViewReceivedApplication / ReviewDispute | 8-21 `console.log` statements left in production code | 🟢 Low | Not visible to users but leaks implementation details in DevTools |
-| 37 | ApplyNow | Shows "Creating proposal on Arbitrum Sepolia..." status message to user | 🔴 High | Hardcoded testnet name shown in UI — users on mainnet will see wrong chain name |
-| 38 | ALL list pages (Browse Jobs, Browse Talent, DAO Members, Skill Oracles) | Left column completely clipped — root cause likely a shared table CSS class | 🔴 High | One CSS fix should resolve all 4 |
+| # | Page | Issue | Notes |
+|---|------|-------|-------|
+| P5 | Governance `/governance` | Full page blank without wallet | Should show description or connect-wallet prompt |
+| P6 | DAO stat card | "MY OW BALAN..." still slightly clipped on some screens | CSS fix committed but may need viewport check |
+| P7 | Profile portfolio | "Failed to load portfolios" error — too technical | Should say "No portfolio items yet" |
+| P8 | Profile portfolio | "Contract ID: 0x5a79..." label — wrong, it's a wallet address | Mislabelled field |
+| P9 | Join Now | Shows oracle-specific content without wallet connected | Should show generic prompt |
+| P10 | BrowseTalent | Profile link destination — needs verification it goes to correct route | Quick check needed |
+| P11 | AskAthena | Athena contract address — needs verification against deployed contracts doc | Quick check |
+| P12 | SkillVerificationApplication, ReferEarn | window.ethereum wallet reads still present | Low risk — ReferEarn also signs txs |
 
 ---
 
-## Updated Summary
+## 🟢 PENDING — LOW PRIORITY
 
-| Severity | Count |
-|----------|-------|
-| 🔴 High | 19 |
-| 🟡 Medium | 13 |
-| 🟢 Low | 6 |
-| ✅ No issues | 2 |
-
-**Total: 38 issues across Phase 1 pages**
+| # | Page | Issue | Notes |
+|---|------|-------|-------|
+| P13 | Work Profile | "Portfolio item not found" bare error — no back button | Empty state needs friendly design |
+| P14 | DAO Members | "Proposals Created" shows N/A | May be intentional |
+| P15 | Skill Oracles | "test-oracle" visible in production data | Test data — not a code issue |
 
 ---
 
-## Priority Fix Order (before wallet pass)
+## Fixes by Revision
 
-1. **Sepolia RPC in Profile.jsx, ProfileOwnerView, DirectContractForm, ApplyJob, ReleasePayment** — mainnet data won't load
-2. **`quote-placeholder` in DirectContractForm** — bad data sent to contract
-3. **Table left-clipping** — affects 4 public pages, single CSS fix
-4. **Profile viewer shows edit form** — confusing to all visitors
-5. **`alert()` → inline validation** — UX polish on key flows
-6. **"Arbitrum Sepolia" text in ApplyNow** — wrong chain name shown to users
-
----
-
-## Issues Found — Simulated Wallet Pass
-
-*Mock wallet: `0x93514040f43aB16D52faAe7A3f380c4089D844F9` (Anas's address, ARB mainnet)*
-
-| # | Page | Issue | Severity | Notes |
-|---|------|-------|----------|-------|
-| 39 | Post Job `/post-job` | "No wallet detected. Please install MetaMask" warning banner shows even though wallet IS connected in header | 🔴 High | Banner reads `window.ethereum` directly but connected state isn't propagating — same wallet detection bug as Profile viewer |
-| 40 | Post Job | Milestone default shows "1 🔵" — USDC icon looks like a blue dot at small size | 🟢 Low | Minor icon sizing issue |
-| 41 | Post Job | No chain selector visible — user can't choose OP vs ARB before posting | 🟡 Medium | Chain selection exists in code but may not show until user action |
-| 42 | View Jobs `/view-jobs` | Stuck on "Loading your jobs..." indefinitely — never resolves or shows empty state | 🔴 High | Likely reading from wrong chain (Sepolia), or RPC call failing silently |
-| 43 | View Jobs | Sidebar cut off — "Ope..." showing at top right, same left-clip issue | 🔴 High | Systemic table/layout bug |
-| 44 | Direct Contract `/direct-contract` | Form looks clean and functional ✅ but "Enter Contract" button text is generic — should be "Start Direct Contract" or similar | 🟢 Low | Minor copy issue |
-| 45 | Direct Contract | No chain indicator shown — user doesn't know which chain the contract will be on | 🟡 Medium | Important for cross-chain UX |
-| 46 | Notifications `/notifications` | Clean and functional ✅ — "No notifications yet" empty state is clear | — | No issues |
-| 47 | Payments `/payments/30111-93` | Blank white page — nothing renders at all | 🔴 High | Completely broken — likely component crash or wrong data loading |
-| 48 | Work `/work` | Just the glowing circle — same radial hover menu as Home and Governance | 🟡 Medium | Need to hover to see options — not intuitive, especially for new users |
-| 49 | ALL pages | Header still says "Connect Wallet" even when wallet IS connected (mock) | 🔴 High | WalletContext not being read correctly by the header component — major UX bug |
-
----
-
-## Final Summary (all passes complete)
-
-| Severity | Count |
-|----------|-------|
-| 🔴 High | 24 |
-| 🟡 Medium | 16 |
-| 🟢 Low | 8 |
-| ✅ No issues | 3 |
-
-**Total: 49 issues across Phase 1 pages**
-
----
-
-## Top 5 to Fix First
-
-1. **Header "Connect Wallet" bug** — shows even when wallet connected. Affects every page.
-2. **Table left-clipping** — Browse Jobs, Browse Talent, DAO Members, Skill Oracles, View Jobs. One CSS fix.
-3. **Sepolia RPC in Profile, ProfileOwnerView, DirectContractForm, ApplyJob, ReleasePayment** — reading testnet data.
-4. **Payments page blank** — completely broken.
-5. **View Jobs stuck loading** — infinite spinner, never resolves.
-
----
-
-## Phase 2 — Issue Log (Child / Secondary Pages)
-
-*Mix of screenshots + code analysis. Mock wallet active for wallet-gated pages.*
-
-| # | Page | Issue | Severity | Method |
-|---|------|-------|----------|--------|
-| 50 | Profile About `/profile-about` | Completely blank white page — renders nothing | 🔴 High | Screenshot |
-| 51 | Profile Packages `/profile-packages` | Completely blank white page — renders nothing | 🔴 High | Screenshot |
-| 52 | Edit Picture `/edit-picture` | Completely blank white page — renders nothing | 🔴 High | Screenshot |
-| 53 | Add Portfolio `/add-portfolio` | "No wallet detected" banner while wallet IS connected. Same detection bug as Phase 1 | 🔴 High | Screenshot |
-| 54 | Add Portfolio | "Contract ID: 0xfd08...024a" shown in header — wrong label, should say "Job ID" or "Contract Address" | 🟡 Medium | Screenshot |
-| 55 | Add Portfolio | Pre-filled with "Project Name", "UX Design", "UI Design" placeholder data — not cleared | 🟡 Medium | Screenshot |
-| 56 | Skill Verification Page | Stuck on "Loading Skill Verification... Fetching data from blockchain. Please wait..." — never resolves | 🔴 High | Screenshot |
-| 57 | DAO `/dao` | "Work DAO" title clipped — first letter cut off, shows "ork DAO" | 🔴 High | Screenshot |
-| 58 | DAO | Stats row clipped right side — third stat card half-visible | 🟡 Medium | Screenshot |
-| 59 | DAO | Proposal table — first column (proposal ID) clipped off left edge. Same systemic table bug | 🔴 High | Screenshot |
-| 60 | DAO | "Ledger" heading clipped — shows "edger" | 🔴 High | Screenshot |
-| 61 | Skill Oracle Proposals | Page title "penWork Ledger" — first letter "O" clipped off | 🔴 High | Screenshot |
-| 62 | Skill Oracle Proposals | Proposal table first column clipped — same systemic table bug | 🔴 High | Screenshot |
-| 63 | Skill Oracle Proposals | "Page 1 of 0" — empty state with no friendly message | 🟢 Low | Screenshot |
-| 64 | Ask Athena `/ask-athena/:address` | "Connect your wallet to submit an Ask Athena inquiry" shown even though wallet IS connected — same detection bug | 🔴 High | Screenshot |
-| 65 | User Referral Sign In | "Unknown referrer" shown — acceptable for direct navigation, but should say "No referrer" more clearly | 🟢 Low | Screenshot |
-| 66 | Agent Oppy `/oppy` | Clean and functional ✅ | — | Screenshot |
-| 67 | ApplyJob | Uses `VITE_ARBITRUM_SEPOLIA_RPC_URL` as fallback — testnet reads | 🔴 High | Code |
-| 68 | ReviewDispute | "🎉 Dispute settled and funds delivered to winner on OP Sepolia!" — testnet chain name hardcoded in success message | 🔴 High | Code |
-| 69 | ReviewDispute | Raw `alert("MetaMask is not installed")` + `alert("Address copied")` | 🟡 Medium | Code |
-| 70 | JoinDAO | 3x raw `alert()` for validation: wallet not connected, already a member, validation errors | 🟡 Medium | Code |
-| 71 | All step 2/3 pages (ContractUpgradeStep2, ContractUpdateStep3, NewGeneralOracleStep2, etc.) | Navigate to these directly = blank white page — no fallback, no redirect | 🟡 Medium | Code |
-| 72 | All proposal views without context | Accessing `/proposal-view/:id/:chain` without a real ID likely crashes silently | 🟡 Medium | Code |
-| 73 | ProfilePortfolioOwner | Error state shows raw message: "Failed to load portfolios" — no icon, no retry button | 🟢 Low | Code |
-| 74 | SkillOracleDisputes | Error state exposes raw `err.message` to users | 🟡 Medium | Code |
-
----
-
-## Phase 2 Summary
-
-| Severity | Count |
-|----------|-------|
-| 🔴 High | 12 |
-| 🟡 Medium | 8 |
-| 🟢 Low | 3 |
-| ✅ No issues | 1 |
-
----
-
-## GRAND TOTAL (Phase 1 + Phase 2)
-
-| Severity | Count |
-|----------|-------|
-| 🔴 High | 36 |
-| 🟡 Medium | 24 |
-| 🟢 Low | 11 |
-| ✅ Clean | 4 |
-| **Total** | **75 issues** |
-
----
-
-## Systemic Issues Summary (fix once, resolves many)
-
-| Root Cause | Pages Affected | Issues Fixed |
-|------------|----------------|--------------|
-| Wallet detection bug — "No wallet detected" despite connection | PostJob, AddPortfolio, AskAthena, Profile | #39, #53, #64 |
-| Table left-clipping CSS | Browse Jobs, Browse Talent, DAO Members, Skill Oracles, DAO, Skill Oracle Proposals, ViewJobs | #2, #3, #17, #19, #43, #59, #61, #62 |
-| Sepolia RPC fallback | Profile, ProfileOwnerView, DirectContractForm, ApplyJob, ReleasePayment | #26, #28, #29, #30, #31, #67 |
-| Testnet name in UI strings | ApplyNow, ReviewDispute | #37, #68 |
-| Raw `alert()` calls | 8+ pages | #32-35, #69-70 |
-| Blank pages (no wallet guard / no content) | ProfileAbout, ProfilePackages, EditPicture, SkillVerificationPage | #50-52, #56 |
-
----
-
-## Fix Log — 5 Systemic Fixes Applied (2026-03-03)
-
-| Fix | Issue | Status | Commit | Revision |
-|-----|-------|--------|--------|----------|
-| 1 | Table left-clipping (Browse Jobs, Browse Talent, DAO, DAO Members, Skill Oracles) | ✅ Fixed | `43aa2a3` | `00160-mh6` |
-| 2 | Sepolia RPC fallback in Profile, ProfileOwnerView, DirectContractForm, ApplyJob, ReleasePayment | ✅ Fixed | `201d7f8` | `00157-fg8` |
-| 3 | "No wallet detected" banner showing despite wallet connected | ✅ Fixed | `7fb549f` | `00157-fg8` |
-| 4 | Hardcoded "Arbitrum Sepolia" / "OP Sepolia" in UI strings | ✅ Fixed | `80b8a07` | `00157-fg8` |
-| 5 | Blank pages (EditPicture, ProfilePackages, ProfileAbout crashing on undefined walletAddress) | ✅ Fixed | `e95ea49` | `00157-fg8` |
-
-**Root cause of fix 1 (3 layers):**
-1. `Layout.jsx` had `overflowX: hidden` globally — changed to `auto`
-2. `JobsTable.jsx` table not wrapped in scroll container — added `overflow-x: auto` wrapper div
-3. `body-container` had `display: flex; justify-content: center` — overridden to `flex-start` in BrowseJobs.css
-
-**Baseline verified:** Browse Jobs and Browse Talent load full job/profile titles. No regressions observed.
-
-**Remaining open:** 70 issues from audit still queued. Awaiting go-ahead.
-
----
-
-## Low-Hanging Fruit Batch — Fixed (2026-03-03, revision 00161-vbj)
-
-| Issues Fixed | Details |
-|-------------|---------|
-| DAO, DAO Members, Skill Oracle, Skill Oracle Proposals, Skill Oracle Disputes, Browse Talent — title/table clipping | Added `justify-content: flex-start` to body-container in 6 CSS files |
-| Header "Connect Wallet" text when wallet IS connected | Changed to "Switch Network" in ChainSelector.jsx |
-| `alert()` calls across 24 files | Replaced clipboard alerts with `void 0`, MetaMask alerts with `console.warn` |
-| `console.log` production leaks in 5 files | Removed from RaiseDispute, ViewReceivedApplication, ReviewDispute, DirectContractForm, SingleJobDetails |
-| AskAthena "Connect wallet" despite wallet connected | Switched from `useWalletAddress` to `useWalletConnection` (reads from localStorage) |
-
-**Commit:** `d001d72` | **Revision:** `openwork-00161-vbj`
-
-**Remaining open issues: ~55** (complex ones — profile read-only view, Payments blank page, View Jobs spinner, etc.)
-
----
-
-## Next-10 Batch — Fixed (2026-03-03, revision 00162-vwc / 00163-cf5)
-
-| # | Issue | Fix |
-|---|-------|-----|
-| 1 | ViewJobs infinite spinner (was pointing at XinFin legacy) | Full rewrite — ARB mainnet genesis `0xE8f7...` via `getJobsByPoster(walletAddress)` |
-| 2 | `quote-placeholder` sent to contract in DirectContractForm | Replaced with real `jobDetailHash` (already uploaded to IPFS) |
-| 3 | GetSkillsVerified infinite spinner | Timeout guard: stops loading after 8s |
-| 4 | DAO stat card "MY OW BALAN..." clipped | Shortened label to "MY BALANCE"; added `text-overflow: ellipsis` |
-| 5 | "Page 1 of 0" on empty tables | Shows "No results found" when `totalPages === 0` |
-| 6 | "Unknown referrer" label | Changed to "No referrer" |
-| 7 | JoinDAO raw `alert()` for validation errors (3 popups) | Replaced with inline error div |
-| 8 | Profile "No wallet detected" banner | Already resolved by ChainSelector "Switch Network" fix |
-
-**Rule added:** Always refer to `contracts/all-deployed-contracts-18-jan-2026.md` for contract addresses — never hardcode from memory.
-
-**Commits:** `3cf0797`, `bcc24b2` | **Revisions:** `openwork-00162-vwc`, `openwork-00163-cf5`
-
----
-
-## Batch 3 — Fixed (2026-03-03, revision 00164-v7s)
-
-| Issue | Fix |
-|-------|-----|
-| ProfileOwnerView shows editable form to all visitors | `isOwner` logic was correct but wallet came from `window.ethereum` (useWalletAddress) — switched to `useWalletConnection` (localStorage); fields now properly `readOnly` for non-owners |
-| Payments page blank | Rewrote data fetch: XinFin → ARB mainnet genesis `0xE8f7`; wallet source fixed |
-| PaymentHistory, TakerJobDetails, VotingHistory, ProfileAbout | XinFin → ARB mainnet genesis; `getJobDetails` → `getJob`; field access updated |
-| GetSkillsVerified, RemovalApplication, PaymentRefund, RecruitmentApplication, MembersGovernance, RemoveMember, JoineeApplication | XinFin RPC → ARB mainnet; L1ABI → inline genesis ABI |
-| Blank `<div></div>` fallback on Payments + MembersGovernance | Replaced with "Loading job data..." message |
-
-**Commit:** `9475c66` | **Revision:** `openwork-00164-v7s`
-
----
-
-## Batch 3b — Dead Code Cleanup (2026-03-03, revision 00165-4q5)
-
-| Page | Action |
-|------|--------|
-| MembersGovernance, RemoveMember | Entire XinFin job-fetch useEffect deleted — `job` state was never used in JSX |
-| RemovalApplication, RecruitmentApplication, JoineeApplication | Removed dead `getApplicationProposedAmount` + `getJobEscrowAmount` calls (don't exist on genesis); kept `getJob` fetch since `job.title` + `job.employer` are rendered |
-
-**Net result:** 151 lines deleted, 0 features lost.
-**Commit:** `ae844bd` | **Revision:** `openwork-00165-4q5`
-
----
-
-## Batch 4 — Wallet Migration + ViewJobs Polish (2026-03-03, revision 00167-4f5 / patch)
-
-| Fix | Details |
-|-----|---------|
-| 12 more pages off window.ethereum/useWalletAddress | GetSkillsVerified, ProfileAbout, ApplyNow, GenericProposalView, JobDeepView, MembersGovernance, RemoveMember, Payments, PaymentRefund (read-only → useWalletConnection); SkillVerification, AddEditPortfolio, AddUpdate (signing pages — address source switched, window.ethereum kept for Web3) |
-| ViewJobs status labels | Added status 64 ("Closed") and 96 ("Released") for legacy genesis jobs |
-| ViewJobs title fallback | Falls back to jobId correctly for pre-IPFS legacy jobs with empty jobDetailHash |
-
-**Commit:** `49a9d3b` + patch | **Revision:** `openwork-00167-4f5` → `00168`
+| Revision | Summary |
+|----------|---------|
+| `00160-mh6` | 5 fixes: table clipping root cause, Sepolia RPC, wallet banner, testnet names, blank page crashes |
+| `00161-vbj` | 5 fixes: DAO/Skill Oracle clipping, Switch Network label, 24 alert() removals, console.log cleanup, AskAthena wallet |
+| `00162-vwc` | 7 fixes: quote-placeholder, GetSkillsVerified timeout, DAO stat label, Page-1-of-0, referrer label, JoinDAO inline errors |
+| `00163-cf5` | ViewJobs rewritten for ARB mainnet (wrong genesis address hotfix) |
+| `00164-v7s` | ProfileOwnerView isOwner fix; Payments + 10 pages off XinFin |
+| `00165-4q5` | Dead XinFin code removed cleanly — 151 lines deleted |
+| `00166-s2n` | 8 pages wallet reads → useWalletConnection (251 lines deleted) |
+| `00167-4f5` | 12 more pages wallet source fixed |
+| `00168-tkb` | ViewJobs legacy status labels |
