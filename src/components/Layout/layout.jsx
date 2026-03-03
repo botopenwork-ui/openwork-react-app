@@ -7,7 +7,7 @@ export function Layout({ children }) {
     const { walletAddress } = useWalletConnection();
     
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', overflowX: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', overflowX: 'auto' }}>
             {walletAddress && walletAddress.length > 0 && (
                 <ChainSelector key={walletAddress} walletAddress={walletAddress} />
             )}
