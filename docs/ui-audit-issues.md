@@ -72,7 +72,6 @@
 | P16 | DAO page | Table content not centered — toolbar buttons (Table Columns/Filter/+New Proposal) are centered but table headers/rows are left-aligned; visual mismatch | Noted from screenshot |
 | P13 | Work Profile | "Portfolio item not found" bare error — no back button | Empty state needs friendly design |
 | P14 | DAO Members | "Proposals Created" shows N/A | May be intentional |
-| P15 | Skill Oracles | "test-oracle" visible in production data | Test data — not a code issue |
 
 ---
 

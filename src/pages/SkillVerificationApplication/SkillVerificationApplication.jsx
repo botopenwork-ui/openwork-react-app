@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useWalletConnection } from "../../functions/useWalletConnection";
 import { useParams, Link } from "react-router-dom";
 import Web3 from "web3";
 import GenesisABI from "../../ABIs/genesis_ABI.json";
@@ -53,13 +54,13 @@ function ATTACHMENTS({title, url}) {
   }
 
 export default function SkillVerificationApplication() {
+  const { walletAddress } = useWalletConnection();
   const { jobId } = useParams(); // jobId is actually applicationId from the route
   const applicationId = jobId;
 
   const [appData, setAppData] = useState(null);
   const [voters, setVoters] = useState([]);
   const [ipfsData, setIpfsData] = useState(null);
-  const [walletAddress, setWalletAddress] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadingT, setLoadingT] = useState("");
   const [hasVoted, setHasVoted] = useState(false);
@@ -80,24 +81,6 @@ export default function SkillVerificationApplication() {
   };
 
   // Check if user is already connected to MetaMask
-  useEffect(() => {
-    const checkWalletConnection = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({
-            method: "eth_accounts",
-          });
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-          }
-        } catch (error) {
-          console.error("Failed to check wallet connection:", error);
-        }
-      }
-    };
-
-    checkWalletConnection();
-  }, []);
 
   // Check if current wallet has voted
   useEffect(() => {

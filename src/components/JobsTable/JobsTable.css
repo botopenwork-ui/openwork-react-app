@@ -337,7 +337,7 @@
   }
 
   .filter-section {
-    padding: 0px 49px;
+    padding: 0px 24px;
     display: flex;
     align-items: center;
     gap: 24px;
@@ -384,6 +384,10 @@
   }
 
   .box-title span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 140px;
     color: var(--Gray-Dark, #767676);
     color: var(--Gray-Dark, color(display-p3 0.463 0.463 0.463));
     text-align: center;

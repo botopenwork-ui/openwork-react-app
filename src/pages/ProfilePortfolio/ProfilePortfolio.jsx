@@ -72,7 +72,7 @@ export default function ProfilePortfolio() {
           <div className="titleText">{formatWalletAddress(walletAddress)}</div>
         </div>
         <div className="titleBottom">
-          <p>Contract ID: {formatWalletAddress(walletAddress)}</p>
+          <p>Wallet: {formatWalletAddress(walletAddress)}</p>
           <img 
             src="/copy.svg" 
             className="copyImage" 
@@ -125,8 +125,16 @@ export default function ProfilePortfolio() {
           </div>
         )}
 
+        {/* Empty state */}
+        {!loading && portfolioItems.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '60px 40px', color: '#868686' }}>
+            <img src="/user.svg" alt="" style={{ width: '48px', opacity: 0.3, marginBottom: '16px' }} />
+            <p style={{ fontSize: '16px' }}>No portfolio items yet.</p>
+          </div>
+        )}
+
         {/* Portfolio Grid */}
-        {!loading && (
+        {!loading && portfolioItems.length > 0 && (
           <div className="portfolio-grid">
             {portfolioItems.map((item) => (
             <div key={item.id} className="portfolio-card">

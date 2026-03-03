@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useWalletConnection } from "../../functions/useWalletConnection";
 import { useNavigate } from "react-router-dom";
 import Web3 from "web3";
 import "./ReferEarn.css";
@@ -37,12 +38,12 @@ const POLL_INTERVAL_MS = 15000;
 const MAX_POLL_DURATION_MS = 300000;
 
 export default function ReferEarn() {
+  const { walletAddress } = useWalletConnection();
   const navigate = useNavigate();
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
 
   // Wallet state
-  const [walletAddress, setWalletAddress] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
 
   // Rewards state - Arbitrum (Native)
@@ -113,12 +114,7 @@ export default function ReferEarn() {
 
   // Check for connected wallet on mount
   useEffect(() => {
-    const checkWallet = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-          if (accounts.length > 0) setWalletAddress(accounts[0]);
-        } catch (error) {
+    const checkWallet = async () => { catch (error) {
           console.error("Error checking wallet:", error);
         }
       }

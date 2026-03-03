@@ -195,6 +195,19 @@ export default function JoinNow() {
   };
 
 
+  if (!walletAddress) {
+    return (
+      <div className="form-containerDC">
+        <div className="form-header">
+          <BackButton to="/work" title="Join a Skill Oracle"/>
+        </div>
+        <div style={{ textAlign: 'center', padding: '60px 40px', color: '#6b7280' }}>
+          <p style={{ fontSize: '16px', marginBottom: '16px' }}>Connect your wallet to join a Skill Oracle.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="form-containerDC">

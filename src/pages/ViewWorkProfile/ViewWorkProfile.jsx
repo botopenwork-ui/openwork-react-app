@@ -55,8 +55,14 @@ export default function ViewWorkProfile() {
 
   if (!workData) {
     return (
-      <div style={{ textAlign: 'center', padding: '100px', color: '#868686' }}>
-        Portfolio item not found
+      <div style={{ textAlign: 'center', padding: '60px 40px', color: '#868686' }}>
+        <p style={{ fontSize: '16px', marginBottom: '20px' }}>Portfolio item not found.</p>
+        <button
+          onClick={() => window.history.back()}
+          style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontSize: '14px' }}
+        >
+          ← Go Back
+        </button>
       </div>
     );
   }
