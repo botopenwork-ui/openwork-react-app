@@ -269,7 +269,7 @@ export default function ReleasePayment() {
   const fetchFromIPFS = async (hash, timeout = 5000) => {
     const gateways = [
       `https://ipfs.io/ipfs/${hash}`,
-      `https://gateway.lighthouse.storage/ipfs/${hash}`,
+      `/api/ipfs/content/${hash}`,
       `https://dweb.link/ipfs/${hash}`,
       `https://w3s.link/ipfs/${hash}`
     ];

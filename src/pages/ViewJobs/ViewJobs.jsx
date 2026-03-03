@@ -117,7 +117,7 @@ export default function ViewJobs() {
 
   const fetchFromIPFS = async (hash) => {
     try {
-      const response = await fetch(`https://gateway.lighthouse.storage/ipfs/${hash}`);
+      const response = await fetch(`/api/ipfs/content/${hash}`);
 
       if (!response.ok) {
         throw new Error("Failed to fetch IPFS data");

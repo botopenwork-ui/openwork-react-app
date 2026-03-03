@@ -284,7 +284,7 @@ export default function AddUpdate() {
         let jobDetails = {};
         if (jobData.jobDetailHash) {
           try {
-            const response = await fetch(`https://gateway.lighthouse.storage/ipfs/${jobData.jobDetailHash}`);
+            const response = await fetch(`/api/ipfs/content/${jobData.jobDetailHash}`);
             jobDetails = await response.json();
           } catch (error) {
             console.warn("Failed to fetch job details from IPFS:", error);

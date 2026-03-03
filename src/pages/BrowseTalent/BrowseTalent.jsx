@@ -97,7 +97,7 @@ export default function BrowseTalent() {
                         
                         // Fetch profile data from IPFS with timeout
                         const response = await fetchWithTimeout(
-                            `https://gateway.lighthouse.storage/ipfs/${ipfsHash}`,
+                            `/api/ipfs/content/${ipfsHash}`,
                             8000 // 8 second timeout
                         );
                         
@@ -127,7 +127,7 @@ export default function BrowseTalent() {
                             experience: profileData.experience || 'N/A',
                             location: profileData.location || '',
                             profilePhoto: profileData.profilePhotoHash 
-                                ? `https://gateway.lighthouse.storage/ipfs/${profileData.profilePhotoHash}`
+                                ? `/api/ipfs/content/${profileData.profilePhotoHash}`
                                 : '/user.svg',
                             hourlyRate: profileData.hourlyRate || null
                         };

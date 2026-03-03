@@ -27,7 +27,7 @@ export default function WorkSubmission({title, date, content, image, attachments
                             {attachments.map((file, index) => (
                                 <a
                                     key={index}
-                                    href={`https://gateway.lighthouse.storage/ipfs/${file.ipfsHash}`}
+                                    href={`/api/ipfs/content/${file.ipfsHash}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="attachment-link"

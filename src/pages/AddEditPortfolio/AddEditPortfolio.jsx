@@ -283,7 +283,7 @@ export default function AddEditPortfolio() {
             <>
               <div className="addedit-main-image">
                 <img
-                  src={`https://gateway.lighthouse.storage/ipfs/${images[selectedImage]}`}
+                  src={`/api/ipfs/content/${images[selectedImage]}`}
                   alt="Work preview"
                 />
                 <div className="image-overlay-actions">
@@ -308,7 +308,7 @@ export default function AddEditPortfolio() {
                     className={`gallery-thumbnail ${selectedImage === index ? "active" : ""}`}
                     onClick={() => setSelectedImage(index)}
                   >
-                    <img src={`https://gateway.lighthouse.storage/ipfs/${image}`} alt={`Thumbnail ${index + 1}`} />
+                    <img src={`/api/ipfs/content/${image}`} alt={`Thumbnail ${index + 1}`} />
                   </div>
                 ))}
                 <div 

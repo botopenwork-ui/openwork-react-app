@@ -91,7 +91,7 @@ export default function Profile() {
           }
           
           // Fetch profile data from IPFS
-          const response = await fetch(`https://gateway.lighthouse.storage/ipfs/${ipfsHash}`);
+          const response = await fetch(`/api/ipfs/content/${ipfsHash}`);
           if (!response.ok) {
             throw new Error("Failed to fetch profile data from IPFS");
           }
@@ -244,7 +244,7 @@ export default function Profile() {
           <div className="core-profile">
             <img 
               src={profilePhotoHash 
-                ? `https://gateway.lighthouse.storage/ipfs/${profilePhotoHash}`
+                ? `/api/ipfs/content/${profilePhotoHash}`
                 : "/default-avatar.svg"
               } 
               alt="Profile"

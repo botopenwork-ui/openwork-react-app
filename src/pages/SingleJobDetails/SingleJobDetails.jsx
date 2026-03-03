@@ -166,7 +166,7 @@ export default function SingleJobDetails() {
             // Try multiple IPFS gateways in case of rate limiting
             const gateways = [
               `https://ipfs.io/ipfs/${jobData.jobDetailHash}`,
-              `https://gateway.lighthouse.storage/ipfs/${jobData.jobDetailHash}`,
+              `/api/ipfs/content/${jobData.jobDetailHash}`,
               `https://dweb.link/ipfs/${jobData.jobDetailHash}`,
               `https://w3s.link/ipfs/${jobData.jobDetailHash}`
             ];
@@ -310,7 +310,7 @@ export default function SingleJobDetails() {
 
   const fetchFromIPFS = async (hash) => {
     try {
-      const response = await fetch(`https://gateway.lighthouse.storage/ipfs/${hash}`);
+      const response = await fetch(`/api/ipfs/content/${hash}`);
       return await response.json();
     } catch (error) {
       console.error("Error fetching data from IPFS:", error);

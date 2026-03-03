@@ -255,7 +255,7 @@ export default function ReviewDispute() {
 
   const fetchFromIPFS = async (hash) => {
     try {
-      const response = await fetch(`https://gateway.lighthouse.storage/ipfs/${hash}`);
+      const response = await fetch(`/api/ipfs/content/${hash}`);
       return await response.json();
     } catch (error) {
       console.error("Error fetching data from IPFS:", error);

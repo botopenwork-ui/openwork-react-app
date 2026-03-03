@@ -227,7 +227,7 @@ export default function ProfileOwnerView() {
                 phone: phone,
                 profilePhotoHash: profilePhotoHash || "",
                 profilePhoto: profilePhotoHash 
-                    ? `https://gateway.lighthouse.storage/ipfs/${profilePhotoHash}` 
+                    ? `/api/ipfs/content/${profilePhotoHash}` 
                     : "/default-avatar.svg",
                 createdFromChain: chainConfig?.name,
                 createdFromChainId: chainId
@@ -410,7 +410,7 @@ export default function ProfileOwnerView() {
                 }
                 
                 // Fetch profile data from IPFS
-                const response = await fetch(`https://gateway.lighthouse.storage/ipfs/${ipfsHash}`);
+                const response = await fetch(`/api/ipfs/content/${ipfsHash}`);
                 if (!response.ok) {
                     throw new Error("Failed to fetch profile data from IPFS");
                 }
@@ -528,7 +528,7 @@ export default function ProfileOwnerView() {
                             }}>
                                 <img 
                                     src={profilePhotoHash 
-                                        ? `https://gateway.lighthouse.storage/ipfs/${profilePhotoHash}` 
+                                        ? `/api/ipfs/content/${profilePhotoHash}` 
                                         : "/default-avatar.svg"
                                     } 
                                     alt="Profile"
