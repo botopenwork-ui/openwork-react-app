@@ -113,7 +113,7 @@ export default function ApplyNow() {
 
     try {
       setSubmitting(true);
-      setSubmitStatus("Creating proposal on Arbitrum Sepolia...");
+      setSubmitStatus("Creating proposal on Arbitrum...");
 
       const result = await createOracleMemberRecruitmentProposal({
         oracleName: selectedOracle,

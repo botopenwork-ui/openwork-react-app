@@ -492,11 +492,11 @@ export default function ReviewDispute() {
             if (statusData.status === 'polling_attestation') {
               setLoadingT("⏳ Backend: Polling Circle API for CCTP attestation...");
             } else if (statusData.status === 'executing_receive') {
-              setLoadingT("🔗 Backend: Executing receiveMessage() on OP Sepolia...");
+              setLoadingT("🔗 Backend: Executing receiveMessage() on Optimism...");
             } else if (statusData.status === 'completed') {
               clearInterval(pollInterval);
               setLoadingT("");
-              setSuccessMessage("🎉 Dispute settled and funds delivered to winner on OP Sepolia!");
+              setSuccessMessage("🎉 Dispute settled and funds delivered to winner!");
               
               setTimeout(() => {
                 window.location.reload();
