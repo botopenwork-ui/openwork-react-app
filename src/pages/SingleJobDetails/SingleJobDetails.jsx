@@ -508,7 +508,7 @@ export default function SingleJobDetails() {
               className="buttonImageS"
             />
             <img
-              src={`/${payHover ? "user1.png" : "user1.png"}`}
+              src="/user.svg"
               alt="Person Icon"
               className="buttonIconPS"
             />
@@ -580,7 +580,7 @@ export default function SingleJobDetails() {
               className="buttonImageS"
             />
             <img
-              src={`/${receiveHover ? "user.png" : "user.png"}`}
+              src="/user.svg"
               alt="Person Icon"
               className="buttonIconPS"
             />

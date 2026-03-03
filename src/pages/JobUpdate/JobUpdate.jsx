@@ -162,7 +162,7 @@ export default function JobUpdate() {
                 <>
                   <JobItem
                     key={index}
-                    icon={'user.png'}
+                    icon={'user.svg'}
                     inform={update.title || update.description || 'Work submission added'}
                     devName={formatWalletAddressH(job?.selectedApplicant || 'Worker')}
                     time={update.timestamp ? Math.floor((Date.now() - new Date(update.timestamp).getTime()) / 60000) : 0}
