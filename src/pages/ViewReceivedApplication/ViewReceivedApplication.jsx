@@ -13,6 +13,7 @@ import Warning from "../../components/Warning/Warning";
 import Collapse from "../../components/Collapse/Collapse";
 import SkillBox from "../../components/SkillBox/SkillBox";
 import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
+import { useWalletConnection } from "../../functions/useWalletConnection";
 import { getChainConfig, extractChainIdFromJobId, getNativeChain, isMainnet, buildLzOptions, DESTINATION_GAS_ESTIMATES } from "../../config/chainConfig";
 import { switchToChain } from "../../utils/switchNetwork";
 import { getLOWJCContract } from "../../services/localChainService";
@@ -149,7 +150,7 @@ export default function ViewReceivedApplication() {
 
   // Multi-chain hooks
   const { chainId: userChainId, chainConfig: userChainConfig } = useChainDetection();
-  const { address: walletAddress, connect: connectWallet } = useWalletAddress();
+  const { walletAddress, connectWallet } = useWalletConnection();
   
   // Get job posting chain from jobId
   const jobChainId = jobId ? extractChainIdFromJobId(jobId) : null;

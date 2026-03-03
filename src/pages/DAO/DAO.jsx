@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
+import { useWalletConnection } from "../../functions/useWalletConnection";
 import { useNavigate } from "react-router-dom";
 import JobsTable from "../../components/JobsTable/JobsTable";
 import "./DAO.css";
@@ -8,13 +9,13 @@ import Loading from "../../components/Loading";
 import { getDAOStats, getAllProposals } from "../../services/daoService";
 
 export default function DAO() {
+  const { walletAddress } = useWalletConnection();
     const navigate = useNavigate();
     const [currentPage, setCurrentPage] = useState(1);
     const proposalsPerPage = 4;
     const [daoStats, setDaoStats] = useState(null);
     const [proposals, setProposals] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [walletAddress, setWalletAddress] = useState("");
     const [selectedFilter, setSelectedFilter] = useState('All');
 
     // Column configuration

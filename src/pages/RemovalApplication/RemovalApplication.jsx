@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useWalletConnection } from "../../functions/useWalletConnection";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Web3 from "web3";
 import "./RemovalApplication.css";
@@ -32,6 +33,7 @@ function ATTACHMENTS({title}) {
   }
 
 export default function RemovalApplication() {
+  const { walletAddress } = useWalletConnection();
   const { jobId } = useParams();
   const [job, setJob] = useState(null);
   const [releaseAmount, setReleaseAmount] = useState("");
@@ -39,7 +41,6 @@ export default function RemovalApplication() {
   const [account, setAccount] = useState(null);
   const navigate = useNavigate();
   const [loadingT, setLoadingT] = useState("");
-  const [walletAddress, setWalletAddress] = useState("");
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [loading, setLoading] = useState(true); // Initialize loading state
 
@@ -62,26 +63,6 @@ export default function RemovalApplication() {
       });
   };
 
-  // Check if user is already connected to MetaMask
-  useEffect(() => {
-    const checkWalletConnection = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({
-            method: "eth_accounts",
-          });
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-          }
-        } catch (error) {
-          console.error("Failed to check wallet connection:", error);
-        }
-      }
-    };
-
-    checkWalletConnection();
-  }, []);
-
   function formatWalletAddress(address) {
     if (!address) return "";
     const start = address.substring(0, 6);
@@ -89,29 +70,8 @@ export default function RemovalApplication() {
     return `${start}....${end}`;
   }
 
-  const connectWallet = async () => {
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({
-          method: "eth_requestAccounts",
-        });
-        setWalletAddress(accounts[0]);
-        setAccount(accounts[0]); // Set account when wallet is connected
-      } catch (error) {
-        console.error("Failed to connect wallet:", error);
-      }
-    } else {
-      console.warn("MetaMask not installed");
-    }
-  };
-
   const toggleDropdown = () => {
     setDropdownVisible(!dropdownVisible);
-  };
-
-  const disconnectWallet = () => {
-    setWalletAddress("");
-    setDropdownVisible(false);
   };
 
   useEffect(() => {

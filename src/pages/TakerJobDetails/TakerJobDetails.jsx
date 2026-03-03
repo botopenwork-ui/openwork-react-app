@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useWalletConnection } from "../../functions/useWalletConnection";
 import { useParams, Link } from "react-router-dom";
 import Web3 from "web3";
 import "./TakerJobDetails.css";
@@ -31,10 +32,10 @@ function FileUpload() {
 
 
 export default function TakerJobDetails() {
+  const { walletAddress } = useWalletConnection();
   const { jobId } = useParams();
   const [job, setJob] = useState(null);
   const [copiedAddress, setCopiedAddress] = useState(null);
-  const [walletAddress, setWalletAddress] = useState("");
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
 
@@ -50,46 +51,8 @@ export default function TakerJobDetails() {
       });
   };
 
-  // Check if user is already connected to MetaMask
-  useEffect(() => {
-    const checkWalletConnection = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({ method: "eth_accounts" });
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-          }
-        } catch (error) {
-          console.error("Failed to check wallet connection:", error);
-        }
-      }
-    };
-
-    checkWalletConnection();
-  }, []);
-
-  const connectWallet = async () => {
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({
-          method: "eth_requestAccounts",
-        });
-        setWalletAddress(accounts[0]);
-      } catch (error) {
-        console.error("Failed to connect wallet:", error);
-      }
-    } else {
-      console.error("MetaMask is not installed.");
-    }
-  };
-
   const toggleDropdown = () => {
     setDropdownVisible(!dropdownVisible);
-  };
-
-  const disconnectWallet = () => {
-    setWalletAddress("");
-    setDropdownVisible(false);
   };
 
   useEffect(() => {
