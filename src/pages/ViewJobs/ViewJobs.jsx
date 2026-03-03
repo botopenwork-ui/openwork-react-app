@@ -28,7 +28,7 @@ export default function ViewJobs() {
 
         const nativeChain = getNativeChain();
         const rpcUrl = import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL || 'https://arb1.arbitrum.io/rpc';
-        const contractAddress = nativeChain?.contracts?.genesis || '0x794809471215cBa5cE56c7d9F402eDd85F9eBa2E';
+        const contractAddress = nativeChain?.contracts?.genesis || '0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294';
 
         const web3 = new Web3(rpcUrl);
         const contract = new web3.eth.Contract(genesisABI, contractAddress);
