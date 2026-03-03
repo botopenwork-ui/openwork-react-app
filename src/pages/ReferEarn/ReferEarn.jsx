@@ -112,23 +112,6 @@ export default function ReferEarn() {
     }
   };
 
-  // Check for connected wallet on mount
-  useEffect(() => {
-    const checkWallet = async () => { catch (error) {
-          console.error("Error checking wallet:", error);
-        }
-      }
-    };
-
-    checkWallet();
-
-    if (window.ethereum) {
-      window.ethereum.on('accountsChanged', (accounts) => {
-        setWalletAddress(accounts.length > 0 ? accounts[0] : null);
-      });
-    }
-  }, []);
-
   // Fetch rewards from Arbitrum (Native Rewards)
   const fetchNativeRewards = useCallback(async () => {
     if (!walletAddress) return;
