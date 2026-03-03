@@ -96,3 +96,8 @@
   background-color: transparent !important;
   border-bottom: 1px solid #e9ecf0 !important;
 }
+/* Fix table left-clipping */
+.view-jobs-container {
+  margin-left: 0 !important;
+  overflow-x: auto;
+}

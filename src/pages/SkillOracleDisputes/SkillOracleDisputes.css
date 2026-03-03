@@ -96,3 +96,8 @@
     align-items: center;
     padding-right: 32px;
 }
+/* Fix table left-clipping */
+.view-jobs-container {
+  margin-left: 0 !important;
+  overflow-x: auto;
+}

@@ -86,3 +86,14 @@
   margin-left: -4px !important;
 }
 
+
+/* Fix table left-clipping: left-align container, allow horizontal scroll */
+.browse-jobs-page.view-jobs-container,
+.browse-jobs-page {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  overflow-x: auto;
+}
+.browse-jobs-page .body-container {
+  overflow-x: auto;
+}
