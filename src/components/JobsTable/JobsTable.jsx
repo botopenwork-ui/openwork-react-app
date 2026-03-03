@@ -140,6 +140,7 @@ export default function JobsTable({ title, tableData, currentPage, totalPages, o
                     }}/>}
                     </div>
                 </div>
+                <div style={{ overflowX: 'auto', width: '100%' }}>
                 <table className="table">
                     <thead>
                         <tr>
@@ -160,6 +161,7 @@ export default function JobsTable({ title, tableData, currentPage, totalPages, o
                         ))}
                     </tbody>
                 </table>
+                </div>
 
                 <div className="pagination">
                     {currentPage > 1 && (
