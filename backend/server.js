@@ -58,6 +58,7 @@ app.use('/api/health', healthRoute);
 
 // Health dashboard UI
 app.get('/health', (req, res) => res.sendFile(path.join(__dirname, 'public/health.html')));
+app.get('/mission-control', (req, res) => res.sendFile(path.join(__dirname, 'public/mission-control.html')));
 
 // Track processing jobs to avoid duplicates
 const processingJobs = new Set();

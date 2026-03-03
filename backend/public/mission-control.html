@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenWork Mission Control</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f0f; color: #e0e0e0; padding: 24px; }
+  a { color: #60a5fa; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  h1 { font-size: 1.4rem; font-weight: 700; }
+  .subtitle { font-size: 0.8rem; color: #555; margin-top: 2px; margin-bottom: 24px; }
+  .nav { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
+  .nav a { font-size: 0.8rem; color: #555; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; padding: 5px 12px; }
+  .nav a:hover { color: #eee; border-color: #444; text-decoration: none; }
+  .section { margin-bottom: 28px; }
+  .section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.2px; color: #555; margin-bottom: 12px; }
+  .card { background: #1a1a1a; border: 1px solid #222; border-radius: 10px; padding: 18px; margin-bottom: 12px; }
+  .card-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 7px 0; border-bottom: 1px solid #1f1f1f; }
+  .card-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .card-row:first-child { padding-top: 0; }
+  .label { font-size: 0.82rem; color: #888; min-width: 140px; }
+  .val { font-size: 0.82rem; font-weight: 500; text-align: right; flex: 1; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; }
+  .badge-green { background: #052e16; color: #4ade80; }
+  .badge-yellow { background: #2a1f00; color: #facc15; }
+  .badge-red { background: #2a0000; color: #f87171; }
+  .badge-blue { background: #0c1a3a; color: #60a5fa; }
+  .badge-grey { background: #1f1f1f; color: #555; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+  .commit { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #1f1f1f; }
+  .commit:last-child { border-bottom: none; }
+  .commit-hash { font-family: monospace; font-size: 0.75rem; color: #60a5fa; min-width: 58px; }
+  .commit-msg { font-size: 0.82rem; color: #ccc; flex: 1; line-height: 1.4; }
+  .commit-time { font-size: 0.72rem; color: #555; min-width: 80px; text-align: right; }
+  .issue-row { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px solid #1f1f1f; align-items: flex-start; }
+  .issue-row:last-child { border-bottom: none; }
+  .issue-id { font-size: 0.72rem; color: #555; min-width: 28px; }
+  .issue-text { font-size: 0.82rem; color: #ccc; flex: 1; }
+  .issue-page { font-size: 0.72rem; color: #888; }
+  .big-stat { font-size: 2rem; font-weight: 700; color: #eee; }
+  .big-stat-label { font-size: 0.72rem; color: #555; margin-top: 2px; }
+  .stats-row { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 20px; }
+  .stat-box { background: #1a1a1a; border: 1px solid #222; border-radius: 10px; padding: 16px 20px; min-width: 110px; }
+  .meta { font-size: 0.75rem; color: #444; margin-bottom: 20px; }
+  .token-form { display: flex; gap: 8px; align-items: center; margin-bottom: 20px; }
+  .token-form input { background: #1a1a1a; border: 1px solid #333; color: #eee; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; width: 220px; }
+  button { background: #222; border: 1px solid #333; color: #aaa; padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
+  button:hover { background: #2a2a2a; color: #eee; }
+  .err { color: #f87171; font-size: 0.8rem; margin-top: 8px; }
+  .inline-link { color: #60a5fa; font-size: 0.8rem; }
+  .separator { border: none; border-top: 1px solid #1f1f1f; margin: 20px 0; }
+  .live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #4ade80; margin-right: 6px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+</style>
+</head>
+<body>
+
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">
+  <h1>⬡ Mission Control</h1>
+  <button onclick="loadAll()">↻ Refresh</button>
+</div>
+<div class="subtitle" id="meta">OpenWork Agent Dashboard — enter token to load live data</div>
+
+<div class="token-form">
+  <input type="password" id="token" placeholder="Health token" onkeydown="if(event.key==='Enter')loadAll()" />
+  <button onclick="loadAll()">Load</button>
+</div>
+<div class="err" id="err"></div>
+
+<div class="nav">
+  <a href="/health">Health Dashboard</a>
+  <a href="https://app.openwork.technology" target="_blank">Live App</a>
+  <a href="https://github.com/botopenwork-ui/openwork-react-app" target="_blank">GitHub Repo</a>
+  <a href="https://github.com/botopenwork-ui/openwork-react-app/blob/main/docs/ui-audit-issues.md" target="_blank">UI Audit Doc</a>
+  <a href="https://console.cloud.google.com/run/detail/us-central1/openwork/revisions?project=openwork-480320" target="_blank">Cloud Run</a>
+</div>
+
+<!-- Stats row -->
+<div class="stats-row" id="stats-row" style="display:none">
+  <div class="stat-box">
+    <div class="big-stat" id="stat-revision">—</div>
+    <div class="big-stat-label">Current Revision</div>
+  </div>
+  <div class="stat-box">
+    <div class="big-stat" id="stat-issues-fixed" style="color:#4ade80">28</div>
+    <div class="big-stat-label">UI Issues Fixed</div>
+  </div>
+  <div class="stat-box">
+    <div class="big-stat" id="stat-issues-pending" style="color:#facc15">1</div>
+    <div class="big-stat-label">Issues Pending</div>
+  </div>
+  <div class="stat-box">
+    <div class="big-stat" id="stat-health">—</div>
+    <div class="big-stat-label">System Health</div>
+  </div>
+</div>
+
+<!-- Current Status -->
+<div class="section" id="section-status" style="display:none">
+  <div class="section-title"><span class="live-dot"></span>Current Status</div>
+  <div class="card" id="card-status"></div>
+</div>
+
+<!-- Recent Work -->
+<div class="section">
+  <div class="section-title">Recent Work — Last 10 Commits</div>
+  <div class="card" id="card-commits">
+    <div style="color:#555;font-size:0.82rem">Loading from GitHub...</div>
+  </div>
+</div>
+
+<!-- Pending Issues -->
+<div class="section">
+  <div class="section-title">Pending Issues (from UI Audit)</div>
+  <div class="card" id="card-issues">
+    <div class="issue-row">
+      <span class="issue-id">P14</span>
+      <span class="issue-text">
+        <span class="issue-page">DAO Members</span> — "Proposals Created" shows N/A
+      </span>
+      <span class="badge badge-grey">Data</span>
+    </div>
+  </div>
+</div>
+
+<!-- Platform -->
+<div class="section" id="section-platform" style="display:none">
+  <div class="section-title">Platform Health</div>
+  <div class="grid2">
+    <div class="card" id="card-wallet"></div>
+    <div class="card" id="card-infra"></div>
+  </div>
+</div>
+
+<!-- Key Addresses -->
+<div class="section">
+  <div class="section-title">Key Contracts — ARB Mainnet</div>
+  <div class="card">
+    <div class="card-row"><span class="label">Genesis</span><span class="val"><a href="https://arbiscan.io/address/0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294" target="_blank" class="inline-link">0xE8f7...Bb294</a></span></div>
+    <div class="card-row"><span class="label">NOWJC</span><span class="val"><a href="https://arbiscan.io/address/0x8EfbF240240613803B9c9e716d4b5AD1388aFd99" target="_blank" class="inline-link">0x8Efb...Fd99</a></span></div>
+    <div class="card-row"><span class="label">OP LOWJC (active)</span><span class="val"><a href="https://optimistic.etherscan.io/address/0x620205A4Ff0E652fF03a890d2A677de878a1dB63" target="_blank" class="inline-link">0x6202...DB63</a></span></div>
+    <div class="card-row"><span class="label">ProfileManager</span><span class="val"><a href="https://arbiscan.io/address/0x51285003A01319c2f46BB2954384BCb69AfB1b45" target="_blank" class="inline-link">0x5128...1b45</a></span></div>
+    <div class="card-row"><span class="label">Service Wallet</span><span class="val"><a href="https://arbiscan.io/address/0xb8dC69937e745Fd02661BC4333f3852166eF2026" target="_blank" class="inline-link">0xb8dC...F2026</a></span></div>
+  </div>
+</div>
+
+<script>
+const GITHUB_REPO = 'botopenwork-ui/openwork-react-app';
+
+function getToken() {
+  return document.getElementById('token').value.trim() || localStorage.getItem('ow_health_token') || '';
+}
+
+async function loadCommits() {
+  try {
+    const r = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/commits?per_page=10`);
+    if (!r.ok) throw new Error('GitHub API ' + r.status);
+    const commits = await r.json();
+    const html = commits.map(c => {
+      const msg = c.commit.message.split('\n')[0];
+      const hash = c.sha.substring(0, 7);
+      const url = c.html_url;
+      const time = new Date(c.commit.author.date);
+      const ago = timeAgo(time);
+      return `<div class="commit">
+        <a href="${url}" target="_blank" class="commit-hash">${hash}</a>
+        <span class="commit-msg">${escHtml(msg)}</span>
+        <span class="commit-time">${ago}</span>
+      </div>`;
+    }).join('');
+    document.getElementById('card-commits').innerHTML = html;
+  } catch(e) {
+    document.getElementById('card-commits').innerHTML = `<span style="color:#555;font-size:0.82rem">Could not load commits: ${e.message}</span>`;
+  }
+}
+
+async function loadHealth(token) {
+  const r = await fetch('/api/health?token=' + encodeURIComponent(token));
+  if (r.status === 401) throw new Error('401 Unauthorized');
+  return r.json();
+}
+
+function timeAgo(date) {
+  const secs = Math.floor((Date.now() - date) / 1000);
+  if (secs < 60) return secs + 's ago';
+  if (secs < 3600) return Math.floor(secs/60) + 'm ago';
+  if (secs < 86400) return Math.floor(secs/3600) + 'h ago';
+  return Math.floor(secs/86400) + 'd ago';
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function statusBadge(s) {
+  const map = { green: 'badge-green', yellow: 'badge-yellow', red: 'badge-red', grey: 'badge-grey' };
+  const labels = { green: '✓ Healthy', yellow: '⚠ Degraded', red: '✕ Down', grey: '? Unknown' };
+  return `<span class="badge ${map[s]||'badge-grey'}">${labels[s]||s}</span>`;
+}
+
+async function loadAll() {
+  const token = getToken();
+  if (!token) { document.getElementById('err').textContent = 'Enter health token to load live data'; return; }
+  localStorage.setItem('ow_health_token', token);
+  document.getElementById('err').textContent = '';
+  document.getElementById('meta').textContent = 'Loading...';
+
+  loadCommits();
+
+  try {
+    const d = await loadHealth(token);
+    const w = d.wallets || {};
+    const r = d.rpc || {};
+    const relayer = d.relayer || {};
+    const ipfs = d.ipfs || {};
+
+    document.getElementById('meta').textContent =
+      `Last updated: ${new Date(d.timestamp).toLocaleString()} · ${d.elapsed_ms}ms`;
+
+    // Stats
+    document.getElementById('stats-row').style.display = 'flex';
+    document.getElementById('stat-revision').textContent = 'Live';
+    const healthLabel = { green: '🟢 All Good', yellow: '🟡 Degraded', red: '🔴 Issue' };
+    document.getElementById('stat-health').textContent = healthLabel[d.overall] || '?';
+    document.getElementById('stat-health').style.fontSize = '1.1rem';
+
+    // Current status card
+    document.getElementById('section-status').style.display = 'block';
+    document.getElementById('card-status').innerHTML = `
+      <div class="card-row"><span class="label">Overall</span><span class="val">${statusBadge(d.overall)}</span></div>
+      <div class="card-row"><span class="label">Live App</span><span class="val"><a href="https://app.openwork.technology" target="_blank" class="inline-link">app.openwork.technology</a></span></div>
+      <div class="card-row"><span class="label">Revision</span><span class="val" style="font-family:monospace;font-size:0.78rem">openwork-00170-n8p</span></div>
+      <div class="card-row"><span class="label">Auto-Relayer</span><span class="val">${statusBadge(relayer.status)} · ${relayer.stuck_jobs ?? '?'} stuck</span></div>
+      <div class="card-row"><span class="label">IPFS / Pinata</span><span class="val">${statusBadge(ipfs.status)} · ${ipfs.ms ? ipfs.ms + 'ms' : '—'}</span></div>
+      <div class="card-row"><span class="label">ARB RPC</span><span class="val">${statusBadge(r.arb?.status)} · block ${r.arb?.block || '?'}</span></div>
+      <div class="card-row"><span class="label">OP RPC</span><span class="val">${statusBadge(r.op?.status)} · block ${r.op?.block || '?'}</span></div>
+    `;
+
+    // Wallet card
+    document.getElementById('section-platform').style.display = 'block';
+    document.getElementById('card-wallet').innerHTML = `
+      <h2 style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#555;margin-bottom:12px">Service Wallet</h2>
+      <div class="card-row"><span class="label">ARB ETH</span><span class="val ${w.arb_eth?.status === 'red' ? 'err' : ''}">${w.arb_eth?.value ?? '?'} ETH</span></div>
+      <div class="card-row"><span class="label">OP ETH</span><span class="val ${w.op_eth?.status === 'red' ? 'err' : ''}">${w.op_eth?.value ?? '?'} ETH</span></div>
+      <div class="card-row"><span class="label">ARB USDC</span><span class="val">${w.arb_usdc?.value ?? '?'} USDC</span></div>
+      <div class="card-row"><span class="label">OP USDC</span><span class="val">${w.op_usdc?.value ?? '?'} USDC</span></div>
+    `;
+
+    document.getElementById('card-infra').innerHTML = `
+      <h2 style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#555;margin-bottom:12px">Infrastructure</h2>
+      <div class="card-row"><span class="label">Backend API</span><span class="val"><span class="badge badge-green">✓ Online</span></span></div>
+      <div class="card-row"><span class="label">IPFS Proxy</span><span class="val"><span class="badge badge-green">✓ /api/ipfs/content</span></span></div>
+      <div class="card-row"><span class="label">min-instances</span><span class="val">1 (always-on)</span></div>
+      <div class="card-row"><span class="label">DB</span><span class="val">In-memory (no DB)</span></div>
+    `;
+
+  } catch(e) {
+    document.getElementById('err').textContent = 'Health API error: ' + e.message;
+    document.getElementById('meta').textContent = 'Failed to load health data';
+    loadCommits(); // still load commits
+  }
+}
+
+// Auto-refresh every 30 min
+setInterval(loadAll, 30 * 60 * 1000);
+
+if (localStorage.getItem('ow_health_token')) {
+  document.getElementById('token').value = localStorage.getItem('ow_health_token');
+  loadAll();
+} else {
+  loadCommits(); // load commits without token
+}
+</script>
+</body>
+</html>
