@@ -37,9 +37,15 @@ const ERC20_ABI = ['function balanceOf(address) view returns (uint256)', 'functi
 const ok  = s => console.log('  \u2705', s);
 const fail = s => { console.log('  \u274c', s); process.exit(1); };
 
-// Send tx with fresh nonce, wait for receipt
+// Per-wallet nonce tracker
+const nonces = {};
 async function send(label, wallet, contract, method, args, extraOpts = {}) {
-  const nonce = await wallet.provider.getTransactionCount(wallet.address, 'pending');
+  const addr = wallet.address;
+  if (nonces[addr] === undefined) {
+    nonces[addr] = await wallet.provider.getTransactionCount(addr, 'latest');
+  }
+  const nonce = nonces[addr];
+  nonces[addr]++;
   process.stdout.write(`  \uD83D\uDD17 ${label}: `);
   const t = await contract[method](...args, { nonce, ...extraOpts });
   const r = await t.wait();
@@ -74,7 +80,7 @@ async function main() {
   if (!(await athena1.isOracleActive(ORACLE))) fail('Oracle not active');
   ok('oracle active, funds ok');
 
-  // Step 1: Profiles
+  // Step 1: Profiles (skip nonce for already-exists)
   console.log('\n-- Step 1: Profiles --');
   for (const [w, lj, lbl] of [[w1, lowjc1,'W1'],[w2, lowjc2,'W2']]) {
     try {
@@ -82,6 +88,8 @@ async function main() {
       ok(`${lbl} profile created`);
     } catch(e) {
       if (e.message?.includes('already') || e.shortMessage?.includes('already')) {
+        // Undo the nonce increment since tx didn't land
+        nonces[w.address]--;
         ok(`${lbl} profile exists`);
       } else throw e;
     }
@@ -104,7 +112,7 @@ async function main() {
 
   // Step 4: Start
   console.log('\n-- Step 4: Start Job --');
-  await send('startJob', w1, lowjc1, 'startJob', [jobId, 0, false]);
+  await send('startJob', w1, lowjc1, 'startJob', [jobId, 1, false]);
   ok('startJob');
 
   // Step 5: Submit work
@@ -148,8 +156,23 @@ async function main() {
   console.log('  W1 USDC:', ethers.formatUnits(w1End, 6));
   console.log('  W2 USDC:', ethers.formatUnits(w2End, 6));
 
+  // v3 verification: check LOWJC job status is now Completed
+  console.log('\n-- v3 Fix Verification --');
+  const lowjcView = new ethers.Contract(LOWJC, [
+    'function getJobStatus(string) view returns (uint8)',
+    'function getEscrowBalance(string) view returns (uint256,uint256,uint256)',
+  ], p);
+  const status = await lowjcView.getJobStatus(jobId);
+  const statusNames = ['Open','InProgress','Completed','Cancelled'];
+  console.log('  LOWJC job status:', statusNames[Number(status)] || status);
+  if (Number(status) === 2) ok('LOWJC state synced to Completed');
+  else fail('LOWJC state NOT synced — expected Completed, got ' + statusNames[Number(status)]);
+
+  const [escrowed, released, remaining] = await lowjcView.getEscrowBalance(jobId);
+  console.log('  Escrow:', ethers.formatUnits(escrowed,6), '| Released:', ethers.formatUnits(released,6), '| Remaining:', ethers.formatUnits(remaining,6));
+
   console.log('\n==========================================');
-  console.log('  DISPUTE CYCLE COMPLETE \u2705');
+  console.log('  DISPUTE CYCLE v3 COMPLETE \u2705');
   console.log('==========================================\n');
 }
 
