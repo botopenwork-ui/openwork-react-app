@@ -153,3 +153,73 @@ Pages that need a connected wallet to audit:
 3. **Sepolia RPC in Profile, ProfileOwnerView, DirectContractForm, ApplyJob, ReleasePayment** — reading testnet data.
 4. **Payments page blank** — completely broken.
 5. **View Jobs stuck loading** — infinite spinner, never resolves.
+
+---
+
+## Phase 2 — Issue Log (Child / Secondary Pages)
+
+*Mix of screenshots + code analysis. Mock wallet active for wallet-gated pages.*
+
+| # | Page | Issue | Severity | Method |
+|---|------|-------|----------|--------|
+| 50 | Profile About `/profile-about` | Completely blank white page — renders nothing | 🔴 High | Screenshot |
+| 51 | Profile Packages `/profile-packages` | Completely blank white page — renders nothing | 🔴 High | Screenshot |
+| 52 | Edit Picture `/edit-picture` | Completely blank white page — renders nothing | 🔴 High | Screenshot |
+| 53 | Add Portfolio `/add-portfolio` | "No wallet detected" banner while wallet IS connected. Same detection bug as Phase 1 | 🔴 High | Screenshot |
+| 54 | Add Portfolio | "Contract ID: 0xfd08...024a" shown in header — wrong label, should say "Job ID" or "Contract Address" | 🟡 Medium | Screenshot |
+| 55 | Add Portfolio | Pre-filled with "Project Name", "UX Design", "UI Design" placeholder data — not cleared | 🟡 Medium | Screenshot |
+| 56 | Skill Verification Page | Stuck on "Loading Skill Verification... Fetching data from blockchain. Please wait..." — never resolves | 🔴 High | Screenshot |
+| 57 | DAO `/dao` | "Work DAO" title clipped — first letter cut off, shows "ork DAO" | 🔴 High | Screenshot |
+| 58 | DAO | Stats row clipped right side — third stat card half-visible | 🟡 Medium | Screenshot |
+| 59 | DAO | Proposal table — first column (proposal ID) clipped off left edge. Same systemic table bug | 🔴 High | Screenshot |
+| 60 | DAO | "Ledger" heading clipped — shows "edger" | 🔴 High | Screenshot |
+| 61 | Skill Oracle Proposals | Page title "penWork Ledger" — first letter "O" clipped off | 🔴 High | Screenshot |
+| 62 | Skill Oracle Proposals | Proposal table first column clipped — same systemic table bug | 🔴 High | Screenshot |
+| 63 | Skill Oracle Proposals | "Page 1 of 0" — empty state with no friendly message | 🟢 Low | Screenshot |
+| 64 | Ask Athena `/ask-athena/:address` | "Connect your wallet to submit an Ask Athena inquiry" shown even though wallet IS connected — same detection bug | 🔴 High | Screenshot |
+| 65 | User Referral Sign In | "Unknown referrer" shown — acceptable for direct navigation, but should say "No referrer" more clearly | 🟢 Low | Screenshot |
+| 66 | Agent Oppy `/oppy` | Clean and functional ✅ | — | Screenshot |
+| 67 | ApplyJob | Uses `VITE_ARBITRUM_SEPOLIA_RPC_URL` as fallback — testnet reads | 🔴 High | Code |
+| 68 | ReviewDispute | "🎉 Dispute settled and funds delivered to winner on OP Sepolia!" — testnet chain name hardcoded in success message | 🔴 High | Code |
+| 69 | ReviewDispute | Raw `alert("MetaMask is not installed")` + `alert("Address copied")` | 🟡 Medium | Code |
+| 70 | JoinDAO | 3x raw `alert()` for validation: wallet not connected, already a member, validation errors | 🟡 Medium | Code |
+| 71 | All step 2/3 pages (ContractUpgradeStep2, ContractUpdateStep3, NewGeneralOracleStep2, etc.) | Navigate to these directly = blank white page — no fallback, no redirect | 🟡 Medium | Code |
+| 72 | All proposal views without context | Accessing `/proposal-view/:id/:chain` without a real ID likely crashes silently | 🟡 Medium | Code |
+| 73 | ProfilePortfolioOwner | Error state shows raw message: "Failed to load portfolios" — no icon, no retry button | 🟢 Low | Code |
+| 74 | SkillOracleDisputes | Error state exposes raw `err.message` to users | 🟡 Medium | Code |
+
+---
+
+## Phase 2 Summary
+
+| Severity | Count |
+|----------|-------|
+| 🔴 High | 12 |
+| 🟡 Medium | 8 |
+| 🟢 Low | 3 |
+| ✅ No issues | 1 |
+
+---
+
+## GRAND TOTAL (Phase 1 + Phase 2)
+
+| Severity | Count |
+|----------|-------|
+| 🔴 High | 36 |
+| 🟡 Medium | 24 |
+| 🟢 Low | 11 |
+| ✅ Clean | 4 |
+| **Total** | **75 issues** |
+
+---
+
+## Systemic Issues Summary (fix once, resolves many)
+
+| Root Cause | Pages Affected | Issues Fixed |
+|------------|----------------|--------------|
+| Wallet detection bug — "No wallet detected" despite connection | PostJob, AddPortfolio, AskAthena, Profile | #39, #53, #64 |
+| Table left-clipping CSS | Browse Jobs, Browse Talent, DAO Members, Skill Oracles, DAO, Skill Oracle Proposals, ViewJobs | #2, #3, #17, #19, #43, #59, #61, #62 |
+| Sepolia RPC fallback | Profile, ProfileOwnerView, DirectContractForm, ApplyJob, ReleasePayment | #26, #28, #29, #30, #31, #67 |
+| Testnet name in UI strings | ApplyNow, ReviewDispute | #37, #68 |
+| Raw `alert()` calls | 8+ pages | #32-35, #69-70 |
+| Blank pages (no wallet guard / no content) | ProfileAbout, ProfilePackages, EditPicture, SkillVerificationPage | #50-52, #56 |
