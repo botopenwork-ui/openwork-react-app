@@ -364,7 +364,7 @@ export default function ProfileOwnerView() {
                 const nativeChain = getNativeChain();
                 const rpcUrl = isMainnet()
                     ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
-                    : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+                    : import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL || 'https://arb1.arbitrum.io/rpc';
                 const web3 = new Web3(rpcUrl);
                 const contractAddress = nativeChain?.contracts?.profileGenesis;
                 const contract = new web3.eth.Contract(ProfileGenesisABI, contractAddress);
@@ -394,7 +394,7 @@ export default function ProfileOwnerView() {
                 const nativeChain = getNativeChain();
                 const rpcUrl = isMainnet()
                     ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
-                    : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+                    : import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL || 'https://arb1.arbitrum.io/rpc';
                 const web3 = new Web3(rpcUrl);
                 const contractAddress = nativeChain?.contracts?.profileGenesis;
                 const contract = new web3.eth.Contract(ProfileGenesisABI, contractAddress);

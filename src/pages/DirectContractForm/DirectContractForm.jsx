@@ -33,7 +33,7 @@ function getGenesisAddress() {
 function getArbitrumRpc() {
   return isMainnet()
     ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
-    : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+    : import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL || 'https://arb1.arbitrum.io/rpc';
 }
 
 // Backend URL for secure API calls

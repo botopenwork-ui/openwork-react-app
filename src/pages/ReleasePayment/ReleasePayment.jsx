@@ -107,7 +107,7 @@ export default function ReleasePayment() {
         const nativeChain = getNativeChain();
         const rpcUrl = isMainnet()
           ? import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL
-          : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
+          : import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL || 'https://arb1.arbitrum.io/rpc';
         const contractAddress = nativeChain.contracts.nowjc;
 
 

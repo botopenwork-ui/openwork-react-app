@@ -68,7 +68,7 @@ export default function Profile() {
           console.log("Fetching profile data for:", displayAddress);
           
           // Get profile from ProfileGenesis contract on Arbitrum Sepolia
-          const web3 = new Web3(import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL);
+          const web3 = new Web3(import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL || 'https://arb1.arbitrum.io/rpc');
           const contractAddress = import.meta.env.VITE_PROFILE_GENESIS_ADDRESS;
           const contract = new web3.eth.Contract(ProfileGenesisABI, contractAddress);
           
