@@ -303,3 +303,15 @@ Pages that need a connected wallet to audit:
 | Blank `<div></div>` fallback on Payments + MembersGovernance | Replaced with "Loading job data..." message |
 
 **Commit:** `9475c66` | **Revision:** `openwork-00164-v7s`
+
+---
+
+## Batch 3b — Dead Code Cleanup (2026-03-03, revision 00165-4q5)
+
+| Page | Action |
+|------|--------|
+| MembersGovernance, RemoveMember | Entire XinFin job-fetch useEffect deleted — `job` state was never used in JSX |
+| RemovalApplication, RecruitmentApplication, JoineeApplication | Removed dead `getApplicationProposedAmount` + `getJobEscrowAmount` calls (don't exist on genesis); kept `getJob` fetch since `job.title` + `job.employer` are rendered |
+
+**Net result:** 151 lines deleted, 0 features lost.
+**Commit:** `ae844bd` | **Revision:** `openwork-00165-4q5`
