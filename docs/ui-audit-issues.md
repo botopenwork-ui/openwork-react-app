@@ -270,3 +270,22 @@ Pages that need a connected wallet to audit:
 **Commit:** `d001d72` | **Revision:** `openwork-00161-vbj`
 
 **Remaining open issues: ~55** (complex ones — profile read-only view, Payments blank page, View Jobs spinner, etc.)
+
+---
+
+## Next-10 Batch — Fixed (2026-03-03, revision 00162-vwc / 00163-cf5)
+
+| # | Issue | Fix |
+|---|-------|-----|
+| 1 | ViewJobs infinite spinner (was pointing at XinFin legacy) | Full rewrite — ARB mainnet genesis `0xE8f7...` via `getJobsByPoster(walletAddress)` |
+| 2 | `quote-placeholder` sent to contract in DirectContractForm | Replaced with real `jobDetailHash` (already uploaded to IPFS) |
+| 3 | GetSkillsVerified infinite spinner | Timeout guard: stops loading after 8s |
+| 4 | DAO stat card "MY OW BALAN..." clipped | Shortened label to "MY BALANCE"; added `text-overflow: ellipsis` |
+| 5 | "Page 1 of 0" on empty tables | Shows "No results found" when `totalPages === 0` |
+| 6 | "Unknown referrer" label | Changed to "No referrer" |
+| 7 | JoinDAO raw `alert()` for validation errors (3 popups) | Replaced with inline error div |
+| 8 | Profile "No wallet detected" banner | Already resolved by ChainSelector "Switch Network" fix |
+
+**Rule added:** Always refer to `contracts/all-deployed-contracts-18-jan-2026.md` for contract addresses — never hardcode from memory.
+
+**Commits:** `3cf0797`, `bcc24b2` | **Revisions:** `openwork-00162-vwc`, `openwork-00163-cf5`
