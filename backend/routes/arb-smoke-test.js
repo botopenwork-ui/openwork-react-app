@@ -16,7 +16,7 @@ const router   = express.Router();
 const { ethers } = require('ethers');
 const config   = require('../config');
 
-const ARB_RPC      = config.ARBITRUM_RPC || 'https://arb-mainnet.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ';
+const ARB_RPC      = config.ARBITRUM_RPC || 'https://arb1.arbitrum.io/rpc';
 const LOWJC_ADDR   = '0xEE57ee10cCAB26f5642d4EbDC15B3881Bb0B5587';
 const USDC_ADDR    = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831';
 const SMOKE_AMOUNT = BigInt(10_000); // 0.01 USDC

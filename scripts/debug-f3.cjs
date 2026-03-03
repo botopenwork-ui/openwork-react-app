@@ -2,7 +2,7 @@ const { ethers } = require('../backend/node_modules/ethers');
 const path = require('path');
 const fs = require('fs');
 
-const RPC = 'https://arb-sepolia.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ';
+const RPC = 'https://arb-sepolia.g.alchemy.com/v2/${ARB_RPC_REPLACED}';
 const USDC = '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d';
 const OUT = path.join(__dirname, '../contracts/out-minsize');
 

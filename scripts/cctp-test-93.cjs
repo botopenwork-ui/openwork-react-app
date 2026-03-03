@@ -30,8 +30,8 @@ const { ethers } = require('../backend/node_modules/ethers');
 const { execSync } = require('child_process');
 
 // ── Config ──────────────────────────────────────────────────────────────────
-const OP_RPC  = 'https://opt-mainnet.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ';
-const ARB_RPC = 'https://arb-mainnet.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ';
+const OP_RPC  = 'https://mainnet.optimism.io';
+const ARB_RPC = 'https://arb1.arbitrum.io/rpc';
 
 const OP_LOWJC   = '0x620205A4Ff0E652fF03a890d2A677de878a1dB63';
 const OP_BRIDGE  = '0x74566644782e98c87a12E8Fc6f7c4c72e2908a36';

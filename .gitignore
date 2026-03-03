@@ -128,3 +128,18 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*backend/.env
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+backend/deployments.db
+
+# GCP service account keys
+gcp-key.json
+*-key.json
+service-account*.json
+
+# Test/debug scripts with potential hardcoded values
+backend/op-check.cjs
+backend/op-check2.cjs

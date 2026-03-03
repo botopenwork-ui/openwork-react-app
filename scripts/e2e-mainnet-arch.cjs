@@ -13,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const RPC    = 'https://arb-sepolia.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ';
+const RPC    = 'https://arb-sepolia.g.alchemy.com/v2/${ARB_RPC_REPLACED}';
 const USDC   = '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d';
 const SCAN   = 'https://sepolia.arbiscan.io/tx/';
 const OUT    = path.join(__dirname, '../contracts/out-minsize');

@@ -1,6 +1,6 @@
 require("@nomicfoundation/hardhat-ethers");
 
-const ARB_SEPOLIA_RPC = "https://arb-sepolia.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ";
+const ARB_SEPOLIA_RPC = "https://arb-sepolia.g.alchemy.com/v2/${ARB_RPC_REPLACED}";
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {

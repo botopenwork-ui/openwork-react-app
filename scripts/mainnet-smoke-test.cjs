@@ -24,7 +24,7 @@ const LOWJC_ADDR  = '0xEE57ee10cCAB26f5642d4EbDC15B3881Bb0B5587';
 const NOWJC_ADDR  = '0x8EfbF240240613803B9c9e716d4b5AD1388aFd99';
 const USDC_ADDR   = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831'; // Native USDC on Arb
 const ARB_RPC     = process.env.VITE_ARBITRUM_MAINNET_RPC_URL ||
-                    'https://arb-mainnet.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ';
+                    'https://arb1.arbitrum.io/rpc';
 
 // ── Setup ─────────────────────────────────────────────────────────────────────
 const provider = new ethers.JsonRpcProvider(ARB_RPC);

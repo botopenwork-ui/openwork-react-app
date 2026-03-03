@@ -17,7 +17,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-const ARB_RPC = 'https://arb-mainnet.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ';
+const ARB_RPC = 'https://arb1.arbitrum.io/rpc';
 const NOWJC_PROXY       = '0x8EfbF240240613803B9c9e716d4b5AD1388aFd99';
 const NATIVE_ATHENA     = '0xE6B9d996b56162cD7eDec3a83aE72943ee7C46Bf';
 const USDC_ARB          = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831';

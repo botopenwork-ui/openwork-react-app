@@ -13,7 +13,7 @@ const ethers = require('/data/.openclaw/workspace/openwork/backend/node_modules/
 const https = require('https');
 const fs = require('fs');
 
-const OPTIMISM_RPC = 'https://opt-mainnet.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ';
+const OPTIMISM_RPC = 'https://mainnet.optimism.io';
 const BACKEND_URL = 'https://openwork-823072243332.us-central1.run.app';
 const JOB_ID = '30111-90';
 
@@ -243,7 +243,7 @@ async function main() {
 
   // Final wallet2 USDC balance on Arbitrum
   try {
-    const arbProvider = new ethers.JsonRpcProvider('https://arb-mainnet.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ');
+    const arbProvider = new ethers.JsonRpcProvider('https://arb1.arbitrum.io/rpc');
     const usdcArb = new ethers.Contract('0xaf88d065e77c8cC2239327C5EDb3A432268e5831', ERC20_ABI, arbProvider);
     const bal = await usdcArb.balanceOf(wallet2.address);
     console.log(`\n💰 Wallet2 USDC on Arbitrum: ${ethers.formatUnits(bal, 6)}`);

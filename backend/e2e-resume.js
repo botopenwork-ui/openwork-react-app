@@ -24,8 +24,8 @@ const PRIVATE_KEY = process.env.WALL2_PRIVATE_KEY
 
 // Use public Arbitrum RPC for event scanning (no rate limits on getLogs)
 const ARB_RPC_PUBLIC  = 'https://arb1.arbitrum.io/rpc';
-const ARB_RPC_ALCHEMY = process.env.ARBITRUM_MAINNET_RPC_URL || 'https://arb-mainnet.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ';
-const OP_RPC          = process.env.OPTIMISM_MAINNET_RPC_URL || 'https://opt-mainnet.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ';
+const ARB_RPC_ALCHEMY = process.env.ARBITRUM_MAINNET_RPC_URL || 'https://arb1.arbitrum.io/rpc';
+const OP_RPC          = process.env.OPTIMISM_MAINNET_RPC_URL || 'https://mainnet.optimism.io';
 
 const CONTRACTS = {
   NOWJC_ARB:           '0x8EfbF240240613803B9c9e716d4b5AD1388aFd99',

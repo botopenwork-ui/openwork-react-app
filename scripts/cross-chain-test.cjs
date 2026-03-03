@@ -2,8 +2,8 @@
 'use strict';
 const { ethers } = require('../backend/node_modules/ethers');
 
-const OP_RPC  = 'https://opt-mainnet.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ';
-const ARB_RPC = 'https://arb-mainnet.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ';
+const OP_RPC  = 'https://mainnet.optimism.io';
+const ARB_RPC = 'https://arb1.arbitrum.io/rpc';
 const KEY1 = process.env.WALL2_PRIVATE_KEY;
 const KEY2 = process.env.TAKER_PRIVATE_KEY;
 

@@ -12,7 +12,7 @@ const fs           = require('fs');
 const path         = require('path');
 const { execSync } = require('child_process');
 
-const ARB_SEPOLIA_RPC = 'https://arb-sepolia.g.alchemy.com/v2/ECvjGU_6M0Jrw6wlFkPo2ZbonbfW5oIZ';
+const ARB_SEPOLIA_RPC = 'https://arb-sepolia.g.alchemy.com/v2/${ARB_RPC_REPLACED}';
 const USDC_ADDR       = '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d';
 const NOWJC_ADDR      = '0x39158a9F92faB84561205B05223929eFF131455e';
 const ARBISCAN        = 'https://sepolia.arbiscan.io/tx/';
