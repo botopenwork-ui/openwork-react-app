@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useWalletConnection } from "../../functions/useWalletConnection";
 import { useNavigate, useParams } from 'react-router-dom';
 import BackButtonProposal from '../../components/BackButtonProposal/BackButtonProposal';
 import { getProposalDetails } from '../../services/daoService';

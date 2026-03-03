@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useWalletConnection } from "../../functions/useWalletConnection";
 import { useParams, Link } from "react-router-dom";
 import Web3 from "web3";
 import contractABI from "../../ABIs/genesis_ABI.json"; // Use Genesis ABI for job data
@@ -120,10 +121,10 @@ function ATTACHMENTS({ title, ipfsHash }) {
 }
 
 export default function JobInfo() {
+  const { walletAddress } = useWalletConnection();
   const { jobId } = useParams();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [walletAddress, setWalletAddress] = useState("");
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(null);
 
@@ -138,26 +139,6 @@ export default function JobInfo() {
         console.error("Failed to copy: ", err);
       });
   };
-
-  // Check if user is already connected to MetaMask
-  useEffect(() => {
-    const checkWalletConnection = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({
-            method: "eth_accounts",
-          });
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-          }
-        } catch (error) {
-          console.error("Failed to check wallet connection:", error);
-        }
-      }
-    };
-
-    checkWalletConnection();
-  }, []);
 
   const connectWallet = async () => {
     if (window.ethereum) {
@@ -176,11 +157,6 @@ export default function JobInfo() {
 
   const toggleDropdown = () => {
     setDropdownVisible(!dropdownVisible);
-  };
-
-  const disconnectWallet = () => {
-    setWalletAddress("");
-    setDropdownVisible(false);
   };
 
   const hasFetchedRef = useRef(false);

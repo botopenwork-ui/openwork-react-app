@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useWalletConnection } from "../../functions/useWalletConnection";
 import { useNavigate } from "react-router-dom";
 import "./ApplyNow.css";
 
@@ -11,6 +12,7 @@ import { fetchAllOracleData } from "../../services/oracleService";
 import { createOracleMemberRecruitmentProposal } from "../../services/proposalCreationService";
 
 export default function ApplyNow() {
+  const { walletAddress } = useWalletConnection();
   const navigate = useNavigate();
   const [jobDescription, setJobDescription] = useState("");
   const [skillOptions, setSkillOptions] = useState([]);

@@ -95,11 +95,6 @@ export default function Payments() {
     setDropdownVisible(!dropdownVisible);
   };
 
-  const disconnectWallet = () => {
-    setWalletAddress("");
-    setDropdownVisible(false);
-  };
-
   useEffect(() => {
     async function fetchJobDetails() {
       try {
@@ -157,26 +152,6 @@ export default function Payments() {
       return {};
     }
   };
-
-  // Check if user is already connected to MetaMask
-  useEffect(() => {
-    const checkWalletConnection = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({
-            method: "eth_accounts",
-          });
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-          }
-        } catch (error) {
-          console.error("Failed to check wallet connection:", error);
-        }
-      }
-    };
-
-    checkWalletConnection();
-  }, []);
 
   const handleNavigation = () => {
     window.open(

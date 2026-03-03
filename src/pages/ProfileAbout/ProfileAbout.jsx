@@ -21,26 +21,6 @@ export default function ProfileAbout() {
         });
     };
   
-    // Check if user is already connected to MetaMask
-    useEffect(() => {
-      const checkWalletConnection = async () => {
-        if (window.ethereum) {
-          try {
-            const accounts = await window.ethereum.request({
-              method: "eth_accounts",
-            });
-            if (accounts.length > 0) {
-              setWalletAddress(accounts[0]);
-            }
-          } catch (error) {
-            console.error("Failed to check wallet connection:", error);
-          }
-        }
-      };
-  
-      checkWalletConnection();
-    }, []);
-  
     function formatWalletAddress(address) {
       if (!address) return "";
       const start = address.substring(0, 6);

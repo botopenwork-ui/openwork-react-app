@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useWalletConnection } from "../../functions/useWalletConnection";
 import { useParams, useNavigate } from "react-router-dom";
 import Web3 from "web3";
 import genesisABI from "../../ABIs/genesis_ABI.json";
@@ -87,7 +88,7 @@ export default function SkillVerification() {
 
   // Multi-chain hooks
   const { chainId, chainConfig, isAllowed, error: chainError } = useChainDetection();
-  const { address: walletAddress } = useWalletAddress();
+  const { walletAddress } = useWalletConnection();
 
   // Check if the connected wallet is the owner of this address
   const isOwner = walletAddress && address &&

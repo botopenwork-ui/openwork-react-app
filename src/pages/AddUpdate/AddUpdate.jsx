@@ -48,7 +48,7 @@ export default function AddUpdate() {
   
   // Multi-chain hooks
   const { chainId: userChainId, chainConfig: userChainConfig } = useChainDetection();
-  const { address: walletAddress, connect: connectWallet } = useWalletAddress();
+  const { walletAddress, connectWallet } = useWalletConnection();
   
   // Get job posting chain
   const jobChainId = jobId ? extractChainIdFromJobId(jobId) : null;

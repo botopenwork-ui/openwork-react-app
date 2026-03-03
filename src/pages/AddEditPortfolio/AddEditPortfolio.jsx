@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useWalletConnection } from "../../functions/useWalletConnection";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { 
   uploadFileToIPFS, 
@@ -20,7 +21,7 @@ export default function AddEditPortfolio() {
   
   // Multi-chain hooks
   const { chainId, chainConfig, isAllowed, error: chainError } = useChainDetection();
-  const { address: walletAddress, connect: connectWallet } = useWalletAddress();
+  const { walletAddress, connectWallet } = useWalletConnection();
   
   const isEditMode = !!id;
   const existingData = location.state?.portfolioData;

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useWalletConnection } from "../../functions/useWalletConnection";
 import { Tooltip } from "react-tooltip";
 import { useParams } from "react-router-dom";
 import { Link } from "react-router-dom";
@@ -8,9 +9,9 @@ import ToolTipContent from "../../components/ToolTipContent/ToolTipContent";
 import ToolTipMilestone from "../../components/ToolTipMilestone/ToolTipMilestone";
 
 export default function MembersGovernance() {
+  const { walletAddress } = useWalletConnection();
   const [buttonFlex2, setButtonFlex2] = useState(false);
   const { jobId } = useParams();
-  const [walletAddress, setWalletAddress] = useState("");
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [loading, setLoading] = useState(true); // State for loading animation
   const [amountPaid, setAmountPaid] = useState(0); // State for amount paid
@@ -95,11 +96,6 @@ export default function MembersGovernance() {
     setDropdownVisible(!dropdownVisible);
   };
 
-  const disconnectWallet = () => {
-    setWalletAddress("");
-    setDropdownVisible(false);
-  };
-
   const fetchFromIPFS = async (hash) => {
     try {
       const response = await fetch(`/api/ipfs/content/${hash}`);
@@ -109,26 +105,6 @@ export default function MembersGovernance() {
       return {};
     }
   };
-
-  // Check if user is already connected to MetaMask
-  useEffect(() => {
-    const checkWalletConnection = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({
-            method: "eth_accounts",
-          });
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-          }
-        } catch (error) {
-          console.error("Failed to check wallet connection:", error);
-        }
-      }
-    };
-
-    checkWalletConnection();
-  }, []);
 
   const handleNavigation = () => {
     window.open(
