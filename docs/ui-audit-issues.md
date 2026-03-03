@@ -233,3 +233,24 @@ Pages that need a connected wallet to audit:
 | Testnet name in UI strings | ApplyNow, ReviewDispute | #37, #68 |
 | Raw `alert()` calls | 8+ pages | #32-35, #69-70 |
 | Blank pages (no wallet guard / no content) | ProfileAbout, ProfilePackages, EditPicture, SkillVerificationPage | #50-52, #56 |
+
+---
+
+## Fix Log — 5 Systemic Fixes Applied (2026-03-03)
+
+| Fix | Issue | Status | Commit | Revision |
+|-----|-------|--------|--------|----------|
+| 1 | Table left-clipping (Browse Jobs, Browse Talent, DAO, DAO Members, Skill Oracles) | ✅ Fixed | `43aa2a3` | `00160-mh6` |
+| 2 | Sepolia RPC fallback in Profile, ProfileOwnerView, DirectContractForm, ApplyJob, ReleasePayment | ✅ Fixed | `201d7f8` | `00157-fg8` |
+| 3 | "No wallet detected" banner showing despite wallet connected | ✅ Fixed | `7fb549f` | `00157-fg8` |
+| 4 | Hardcoded "Arbitrum Sepolia" / "OP Sepolia" in UI strings | ✅ Fixed | `80b8a07` | `00157-fg8` |
+| 5 | Blank pages (EditPicture, ProfilePackages, ProfileAbout crashing on undefined walletAddress) | ✅ Fixed | `e95ea49` | `00157-fg8` |
+
+**Root cause of fix 1 (3 layers):**
+1. `Layout.jsx` had `overflowX: hidden` globally — changed to `auto`
+2. `JobsTable.jsx` table not wrapped in scroll container — added `overflow-x: auto` wrapper div
+3. `body-container` had `display: flex; justify-content: center` — overridden to `flex-start` in BrowseJobs.css
+
+**Baseline verified:** Browse Jobs and Browse Talent load full job/profile titles. No regressions observed.
+
+**Remaining open:** 70 issues from audit still queued. Awaiting go-ahead.
