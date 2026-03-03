@@ -1,0 +1,15 @@
+[
+  {
+    "id": "home",
+    "title": "Home Screen",
+    "figmaUrl": "https://www.figma.com/design/pgepy6ynoBsaiHDfQv3Ior/OpenWork?node-id=1-6",
+    "figmaImage": "/design-review-assets/figma-home.png",
+    "liveImage": "/design-review-assets/live-home.png",
+    "tasks": [
+      {"id": "t1", "text": "Bottom clipping — hub cut off on 900px screens", "bucket": "fix", "status": "pending"},
+      {"id": "t2", "text": "Header left: chain name shown vs wordmark in Figma", "bucket": "clarify", "status": "pending"},
+      {"id": "t3", "text": "Blue glow slightly softer on live", "bucket": "fix", "status": "pending"}
+    ],
+    "comments": []
+  }
+]

@@ -14,6 +14,7 @@ const ipfsRoutes = require('./routes/ipfs');
 const chatRoutes = require('./routes/chat');
 const docsRoutes = require('./routes/docs');
 const e2eTestRoute = require('./routes/e2e-test-route');
+const designReviewRouter = require('./routes/design-review');
 const arbSmokeRoute = require('./routes/arb-smoke-test');
 const jobTxRoutes  = require('./routes/job-transactions');
 const healthRoute  = require('./routes/health');
@@ -55,6 +56,11 @@ app.use('/api/e2e-test', e2eTestRoute);
 app.use('/api/arb-smoke', arbSmokeRoute);
 app.use('/api/jobs', jobTxRoutes);
 app.use('/api/health', healthRoute);
+
+// Mount design review routes and assets
+app.use('/api/design-review', designReviewRouter);
+app.use('/design-review-assets', express.static(path.join(__dirname, 'public/design-review-assets')));
+app.get('/design-review', (req, res) => res.sendFile(path.join(__dirname, 'public/design-review.html')));
 
 // Health dashboard UI
 app.get('/health', (req, res) => res.sendFile(path.join(__dirname, 'public/health.html')));

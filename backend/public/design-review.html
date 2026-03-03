@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenWork Design Review</title>
+    <style>
+        :root {
+            --openwork-blue: #2B7BFF;
+            --light-gray: #f4f7f6;
+            --dark-gray: #333;
+            --white: #ffffff;
+            --card-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            --border-color: #eee;
+            --text-color: #333;
+            --header-bg: #222;
+            --header-text: #f0f0f0;
+            --badge-fix: #ef4444; /* Red */
+            --badge-clarify: #3b82f6; /* Blue */
+            --badge-practical: #f59e0b; /* Amber */
+            --badge-web3: #6366f1; /* Indigo */
+            --badge-rendering: #a1a1aa; /* Gray */
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--light-gray);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        #password-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        #password-prompt {
+            background: var(--white);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            text-align: center;
+            width: 300px;
+        }
+        #password-prompt input {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin: 15px 0;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        #password-prompt button {
+            background-color: var(--openwork-blue);
+            color: var(--white);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+        #password-prompt button:hover {
+            background-color: #2463cc;
+        }
+        header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+        header button {
+            background-color: var(--openwork-blue);
+            color: var(--white);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+        header button:hover {
+            background-color: #2463cc;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        #screens-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+        }
+        .screen-card {
+            background-color: var(--white);
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border-color);
+        }
+        .screen-card h2 {
+            margin-top: 0;
+            color: var(--openwork-blue);
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+        }
+        .screen-card h2 a {
+            color: var(--openwork-blue);
+            text-decoration: none;
+            margin-left: 10px;
+            font-size: 1rem;
+        }
+        .screen-card h2 a:hover {
+            text-decoration: underline;
+        }
+        .image-viewer {
+            position: relative;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .image-viewer .image-wrapper {
+            display: flex;
+            overflow-x: auto;
+        }
+        .image-viewer img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            flex-shrink: 0;
+        }
+        .image-viewer .overlay-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.5; /* Default overlay opacity */
+            mix-blend-mode: difference; /* Or other blend mode for diff */
+        }
+        .image-viewer .overlay-img.hidden {
+            display: none;
+        }
+        .image-controls {
+            display: flex;
+            justify-content: center;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-top: 1px solid var(--border-color);
+        }
+        .image-controls button {
+            background-color: var(--openwork-blue);
+            color: var(--white);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0 5px;
+            transition: background-color 0.2s;
+        }
+        .image-controls button:hover {
+            background-color: #2463cc;
+        }
+
+        .tasks-section {
+            margin-top: 20px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+        }
+        .task-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            background-color: var(--light-gray);
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .task-item .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: var(--white);
+            margin-right: 10px;
+            text-transform: capitalize;
+        }
+        .badge.fix { background-color: var(--badge-fix); }
+        .badge.clarify { background-color: var(--badge-clarify); }
+        .badge.practical { background-color: var(--badge-practical); }
+        .badge.web3 { background-color: var(--badge-web3); }
+        .badge.rendering { background-color: var(--badge-rendering); }
+
+        .task-item .task-text {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+        .task-item select {
+            padding: 6px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.9rem;
+            background-color: var(--white);
+        }
+
+        .comments-section {
+            margin-top: 20px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+        }
+        .comments-feed {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #fdfdfd;
+        }
+        .comment-item {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #eee;
+            font-size: 0.9rem;
+        }
+        .comment-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .comment-meta {
+            font-size: 0.8rem;
+            color: #777;
+            margin-bottom: 5px;
+        }
+        .comment-meta strong {
+            color: var(--text-color);
+        }
+        .comment-form textarea {
+            width: calc(100% - 22px);
+            min-height: 60px;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+        .comment-form button {
+            background-color: var(--openwork-blue);
+            color: var(--white);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .comment-form button:hover {
+            background-color: #2463cc;
+        }
+        .last-updated {
+            font-size: 0.85rem;
+            color: #777;
+            margin-top: 20px;
+            text-align: right;
+            border-top: 1px solid var(--border-color);
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="password-overlay">
+        <div id="password-prompt">
+            <h2>Enter Password</h2>
+            <input type="password" id="password-input" placeholder="Password">
+            <p id="password-error" style="color: var(--badge-fix); display: none;">Incorrect password.</p>
+            <button id="password-submit">Submit</button>
+        </div>
+    </div>
+
+    <header>
+        <h1>OpenWork Design Review</h1>
+        <button>Add Screen (stub)</button>
+    </header>
+
+    <div class="container">
+        <div id="screens-grid">
+            <!-- Screen cards will be injected here -->
+        </div>
+    </div>
+
+    <script>
+        const DR_TOKEN_KEY = 'dr_token';
+        const PASSWORD = 'ow-review-2026';
+        const API_BASE = '/api/design-review';
+        const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkPassword();
+            setInterval(fetchScreens, REFRESH_INTERVAL_MS); // Auto-refresh
+        });
+
+        function checkPassword() {
+            const token = localStorage.getItem(DR_TOKEN_KEY);
+            if (token === PASSWORD) {
+                document.getElementById('password-overlay').style.display = 'none';
+                fetchScreens();
+            } else {
+                document.getElementById('password-overlay').style.display = 'flex';
+                document.getElementById('password-submit').onclick = () => {
+                    const input = document.getElementById('password-input').value;
+                    if (input === PASSWORD) {
+                        localStorage.setItem(DR_TOKEN_KEY, PASSWORD);
+                        document.getElementById('password-overlay').style.display = 'none';
+                        fetchScreens();
+                    } else {
+                        document.getElementById('password-error').style.display = 'block';
+                    }
+                };
+            }
+        }
+
+        async function fetchScreens() {
+            try {
+                const response = await fetch(`${API_BASE}/screens`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const screens = await response.json();
+                renderScreens(screens);
+            } catch (error) {
+                console.error('Failed to fetch screens:', error);
+                alert('Failed to load design review data. Please check the console for details.');
+            }
+        }
+
+        function renderScreens(screens) {
+            const grid = document.getElementById('screens-grid');
+            grid.innerHTML = ''; // Clear existing cards
+            screens.forEach(screen => {
+                const card = document.createElement('div');
+                card.className = 'screen-card';
+                card.setAttribute('data-screen-id', screen.id);
+
+                const lastUpdated = new Date().toLocaleString(); // Placeholder for now
+
+                card.innerHTML = `
+                    <h2>
+                        ${screen.title}
+                        <a href="${screen.figmaUrl}" target="_blank" title="Open Figma link">🔗 Figma</a>
+                    </h2>
+                    <div class="image-viewer">
+                        <div class="image-wrapper">
+                            <img class="figma-image" src="${screen.figmaImage}" alt="${screen.title} Figma">
+                            <img class="live-image" src="${screen.liveImage}" alt="${screen.title} Live">
+                            <img class="overlay-img hidden" src="${screen.liveImage}" alt="${screen.title} Live Overlay">
+                        </div>
+                        <div class="image-controls">
+                            <button class="toggle-view" data-view="side-by-side">Side-by-side</button>
+                            <button class="toggle-view" data-view="overlay">Overlay Diff</button>
+                        </div>
+                    </div>
+                    <div class="tasks-section">
+                        <h3>Tasks</h3>
+                        <div class="task-list">
+                            ${screen.tasks.map(task => `
+                                <div class="task-item" data-task-id="${task.id}">
+                                    <span class="badge ${task.bucket}">${task.bucket}</span>
+                                    <span class="task-text">${task.text}</span>
+                                    <select class="task-status-select" data-screen-id="${screen.id}" data-task-id="${task.id}">
+                                        <option value="pending" ${task.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                        <option value="in-progress" ${task.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                                        <option value="fixed" ${task.status === 'fixed' ? 'selected' : ''}>Fixed</option>
+                                        <option value="wont-fix" ${task.status === 'wont-fix' ? 'selected' : ''}>Won't Fix</option>
+                                        <option value="needs-clarification" ${task.status === 'needs-clarification' ? 'selected' : ''}>Needs Clarification</option>
+                                    </select>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="comments-section">
+                        <h3>Comments</h3>
+                        <div class="comments-feed">
+                            ${screen.comments.length > 0 ? screen.comments.map(comment => `
+                                <div class="comment-item">
+                                    <div class="comment-meta"><strong>${comment.author}</strong> - ${new Date(comment.timestamp).toLocaleString()}</div>
+                                    <div class="comment-text">${comment.text}</div>
+                                </div>
+                            `).join('') : '<p>No comments yet.</p>'}
+                        </div>
+                        <div class="comment-form">
+                            <textarea placeholder="Add a comment..." data-screen-id="${screen.id}"></textarea>
+                            <button class="add-comment-btn" data-screen-id="${screen.id}">Add Comment</button>
+                        </div>
+                    </div>
+                    <div class="last-updated">Last updated: ${lastUpdated}</div>
+                `;
+                grid.appendChild(card);
+            });
+
+            // Add event listeners for new elements
+            addEventListeners();
+        }
+
+        function addEventListeners() {
+            document.querySelectorAll('.toggle-view').forEach(button => {
+                button.onclick = (event) => {
+                    const card = event.target.closest('.screen-card');
+                    const figmaImage = card.querySelector('.figma-image');
+                    const liveImage = card.querySelector('.live-image');
+                    const overlayImage = card.querySelector('.overlay-img');
+                    const imageWrapper = card.querySelector('.image-wrapper');
+
+                    if (event.target.dataset.view === 'side-by-side') {
+                        imageWrapper.style.display = 'flex';
+                        figmaImage.style.width = '50%';
+                        liveImage.style.width = '50%';
+                        overlayImage.classList.add('hidden');
+                        figmaImage.style.position = 'static';
+                        liveImage.style.position = 'static';
+                    } else { // overlay
+                        imageWrapper.style.display = 'block';
+                        figmaImage.style.width = '100%';
+                        liveImage.style.width = '100%'; /* Base image */
+                        figmaImage.style.position = 'absolute';
+                        figmaImage.style.top = '0';
+                        figmaImage.style.left = '0';
+                        overlayImage.classList.remove('hidden');
+                    }
+                };
+            });
+
+            document.querySelectorAll('.task-status-select').forEach(select => {
+                select.onchange = async (event) => {
+                    const screenId = event.target.dataset.screenId;
+                    const taskId = event.target.dataset.taskId;
+                    const newStatus = event.target.value;
+
+                    try {
+                        const response = await fetch(`${API_BASE}/screens/${screenId}/tasks/${taskId}/status`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status: newStatus })
+                        });
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        const updatedTask = await response.json();
+                        console.log('Task status updated:', updatedTask);
+                        // No need to re-render all screens, but can update timestamp
+                        updateLastUpdated(screenId);
+                    } catch (error) {
+                        console.error('Failed to update task status:', error);
+                        alert('Failed to update task status.');
+                    }
+                };
+            });
+
+            document.querySelectorAll('.add-comment-btn').forEach(button => {
+                button.onclick = async (event) => {
+                    const screenId = event.target.dataset.screenId;
+                    const textarea = document.querySelector(`.comment-form textarea[data-screen-id="${screenId}"]`);
+                    const commentText = textarea.value.trim();
+                    const author = 'Reviewer'; // Hardcode author for now
+
+                    if (!commentText) {
+                        alert('Comment cannot be empty.');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`${API_BASE}/screens/${screenId}/comments`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ author, text: commentText })
+                        });
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        const updatedComments = await response.json();
+                        console.log('Comment added:', updatedComments);
+                        textarea.value = ''; // Clear textarea
+                        // Re-render only the comments section or the entire card for simplicity
+                        fetchScreens(); // Re-fetch all screens to update comments and timestamp
+                    } catch (error) {
+                        console.error('Failed to add comment:', error);
+                        alert('Failed to add comment.');
+                    }
+                };
+            });
+        }
+
+        function updateLastUpdated(screenId) {
+            const card = document.querySelector(`.screen-card[data-screen-id="${screenId}"]`);
+            if (card) {
+                const lastUpdatedElement = card.querySelector('.last-updated');
+                lastUpdatedElement.textContent = `Last updated: ${new Date().toLocaleString()}`;
+            }
+        }
+    </script>
+</body>
+</html>
