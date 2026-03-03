@@ -97,3 +97,8 @@
 .browse-jobs-page .body-container {
   overflow-x: auto;
 }
+
+/* Root fix: body-container centers children via flexbox — override to left-align */
+.body-container {
+  justify-content: flex-start !important;
+}
