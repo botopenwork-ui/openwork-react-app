@@ -181,6 +181,59 @@
             background-color: #2463cc;
         }
 
+        .image-labels {
+            display: flex;
+            justify-content: space-between; /* Changed to space-between */
+            margin-bottom: 10px;
+            padding: 0 5px; /* Add some padding to match image padding visually */
+        }
+        .image-label {
+            font-weight: 700;
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .image-label.figma {
+            color: #7B61FF; /* Purple */
+        }
+        .image-label.live {
+            color: #00C48C; /* Green */
+        }
+
+        .navigation-bar {
+            background-color: var(--dark-gray);
+            color: var(--white);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .navigation-bar .screen-info {
+            flex-grow: 1;
+            text-align: center;
+            font-weight: bold;
+        }
+        .navigation-bar button {
+            background-color: var(--openwork-blue);
+            color: var(--white);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px; /* Rounded buttons */
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+            min-width: 100px;
+            text-align: center;
+        }
+        .navigation-bar button:hover:not(:disabled) {
+            background-color: #2463cc;
+        }
+        .navigation-bar button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+
         .tasks-section {
             margin-top: 20px;
             border-top: 1px solid var(--border-color);
@@ -304,6 +357,12 @@
         <button>Add Screen (stub)</button>
     </header>
 
+    <nav class="navigation-bar">
+        <button id="prev-screen-btn" disabled>← Prev</button>
+        <div class="screen-info" id="current-screen-info"></div>
+        <button id="next-screen-btn" disabled>Next →</button>
+    </nav>
+
     <div class="container">
         <div id="screens-grid">
             <!-- Screen cards will be injected here -->
@@ -314,11 +373,15 @@
         const DR_TOKEN_KEY = 'dr_token';
         const PASSWORD = 'ow-review-2026';
         const API_BASE = '/api/design-review';
-        const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+        // const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes - Disable auto-refresh for single screen view
+
+        let allScreens = [];
+        let currentScreenIndex = 0;
 
         document.addEventListener('DOMContentLoaded', () => {
             checkPassword();
-            setInterval(fetchScreens, REFRESH_INTERVAL_MS); // Auto-refresh
+            // setInterval(fetchScreens, REFRESH_INTERVAL_MS); // Auto-refresh - disable for single screen view for now
+            setupNavigationListeners(); // Setup navigation listeners once DOM is ready
         });
 
         function checkPassword() {
@@ -347,83 +410,135 @@
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                const screens = await response.json();
-                renderScreens(screens);
+                allScreens = await response.json();
+                if (allScreens.length > 0) {
+                    currentScreenIndex = 0; // Reset to first screen when fetching new data
+                    displayCurrentScreen();
+                } else {
+                    document.getElementById('screens-grid').innerHTML = '<p>No screens to display.</p>';
+                    document.getElementById('current-screen-info').textContent = '';
+                    document.getElementById('prev-screen-btn').disabled = true;
+                    document.getElementById('next-screen-btn').disabled = true;
+                }
             } catch (error) {
                 console.error('Failed to fetch screens:', error);
                 alert('Failed to load design review data. Please check the console for details.');
             }
         }
 
-        function renderScreens(screens) {
+        function displayCurrentScreen() {
+            if (allScreens.length === 0) {
+                document.getElementById('screens-grid').innerHTML = '<p>No screens to display.</p>';
+                document.getElementById('current-screen-info').textContent = '';
+                document.getElementById('prev-screen-btn').disabled = true;
+                document.getElementById('next-screen-btn').disabled = true;
+                return;
+            }
+
+            const screen = allScreens[currentScreenIndex];
+            const totalScreens = allScreens.length;
             const grid = document.getElementById('screens-grid');
-            grid.innerHTML = ''; // Clear existing cards
-            screens.forEach(screen => {
-                const card = document.createElement('div');
-                card.className = 'screen-card';
-                card.setAttribute('data-screen-id', screen.id);
+            grid.innerHTML = ''; // Clear existing card
 
-                const lastUpdated = new Date().toLocaleString(); // Placeholder for now
+            const card = document.createElement('div');
+            card.className = 'screen-card';
+            card.setAttribute('data-screen-id', screen.id);
 
-                card.innerHTML = `
-                    <h2>
-                        ${screen.title}
-                        <a href="${screen.figmaUrl}" target="_blank" title="Open Figma link">🔗 Figma</a>
-                    </h2>
-                    <div class="image-viewer">
-                        <div class="image-wrapper">
-                            <img class="figma-image" src="${screen.figmaImage}" alt="${screen.title} Figma">
-                            <img class="live-image" src="${screen.liveImage}" alt="${screen.title} Live">
-                            <img class="overlay-img hidden" src="${screen.liveImage}" alt="${screen.title} Live Overlay">
-                        </div>
-                        <div class="image-controls">
-                            <button class="toggle-view" data-view="side-by-side">Side-by-side</button>
-                            <button class="toggle-view" data-view="overlay">Overlay Diff</button>
-                        </div>
-                    </div>
-                    <div class="tasks-section">
-                        <h3>Tasks</h3>
-                        <div class="task-list">
-                            ${screen.tasks.map(task => `
-                                <div class="task-item" data-task-id="${task.id}">
-                                    <span class="badge ${task.bucket}">${task.bucket}</span>
-                                    <span class="task-text">${task.text}</span>
-                                    <select class="task-status-select" data-screen-id="${screen.id}" data-task-id="${task.id}">
-                                        <option value="pending" ${task.status === 'pending' ? 'selected' : ''}>Pending</option>
-                                        <option value="in-progress" ${task.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
-                                        <option value="fixed" ${task.status === 'fixed' ? 'selected' : ''}>Fixed</option>
-                                        <option value="wont-fix" ${task.status === 'wont-fix' ? 'selected' : ''}>Won't Fix</option>
-                                        <option value="needs-clarification" ${task.status === 'needs-clarification' ? 'selected' : ''}>Needs Clarification</option>
-                                    </select>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                    <div class="comments-section">
-                        <h3>Comments</h3>
-                        <div class="comments-feed">
-                            ${screen.comments.length > 0 ? screen.comments.map(comment => `
-                                <div class="comment-item">
-                                    <div class="comment-meta"><strong>${comment.author}</strong> - ${new Date(comment.timestamp).toLocaleString()}</div>
-                                    <div class="comment-text">${comment.text}</div>
-                                </div>
-                            `).join('') : '<p>No comments yet.</p>'}
-                        </div>
-                        <div class="comment-form">
-                            <textarea placeholder="Add a comment..." data-screen-id="${screen.id}"></textarea>
-                            <button class="add-comment-btn" data-screen-id="${screen.id}">Add Comment</button>
-                        </div>
-                    </div>
-                    <div class="last-updated">Last updated: ${lastUpdated}</div>
-                `;
-                grid.appendChild(card);
-            });
+            const lastUpdated = new Date().toLocaleString(); // Placeholder for now
 
-            // Add event listeners for new elements
-            addEventListeners();
+            card.innerHTML = `
+                <h2>
+                    ${screen.title}
+                    <a href="${screen.figmaUrl}" target="_blank" title="Open Figma link">🔗 Figma</a>
+                </h2>
+                <div class="image-viewer">
+                    <div class="image-labels">
+                        <span class="image-label figma">FIGMA DESIGN</span>
+                        <span class="image-label live">LIVE APP</span>
+                    </div>
+                    <div class="image-wrapper">
+                        <img class="figma-image" src="${screen.figmaImage}" alt="${screen.title} Figma">
+                        <img class="live-image" src="${screen.liveImage}" alt="${screen.title} Live">
+                        <img class="overlay-img hidden" src="${screen.liveImage}" alt="${screen.title} Live Overlay">
+                    </div>
+                    <div class="image-controls">
+                        <button class="toggle-view" data-view="side-by-side">Side-by-side</button>
+                        <button class="toggle-view" data-view="overlay">Overlay Diff</button>
+                    </div>
+                </div>
+                <div class="tasks-section">
+                    <h3>Tasks</h3>
+                    <div class="task-list">
+                        ${screen.tasks.map(task => `
+                            <div class="task-item" data-task-id="${task.id}">
+                                <span class="badge ${task.bucket}">${task.bucket}</span>
+                                <span class="task-text">${task.text}</span>
+                                <select class="task-status-select" data-screen-id="${screen.id}" data-task-id="${task.id}">
+                                    <option value="pending" ${task.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                    <option value="in-progress" ${task.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                                    <option value="fixed" ${task.status === 'fixed' ? 'selected' : ''}>Fixed</option>
+                                    <option value="wont-fix" ${task.status === 'wont-fix' ? 'selected' : ''}>Won't Fix</option>
+                                    <option value="needs-clarification" ${task.status === 'needs-clarification' ? 'selected' : ''}>Needs Clarification</option>
+                                </select>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="comments-section">
+                    <h3>Comments</h3>
+                    <div class="comments-feed">
+                        ${screen.comments.length > 0 ? screen.comments.map(comment => `
+                            <div class="comment-item">
+                                <div class="comment-meta"><strong>${comment.author}</strong> - ${new Date(comment.timestamp).toLocaleString()}</div>
+                                <div class="comment-text">${comment.text}</div>
+                            </div>
+                        `).join('') : '<p>No comments yet.</p>'}
+                    </div>
+                    <div class="comment-form">
+                        <textarea placeholder="Add a comment..." data-screen-id="${screen.id}"></textarea>
+                        <button class="add-comment-btn" data-screen-id="${screen.id}">Add Comment</button>
+                    </div>
+                </div>
+                <div class="last-updated">Last updated: ${lastUpdated}</div>
+            `;
+            grid.appendChild(card);
+
+            document.getElementById('current-screen-info').textContent = `${screen.title} — ${currentScreenIndex + 1} of ${totalScreens}`;
+            document.getElementById('prev-screen-btn').disabled = currentScreenIndex === 0;
+            document.getElementById('next-screen-btn').disabled = currentScreenIndex === totalScreens - 1;
+
+            addCardEventListeners();
         }
 
-        function addEventListeners() {
+        function navigateScreens(direction) {
+            currentScreenIndex += direction;
+            if (currentScreenIndex < 0) {
+                currentScreenIndex = allScreens.length - 1; // Cycle to end
+            } else if (currentScreenIndex >= allScreens.length) {
+                currentScreenIndex = 0; // Cycle to beginning
+            }
+            displayCurrentScreen();
+        }
+
+        function setupNavigationListeners() {
+            // Navigation buttons
+            document.getElementById('prev-screen-btn').onclick = () => navigateScreens(-1);
+            document.getElementById('next-screen-btn').onclick = () => navigateScreens(1);
+
+            // Keyboard navigation
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'ArrowLeft') {
+                    navigateScreens(-1);
+                } else if (event.key === 'ArrowRight') {
+                    navigateScreens(1);
+                }
+            });
+        }
+
+        function addCardEventListeners() {
+            // This function adds event listeners specific to the currently displayed card.
+            // It should be called every time a new card is displayed.
+
             document.querySelectorAll('.toggle-view').forEach(button => {
                 button.onclick = (event) => {
                     const card = event.target.closest('.screen-card');
@@ -441,8 +556,8 @@
                         liveImage.style.position = 'static';
                     } else { // overlay
                         imageWrapper.style.display = 'block';
-                        figmaImage.style.width = '100%';
                         liveImage.style.width = '100%'; /* Base image */
+                        figmaImage.style.width = '100%';
                         figmaImage.style.position = 'absolute';
                         figmaImage.style.top = '0';
                         figmaImage.style.left = '0';
@@ -501,8 +616,9 @@
                         const updatedComments = await response.json();
                         console.log('Comment added:', updatedComments);
                         textarea.value = ''; // Clear textarea
-                        // Re-render only the comments section or the entire card for simplicity
-                        fetchScreens(); // Re-fetch all screens to update comments and timestamp
+                        // Re-fetch all screens to update comments and timestamp and re-display current screen.
+                        // This is simpler than trying to update comments in-place.
+                        fetchScreens();
                     } catch (error) {
                         console.error('Failed to add comment:', error);
                         alert('Failed to add comment.');
