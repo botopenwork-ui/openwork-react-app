@@ -6,8 +6,8 @@ import "./ViewJobs.css";
 import { useWalletConnection } from "../../functions/useWalletConnection";
 import { getNativeChain } from "../../config/chainConfig";
 
-const STATUS_LABELS = { 0: "Open", 1: "In Progress", 2: "Completed", 3: "Disputed", 4: "Cancelled" };
-const STATUS_COLORS = { 0: "#22c55e", 1: "#3b82f6", 2: "#6366f1", 3: "#ef4444", 4: "#9ca3af" };
+const STATUS_LABELS = { 0: "Open", 1: "In Progress", 2: "Completed", 3: "Cancelled", 4: "Disputed", 64: "Closed", 96: "Released" };
+const STATUS_COLORS = { 0: "#22c55e", 1: "#3b82f6", 2: "#6366f1", 3: "#9ca3af", 4: "#ef4444", 64: "#6b7280", 96: "#6366f1" };
 
 export default function ViewJobs() {
   const { walletAddress } = useWalletConnection();

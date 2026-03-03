@@ -315,3 +315,15 @@ Pages that need a connected wallet to audit:
 
 **Net result:** 151 lines deleted, 0 features lost.
 **Commit:** `ae844bd` | **Revision:** `openwork-00165-4q5`
+
+---
+
+## Batch 4 — Wallet Migration + ViewJobs Polish (2026-03-03, revision 00167-4f5 / patch)
+
+| Fix | Details |
+|-----|---------|
+| 12 more pages off window.ethereum/useWalletAddress | GetSkillsVerified, ProfileAbout, ApplyNow, GenericProposalView, JobDeepView, MembersGovernance, RemoveMember, Payments, PaymentRefund (read-only → useWalletConnection); SkillVerification, AddEditPortfolio, AddUpdate (signing pages — address source switched, window.ethereum kept for Web3) |
+| ViewJobs status labels | Added status 64 ("Closed") and 96 ("Released") for legacy genesis jobs |
+| ViewJobs title fallback | Falls back to jobId correctly for pre-IPFS legacy jobs with empty jobDetailHash |
+
+**Commit:** `49a9d3b` + patch | **Revision:** `openwork-00167-4f5` → `00168`
