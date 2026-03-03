@@ -128,19 +128,7 @@ export default function JoineeApplication() {
         const ipfsHash = jobDetails[2] || jobDetails.jobDetailHash;
         const ipfsData = await fetchFromIPFS(ipfsHash);
 
-        // Fetch proposed amount using getApplicationProposedAmount
-        const proposedAmountWei = await contract.methods
-          .getApplicationProposedAmount(jobId)
-          .call();
-
-        // Fetch escrow amount using getJobEscrowAmount
-        const escrowAmountWei = await contract.methods
-          .getJobEscrowAmount(jobId)
-          .call();
-
         // Convert amounts from USDC units (6 decimals)
-        const proposedAmount = web3.utils.fromWei(proposedAmountWei, "mwei");
-        const currentEscrowAmount = web3.utils.fromWei(escrowAmountWei, "mwei");
 
         const amountReleased = proposedAmount - currentEscrowAmount;
 

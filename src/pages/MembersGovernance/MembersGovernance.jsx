@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { Tooltip } from "react-tooltip";
 import { useParams } from "react-router-dom";
 import { Link } from "react-router-dom";
-import Web3 from "web3";
 import "./MembersGovernance.css";
 import MenuItem from "../../components/MenuItem";
 import ToolTipContent from "../../components/ToolTipContent/ToolTipContent";
@@ -11,7 +10,6 @@ import ToolTipMilestone from "../../components/ToolTipMilestone/ToolTipMilestone
 export default function MembersGovernance() {
   const [buttonFlex2, setButtonFlex2] = useState(false);
   const { jobId } = useParams();
-  const [job, setJob] = useState(null);
   const [walletAddress, setWalletAddress] = useState("");
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [loading, setLoading] = useState(true); // State for loading animation
@@ -101,66 +99,6 @@ export default function MembersGovernance() {
     setWalletAddress("");
     setDropdownVisible(false);
   };
-
-  useEffect(() => {
-    async function fetchJobDetails() {
-      try {
-        const rpcUrl = import.meta.env.VITE_ARBITRUM_MAINNET_RPC_URL || 'https://arb1.arbitrum.io/rpc';
-        const web3 = new Web3(rpcUrl); // Using the RPC URL
-        const contractAddress = '0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294';
-        const genesisABI = [{ "inputs": [{"name":"jobId","type":"string"}], "name": "getJob", "outputs": [{"type":"tuple","components":[{"name":"jobId","type":"string"},{"name":"jobGiver","type":"address"},{"name":"jobDetailHash","type":"string"},{"name":"status","type":"uint8"},{"name":"totalBudget","type":"uint256"},{"name":"currentMilestone","type":"uint256"},{"name":"jobTaker","type":"address"},{"name":"totalPaid","type":"uint256"},{"name":"paymentChainDomain","type":"uint32"},{"name":"paymentAddress","type":"address"},{"name":"takerOriginChainDomain","type":"uint32"}]}], "stateMutability": "view", "type": "function" }];
-        const contract = new web3.eth.Contract(genesisABI, contractAddress);
-
-        // Fetch job details
-        const jobDetails = await contract.methods.getJob(jobId).call();
-        const ipfsHash = jobDetails[2] || jobDetails.jobDetailHash;
-        const ipfsData = await fetchFromIPFS(ipfsHash);
-
-        // Fetch proposed amount using getApplicationProposedAmount
-        const proposedAmountWei = await contract.methods
-          .getApplicationProposedAmount(jobId)
-          .call();
-        // Fetch escrow amount using getJobEscrowAmount
-        const escrowAmountWei = await contract.methods
-          .getJobEscrowAmount(jobId)
-          .call();
-
-        // Log the raw wei values
-        console.log("Proposed Amount (raw wei):", proposedAmountWei);
-        console.log("Escrow Amount (raw wei):", escrowAmountWei);
-
-        // Convert amounts from USDC units (6 decimals)
-        const proposedAmount = web3.utils.fromWei(proposedAmountWei, "mwei");
-        const currentEscrowAmount = web3.utils.fromWei(
-          escrowAmountWei,
-          "mwei"
-        );
-
-        const receivedAmount = proposedAmount - currentEscrowAmount;
-
-        setJob({
-          jobId,
-          employer: jobDetails[1] || jobDetails.jobGiver,
-          jobTaker: jobDetails[6] || jobDetails.jobTaker,
-          escrowAmount: currentEscrowAmount,
-          isJobOpen: (Number(jobDetails[3] || jobDetails.status) === 0),
-          ...ipfsData,
-        });
-
-        setAmountPaid(proposedAmount);
-        setAmountReceived(receivedAmount);
-
-        setLoading(false); // Stop loading animation after fetching data
-        setIsElementReady(true);
-        console.log("elements ready!!!!");
-      } catch (error) {
-        console.error("Error fetching job details:", error);
-        setLoading(false); // Ensure loading stops even if there is an error
-      }
-    }
-
-    fetchJobDetails();
-  }, [jobId]);
 
   const fetchFromIPFS = async (hash) => {
     try {
