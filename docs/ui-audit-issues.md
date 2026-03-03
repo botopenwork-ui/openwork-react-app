@@ -1,5 +1,15 @@
-# Phase 1 UI Audit — Issue Log
-**Date:** 2026-03-03 | **Status:** No-wallet pass complete. Wallet pass pending (Anas).
+# Phase 1 + Phase 2 UI Audit — Issue Log
+**Date:** 2026-03-03 | **Status:** Audit complete. Fixes in progress.
+
+---
+
+## ⚠️ BASELINE RULE — NON-NEGOTIABLE
+
+> **Before any fix: the existing working features must not break.**
+> - All on-chain flows (postJob, applyToJob, startJob, submitWork, releasePayment, CCTP cross-chain) must keep working
+> - Every fix must be committed and pushed to GitHub before moving to the next fix
+> - If a fix causes a regression, revert immediately via `git revert` — do NOT debug on top of broken code
+> - Test each fix by screenshot after deploy before marking ✅
 
 ---
 
