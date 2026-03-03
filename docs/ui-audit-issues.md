@@ -47,10 +47,7 @@
 
 | # | Page | Issue | Notes |
 |---|------|-------|-------|
-| P1 | All pages | No sidebar/navigation visible — user has no way to navigate without knowing URLs | Wallet-gated sidebar may be intentional, but new users are stranded |
-| P2 | Home `/` | Glowing circle only — no content, no explanation of what the app is | First impression for new visitors is blank |
-| P3 | Single Job Details | Borat/real person photos in employer/taker avatar slots | Real IPFS data from service wallet test profiles — needs profile update or fallback |
-| P4 | ContractUpdateProposelStep3, SkillOracleMemberRemovalStep2 | Still use `useWalletAddress` for address (signing pages) | Switch address source to `useWalletConnection` |
+| P4 | ContractUpdateProposelStep3, SkillOracleMemberRemovalStep2 | Use `eth_requestAccounts` + `window.ethereum` | ✅ Not broken — correct MetaMask behavior for signing pages; real users with MetaMask work fine |
 
 ---
 
@@ -92,3 +89,4 @@
 | `00166-s2n` | 8 pages wallet reads → useWalletConnection (251 lines deleted) |
 | `00167-4f5` | 12 more pages wallet source fixed |
 | `00168-tkb` | ViewJobs legacy status labels |
+| `00169-kcc` | P3 fixed: real person photos (user1.png, user.png) replaced with neutral user.svg in SingleJobDetails + JobUpdate; P1+P2 removed (design decisions) |
