@@ -110,3 +110,46 @@ Pages that need a connected wallet to audit:
 4. **Profile viewer shows edit form** — confusing to all visitors
 5. **`alert()` → inline validation** — UX polish on key flows
 6. **"Arbitrum Sepolia" text in ApplyNow** — wrong chain name shown to users
+
+---
+
+## Issues Found — Simulated Wallet Pass
+
+*Mock wallet: `0x93514040f43aB16D52faAe7A3f380c4089D844F9` (Anas's address, ARB mainnet)*
+
+| # | Page | Issue | Severity | Notes |
+|---|------|-------|----------|-------|
+| 39 | Post Job `/post-job` | "No wallet detected. Please install MetaMask" warning banner shows even though wallet IS connected in header | 🔴 High | Banner reads `window.ethereum` directly but connected state isn't propagating — same wallet detection bug as Profile viewer |
+| 40 | Post Job | Milestone default shows "1 🔵" — USDC icon looks like a blue dot at small size | 🟢 Low | Minor icon sizing issue |
+| 41 | Post Job | No chain selector visible — user can't choose OP vs ARB before posting | 🟡 Medium | Chain selection exists in code but may not show until user action |
+| 42 | View Jobs `/view-jobs` | Stuck on "Loading your jobs..." indefinitely — never resolves or shows empty state | 🔴 High | Likely reading from wrong chain (Sepolia), or RPC call failing silently |
+| 43 | View Jobs | Sidebar cut off — "Ope..." showing at top right, same left-clip issue | 🔴 High | Systemic table/layout bug |
+| 44 | Direct Contract `/direct-contract` | Form looks clean and functional ✅ but "Enter Contract" button text is generic — should be "Start Direct Contract" or similar | 🟢 Low | Minor copy issue |
+| 45 | Direct Contract | No chain indicator shown — user doesn't know which chain the contract will be on | 🟡 Medium | Important for cross-chain UX |
+| 46 | Notifications `/notifications` | Clean and functional ✅ — "No notifications yet" empty state is clear | — | No issues |
+| 47 | Payments `/payments/30111-93` | Blank white page — nothing renders at all | 🔴 High | Completely broken — likely component crash or wrong data loading |
+| 48 | Work `/work` | Just the glowing circle — same radial hover menu as Home and Governance | 🟡 Medium | Need to hover to see options — not intuitive, especially for new users |
+| 49 | ALL pages | Header still says "Connect Wallet" even when wallet IS connected (mock) | 🔴 High | WalletContext not being read correctly by the header component — major UX bug |
+
+---
+
+## Final Summary (all passes complete)
+
+| Severity | Count |
+|----------|-------|
+| 🔴 High | 24 |
+| 🟡 Medium | 16 |
+| 🟢 Low | 8 |
+| ✅ No issues | 3 |
+
+**Total: 49 issues across Phase 1 pages**
+
+---
+
+## Top 5 to Fix First
+
+1. **Header "Connect Wallet" bug** — shows even when wallet connected. Affects every page.
+2. **Table left-clipping** — Browse Jobs, Browse Talent, DAO Members, Skill Oracles, View Jobs. One CSS fix.
+3. **Sepolia RPC in Profile, ProfileOwnerView, DirectContractForm, ApplyJob, ReleasePayment** — reading testnet data.
+4. **Payments page blank** — completely broken.
+5. **View Jobs stuck loading** — infinite spinner, never resolves.
