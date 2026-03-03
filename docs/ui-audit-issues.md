@@ -66,3 +66,47 @@ Pages that need a connected wallet to audit:
 - Notifications
 - Governance (wallet connected)
 
+
+---
+
+## Issues Found — Code Analysis Pass (wallet-gated pages)
+
+| # | Page | Issue | Severity | Notes |
+|---|------|-------|----------|-------|
+| 26 | Profile `/profile/:address` | Still uses `VITE_ARBITRUM_SEPOLIA_RPC_URL` — same testnet bug as BrowseTalent had | 🔴 High | Will fail to load profile data from mainnet |
+| 27 | Profile `/profile/:address` | No owner vs viewer distinction — same editable form shown to everyone | 🔴 High | Need `isOwner = address === walletAddress` check and separate read-only view |
+| 28 | ProfileOwnerView | Also uses `VITE_ARBITRUM_SEPOLIA_RPC_URL` in two places | 🔴 High | Profile owner view won't load real mainnet data |
+| 29 | DirectContractForm | Uses `VITE_ARBITRUM_SEPOLIA_RPC_URL` as fallback RPC | 🔴 High | Cross-chain form may read wrong chain data |
+| 30 | ApplyJob | Uses `VITE_ARBITRUM_SEPOLIA_RPC_URL` as fallback RPC | 🔴 High | Apply flow may read from testnet |
+| 31 | ReleasePayment | Uses `VITE_ARBITRUM_SEPOLIA_RPC_URL` as fallback RPC | 🔴 High | Payment release could read from testnet |
+| 32 | DirectContractForm | 5x raw `alert()` calls for validation errors (title, requirements, taker address, milestone, chain switch) | 🟡 Medium | `alert()` is a jarring native browser popup — should be inline form validation or toast |
+| 33 | DirectContractForm | `'quote-placeholder'` hardcoded as argument to `startDirectContract` | 🔴 High | Literal string "quote-placeholder" sent to contract — likely a dev stub that was never replaced |
+| 34 | ViewJobs / Payments / GetSkillsVerified / RemovalApplication | Raw `alert("MetaMask is not installed...")` — native browser popup | 🟡 Medium | Should be styled in-app message |
+| 35 | All above pages | Multiple `alert("Address copied to clipboard")` calls | 🟢 Low | Minor — should be a toast notification, not native alert |
+| 36 | RaiseDispute / ViewReceivedApplication / ReviewDispute | 8-21 `console.log` statements left in production code | 🟢 Low | Not visible to users but leaks implementation details in DevTools |
+| 37 | ApplyNow | Shows "Creating proposal on Arbitrum Sepolia..." status message to user | 🔴 High | Hardcoded testnet name shown in UI — users on mainnet will see wrong chain name |
+| 38 | ALL list pages (Browse Jobs, Browse Talent, DAO Members, Skill Oracles) | Left column completely clipped — root cause likely a shared table CSS class | 🔴 High | One CSS fix should resolve all 4 |
+
+---
+
+## Updated Summary
+
+| Severity | Count |
+|----------|-------|
+| 🔴 High | 19 |
+| 🟡 Medium | 13 |
+| 🟢 Low | 6 |
+| ✅ No issues | 2 |
+
+**Total: 38 issues across Phase 1 pages**
+
+---
+
+## Priority Fix Order (before wallet pass)
+
+1. **Sepolia RPC in Profile.jsx, ProfileOwnerView, DirectContractForm, ApplyJob, ReleasePayment** — mainnet data won't load
+2. **`quote-placeholder` in DirectContractForm** — bad data sent to contract
+3. **Table left-clipping** — affects 4 public pages, single CSS fix
+4. **Profile viewer shows edit form** — confusing to all visitors
+5. **`alert()` → inline validation** — UX polish on key flows
+6. **"Arbitrum Sepolia" text in ApplyNow** — wrong chain name shown to users
