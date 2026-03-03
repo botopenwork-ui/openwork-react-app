@@ -257,7 +257,7 @@ export default function AddEditPortfolio() {
               </h1>
             )}
             <div className="addedit-contract-row">
-              <span>Contract ID: {formatWalletAddress(walletAddress)}</span>
+              <span>Wallet: {formatWalletAddress(walletAddress)}</span>
               <img 
                 src="/copy.svg" 
                 className="addedit-copy-icon" 
@@ -367,7 +367,7 @@ export default function AddEditPortfolio() {
         </div>
 
         {/* Status and Submit Section */}
-        {chainError && (
+        {chainError && !walletAddress && (
           <div className="warning-form" style={{marginBottom: '12px'}}>
             <Warning content={chainError} icon="/triangle_warning.svg" />
           </div>

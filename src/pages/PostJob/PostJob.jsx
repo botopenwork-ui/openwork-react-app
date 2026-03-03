@@ -77,9 +77,14 @@ export default function PostJob() {
     if (chainConfig && isAllowed) {
       setTransactionStatus(`Ready to post on ${chainConfig.name}. Job posting requires blockchain transaction fees.`);
     } else if (chainError) {
-      setTransactionStatus(`⚠️ ${chainError}`);
+      // Only show wallet-install prompt if no wallet address exists at all
+      if (walletAddress) {
+        setTransactionStatus(`Job posting requires blockchain transaction fees.`);
+      } else {
+        setTransactionStatus(`⚠️ ${chainError}`);
+      }
     }
-  }, [chainId, chainConfig, isAllowed, chainError]);
+  }, [chainId, chainConfig, isAllowed, chainError, walletAddress]);
 
   // Function to extract job ID from LayerZero logs (MULTI-CHAIN COMPATIBLE)
   const extractJobIdFromLayerZeroLogs = (receipt) => {
