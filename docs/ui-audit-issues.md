@@ -55,13 +55,6 @@
 
 | # | Page | Issue | Notes |
 |---|------|-------|-------|
-| P6 | DAO stat card | "MY OW BALAN..." still slightly clipped on some screens | CSS fix committed but may need viewport check |
-| P7 | Profile portfolio | "Failed to load portfolios" error — too technical | Should say "No portfolio items yet" |
-| P8 | Profile portfolio | "Contract ID: 0x5a79..." label — wrong, it's a wallet address | Mislabelled field |
-| P9 | Join Now | Shows oracle-specific content without wallet connected | Should show generic prompt |
-| P10 | BrowseTalent | Profile link destination — needs verification it goes to correct route | Quick check needed |
-| P11 | AskAthena | Athena contract address — needs verification against deployed contracts doc | Quick check |
-| P12 | SkillVerificationApplication, ReferEarn | window.ethereum wallet reads still present | Low risk — ReferEarn also signs txs |
 
 ---
 
@@ -69,8 +62,6 @@
 
 | # | Page | Issue | Notes |
 |---|------|-------|-------|
-| P16 | DAO page | Table content not centered — toolbar buttons (Table Columns/Filter/+New Proposal) are centered but table headers/rows are left-aligned; visual mismatch | Noted from screenshot |
-| P13 | Work Profile | "Portfolio item not found" bare error — no back button | Empty state needs friendly design |
 | P14 | DAO Members | "Proposals Created" shows N/A | May be intentional |
 
 ---
@@ -89,3 +80,4 @@
 | `00167-4f5` | 12 more pages wallet source fixed |
 | `00168-tkb` | ViewJobs legacy status labels |
 | `00169-kcc` | P3 fixed: real person photos replaced with user.svg; P1+P2 removed (design decisions); P4 confirmed not broken (correct MetaMask signing flow) |
+| `00170-n8p` | Batch-5: P6 box-title overflow fix; P7+P8 portfolio empty state + label; P9 JoinNow no-wallet guard; P10 verified not broken; P11 AthenaClient address fixed; P12 SkillVerificationApplication+ReferEarn wallet source; P13 ViewWorkProfile back button; P15 removed (real data); P16 DAO toolbar alignment |
