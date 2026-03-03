@@ -59,8 +59,8 @@ app.use('/api/health', healthRoute);
 
 // Mount design review routes and assets
 app.use('/api/design-review', designReviewRouter);
-app.use('/design-review-assets', express.static(path.join(__dirname, 'public/design-review-assets')));
-app.get('/design-review', (req, res) => res.sendFile(path.join(__dirname, 'public/design-review.html')));
+app.use('/design-review-assets', express.static(require('path').join(__dirname, 'public/design-review-assets')));
+app.get('/design-review', (req, res) => res.sendFile(require('path').join(__dirname, 'public/design-review.html')));
 
 // Health dashboard UI
 app.get('/health', (req, res) => res.sendFile(path.join(__dirname, 'public/health.html')));
