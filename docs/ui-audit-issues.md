@@ -289,3 +289,17 @@ Pages that need a connected wallet to audit:
 **Rule added:** Always refer to `contracts/all-deployed-contracts-18-jan-2026.md` for contract addresses — never hardcode from memory.
 
 **Commits:** `3cf0797`, `bcc24b2` | **Revisions:** `openwork-00162-vwc`, `openwork-00163-cf5`
+
+---
+
+## Batch 3 — Fixed (2026-03-03, revision 00164-v7s)
+
+| Issue | Fix |
+|-------|-----|
+| ProfileOwnerView shows editable form to all visitors | `isOwner` logic was correct but wallet came from `window.ethereum` (useWalletAddress) — switched to `useWalletConnection` (localStorage); fields now properly `readOnly` for non-owners |
+| Payments page blank | Rewrote data fetch: XinFin → ARB mainnet genesis `0xE8f7`; wallet source fixed |
+| PaymentHistory, TakerJobDetails, VotingHistory, ProfileAbout | XinFin → ARB mainnet genesis; `getJobDetails` → `getJob`; field access updated |
+| GetSkillsVerified, RemovalApplication, PaymentRefund, RecruitmentApplication, MembersGovernance, RemoveMember, JoineeApplication | XinFin RPC → ARB mainnet; L1ABI → inline genesis ABI |
+| Blank `<div></div>` fallback on Payments + MembersGovernance | Replaced with "Loading job data..." message |
+
+**Commit:** `9475c66` | **Revision:** `openwork-00164-v7s`
