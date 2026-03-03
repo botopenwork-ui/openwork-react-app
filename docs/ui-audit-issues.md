@@ -254,3 +254,19 @@ Pages that need a connected wallet to audit:
 **Baseline verified:** Browse Jobs and Browse Talent load full job/profile titles. No regressions observed.
 
 **Remaining open:** 70 issues from audit still queued. Awaiting go-ahead.
+
+---
+
+## Low-Hanging Fruit Batch — Fixed (2026-03-03, revision 00161-vbj)
+
+| Issues Fixed | Details |
+|-------------|---------|
+| DAO, DAO Members, Skill Oracle, Skill Oracle Proposals, Skill Oracle Disputes, Browse Talent — title/table clipping | Added `justify-content: flex-start` to body-container in 6 CSS files |
+| Header "Connect Wallet" text when wallet IS connected | Changed to "Switch Network" in ChainSelector.jsx |
+| `alert()` calls across 24 files | Replaced clipboard alerts with `void 0`, MetaMask alerts with `console.warn` |
+| `console.log` production leaks in 5 files | Removed from RaiseDispute, ViewReceivedApplication, ReviewDispute, DirectContractForm, SingleJobDetails |
+| AskAthena "Connect wallet" despite wallet connected | Switched from `useWalletAddress` to `useWalletConnection` (reads from localStorage) |
+
+**Commit:** `d001d72` | **Revision:** `openwork-00161-vbj`
+
+**Remaining open issues: ~55** (complex ones — profile read-only view, Payments blank page, View Jobs spinner, etc.)
