@@ -2,104 +2,185 @@ const express = require('express');
 const router = express.Router();
 const fetch = require('node-fetch');
 
+// Simple in-memory rate limiter
+const rateLimit = new Map();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS = 20;
+
 /**
- * Gemini AI Chat endpoint
+ * Middleware: Rate limit + Auth token
+ */
+router.use((req, res, next) => {
+  // 1. Rate Limit
+  const ip = req.ip || 'anonymous';
+  const now = Date.now();
+  const userRate = rateLimit.get(ip) || { count: 0, reset: now + RATE_LIMIT_WINDOW };
+
+  if (now > userRate.reset) {
+    userRate.count = 0;
+    userRate.reset = now + RATE_LIMIT_WINDOW;
+  }
+  
+  if (userRate.count >= MAX_REQUESTS) {
+    return res.status(429).json({ success: false, error: 'Too many requests' });
+  }
+
+  userRate.count++;
+  rateLimit.set(ip, userRate);
+
+  // 2. Auth Token
+  const authHeader = req.headers['authorization'];
+  const expectedToken = process.env.CHAT_API_TOKEN;
+  
+  if (expectedToken && authHeader !== `Bearer ${expectedToken}`) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+
+  next();
+});
+
+// Transaction tools section
+const TRANSACTION_TOOLS_SECTION = `
+## TRANSACTION CAPABILITIES
+
+You can help users execute OpenWork transactions. When a user clearly wants to perform one of these actions AND has provided enough information, respond normally AND embed a tool call at the end of your response:
+
+<tool>
+{"name": "TOOL_NAME", "params": {...}, "display": "Human readable summary"}
+</tool>
+
+Available tools:
+- postJob(title, budget, description) — Post a new job. budget is a number in USDC. Ask for missing params.
+- applyToJob(jobId, proposal) — Apply to an existing job
+- startJob(jobId, applicationId) — Start a job by hiring an applicant
+- submitWork(jobId, workDetails) — Submit completed work
+- releasePayment(jobId) — Release payment to worker
+- raiseDispute(jobId, reason) — Raise a dispute on a job
+- createProfile(name, skills, hourlyRate) — Create a freelancer profile
+- startDirectContract(title, budget, description, jobTaker) — Hire someone directly
+
+IMPORTANT: Only embed <tool> when the user has explicitly confirmed they want to transact. Always ask for missing required params first.
+`;
+
+/**
+ * Call LLM with automatic provider detection:
+ * 1. GEMINI_API_KEY → Google Generative Language API
+ * 2. AWS creds → Amazon Bedrock (Claude)
+ * 3. Fail with helpful error
+ */
+async function callLLM(messages) {
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+  // Method 1: Gemini API key
+  if (GEMINI_API_KEY) {
+    // Extract system prompt — Gemini uses systemInstruction, not a 'system' role message
+    const systemMsg = messages.find(m => m.role === 'system');
+    const contents = messages
+      .filter(m => m.role !== 'system')
+      .map(m => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }]
+      }));
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const body = {
+      contents,
+      generationConfig: { temperature: 0.3, maxOutputTokens: 2048, topP: 0.95 }
+    };
+    if (systemMsg) {
+      body.systemInstruction = { parts: [{ text: systemMsg.content }] };
+    }
+
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    if (resp.ok) {
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
+    }
+    throw new Error(data.error?.message || 'Gemini API error');
+  }
+
+  // Method 2: AWS Bedrock (Claude)
+  const awsKey = process.env.AWS_ACCESS_KEY_ID;
+  const awsSecret = process.env.AWS_SECRET_ACCESS_KEY;
+  if (awsKey && awsSecret) {
+    const { BedrockRuntimeClient, ConverseCommand } = require('@aws-sdk/client-bedrock-runtime');
+    const client = new BedrockRuntimeClient({
+      region: process.env.AWS_REGION || 'us-east-1',
+      credentials: { accessKeyId: awsKey, secretAccessKey: awsSecret }
+    });
+
+    // Convert to Bedrock Converse format
+    const bedrockMessages = messages
+      .filter(m => m.role !== 'system')
+      .map(m => ({
+        role: m.role === 'model' ? 'assistant' : m.role,
+        content: [{ text: m.content }]
+      }));
+
+    // Extract system prompt
+    const systemPrompt = messages.filter(m => m.role === 'system').map(m => ({ text: m.content }));
+
+    const command = new ConverseCommand({
+      modelId: 'us.anthropic.claude-3-5-haiku-20241022-v1:0',
+      messages: bedrockMessages,
+      system: systemPrompt.length > 0 ? systemPrompt : undefined,
+      inferenceConfig: { temperature: 0.3, maxTokens: 2048, topP: 0.95 }
+    });
+
+    const response = await client.send(command);
+    return response.output?.message?.content?.[0]?.text || 'Sorry, I could not generate a response.';
+  }
+
+  throw new Error('No LLM provider configured. Set GEMINI_API_KEY or AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY.');
+}
+
+/**
  * POST /api/chat
- * Body: { message: string, context?: string, history?: Array<{role: string, text: string}> }
  */
 router.post('/', async (req, res) => {
   try {
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-    if (!GEMINI_API_KEY) {
-      return res.status(500).json({
-        success: false,
-        error: 'Gemini API key not configured on server'
-      });
-    }
-
     const { message, context, history } = req.body;
 
     if (!message) {
-      return res.status(400).json({
-        success: false,
-        error: 'Message is required'
-      });
+      return res.status(400).json({ success: false, error: 'Message is required' });
     }
 
-    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    // Build messages array (provider-agnostic)
+    const messages = [];
 
-    // Build multi-turn conversation contents
-    const contents = [];
-
-    // First message: system context as the initial user turn
     if (context) {
-      contents.push({
-        role: 'user',
-        parts: [{ text: `${context}\n\nYou are Agent Oppy, the expert AI assistant for OpenWork. Use the documentation above to answer questions accurately and concisely. Be technical when needed but explain concepts clearly. If suggesting code, use proper formatting.` }]
-      });
-      contents.push({
-        role: 'model',
-        parts: [{ text: 'Understood! I\'m Agent Oppy, ready to help with OpenWork questions. I have access to the full protocol documentation including all contracts, deployment addresses, workflows, and technical details. What would you like to know?' }]
+      const fullContext = context.includes('TRANSACTION CAPABILITIES')
+        ? context
+        : context + TRANSACTION_TOOLS_SECTION;
+
+      messages.push({
+        role: 'system',
+        content: `${fullContext}\n\nYou are OpenWork AI, the expert assistant for OpenWork. Answer accurately and concisely. When the user wants a transaction, follow the TRANSACTION CAPABILITIES instructions.`
       });
     }
 
-    // Add conversation history (last 10 exchanges to keep within token limits)
     if (history && Array.isArray(history)) {
-      const recentHistory = history.slice(-20); // last 20 messages (10 exchanges)
-      for (const msg of recentHistory) {
+      for (const msg of history.slice(-20)) {
         if (msg.role === 'user') {
-          contents.push({ role: 'user', parts: [{ text: msg.text }] });
-        } else if (msg.role === 'oppy') {
-          contents.push({ role: 'model', parts: [{ text: msg.text }] });
+          messages.push({ role: 'user', content: msg.text });
+        } else if (msg.role === 'oppy' || msg.role === 'bot') {
+          messages.push({ role: 'assistant', content: msg.text });
         }
       }
     }
 
-    // Add current user message
-    contents.push({
-      role: 'user',
-      parts: [{ text: message }]
-    });
+    messages.push({ role: 'user', content: message });
 
-    const response = await fetch(GEMINI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contents,
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 2048,
-          topP: 0.95,
-          topK: 40
-        }
-      })
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
-
-      res.json({
-        success: true,
-        response: aiResponse
-      });
-    } else {
-      res.status(response.status).json({
-        success: false,
-        error: data.error?.message || 'Gemini API error'
-      });
-    }
+    const aiResponse = await callLLM(messages);
+    res.json({ success: true, response: aiResponse });
 
   } catch (error) {
-    console.error('Error calling Gemini API:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    console.error('[chat] Error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
