@@ -89,7 +89,4 @@
     align-items: center;
     padding-right: 32px;
 }
-/* Fix: body-container centers children — override to left-align */
-.body-container {
-  justify-content: flex-start !important;
-}
+/* centering handled by base .view-jobs-container margin: 0 auto */

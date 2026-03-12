@@ -51,8 +51,8 @@ You can help users execute OpenWork transactions. When a user clearly wants to p
 
 Available tools:
 - postJob(title, budget, description) — Post a new job. budget is a number in USDC. Ask for missing params.
-- applyToJob(jobId, proposal) — Apply to an existing job
-- startJob(jobId, applicationId) — Start a job by hiring an applicant
+- applyToJob(jobId, proposal, proposedAmount?) — Apply to an existing job. proposedAmount is optional USDC amount (e.g. 100 for $100).
+- startJob(jobId, applicantAddress) — Start a job by hiring an applicant. applicantAddress is the 0x address of the applicant. DO NOT ask for applicationId — the frontend looks it up automatically.
 - submitWork(jobId, workDetails) — Submit completed work
 - releasePayment(jobId) — Release payment to worker
 - raiseDispute(jobId, reason) — Raise a dispute on a job

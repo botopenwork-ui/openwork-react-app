@@ -51,7 +51,7 @@ img#connectButtonVJ {
   position: relative;
   width: 100%;
   max-width: 918px;
-  margin: 0 auto;
+  margin: 0 auto !important;
   top: 88px;
   border-bottom:none;
 }
@@ -99,6 +99,7 @@ img#connectButtonVJ {
   padding-top:32px;
   border-radius: 0px 0px 24px 24px;
   border: 2px solid whitesmoke;
+  overflow: visible;
 }
 
 .backButtonV {

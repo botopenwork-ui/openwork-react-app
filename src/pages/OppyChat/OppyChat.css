@@ -1,0 +1,377 @@
+/* ── Desktop layout (mirrors ViewJobs pattern) ─────────────── */
+
+/* ── Desktop header ─────────────────────────────────────────── */
+.oppy-chat-page .title-section {
+  height: auto;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 24px 24px 0 0;
+  background-color: #ffffff;
+  border: 2px solid whitesmoke;
+  border-bottom: none;
+  gap: 8px;
+}
+
+.oppy-chat-page .backButtonV {
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.oppy-chat-page .backIconV {
+  width: 36px;
+  height: 36px;
+}
+
+/* Table section card */
+.oppy-chat-page .table-section {
+  background-color: #ffffff;
+  border-radius: 0 0 24px 24px;
+  border: 2px solid whitesmoke;
+  overflow: hidden;
+}
+
+/* ── Chat header ────────────────────────────────────────────── */
+.oppy-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+}
+
+.oppy-chat-header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.oppy-chat-title {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #050505;
+  line-height: 1.2;
+}
+
+.oppy-chat-subtitle {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: #868686;
+}
+
+.oppy-chat-icon {
+  width: 32px;
+  height: 32px;
+  background: #0047FF;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Messages area ──────────────────────────────────────────── */
+.chat-messages-area {
+  min-height: 200px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding: 24px 24px 12px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scroll-behavior: smooth;
+}
+
+.chat-messages-area::-webkit-scrollbar { width: 4px; }
+.chat-messages-area::-webkit-scrollbar-track { background: transparent; }
+.chat-messages-area::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 2px; }
+
+/* Message rows */
+.chat-msg-row { display: flex; width: 100%; }
+.chat-msg-row.bot { justify-content: flex-start; }
+.chat-msg-row.user { justify-content: flex-end; }
+
+/* Bubbles */
+.chat-bubble {
+  max-width: 70%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-family: 'Satoshi', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.chat-bubble.bot {
+  background: #ffffff;
+  border: 1.5px solid #e8e8e8;
+  color: #050505;
+}
+
+.chat-bubble.user {
+  background: #0047FF;
+  color: #ffffff;
+  border: none;
+}
+
+.chat-bubble.bot p { margin: 0 0 8px 0; }
+.chat-bubble.bot p:last-child { margin-bottom: 0; }
+.chat-bubble.bot ul, .chat-bubble.bot ol { padding-left: 18px; margin: 6px 0; }
+.chat-bubble.bot code { background: #f0f0f0; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+.chat-bubble.bot pre { background: #f0f0f0; padding: 10px; border-radius: 8px; overflow-x: auto; font-size: 12px; }
+
+/* Thinking dots */
+.thinking-dots { display: flex; align-items: center; gap: 5px; padding: 4px 0; }
+.thinking-dots span {
+  width: 7px; height: 7px;
+  background: #0047FF; border-radius: 50%;
+  animation: dotBounce 1.2s infinite ease-in-out;
+}
+.thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotBounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* Suggested prompts */
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 24px 16px 24px;
+}
+
+.chat-suggestion-chip {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0047FF;
+  background: #f0f4ff;
+  border: 1.5px solid #cad7ff;
+  border-radius: 20px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.chat-suggestion-chip:hover { background: #e0eaff; border-color: #0047FF; }
+
+/* Input bar */
+.chat-input-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 24px 24px 24px;
+  border-top: 1.5px solid #f0f0f0;
+}
+
+.chat-input {
+  flex: 1;
+  font-family: 'Satoshi', sans-serif;
+  font-size: 14px;
+  padding: 11px 16px;
+  border: 1.5px solid #e8e8e8;
+  border-radius: 12px;
+  outline: none;
+  color: #050505;
+  background: #fafafa;
+  transition: border-color 0.15s;
+}
+.chat-input:focus { border-color: #0047FF; background: #fff; }
+.chat-input::placeholder { color: #b0b0b0; }
+
+.chat-send-btn {
+  width: 42px; height: 42px;
+  background: #0047FF;
+  border: none; border-radius: 10px;
+  color: white; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, transform 0.1s;
+  flex-shrink: 0;
+}
+.chat-send-btn:hover { background: #003bdd; }
+.chat-send-btn:active { transform: scale(0.95); }
+.chat-send-btn:disabled { background: #c0c0c0; cursor: not-allowed; }
+
+/* ── Transaction card ───────────────────────────────────────── */
+.tx-card {
+  background: #fff;
+  border: 1.5px solid #e8e8e8;
+  border-left: 4px solid #0047FF;
+  border-radius: 12px;
+  padding: 16px 18px;
+  max-width: 480px;
+  font-family: 'Satoshi', sans-serif;
+}
+.tx-card-action { font-size: 13px; font-weight: 700; color: #0047FF; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+.tx-card-display { font-size: 14px; font-weight: 600; color: #050505; margin-bottom: 12px; }
+.tx-card-params { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.tx-param-row { display: flex; gap: 8px; font-size: 13px; }
+.tx-param-key { color: #868686; font-weight: 500; min-width: 80px; }
+.tx-param-value { color: #050505; word-break: break-all; }
+.tx-card-actions { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
+.tx-cancel-btn {
+  font-family: 'Satoshi', sans-serif;
+  font-size: 13px; font-weight: 600; color: #868686;
+  background: #f5f5f5; border: 1.5px solid #e0e0e0;
+  border-radius: 8px; padding: 8px 16px; cursor: pointer;
+}
+.tx-cancel-btn:hover { background: #ebebeb; }
+.tx-hash-link { font-size: 13px; color: #0047FF; text-decoration: underline; margin-top: 8px; display: block; word-break: break-all; }
+.tx-success-msg { font-size: 13px; font-weight: 600; color: #16a34a; margin-top: 8px; }
+
+/* ─────────────────────────────────────────────────────────────
+   MOBILE — pure CSS media query, no JS class needed
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Full-screen chat — override card layout */
+  .oppy-chat-page {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    overflow: hidden;
+    background: #fff;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+  }
+
+  /* Kill desktop body-container padding / centering */
+  .oppy-chat-page .body-container {
+    padding: 0 !important;
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .oppy-chat-page .view-jobs-container {
+    top: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  /* Title bar */
+  .oppy-chat-page .title-section {
+    border-radius: 0;
+    flex-shrink: 0;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    height: 52px;
+    min-height: 52px;
+    padding: 0 8px;
+  }
+
+  .oppy-chat-page .backButtonV {
+    margin-left: 4px;
+    margin-right: -8px;
+    width: 44px; height: 44px;
+  }
+
+  .oppy-chat-page .backIconV { width: 44px; height: 44px; }
+
+  /* Card becomes full-height flex column */
+  .oppy-chat-page .table-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    overflow: visible; /* don't clip send button */
+    min-height: 0;
+  }
+
+  /* Chat header */
+  .oppy-chat-header {
+    padding: 10px 14px;
+    gap: 10px;
+    flex-shrink: 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .oppy-chat-title { font-size: 16px; }
+  .oppy-chat-subtitle { font-size: 11px; }
+  .oppy-chat-icon { width: 28px; height: 28px; }
+
+  /* Messages: grow to fill space, scroll */
+  .chat-messages-area {
+    flex: 1 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 14px 14px 8px 14px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Wider bubbles */
+  .chat-bubble {
+    max-width: 85%;
+    font-size: 15px;
+    padding: 10px 13px;
+  }
+
+  /* Suggestions — horizontal scroll, no wrap */
+  .chat-suggestions {
+    padding: 8px 14px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-shrink: 0;
+    gap: 8px;
+  }
+  .chat-suggestions::-webkit-scrollbar { display: none; }
+  .chat-suggestion-chip { white-space: nowrap; flex-shrink: 0; min-height: 36px; }
+
+  /* Wallet status bar */
+  .wallet-status-bar {
+    flex-shrink: 0;
+    padding: 6px 14px !important;
+  }
+
+  /* Input bar — account for browser chrome + safe area */
+  .chat-input-bar {
+    padding: 10px 12px calc(16px + env(safe-area-inset-bottom, 0px)) 12px !important;
+    flex-shrink: 0;
+    background: #fff;
+    box-sizing: border-box;
+    width: 100%;
+    overflow: visible;
+  }
+
+  /* font-size 16px prevents iOS auto-zoom on focus */
+  .chat-input {
+    font-size: 16px !important;
+    padding: 12px 13px;
+    min-width: 0; /* critical: allows flex child to shrink below content size */
+    flex: 1 1 0%;
+  }
+
+  .chat-send-btn {
+    width: 46px;
+    min-width: 46px; /* never shrink */
+    height: 46px;
+    flex-shrink: 0;
+  }
+
+  /* Transaction card */
+  .tx-card { max-width: 100%; }
+  .tx-card-actions { flex-direction: column; align-items: stretch; }
+  .tx-cancel-btn { text-align: center; }
+}
+
+@media (max-width: 380px) {
+  .chat-bubble { max-width: 92%; font-size: 14px; }
+  .oppy-chat-title { font-size: 14px; }
+}

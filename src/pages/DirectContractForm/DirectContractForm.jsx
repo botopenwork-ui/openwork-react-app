@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Web3 from "web3";
 import JobContractABI from "../../ABIs/lowjc_ABI.json";
 import BrowseJobsABI from "../../ABIs/nowjc_ABI.json";
@@ -244,10 +244,11 @@ function FileUpload({ onFilesUploaded, uploadedFiles }) {
 
 export default function DirectContractForm() {
   const { walletAddress, connectWallet, disconnectWallet } = useWalletConnection();
-  const [jobTitle, setJobTitle] = useState("");
-  const [jobDescription, setJobDescription] = useState("");
+  const [searchParams] = useSearchParams();
+  const [jobTitle, setJobTitle] = useState(searchParams.get('title') || "");
+  const [jobDescription, setJobDescription] = useState(searchParams.get('description') || "");
   const [jobType, setJobType] = useState("");
-  const [jobTaker, setJobTaker] = useState("");
+  const [jobTaker, setJobTaker] = useState(searchParams.get('taker') || "");
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [loadingT, setLoadingT] = useState("");
   const [selectedOption, setSelectedOption] = useState('Single Milestone');
@@ -257,13 +258,14 @@ export default function DirectContractForm() {
   const [transactionStatus, setTransactionStatus] = useState("Direct contract creation requires blockchain transaction fees");
   const [crossChainSteps, setCrossChainSteps] = useState(null);
   const [platformFee, setPlatformFee] = useState(null);
-  const [milestones, setMilestones] = useState([
-    {
+  const [milestones, setMilestones] = useState(() => {
+    const budgetParam = searchParams.get('budget');
+    return [{
       title: "Milestone 1",
       content: "",
-      amount: 1,
-    },
-  ]);
+      amount: budgetParam ? Number(budgetParam) : 1,
+    }];
+  });
 
   const navigate = useNavigate();
 

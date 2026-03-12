@@ -215,52 +215,49 @@ export async function getAllProposals(forceRefresh = false) {
     // Format proposals
     const formattedProposals = [];
 
-    // Add Native DAO proposals with vote data
+    // Helper: compute votePercentage and timeLeft for a proposal in parallel
+    async function fetchProposalDetails(contract, proposalId) {
+      const [votes, deadline] = await Promise.all([
+        contract.methods.proposalVotes(proposalId).call().catch(() => null),
+        contract.methods.proposalDeadline(proposalId).call().catch(() => null)
+      ]);
+
+      let votePercentage = 0;
+      if (votes) {
+        const forV = BigInt(votes.forVotes);
+        const againstV = BigInt(votes.againstVotes);
+        const abstainV = BigInt(votes.abstainVotes);
+        const total = forV + againstV + abstainV;
+        if (total > 0n) votePercentage = Math.round((Number(forV) / Number(total)) * 100);
+      }
+
+      let timeLeft = "Unknown";
+      if (deadline) {
+        const secondsLeft = Number(deadline) - Math.floor(Date.now() / 1000);
+        if (secondsLeft > 0) {
+          const days = Math.floor(secondsLeft / 86400);
+          const hours = Math.floor((secondsLeft % 86400) / 3600);
+          const minutes = Math.floor((secondsLeft % 3600) / 60);
+          if (days > 0) timeLeft = `${days}d ${hours}h`;
+          else if (hours > 0) timeLeft = `${hours}h ${minutes}m`;
+          else if (minutes > 0) timeLeft = `${minutes}m`;
+          else timeLeft = "Ended";
+        } else {
+          timeLeft = "Ended";
+        }
+      }
+      return { votePercentage, timeLeft };
+    }
+
+    // Add Native DAO proposals — all in parallel
     if (nativeProposals && nativeProposals.ids) {
-      for (let i = 0; i < nativeProposals.ids.length; i++) {
-        const proposalId = nativeProposals.ids[i];
-        
-        // Fetch vote data and deadline for this proposal
-        let votePercentage = 0;
-        let timeLeft = "Unknown";
-        
-        try {
-          const votes = await nativeDAOContract.methods.proposalVotes(proposalId).call();
-          const forVotes = BigInt(votes.forVotes);
-          const againstVotes = BigInt(votes.againstVotes);
-          const abstainVotes = BigInt(votes.abstainVotes);
-          const totalVotes = forVotes + againstVotes + abstainVotes;
-          
-          if (totalVotes > 0n) {
-            votePercentage = Math.round((Number(forVotes) / Number(totalVotes)) * 100);
-          }
-        } catch (error) {
-        }
-        
-        try {
-          const deadline = await nativeDAOContract.methods.proposalDeadline(proposalId).call();
-          const now = Math.floor(Date.now() / 1000);
-          const secondsLeft = Number(deadline) - now;
-          
-          if (secondsLeft > 0) {
-            const days = Math.floor(secondsLeft / 86400);
-            const hours = Math.floor((secondsLeft % 86400) / 3600);
-            const minutes = Math.floor((secondsLeft % 3600) / 60);
-            
-            if (days > 0) timeLeft = `${days}d ${hours}h`;
-            else if (hours > 0) timeLeft = `${hours}h ${minutes}m`;
-            else if (minutes > 0) timeLeft = `${minutes}m`;
-            else timeLeft = "Ended";
-          } else {
-            timeLeft = "Ended";
-          }
-        } catch (error) {
-        }
-        
-        // Check if this proposal has database metadata
+      const nativeDetails = await Promise.all(
+        nativeProposals.ids.map(id => fetchProposalDetails(nativeDAOContract, id))
+      );
+      nativeProposals.ids.forEach((proposalId, i) => {
+        const { votePercentage, timeLeft } = nativeDetails[i];
         const dbKey = `${proposalId.toString()}-Arbitrum`;
         const dbData = dbProposalsMap.get(dbKey);
-        
         formattedProposals.push({
           id: proposalId.toString(),
           chain: "Arbitrum",
@@ -269,60 +266,23 @@ export async function getAllProposals(forceRefresh = false) {
           proposedBy: dbData?.proposer_address ? `${dbData.proposer_address.substring(0, 6)}...${dbData.proposer_address.substring(38)}` : "Native DAO",
           voteSubmissions: votePercentage,
           type: dbData?.proposal_type || getProposalType(Number(nativeProposals.states[i])),
-          timeLeft: timeLeft,
+          timeLeft,
           color: getStateColor(Number(nativeProposals.states[i])),
           viewUrl: `/proposal-view/${proposalId.toString()}/Arbitrum`,
           hasMetadata: !!dbData
         });
-      }
+      });
     }
 
-    // Add Main DAO proposals with vote data
+    // Add Main DAO proposals — all in parallel
     if (mainProposals && mainProposals.ids) {
-      for (let i = 0; i < mainProposals.ids.length; i++) {
-        const proposalId = mainProposals.ids[i];
-        
-        // Fetch vote data and deadline for this proposal
-        let votePercentage = 0;
-        let timeLeft = "Unknown";
-        
-        try {
-          const votes = await mainDAOContract.methods.proposalVotes(proposalId).call();
-          const forVotes = BigInt(votes.forVotes);
-          const againstVotes = BigInt(votes.againstVotes);
-          const abstainVotes = BigInt(votes.abstainVotes);
-          const totalVotes = forVotes + againstVotes + abstainVotes;
-          
-          if (totalVotes > 0n) {
-            votePercentage = Math.round((Number(forVotes) / Number(totalVotes)) * 100);
-          }
-        } catch (error) {
-        }
-        
-        try {
-          const deadline = await mainDAOContract.methods.proposalDeadline(proposalId).call();
-          const now = Math.floor(Date.now() / 1000);
-          const secondsLeft = Number(deadline) - now;
-          
-          if (secondsLeft > 0) {
-            const days = Math.floor(secondsLeft / 86400);
-            const hours = Math.floor((secondsLeft % 86400) / 3600);
-            const minutes = Math.floor((secondsLeft % 3600) / 60);
-            
-            if (days > 0) timeLeft = `${days}d ${hours}h`;
-            else if (hours > 0) timeLeft = `${hours}h ${minutes}m`;
-            else if (minutes > 0) timeLeft = `${minutes}m`;
-            else timeLeft = "Ended";
-          } else {
-            timeLeft = "Ended";
-          }
-        } catch (error) {
-        }
-        
-        // Check if this proposal has database metadata
+      const mainDetails = await Promise.all(
+        mainProposals.ids.map(id => fetchProposalDetails(mainDAOContract, id))
+      );
+      mainProposals.ids.forEach((proposalId, i) => {
+        const { votePercentage, timeLeft } = mainDetails[i];
         const dbKey = `${proposalId.toString()}-${mainChainName}`;
         const dbData = dbProposalsMap.get(dbKey);
-
         formattedProposals.push({
           id: proposalId.toString(),
           chain: mainChainName,
@@ -331,12 +291,12 @@ export async function getAllProposals(forceRefresh = false) {
           proposedBy: dbData?.proposer_address ? `${dbData.proposer_address.substring(0, 6)}...${dbData.proposer_address.substring(38)}` : "Main DAO",
           voteSubmissions: votePercentage,
           type: dbData?.proposal_type || getProposalType(Number(mainProposals.states[i])),
-          timeLeft: timeLeft,
+          timeLeft,
           color: getStateColor(Number(mainProposals.states[i])),
           viewUrl: `/proposal-view/${proposalId.toString()}/${mainChainName}`,
           hasMetadata: !!dbData
         });
-      }
+      });
     }
 
     // Sort by newest first

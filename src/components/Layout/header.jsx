@@ -94,6 +94,28 @@ const Header = () => {
         />
 
       <div className="right-header">
+        {/* AI Chat link */}
+        <a
+          href="/chat"
+          style={{
+            fontFamily: 'Satoshi, sans-serif',
+            fontSize: '13px',
+            fontWeight: 600,
+            color: '#0047FF',
+            background: '#f0f4ff',
+            border: '1.5px solid #cad7ff',
+            borderRadius: '20px',
+            padding: '6px 14px',
+            textDecoration: 'none',
+            marginRight: '12px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          ✦ AI Chat
+        </a>
         {walletAddress ? (
           <>
             {/* <div className="alarm" onClick={goNotification}>

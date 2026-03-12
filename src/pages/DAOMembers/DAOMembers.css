@@ -125,13 +125,7 @@
     padding-right: 32px;
 }
 
-/* Fix table left-clipping */
+/* Allow table scroll without breaking centering */
 .view-jobs-container {
-  margin-left: 0 !important;
   overflow-x: auto;
-}
-
-/* Fix: body-container centers children — override to left-align */
-.body-container {
-  justify-content: flex-start !important;
 }

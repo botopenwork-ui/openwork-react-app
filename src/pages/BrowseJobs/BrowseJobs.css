@@ -87,18 +87,13 @@
 }
 
 
-/* Fix table left-clipping: left-align container, allow horizontal scroll */
+/* Allow horizontal scroll on small screens */
 .browse-jobs-page.view-jobs-container,
 .browse-jobs-page {
-  margin-left: 0 !important;
-  margin-right: 0 !important;
   overflow-x: auto;
 }
 .browse-jobs-page .body-container {
   overflow-x: auto;
 }
 
-/* Root fix: body-container centers children via flexbox — override to left-align */
-.body-container {
-  justify-content: flex-start !important;
-}
+/* centering handled by base .view-jobs-container margin: 0 auto */

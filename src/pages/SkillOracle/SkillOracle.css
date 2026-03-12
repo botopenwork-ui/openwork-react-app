@@ -155,7 +155,4 @@
   transform: translateX(-25px) !important;
 }
 
-/* Fix: body-container centers children — override to left-align */
-.body-container {
-  justify-content: flex-start !important;
-}
+/* centering handled by base .view-jobs-container margin: 0 auto */

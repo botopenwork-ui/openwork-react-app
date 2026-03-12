@@ -74,7 +74,8 @@ body.radial-menu-active .menu-background-circle {
   width: 100%;
   height: calc(100vh - 80px);
   margin: 0;
-  overflow: hidden;
+  overflow: visible;
+  overflow-x: hidden;
 }
 
 /* Mobile Warning Styles */

@@ -96,13 +96,9 @@
   background-color: transparent !important;
   border-bottom: 1px solid #e9ecf0 !important;
 }
-/* Fix table left-clipping */
-.view-jobs-container {
-  margin-left: 0 !important;
+/* Force centering — overrides global justify-content: flex-start from BrowseJobs.css */
+.view-jobs-container.browse-talent-page {
+  margin-left: auto !important;
+  margin-right: auto !important;
   overflow-x: auto;
-}
-
-/* Fix: body-container centers children — override to left-align */
-.body-container {
-  justify-content: flex-start !important;
 }
