@@ -109,7 +109,7 @@ import LandingPage from "./pages/LandingPage/LandingPage";
 import Timeline from "./dev-tools/Timeline/Timeline";
 import OpenworkDocs from "./pages/Documentation/OpenworkDocs";
 import AgentOppy from "./pages/AgentOppy/AgentOppy";
-import OppyChat from "./pages/OppyChat/OppyChat";
+// import OppyChat from "./pages/OppyChat/OppyChat"; // hidden — not in scope for v1
 
 function MainPage() {
   // Using the useWalletConnection hook to handle wallet-related state and logic
@@ -260,9 +260,9 @@ function MainPage() {
 export default function App() {
   const isMobile = useMobileDetection();
 
-  // Allow /oppy and /chat on mobile
+  // Allow /oppy on mobile
   const isOppyRoute = window.location.pathname === '/oppy';
-  const isChatRoute = window.location.pathname === '/chat';
+  const isChatRoute = false; // /chat hidden — not in scope for v1
 
   if (isMobile && !isOppyRoute && !isChatRoute) {
     return (
@@ -414,7 +414,7 @@ export default function App() {
               <Route path="/skill-verification-page" element={<SkillVerification/>} />
               <Route path="/dev/timeline" element={<Timeline/>} />
               <Route path="/docs" element={<OpenworkDocs/>} />
-              <Route path="/chat" element={<OppyChat/>} />
+              {/* <Route path="/chat" element={<OppyChat/>} /> */}{/* hidden — not in scope for v1 */}
             </Routes>
           </Layout>
         } />
