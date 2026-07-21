@@ -13,12 +13,13 @@ Direct contracts let a job giver create a contract with a specific job taker ins
 | Contract | Chain | Address |
 |----------|-------|---------|
 | LOWJC | Optimism | `0x620205A4Ff0E652fF03a890d2A677de878a1dB63` |
+| LOWJC | XDC | `0x5cF21bFb944B6851048F9ac18a8C84F6323a8ce7` |
 
 ## Function Signature
 
 **Who:** Job giver
-**Chain:** Optimism
-**Prerequisites:** USDC approval for first milestone amount + ETH for gas/LZ fee
+**Chain:** Optimism or XDC
+**Prerequisites:** USDC approval for first milestone amount plus the native gas token and live LZ fee quote
 
 ```solidity
 function startDirectContract(
@@ -26,7 +27,7 @@ function startDirectContract(
     string memory _jobDetailHash,
     string[] memory _descriptions,
     uint256[] memory _amounts,
-    uint32 _jobTakerChainDomain,      // CCTP domain where taker wants payment (2=OP, 3=Arb)
+    uint32 _jobTakerChainDomain,      // CCTP domain where taker wants payment (2=OP, 3=Arb, 18=XDC)
     bytes calldata _nativeOptions
 ) external payable nonReentrant
 ```
@@ -78,15 +79,15 @@ LOWJC.startDirectContract(
     _amounts: [100000000, 100000000],       // 100 USDC each
     _jobTakerChainDomain: 2,                // Pay on Optimism
     _nativeOptions: 0x0003010011010000000000000000000000000007a120,
-    { value: 0.0005 ETH }                   // LZ fee
+    { value: liveBridgeQuoteWithBuffer }    // ETH on OP, XDC on XDC Network
 )
 
 // Step 3: Wait for CCTP transfers to complete, then for milestone 2:
 USDC.approve(LOWJC_ADDRESS, 100000000)
-LOWJC.lockNextMilestone(_jobId, _nativeOptions, { value: 0.0005 ETH })
+LOWJC.lockNextMilestone(_jobId, _nativeOptions, { value: liveBridgeQuoteWithBuffer })
 
 // Step 4: After work is done, release milestone 2:
-LOWJC.releasePaymentCrossChain(_jobId, 2, takerAddress, _nativeOptions, { value: 0.0005 ETH })
+LOWJC.releasePaymentCrossChain(_jobId, 2, takerAddress, _nativeOptions, { value: liveBridgeQuoteWithBuffer })
 ```
 
 ## Key Details

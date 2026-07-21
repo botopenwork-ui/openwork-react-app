@@ -526,7 +526,18 @@ export default function RaiseDispute() {
       const athenaContract = await getAthenaClientContract(chainId);
       const lzOptions = chainConfig.layerzero.options;
 
-      // Get current gas price for EIP-1559
+      // Quote the exact LayerZero payload. XDC fees are denominated in XDC and
+      // are materially different from the old fixed ETH fallback.
+      setTransactionStatus(`🔧 Step 3/3: Getting LayerZero fee quote on ${chainConfig.name}...`);
+      const payload = web3.eth.abi.encodeParameters(
+        ['string', 'string', 'string', 'string', 'uint256', 'uint256', 'address'],
+        ['raiseDispute', jobId, disputeHash, selectedOracle, compensationAmount, disputedAmountUnits, walletAddress]
+      );
+      const quotedFee = await athenaContract.methods
+        .quoteSingleChain('raiseDispute', payload, lzOptions)
+        .call();
+      const lzFee = (BigInt(quotedFee) * BigInt(130) / BigInt(100)).toString();
+
       const gasPrice = await web3.eth.getGasPrice();
 
       const receipt = await athenaContract.methods
@@ -540,10 +551,9 @@ export default function RaiseDispute() {
         )
         .send({
           from: walletAddress,
-          value: web3.utils.toWei("0.001", "ether"),
+          value: lzFee,
           gas: 800000,
-          maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
-          maxFeePerGas: gasPrice
+          gasPrice: gasPrice.toString()
         });
 
       if (!receipt || !receipt.transactionHash) {

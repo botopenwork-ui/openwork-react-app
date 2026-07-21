@@ -31,7 +31,7 @@ Enables users to use OpenWork on **any preferred blockchain** (referred to as "l
 - Communicate with the OpenWork Chain (single source of truth) for all operations
 - Allow users to interact in their native blockchain ecosystem
 - Are **chain-agnostic by design** - can be deployed on any chain users want
-- Initially built on EVM-based chains (OP, Ethereum, Polygon, Base)
+- Live on EVM-based local chains including Optimism and XDC
 - Future expansion to non-EVM chains like Solana
 
 **Example:** A user on Polygon can post jobs, make payments, and resolve disputes entirely on Polygon, while the OpenWork Chain (Arbitrum) securely records all data and executes core logic like Athena's decentralized dispute resolution.
@@ -46,7 +46,7 @@ Enables users to use OpenWork on **any preferred blockchain** (referred to as "l
 
 ## PAYMENT FLOW
 
-1. User posts job on Local chain (OP/Ethereum) with USDC
+1. User posts job on a Local chain (Optimism or XDC) with USDC
 2. USDC sent via CCTP to Native chain (Arbitrum)
 3. Job data sent via LayerZero to NOWJC
 4. Work completed, payment released via CCTP to any supported chain
@@ -101,7 +101,7 @@ const generateDeploymentKnowledge = () => {
     }
   }
 
-  knowledge += `\n### Networks:\n- OP Sepolia: Chain ID 11155420\n- Arbitrum Sepolia: Chain ID 421614\n- Ethereum Sepolia: Chain ID 11155111\n- Base Sepolia: Chain ID 84532\n- Arbitrum One: Chain ID 42161\n- OP Mainnet: Chain ID 10\n- Base Mainnet: Chain ID 8453\n- Ethereum Mainnet: Chain ID 1`;
+  knowledge += `\n### Networks:\n- OP Sepolia: Chain ID 11155420\n- Arbitrum Sepolia: Chain ID 421614\n- Ethereum Sepolia: Chain ID 11155111\n- Base Sepolia: Chain ID 84532\n- Arbitrum One: Chain ID 42161\n- OP Mainnet: Chain ID 10\n- XDC Mainnet: Chain ID 50, LayerZero EID 30365, CCTP Domain 18\n- Base Mainnet: Chain ID 8453\n- Ethereum Mainnet: Chain ID 1`;
 
   return knowledge;
 };
@@ -225,18 +225,18 @@ export const WORKFLOW_KNOWLEDGE = `
 ## COMMON WORKFLOWS
 
 ### Posting a Job:
-1. Connect wallet to OP Sepolia or Ethereum Sepolia
+1. Connect a wallet to a supported local chain (Optimism or XDC on mainnet)
 2. Create profile if first time (LOWJC.createProfile)
 3. Upload job details and milestones to IPFS
 4. Call LOWJC.postJob() with IPFS hashes and amounts
-5. Pay LayerZero fee (~0.001 ETH)
-6. Job syncs to Arbitrum in 15-30 seconds
+5. Pay the live LayerZero quote in the chain's native token (ETH or XDC)
+6. Job syncs to Arbitrum after LayerZero delivery
 7. Job visible on all chains
 
 ### Applying to a Job:
 1. Upload application details to IPFS (cover letter)
 2. Upload proposed milestones to IPFS (can be different from original)
-3. Specify preferred payment chain (OP, Ethereum, Arbitrum, Base)
+3. Specify preferred payment chain (including Optimism or XDC)
 4. Call LOWJC.applyToJob()
 5. Job giver reviews on any chain
 
@@ -267,7 +267,7 @@ export const FAQ_KNOWLEDGE = `
 ## FREQUENTLY ASKED QUESTIONS
 
 **Q: What chains does OpenWork support?**
-A: Mainnet: Arbitrum One (native hub), OP Mainnet (user interface), Base Mainnet (governance). Testnet: Base Sepolia, Arbitrum Sepolia, OP Sepolia, Ethereum Sepolia. More chains coming soon.
+A: Mainnet: Arbitrum One (native hub), Optimism and XDC (local job chains), and Ethereum (governance). Testnet: Base Sepolia, Arbitrum Sepolia, OP Sepolia, and Ethereum Sepolia.
 
 **Q: How do cross-chain payments work?**
 A: We use Circle's CCTP (Cross-Chain Transfer Protocol) to burn USDC on one chain and mint on another. Native USDC, not wrapped tokens.
@@ -279,7 +279,7 @@ A: 1% of each payment with a $1 USDC minimum. For example, a $50 job pays $1 fee
 A: Job data syncs instantly via LayerZero (1-2 seconds). USDC transfers via CCTP take 10-20 seconds for attestation.
 
 **Q: Can I get paid on a different chain than where I applied?**
-A: Yes! When applying, you specify your preferred payment chain (OP, Ethereum, Arbitrum, or Base).
+A: Yes. When applying, you specify your preferred supported payment chain, including Optimism or XDC.
 
 **Q: What are OW tokens used for?**
 A: Governance voting on Main DAO and Native DAO. Earned by completing jobs, participating in governance, and voting on disputes.
@@ -294,7 +294,7 @@ A: Job descriptions, milestones, profiles, portfolios, applications, work submis
 A: Yes, most contracts use UUPS proxy pattern. Only Main DAO can authorize upgrades for security.
 
 **Q: Is OpenWork on mainnet?**
-A: Yes! Most contracts are deployed on mainnet across Arbitrum One, OP Mainnet, and Base. The platform supports both testnet and mainnet.`;
+A: Yes. Core contracts are live across Arbitrum One, Optimism, Ethereum, and XDC. The XDC/Arbitrum application route is operational; direct XDC/Ethereum messaging is not enabled.`;
 
 // Keyword-to-contract mapping for intelligent context building
 const CONTRACT_KEYWORDS = {
@@ -430,13 +430,13 @@ export const buildOppyContext = (userQuery) => {
 export const FALLBACK_RESPONSES = {
   athena: 'Athena is our decentralized dispute resolution system on Arbitrum. Disputes are raised with a minimum $50 USDC fee, voted on by skill oracle members, and resolved automatically. The winning side gets funds, and voters who chose correctly earn fees proportionally.',
 
-  job: 'Jobs in OpenWork flow through multiple chains: Posted on Local chains (OP/Ethereum) → Synced to Native chain (Arbitrum) via LayerZero → Stored in Genesis. Payments are escrowed via CCTP and released cross-chain after work approval with 1% commission. NOWJC on Arbitrum is the central job hub.',
+  job: 'Jobs in OpenWork flow through multiple chains: posted on local chains such as Optimism or XDC, synced to Arbitrum through LayerZero, and stored in Genesis. Payments are escrowed via CCTP and released cross-chain after work approval with a 1% commission.',
 
   bridge: 'OpenWork uses two bridge types: (1) LayerZero for instant message passing between chains (job data, governance), and (2) Circle\'s CCTP for secure USDC transfers between chains (payments, fees). Bridges connect all 4 chains.',
 
   ipfs: 'All OpenWork data is stored on IPFS for decentralization: job descriptions, profiles, applications, work submissions, dispute evidence. Only content hashes are stored on-chain. Use Pinata gateway: https://gateway.pinata.cloud/ipfs/',
 
-  deploy: 'OpenWork contracts are deployed on mainnet (Arbitrum One, OP Mainnet, Base) and testnet (Arbitrum Sepolia, OP Sepolia, Ethereum Sepolia, Base Sepolia). Most contracts use UUPS proxy pattern for upgradeability.',
+  deploy: 'OpenWork contracts are deployed on mainnet across Arbitrum One, Optimism, Ethereum, and XDC, plus the existing testnets. The XDC LOWJC and LocalAthena proxies and their implementations are verified.',
 
   token: 'The OW token is our ERC-20 governance token on Base. Earned by completing jobs and participating in governance. Used for voting on Main DAO and Native DAO proposals. Staking increases voting power.',
 
@@ -452,7 +452,7 @@ export const FALLBACK_RESPONSES = {
 
   oracle: 'Skill Oracles are groups of verified experts who resolve disputes in their domain. Managed by OracleManager, members must maintain 90-day activity (tracked by ActivityTracker) and stake tokens to participate.',
 
-  mainnet: 'Yes! OpenWork has mainnet deployments across Arbitrum One, OP Mainnet, and Base. Most core contracts including NOWJC, Native Athena, ProfileManager, and bridges are deployed and operational.',
+  mainnet: 'Yes. OpenWork has mainnet deployments across Arbitrum One, Optimism, Ethereum, and XDC. XDC routes application messaging through the operational XDC/Arbitrum pathway.',
 
   default: 'I can help with: contract details (all 24 contracts), deployment addresses (mainnet & testnet), cross-chain flows, IPFS structures, dispute resolution, payment processing, governance, profiles, CCTP rewards, and workflows. What would you like to know?'
 };

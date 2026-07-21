@@ -91,6 +91,7 @@ export default function WalletTest() {
       "11155111": "Sepolia",
       "11155420": "OP Sepolia",
       "10": "Optimism",
+      "50": "XDC Network",
       "137": "Polygon",
       "80001": "Mumbai",
       "8453": "Base",

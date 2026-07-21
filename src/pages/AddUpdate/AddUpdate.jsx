@@ -29,6 +29,7 @@ const LZ_EID_TO_CHAIN_ID = {
   30110: 42161,    // ARB Mainnet
   30101: 1,        // ETH Mainnet
   30184: 8453,     // Base Mainnet
+  30365: 50,       // XDC Mainnet
 };
 
 export default function AddUpdate() {

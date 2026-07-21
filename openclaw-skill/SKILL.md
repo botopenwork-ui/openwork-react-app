@@ -1,6 +1,6 @@
 ---
 name: openwork
-description: Interact with the OpenWork decentralized freelancing protocol. Use when the user wants to post jobs, apply to jobs, hire freelancers, create direct contracts, make milestone payments, release escrow, manage disputes, vote on governance proposals, stake OWORK tokens, verify skills, manage profiles, check contract state, or perform any operation on the OpenWork multi-chain platform. Supports Arbitrum, Optimism, and Ethereum.
+description: Interact with the OpenWork decentralized freelancing protocol. Use when the user wants to post jobs, apply to jobs, hire freelancers, create direct contracts, make milestone payments, release escrow, manage disputes, vote on governance proposals, stake OWORK tokens, verify skills, manage profiles, check contract state, or perform any operation on the OpenWork multi-chain platform. Supports Arbitrum, Optimism, XDC, and Ethereum.
 metadata:
   openclaw:
     emoji: "OW"
@@ -10,6 +10,7 @@ metadata:
         - OPTIMISM_RPC_URL
         - ARBITRUM_RPC_URL
         - ETHEREUM_RPC_URL
+        - XDC_RPC_URL
 ---
 
 # OpenWork
@@ -25,15 +26,15 @@ OpenWork is a multi-chain decentralized freelancing platform where:
 - **Oracle members** verify skills and resolve disputes
 - **Token holders** govern the protocol by staking OWORK and voting on proposals
 
-All user actions happen on **Optimism** (low gas fees). The system automatically syncs state to **Arbitrum** (source of truth) via LayerZero messaging, and moves USDC cross-chain via Circle CCTP. Governance and the OWORK token live on **Ethereum**.
+User-facing actions happen on **Optimism** or **XDC**. The system automatically syncs state to **Arbitrum** (source of truth) via LayerZero messaging, and moves USDC cross-chain via Circle CCTP. Governance and the OWORK token live on **Ethereum**.
 
 ## Quick Start
 
 ### Prerequisites
 
-- A wallet (MetaMask or similar) connected to Optimism
-- USDC on Optimism (for posting jobs or paying)
-- Small amount of ETH on Optimism (for gas + LayerZero fees, ~0.0005 ETH per operation)
+- A wallet (MetaMask or similar) connected to Optimism or XDC
+- USDC on the selected local chain (for posting jobs or paying)
+- Enough ETH or XDC for gas plus the live LayerZero quote
 - OWORK tokens on Ethereum (only needed for staking/governance)
 
 ### Chain Configuration
@@ -41,6 +42,7 @@ All user actions happen on **Optimism** (low gas fees). The system automatically
 | Chain | Chain ID | Role |
 |-------|----------|------|
 | Optimism | 10 | User-facing — post jobs, apply, pay, dispute |
+| XDC Network | 50 | User-facing — post jobs, apply, pay, dispute |
 | Arbitrum One | 42161 | Backend — stores all state, holds escrow |
 | Ethereum | 1 | Governance — staking, voting, OWORK token |
 
@@ -49,8 +51,9 @@ All user actions happen on **Optimism** (low gas fees). The system automatically
 | Contract | Chain | Address |
 |----------|-------|---------|
 | LOWJC (Local Job Contract) | Optimism | `0x620205A4Ff0E652fF03a890d2A677de878a1dB63` |
+| LOWJC (Local Job Contract) | XDC | `0x5cF21bFb944B6851048F9ac18a8C84F6323a8ce7` |
 
-Most user actions go through LOWJC on Optimism. The system handles cross-chain messaging automatically.
+Most user actions go through LOWJC on the selected local chain. The system handles cross-chain messaging automatically.
 
 ## Core Capabilities
 
@@ -115,7 +118,7 @@ Create and manage on-chain profiles with IPFS-stored data, portfolio items, and 
 ### Post a Job and Hire Someone
 
 ```
-1. Post job on Optimism (LOWJC.postJob) — provide IPFS hash, milestone descriptions, amounts
+1. Post job on Optimism or XDC (LOWJC.postJob) — provide IPFS hash, milestone descriptions, amounts
 2. Wait for applicants
 3. Review applications (read from Genesis on Arbitrum)
 4. Start job (LOWJC.startJob) — approve USDC, fund first milestone
@@ -158,7 +161,7 @@ Create and manage on-chain profiles with IPFS-stored data, portfolio items, and 
 ### Raise a Dispute
 
 ```
-1. Approve USDC for dispute fee on Optimism
+1. Approve USDC for dispute fee on the selected local chain
 2. Call LocalAthena.raiseDispute — provide job ID and dispute details
 3. Oracle members vote on the dispute
 4. After voting period, anyone calls finalizeDispute
@@ -168,7 +171,7 @@ Create and manage on-chain profiles with IPFS-stored data, portfolio items, and 
 ## Cross-Chain Architecture
 
 ```
-User (Optimism)
+User (Optimism or XDC)
   ├── LOWJC ──── LayerZero ────→ NOWJC (Arbitrum) ──→ Genesis (state storage)
   ├── USDC ───── Circle CCTP ──→ NOWJC (escrow)
   └── LocalAthena ── LayerZero → NativeAthena (Arbitrum)
@@ -186,7 +189,7 @@ Governance (Ethereum)
 |-----------|-------|
 | Platform commission | 1% |
 | USDC decimals | 6 |
-| LayerZero fee per operation | ~0.0005 ETH |
+| LayerZero fee per operation | Live bridge quote; varies by chain and congestion |
 | Minimum stake | 100 OWORK |
 | Staking duration | 1-3 years |
 | Voting period | 7 days |
@@ -202,13 +205,16 @@ Governance (Ethereum)
 | Contract | Chain | Address |
 |----------|-------|---------|
 | LOWJC (user entry) | Optimism | `0x620205A4Ff0E652fF03a890d2A677de878a1dB63` |
+| LOWJC (user entry) | XDC | `0x5cF21bFb944B6851048F9ac18a8C84F6323a8ce7` |
 | NOWJC (state + escrow) | Arbitrum | `0x8EfbF240240613803B9c9e716d4b5AD1388aFd99` |
 | Genesis (storage) | Arbitrum | `0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294` |
 | NativeAthena | Arbitrum | `0xE6B9d996b56162cD7eDec3a83aE72943ee7C46Bf` |
 | LocalAthena | Optimism | `0x4756294bE516f73e8D1984E7a94E4ABaffA94c4d` |
+| LocalAthena | XDC | `0x4756294bE516f73e8D1984E7a94E4ABaffA94c4d` |
 | ETHOpenworkDAO | Ethereum | `0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294` |
 | OWORK Token | Ethereum | `0x765D70496Ef775F6ba1cB7465c2e0B296eB50d87` |
 | USDC | Optimism | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` |
+| USDC | XDC | `0xfA2958CB79b0491CC627c1557F441eF849Ca8eb1` |
 | USDC | Arbitrum | `0xaf88d065e77c8cC2239327C5EDb3A432268e5831` |
 
 ## Error Handling
@@ -226,9 +232,9 @@ Common issues and solutions:
 ## Tips
 
 - Always approve USDC before calling functions that move funds (startJob, lockNextMilestone, startDirectContract)
-- Include ~0.0005 ETH as `msg.value` for LayerZero fees on every cross-chain call
+- Quote the live bridge fee for every LayerZero call and include the application's safety buffer; never assume a fixed fee
 - CCTP transfers need a manual `receive()` call on the destination chain to complete — check Circle's attestation API
-- Job IDs follow the format `"{lzEid}-{counter}"` (e.g., `"30111-44"` for Optimism job #44)
+- Job IDs follow the format `"{lzEid}-{counter}"` (for example, `"30111-44"` on Optimism or `"30365-1"` on XDC)
 - All USDC amounts use 6 decimals (e.g., 100 USDC = `100000000`)
 
 ## Resources

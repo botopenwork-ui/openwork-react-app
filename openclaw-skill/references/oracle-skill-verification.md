@@ -1,6 +1,6 @@
 # Oracle & Skill Verification (Athena)
 
-NativeAthena is OpenWork's decentralized oracle system on Arbitrum. It handles skill verification for freelancers, job dispute resolution, and general "Ask Athena" queries. LocalAthena on Optimism is the user-facing client that forwards requests.
+NativeAthena is OpenWork's decentralized oracle system on Arbitrum. It handles skill verification for freelancers, job dispute resolution, and general "Ask Athena" queries. LocalAthena on Optimism or XDC is the user-facing client that forwards requests.
 
 ## Contract Addresses
 
@@ -8,6 +8,7 @@ NativeAthena is OpenWork's decentralized oracle system on Arbitrum. It handles s
 |----------|-------|---------|
 | NativeAthena | Arbitrum | `0xE6B9d996b56162cD7eDec3a83aE72943ee7C46Bf` |
 | LocalAthena | Optimism | `0x4756294bE516f73e8D1984E7a94E4ABaffA94c4d` |
+| LocalAthena | XDC | `0x4756294bE516f73e8D1984E7a94E4ABaffA94c4d` |
 | NativeAthenaOracleManager | Arbitrum | `0xEdF3Bcf87716bE05e35E12bA7C0Fc6e1879c0f15` |
 | NativeAthenaActivityTracker | Arbitrum | `0x8C04840c3f5b5a8c44F9187F9205ca73509690EA` |
 
@@ -35,7 +36,7 @@ A user can vote if they have at least one of:
 ### Submit a Skill Verification Application
 
 **Who:** Freelancer
-**Chain:** Optimism (via LocalAthena)
+**Chain:** Optimism or XDC (via LocalAthena)
 
 ```solidity
 function submitSkillVerification(
@@ -47,7 +48,7 @@ function submitSkillVerification(
 ```
 
 **Flow:**
-1. User submits on LocalAthena (Optimism), pays USDC fee
+1. User submits on LocalAthena (Optimism or XDC), pays USDC fee
 2. Fee sent via CCTP to NativeAthena on Arbitrum
 3. Oracle members review and vote
 4. After voting period, result is finalized
@@ -81,7 +82,7 @@ function finalizeSkillVerification(uint256 _applicationId) external
 ### Raise a Dispute
 
 **Who:** Either party in a job (job giver or job taker)
-**Chain:** Optimism (via LocalAthena)
+**Chain:** Optimism or XDC (via LocalAthena)
 
 ```solidity
 function raiseDispute(

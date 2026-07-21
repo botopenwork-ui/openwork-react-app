@@ -558,7 +558,8 @@ export default function ViewReceivedApplication() {
       // Get current gas price for EIP-1559
       const gasPrice = await web3.eth.getGasPrice();
 
-      setTransactionStatus(`🔧 Step 2/3: Network fee ~${parseFloat(web3.utils.fromWei(totalFee.toString(), 'ether')).toFixed(5)} ETH — Please confirm in MetaMask`);
+      const nativeSymbol = jobChainConfig.nativeCurrency?.symbol || 'ETH';
+      setTransactionStatus(`🔧 Step 2/3: Network fee ~${parseFloat(web3.utils.fromWei(totalFee.toString(), 'ether')).toFixed(5)} ${nativeSymbol} — Please confirm in MetaMask`);
 
       const startJobTx = await lowjcContract.methods.startJob(
         jobId,
@@ -569,8 +570,7 @@ export default function ViewReceivedApplication() {
         from: walletAddress,
         value: totalFee.toString(),
         gas: 1000000, // Higher gas for USDC transfer + LZ + CCTP
-        maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
-        maxFeePerGas: gasPrice
+        gasPrice: gasPrice.toString()
       });
       
       if (!startJobTx || !startJobTx.transactionHash) {

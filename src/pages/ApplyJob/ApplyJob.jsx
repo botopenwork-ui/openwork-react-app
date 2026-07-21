@@ -308,8 +308,7 @@ export default function ApplyJob() {
         from: walletAddress,
         value: lzFee.toString(),
         gas: 600000,
-        maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
-        maxFeePerGas: gasPrice
+        gasPrice: gasPrice.toString()
       });
 
       setTransactionStatus(`✅ Application submitted on ${chainConfig?.name}. Tracking cross-chain sync...`);

@@ -1,11 +1,11 @@
 # Payment System
 
-All payments in OpenWork use USDC with cross-chain escrow. Funds flow from the job giver on Optimism, through escrow on Arbitrum, and to the job taker on their preferred chain.
+All payments in OpenWork use USDC with cross-chain escrow. Funds flow from the job giver on a supported local chain (Optimism or XDC), through escrow on Arbitrum, and to the job taker on their preferred chain.
 
 ## Payment Flow Overview
 
 ```
-Job Giver (Optimism)
+Job Giver (Optimism or XDC)
   → Approves USDC
   → LOWJC transfers USDC, sends via CCTP to Arbitrum
   → NOWJC holds USDC in escrow on Arbitrum
@@ -19,6 +19,7 @@ Job Giver (Optimism)
 | Chain | USDC Address |
 |-------|-------------|
 | Optimism | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` |
+| XDC | `0xfA2958CB79b0491CC627c1557F441eF849Ca8eb1` |
 | Arbitrum | `0xaf88d065e77c8cC2239327C5EDb3A432268e5831` |
 
 All amounts use **6 decimals**: 100 USDC = `100000000`
@@ -30,7 +31,7 @@ All amounts use **6 decimals**: 100 USDC = `100000000`
 Before any payment operation, the job giver must approve USDC:
 
 ```solidity
-// On USDC contract (Optimism)
+// On the selected local chain's USDC contract
 USDC.approve(
     0x620205A4Ff0E652fF03a890d2A677de878a1dB63,  // LOWJC address
     amount                                          // In 6 decimal units
@@ -62,7 +63,7 @@ function _sendFunds(string memory _jobId, uint256 _amount) internal {
 ```solidity
 function releasePaymentCrossChain(
     string memory _jobId,
-    uint32 _targetChainDomain,     // 2=Optimism, 3=Arbitrum
+    uint32 _targetChainDomain,     // 2=Optimism, 3=Arbitrum, 18=XDC
     address _targetRecipient,
     bytes calldata _nativeOptions
 ) external payable nonReentrant
@@ -168,12 +169,12 @@ CCTP transfers are **not instant**. After sending, you need to:
 
 ## Payment Summary by Operation
 
-| Operation | USDC Required | ETH Required | Who Pays |
-|-----------|--------------|-------------|----------|
-| Post job | None | ~0.0005 ETH (LZ fee) | Job giver |
-| Apply to job | None | ~0.0005 ETH (LZ fee) | Job taker |
-| Start job | First milestone amount | ~0.0005 ETH (LZ fee) | Job giver |
-| Lock next milestone | Next milestone amount | ~0.0005 ETH (LZ fee) | Job giver |
-| Release payment | None | ~0.0005 ETH (LZ fee) | Job giver |
-| Submit work | None | ~0.0005 ETH (LZ fee) | Job taker |
-| Rate | None | ~0.0005 ETH (LZ fee) | Either party |
+| Operation | USDC Required | Native Fee Required | Who Pays |
+|-----------|--------------|---------------------|----------|
+| Post job | None | Live LZ quote + buffer | Job giver |
+| Apply to job | None | Live LZ quote + buffer | Job taker |
+| Start job | First milestone amount | Live LZ quote + buffer | Job giver |
+| Lock next milestone | Next milestone amount | Live LZ quote + buffer | Job giver |
+| Release payment | None | Live LZ quote + buffer | Job giver |
+| Submit work | None | Live LZ quote + buffer | Job taker |
+| Rate | None | Live LZ quote + buffer | Either party |

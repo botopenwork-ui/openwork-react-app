@@ -207,7 +207,7 @@ await nowjc.postJob(
             { name: 'applicationHash', type: 'string', description: 'IPFS hash with cover letter, portfolio links, and proposal details' },
             { name: 'descriptions', type: 'string[]', description: 'Applicant\'s proposed milestone descriptions (can differ from job poster\'s)' },
             { name: 'amounts', type: 'uint256[]', description: 'Applicant\'s proposed payment amounts (can differ from job poster\'s)' },
-            { name: 'preferredChainDomain', type: 'uint32', description: 'CCTP domain for payments: 0=Ethereum, 2=Optimism, 3=Arbitrum, 6=Base' }
+            { name: 'preferredChainDomain', type: 'uint32', description: 'CCTP domain for payments: 0=Ethereum, 2=Optimism, 3=Arbitrum, 6=Base, 18=XDC' }
           ],
           accessControl: 'Public function, typically called by Native Bridge',
           events: [
@@ -382,7 +382,7 @@ await lowjc.submitWork(
             { name: 'jobGiver', type: 'address', description: 'Job creator initiating payment' },
             { name: 'jobId', type: 'string', description: 'Job identifier' },
             { name: 'amount', type: 'uint256', description: 'Gross payment (before commission, must match milestone exactly)' },
-            { name: 'targetChainDomain', type: 'uint32', description: 'CCTP domain: 0=Ethereum, 2=Optimism, 3=Arbitrum, 6=Base' },
+            { name: 'targetChainDomain', type: 'uint32', description: 'CCTP domain: 0=Ethereum, 2=Optimism, 3=Arbitrum, 6=Base, 18=XDC' },
             { name: 'targetRecipient', type: 'address', description: 'Freelancer address on target chain' }
           ],
           accessControl: 'Public function, callable by job giver or via bridge',
@@ -790,7 +790,7 @@ console.log('Rewards synced to Main chain for claiming');`,
     tips: [
       'Always call calculateCommission() before payment to show users exact fees',
       'Validate amount matches current milestone exactly before releasing payment',
-      'Use CCTP domain codes correctly: 0=Ethereum, 2=Optimism, 3=Arbitrum, 6=Base',
+      'Use CCTP domain codes correctly: 0=Ethereum, 2=Optimism, 3=Arbitrum, 6=Base, 18=XDC',
       'Ensure freelancer\'s preferred payment chain is set during application',
       'Sync rewards data regularly to keep Main chain claims up to date',
       'Monitor CommissionDeducted events to track platform revenue',

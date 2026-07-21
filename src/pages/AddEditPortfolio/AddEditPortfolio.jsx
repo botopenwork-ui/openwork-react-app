@@ -173,12 +173,12 @@ export default function AddEditPortfolio() {
           );
       
       const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, lzOptions).call();
-      console.log(`💰 LayerZero fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH`);
+      console.log(`💰 LayerZero fee: ${web3.utils.fromWei(quotedFee, 'ether')} ${chainConfig.nativeCurrency?.symbol || 'ETH'}`);
 
       // Call contract
       if (isEditMode) {
         setTransactionStatus(`Updating portfolio on ${chainConfig.name}...`);
-        await lowjcContract.methods
+        const receipt = await lowjcContract.methods
           .updatePortfolioItem(parseInt(id), portfolioHash, lzOptions)
           .send({ 
             from: walletAddress,
@@ -192,7 +192,7 @@ export default function AddEditPortfolio() {
         monitorLZMessage(srcTx, (u) => setCrossChainSteps(buildLZSteps({ sourceTxHash: srcTx, sourceChainId: chainConfig?.chainId, lzStatus: u.status === STATUS.SUCCESS ? 'delivered' : u.status === STATUS.FAILED ? 'failed' : 'active', lzLink: u.lzLink || lzLink, dstTxHash: u.dstTxHash, dstChainId: 42161 })));
       } else {
         setTransactionStatus(`Adding portfolio on ${chainConfig.name}...`);
-        await lowjcContract.methods
+        const receipt = await lowjcContract.methods
           .addPortfolio(portfolioHash, lzOptions)
           .send({ 
             from: walletAddress,

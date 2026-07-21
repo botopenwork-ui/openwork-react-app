@@ -14,11 +14,11 @@ export const multiChainIntegrationGuide = {
       title: 'OpenWork Multi-Chain Overview',
       description: 'OpenWork operates on multiple blockchains to give you choice, lower costs, and seamless cross-chain functionality.',
       supportedChains: [
-        { name: 'OP Sepolia', benefits: ['Lower gas fees', 'Faster transactions', 'Optimistic rollup security'] },
-        { name: 'Ethereum Sepolia', benefits: ['Familiar network', 'Most wallet support', 'Maximum decentralization'] }
+        { name: 'Optimism', benefits: ['Low gas fees', 'Fast transactions', 'Optimistic rollup security'] },
+        { name: 'XDC Network', benefits: ['EVM-compatible', 'Native XDC fees', 'Routes safely through Arbitrum'] }
       ],
       keyFeatures: [
-        '✅ Post jobs from OP or Ethereum',
+        '✅ Post jobs from Optimism or XDC',
         '✅ Apply to any job from any chain',
         '✅ Automatic fund transfers (CCTP)',
         '✅ Real-time status tracking',
@@ -33,7 +33,7 @@ export const multiChainIntegrationGuide = {
       whatIsCCTP: [
         'CCTP = Secure cross-chain USDC transfer',
         'Happens automatically in the background',
-        'Typically completes in 1-2 minutes',
+        'Completion time depends on the CCTP route and finality mode',
         'Status shows in blue info boxes',
         'Retry available if something goes wrong'
       ],
@@ -635,6 +635,10 @@ await startJob(jobChainId, userAddress, startData);`
       }
     },
     supportedChains: [
+      { name: 'Optimism', chainId: 10, eid: 30111, status: '✅ Live Local Chain' },
+      { name: 'XDC Network', chainId: 50, eid: 30365, status: '✅ Live Local Chain' },
+      { name: 'Arbitrum One', chainId: 42161, eid: 30110, status: '✅ Live Native Chain' },
+      { name: 'Ethereum', chainId: 1, eid: 30101, status: '✅ Live Governance Chain' },
       { name: 'OP Sepolia', chainId: 11155420, eid: 40232, status: '✅ Live' },
       { name: 'Ethereum Sepolia', chainId: 11155111, eid: 40161, status: '✅ Live' },
       { name: 'Arbitrum Sepolia', chainId: 421614, eid: 40231, status: '🔒 Read-Only (Native Chain)' },

@@ -195,7 +195,7 @@ export const TESTNET_CHAIN_CONFIG = {
 // MAINNET CONFIGURATION
 // ============================================================
 export const MAINNET_CHAIN_CONFIG = {
-  // Optimism - Local Chain (Job Posting Enabled) - ONLY local chain on mainnet
+  // Optimism - Local Chain (Job Posting Enabled)
   10: {
     name: "Optimism",
     type: CHAIN_TYPES.LOCAL,
@@ -222,13 +222,44 @@ export const MAINNET_CHAIN_CONFIG = {
     cctpDomain: 2 // Optimism mainnet CCTP domain
   },
 
+  // XDC Network - Local Chain (routes all OpenWork messages through Arbitrum)
+  50: {
+    name: "XDC Network",
+    shortName: "XDC",
+    type: CHAIN_TYPES.LOCAL,
+    allowed: true,
+    isTestnet: false,
+    nativeCurrency: {
+      name: "XDC",
+      symbol: "XDC",
+      decimals: 18
+    },
+    rpcUrl: import.meta.env.VITE_XDC_MAINNET_RPC_URL || 'https://erpc.xinfin.network',
+    blockExplorer: "https://xdcscan.com",
+    contracts: {
+      lowjc: "0x5cF21bFb944B6851048F9ac18a8C84F6323a8ce7",
+      athenaClient: "0x4756294bE516f73e8D1984E7a94E4ABaffA94c4d",
+      localBridge: "0x74566644782e98c87a12E8Fc6f7c4c72e2908a36",
+      cctp: "0x00c70838cA0de7F1Eb192Bd7a11A7F2e14407510",
+      usdc: "0xfA2958CB79b0491CC627c1557F441eF849Ca8eb1",
+      tokenMessenger: "0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d",
+      messageTransmitter: "0x81D40F21F12A8F0E3252Bccb954D722d4c464B64"
+    },
+    layerzero: {
+      eid: 30365,
+      options: "0x0003010011010000000000000000000000000007a120" // 500k destination gas
+    },
+    cctpDomain: 18,
+    cctpTransferMode: "standard"
+  },
+
   // Arbitrum One - Native Data Hub + Native Local Chain (direct job transactions)
   42161: {
     name: "Arbitrum One",
     type: CHAIN_TYPES.LOCAL_NATIVE, // Both data hub AND write-capable (no LZ/CCTP needed)
     allowed: !!import.meta.env.VITE_NATIVE_ARB_LOWJC_ADDRESS, // Enabled once native contracts are deployed
     isTestnet: false,
-    reason: "Native Arb contracts not yet deployed. Use Optimism for now.",
+    reason: "Native Arb contracts not yet deployed. Use Optimism or XDC for now.",
     nativeCurrency: {
       name: "Ether",
       symbol: "ETH",
@@ -271,7 +302,7 @@ export const MAINNET_CHAIN_CONFIG = {
     type: CHAIN_TYPES.MAIN,
     allowed: false,
     isTestnet: false,
-    reason: "Main chain - governance only. Use Optimism for job operations.",
+    reason: "Main chain - governance only. Use Optimism or XDC for job operations.",
     nativeCurrency: {
       name: "Ether",
       symbol: "ETH",
@@ -335,7 +366,8 @@ export const CHAIN_CONFIG = new Proxy({}, {
  */
 export function getChainConfig(chainId) {
   const config = getActiveChainConfig();
-  return config[chainId] || null;
+  const chain = config[chainId];
+  return chain ? { chainId: Number(chainId), ...chain } : null;
 }
 
 /**
@@ -434,7 +466,8 @@ const EID_TO_CHAIN_ID = {
   30101: 1,         // Ethereum Mainnet
   30110: 42161,     // Arbitrum One
   30184: 8453,      // Base Mainnet
-  30109: 137        // Polygon
+  30109: 137,       // Polygon
+  30365: 50         // XDC Network
 };
 
 // CCTP Domain to Chain ID mapping (used in job IDs on mainnet)
@@ -443,6 +476,7 @@ const CCTP_DOMAIN_TO_CHAIN_ID = {
   2: 10,        // Optimism
   3: 42161,     // Arbitrum One
   6: 8453,      // Base
+  18: 50,       // XDC Network
   // Testnets use different domains
   5: 11155420,  // OP Sepolia (testnet domain)
   7: 84532      // Base Sepolia (testnet domain)
@@ -501,7 +535,8 @@ export function getChainLogo(chainId) {
     1: '/ethereum-chain.png',         // Ethereum Mainnet
     42161: '/arbitrum-chain.png',     // Arbitrum One
     8453: '/base-chain.png',          // Base Mainnet
-    137: '/polygon-chain.png'         // Polygon
+    137: '/polygon-chain.png',        // Polygon
+    50: '/xdc.svg'                    // XDC Network
   };
   return logos[chainId] || '/OWIcon.svg';  // Fallback to OpenWork icon
 }

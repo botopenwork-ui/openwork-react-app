@@ -27,11 +27,9 @@ export default function Governance() {
                     id="core-home"
                     onMouseEnter={() => {
                     setButtonsVisible(true);
-                    setCoreHovered(true);
                     }}
                     onMouseLeave={() => {
                     setButtonsVisible(false);
-                    setCoreHovered(false);
                     }}
                 >
                     <img src="/core.svg" alt="The Core" className="core-image" />

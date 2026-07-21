@@ -292,7 +292,8 @@ export default function ProfileOwnerView() {
             const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, lzOptions).call();
             // Add 20% buffer to LZ fee (matching release/direct contract pattern)
             const feeWithBuffer = (BigInt(quotedFee) * BigInt(120) / BigInt(100)).toString();
-            console.log(`💰 LayerZero fee: ${web3.utils.fromWei(quotedFee.toString(), 'ether')} ETH (with 20% buffer: ${web3.utils.fromWei(feeWithBuffer, 'ether')} ETH)`);
+            const nativeSymbol = chainConfig.nativeCurrency?.symbol || 'ETH';
+            console.log(`💰 LayerZero fee: ${web3.utils.fromWei(quotedFee.toString(), 'ether')} ${nativeSymbol} (with 20% buffer: ${web3.utils.fromWei(feeWithBuffer, 'ether')} ${nativeSymbol})`);
 
             // Get gas price for EIP-1559 pricing (low priority fee to reduce displayed cost)
             const gasPrice = await web3.eth.getGasPrice();
@@ -300,14 +301,13 @@ export default function ProfileOwnerView() {
             // Step 4: Call contract function
             if (hasProfile) {
                 setTransactionStatus(`Updating profile on ${chainConfig.name}...`);
-                await lowjcContract.methods
+                const receipt = await lowjcContract.methods
                     .updateProfile(ipfsHash, lzOptions)
                     .send({
                         from: walletAddress,
                         value: feeWithBuffer,
                         gas: 500000,
-                        maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
-                        maxFeePerGas: gasPrice
+                        gasPrice: gasPrice.toString()
                     });
                 setTransactionStatus(`✅ Profile updated on ${chainConfig.name}!`);
                 const srcTx = receipt.transactionHash;
@@ -317,14 +317,13 @@ export default function ProfileOwnerView() {
             } else {
                 setTransactionStatus(`Creating profile on ${chainConfig.name}...`);
                 console.log("Creating profile with referrer:", referrerForProfile);
-                await lowjcContract.methods
+                const receipt = await lowjcContract.methods
                     .createProfile(ipfsHash, referrerForProfile, lzOptions)
                     .send({
                         from: walletAddress,
                         value: feeWithBuffer,
                         gas: 500000,
-                        maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
-                        maxFeePerGas: gasPrice
+                        gasPrice: gasPrice.toString()
                     });
                 setTransactionStatus(`✅ Profile created on ${chainConfig.name}!`);
                 const srcTx = receipt.transactionHash;

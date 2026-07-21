@@ -2172,6 +2172,7 @@ const OpenworkDocs = () => {
                                   42161: 'Arbitrum One',
                                   421614: 'Arbitrum Sepolia',
                                   10: 'Optimism',
+                                  50: 'XDC Network',
                                   420: 'Optimism Goerli',
                                   137: 'Polygon',
                                   80001: 'Mumbai Testnet'
@@ -2254,6 +2255,7 @@ const OpenworkDocs = () => {
                                       42161: 'https://arbiscan.io',
                                       421614: 'https://sepolia.arbiscan.io',
                                       10: 'https://optimistic.etherscan.io',
+                                      50: 'https://xdcscan.com',
                                       420: 'https://goerli-optimism.etherscan.io',
                                       137: 'https://polygonscan.com',
                                       80001: 'https://mumbai.polygonscan.com'
@@ -2294,6 +2296,7 @@ const OpenworkDocs = () => {
                                       42161: 'https://arbiscan.io',
                                       421614: 'https://sepolia.arbiscan.io',
                                       10: 'https://optimistic.etherscan.io',
+                                      50: 'https://xdcscan.com',
                                       420: 'https://goerli-optimism.etherscan.io',
                                       137: 'https://polygonscan.com',
                                       80001: 'https://mumbai.polygonscan.com'
@@ -2334,6 +2337,7 @@ const OpenworkDocs = () => {
                                       42161: 'https://arbiscan.io',
                                       421614: 'https://sepolia.arbiscan.io',
                                       10: 'https://optimistic.etherscan.io',
+                                      50: 'https://xdcscan.com',
                                       420: 'https://goerli-optimism.etherscan.io',
                                       137: 'https://polygonscan.com',
                                       80001: 'https://mumbai.polygonscan.com'
@@ -3290,6 +3294,7 @@ const OpenworkDocs = () => {
                                     42161: 'https://arbiscan.io',
                                     421614: 'https://sepolia.arbiscan.io',
                                     10: 'https://optimistic.etherscan.io',
+                                    50: 'https://xdcscan.com',
                                     420: 'https://goerli-optimism.etherscan.io',
                                     137: 'https://polygonscan.com',
                                     80001: 'https://mumbai.polygonscan.com'

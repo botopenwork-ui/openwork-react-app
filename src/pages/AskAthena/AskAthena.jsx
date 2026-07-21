@@ -431,6 +431,9 @@ export default function AskAthena() {
         lzFee = (BigInt(quotedFee) * BigInt(120) / BigInt(100)).toString();
         console.log(`LayerZero quoted fee: ${web3.utils.fromWei(quotedFee, 'ether')} ETH (+20% buffer)`);
       } catch (quoteErr) {
+        if (Number(chainId) === 50) {
+          throw new Error(`Unable to quote the XDC LayerZero fee: ${quoteErr.message}`);
+        }
         console.warn("Fee quote failed, using fallback:", quoteErr.message);
         lzFee = web3.utils.toWei("0.0005", "ether");
       }
@@ -446,8 +449,7 @@ export default function AskAthena() {
           from: walletAddress,
           value: lzFee,
           gas: 800000,
-          maxPriorityFeePerGas: web3.utils.toWei("0.001", "gwei"),
-          maxFeePerGas: gasPrice,
+          gasPrice: gasPrice.toString(),
         });
 
       if (!receipt || !receipt.transactionHash) {

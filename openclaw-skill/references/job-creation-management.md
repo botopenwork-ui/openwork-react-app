@@ -1,10 +1,10 @@
 # Job Creation & Management
 
-Jobs are the core of OpenWork. Job givers post jobs on Optimism, applicants apply, and the system handles milestone-based payments with cross-chain escrow.
+Jobs are the core of OpenWork. Job givers post jobs on Optimism or XDC, applicants apply, and the system handles milestone-based payments with cross-chain escrow.
 
 ## How Jobs Work
 
-- Jobs are created on **Optimism** via the LOWJC contract
+- Jobs are created on **Optimism or XDC** via the local LOWJC contract
 - Full job state is stored on **Arbitrum** in the Genesis contract
 - LOWJC stores only minimal data (job giver, status, locked amounts)
 - All cross-chain messaging is automatic via LayerZero
@@ -21,6 +21,7 @@ Post Job → Apply → Start Job (fund) → Submit Work → Release Payment → 
 | Contract | Chain | Address |
 |----------|-------|---------|
 | LOWJC | Optimism | `0x620205A4Ff0E652fF03a890d2A677de878a1dB63` |
+| LOWJC | XDC | `0x5cF21bFb944B6851048F9ac18a8C84F6323a8ce7` |
 | NOWJC | Arbitrum | `0x8EfbF240240613803B9c9e716d4b5AD1388aFd99` |
 | Genesis | Arbitrum | `0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294` |
 
@@ -37,13 +38,14 @@ Post Job → Apply → Start Job (fund) → Submit Work → Release Payment → 
 
 Job IDs follow the pattern `"{lzEid}-{counter}"`:
 - `"30111-44"` = Optimism (EID 30111), job #44
+- `"30365-1"` = XDC (EID 30365), job #1
 - `"40232-12"` = Optimism Sepolia (EID 40232), job #12
 
 ## Step 1: Post a Job
 
 **Who:** Job giver
-**Chain:** Optimism
-**Prerequisites:** ETH for gas + LZ fee (~0.0005 ETH)
+**Chain:** Optimism or XDC
+**Prerequisites:** Native gas token plus the live LayerZero fee quote
 
 ```solidity
 function postJob(
@@ -60,7 +62,7 @@ _jobDetailHash: "QmXy..." (IPFS hash)
 _descriptions: ["QmDesign...", "QmDevelop..."]
 _amounts: [500000000, 500000000]  // 500 USDC each (6 decimals)
 _nativeOptions: 0x0003010011010000000000000000000000000007a120
-msg.value: 0.0005 ETH
+msg.value: live bridge quote plus the application safety buffer
 ```
 
 **What happens:**
@@ -72,8 +74,8 @@ msg.value: 0.0005 ETH
 ## Step 2: Apply to a Job
 
 **Who:** Job taker
-**Chain:** Optimism
-**Prerequisites:** ETH for gas + LZ fee
+**Chain:** Optimism or XDC
+**Prerequisites:** Native gas token plus the live LayerZero fee quote
 
 ```solidity
 function applyToJob(
@@ -81,7 +83,7 @@ function applyToJob(
     string calldata _applicationHash,     // IPFS hash of application
     string[] calldata _descriptions,       // Proposed milestone descriptions
     uint256[] calldata _amounts,           // Proposed milestone amounts
-    uint32 _preferredPaymentChainDomain,   // CCTP domain (2=OP, 3=Arb)
+    uint32 _preferredPaymentChainDomain,   // CCTP domain (2=OP, 3=Arb, 18=XDC)
     address _preferredPaymentAddress,      // Where to receive payment
     bytes calldata _nativeOptions
 ) external payable
@@ -89,14 +91,14 @@ function applyToJob(
 
 **Notes:**
 - Applicants can propose different milestones than the job giver posted
-- `_preferredPaymentChainDomain`: Use `2` for Optimism, `3` for Arbitrum
+- `_preferredPaymentChainDomain`: Use `2` for Optimism, `3` for Arbitrum, or `18` for XDC
 - Application is forwarded entirely to Arbitrum (no local state change)
 - NOWJC assigns an `applicationId` on Arbitrum
 
 ## Step 3: Start a Job (Select Applicant + Fund)
 
 **Who:** Job giver
-**Chain:** Optimism
+**Chain:** Optimism or XDC
 **Prerequisites:** USDC approval for first milestone amount + ETH for gas/LZ
 
 ```solidity
@@ -119,7 +121,7 @@ function startJob(
 ## Step 4: Submit Work
 
 **Who:** Selected job taker
-**Chain:** Optimism
+**Chain:** Optimism or XDC
 
 ```solidity
 function submitWork(
@@ -134,7 +136,7 @@ Pure forwarding — NOWJC stores the submission hash in Genesis.
 ## Step 5: Release Payment
 
 **Who:** Job giver
-**Chain:** Optimism
+**Chain:** Optimism or XDC
 
 ```solidity
 function releasePaymentCrossChain(
@@ -154,7 +156,7 @@ function releasePaymentCrossChain(
 ## Step 6: Lock Next Milestone
 
 **Who:** Job giver (for multi-milestone jobs)
-**Chain:** Optimism
+**Chain:** Optimism or XDC
 **Prerequisites:** Previous milestone must be released, USDC approval for next amount
 
 ```solidity
@@ -172,7 +174,7 @@ function lockNextMilestone(
 ## Step 7: Rate
 
 **Who:** Either party (job giver or job taker)
-**Chain:** Optimism
+**Chain:** Optimism or XDC
 
 ```solidity
 function rate(

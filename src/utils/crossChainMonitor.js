@@ -300,6 +300,7 @@ export function explorerTxUrl(txHash, chainId) {
   const explorers = {
     1:        'https://etherscan.io/tx',
     10:       'https://optimistic.etherscan.io/tx',
+    50:       'https://xdcscan.com/tx',
     42161:    'https://arbiscan.io/tx',
     8453:     'https://basescan.org/tx',
     11155111: 'https://sepolia.etherscan.io/tx',

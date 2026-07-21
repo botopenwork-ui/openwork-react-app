@@ -1,3 +1,7 @@
+# Archived Registry Copy — Do Not Use as Live Source
+
+This application-repository copy is retained for historical links only and is stale. The canonical live registry, including NativeAthena V8 and the verified XDC deployment, is maintained in [`AnasShaikh/openwork-contracts-final`](https://github.com/AnasShaikh/openwork-contracts-final/blob/codex/xdc-mainnet-docs-and-skill/references/logs/imp/live-contract-registry-19-mar-2026.md). See [PR #1](https://github.com/AnasShaikh/openwork-contracts-final/pull/1) and the app-specific [XDC integration record](../docs/xdc-mainnet-app-integration-2026-07-13.md).
+
 # Openwork Live Contract Registry — March 19, 2026
 
 **Deployer:** `0x7a2B7feAB9b0e30A5368d3CC4CB8279c9606384C`

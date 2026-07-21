@@ -50,6 +50,7 @@ function TransactionCard({ tool, onConfirm, onCancel }) {
     if (!window.ethereum) return `https://arbiscan.io/tx/${hash}`;
     const chainId = parseInt(window.ethereum.chainId, 16);
     const base = chainId === 10 ? 'https://optimistic.etherscan.io/tx/' :
+                 chainId === 50 ? 'https://xdcscan.com/tx/' :
                  chainId === 8453 ? 'https://basescan.org/tx/' :
                  chainId === 1 ? 'https://etherscan.io/tx/' :
                  'https://arbiscan.io/tx/';
@@ -343,6 +344,7 @@ const OppyChat = () => {
       const explorerBase =
         chainIdDecimal === 42161 ? 'https://arbiscan.io/tx/' :
         chainIdDecimal === 10    ? 'https://optimistic.etherscan.io/tx/' :
+        chainIdDecimal === 50    ? 'https://xdcscan.com/tx/' :
         chainIdDecimal === 8453  ? 'https://basescan.org/tx/' :
                                    'https://etherscan.io/tx/';
 

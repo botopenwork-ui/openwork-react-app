@@ -1,7 +1,7 @@
 const { waitForNOWJCEvent } = require('../utils/event-monitor');
 const { pollCCTPAttestation } = require('../utils/cctp-poller');
-const { executeReceiveMessage, executeReceiveOnOptimism } = require('../utils/tx-executor');
-const { getDomainFromJobId, getChainNameFromJobId } = require('../utils/chain-utils');
+const { executeReceiveMessage, executeReceiveOnOptimism, executeReceiveOnXdc } = require('../utils/tx-executor');
+const { getDomainFromJobId, getChainNameFromJobId, getChainNameFromDomain } = require('../utils/chain-utils');
 const { saveCCTPTransfer, updateCCTPStatus } = require('../utils/cctp-storage');
 const { recordTx, updateTxStatus } = require('../utils/payment-store');
 const config = require('../config');
@@ -52,7 +52,7 @@ async function processReleasePayment(jobId, statusMap, statusKey, knownTxHash = 
     // 📝 Persist ARB tx hash immediately — user can always recover via /api/payment-log
     recordTx(jobId, 'release_burn', nowjcTxHash, {
       chain: 'Arbitrum', domain: config.DOMAINS.ARBITRUM,
-      note: 'ARB PaymentReleased tx. To recover: poll iris-api.circle.com/v2/messages/3?transactionHash=' + nowjcTxHash + ' then call OP CCTPTransceiver.receive() selector 0x7376ee1f'
+      note: 'ARB PaymentReleased tx. To recover: poll iris-api.circle.com/v2/messages/3?transactionHash=' + nowjcTxHash + ' then call the destination CCTPTransceiver.receive()'
     });
 
     const sourceChainName = config.isMainnet() ? 'Arbitrum One' : 'Arbitrum Sepolia';
@@ -66,6 +66,14 @@ async function processReleasePayment(jobId, statusMap, statusKey, knownTxHash = 
     const attestation = await pollCCTPAttestation(nowjcTxHash, config.DOMAINS.ARBITRUM);
     console.log('✅ Attestation received');
 
+    // The CCTP attestation is authoritative. An applicant may choose a payment
+    // chain different from the chain where the job was posted.
+    if (attestation.destinationDomain !== undefined && attestation.destinationDomain !== null) {
+      destinationDomain = Number(attestation.destinationDomain);
+      destinationChain = getChainNameFromDomain(destinationDomain);
+      console.log(`   Attested Destination: ${destinationChain} (Domain ${destinationDomain})`);
+    }
+
     await updateCCTPStatus(jobId, 'releasePayment', {
       step: 'executing_receive',
       attestationMessage: attestation.message,
@@ -77,11 +85,15 @@ async function processReleasePayment(jobId, statusMap, statusKey, knownTxHash = 
     console.log(`\n📍 STEP 3/3: Executing CCTP receive on ${destinationChain}...`);
     const isOpMainnet = config.isMainnet() &&
       (destinationChain.toLowerCase().includes('optimism') || destinationChain.toLowerCase() === 'op');
+    const isXdcMainnet = config.isMainnet() && destinationChain.toLowerCase().includes('xdc');
 
     let result;
     if (isOpMainnet) {
       console.log('   Using CCTPTransceiver.receive() for OP mainnet (selector 0x7376ee1f)');
       result = await executeReceiveOnOptimism(attestation);
+    } else if (isXdcMainnet) {
+      console.log('   Using XDC Standard CCTPTransceiver.receive()');
+      result = await executeReceiveOnXdc(attestation);
     } else {
       result = await executeReceiveMessage(attestation, destinationChain);
     }
@@ -131,7 +143,7 @@ module.exports = { processReleasePayment };
  * @param {Map} statusMap - Optional status map to update progress
  * @param {string} statusKey - Key for status updates (defaults to jobId for backward compat)
  */
-async function processReleasePayment(jobId, statusMap, statusKey) {
+async function processReleasePaymentLegacy(jobId, statusMap, statusKey) {
   const sKey = statusKey || jobId;
   console.log('\n💰 ========== RELEASE PAYMENT FLOW INITIATED ==========');
   console.log(`Job ID: ${jobId}`);

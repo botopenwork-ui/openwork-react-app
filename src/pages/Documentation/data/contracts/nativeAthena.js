@@ -325,7 +325,7 @@ await nativeAthena.updateMemberActivityThreshold(180);
           ],
           parameters: [
             { name: '_eid', type: 'uint256', description: 'LayerZero Endpoint ID (e.g., 30101 for Ethereum Mainnet, 30111 for Optimism)' },
-            { name: '_domain', type: 'uint32', description: 'CCTP domain: 0=Ethereum, 2=Optimism, 3=Arbitrum, 6=Base' }
+            { name: '_domain', type: 'uint32', description: 'CCTP domain: 0=Ethereum, 2=Optimism, 3=Arbitrum, 6=Base, 18=XDC' }
           ],
           accessControl: 'Owner only',
           events: ['EidMapped(eid, domain)'],

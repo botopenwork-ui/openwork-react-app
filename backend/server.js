@@ -964,10 +964,23 @@ async function processLockMilestoneCCTP(jobId, sourceTxHash, statusKey) {
  * Monitor NOWJC contract for events (used for release payment)
  */
 async function startEventListener() {
+  const redactUrl = (value) => {
+    if (!value) return 'not configured';
+    try {
+      const url = new URL(value);
+      if (url.pathname && url.pathname !== '/') url.pathname = '/***';
+      url.search = '';
+      url.hash = '';
+      return url.toString();
+    } catch {
+      return 'configured';
+    }
+  };
+
   console.log('🎧 Starting OpenWork Event Listener...\n');
   console.log('📡 Configuration:');
   console.log(`   - NOWJC Contract: ${config.NOWJC_ADDRESS}`);
-  console.log(`   - Arbitrum RPC: ${config.ARBITRUM_RPC} (${config.NETWORK_MODE})`);
+  console.log(`   - Arbitrum RPC: ${redactUrl(config.ARBITRUM_RPC)} (${config.NETWORK_MODE})`);
   console.log(`   - Service Wallet: ${config.WALL2_PRIVATE_KEY ? '✓ Configured' : '✗ Missing'}\n`);
 
   const web3 = new Web3(config.ARBITRUM_RPC);
@@ -1077,29 +1090,33 @@ async function processSettleDisputeFlow(disputeId, arbitrumTxHash) {
     
     // Import utilities
     const { pollCCTPAttestation } = require('./utils/cctp-poller');
-    const { executeReceiveMessageOnOpSepolia, executeReceiveOnOptimism } = require('./utils/tx-executor');
+    const { executeReceiveMessage } = require('./utils/tx-executor');
+    const { getChainNameFromDomain } = require('./utils/chain-utils');
     
     // STEP 1: Poll Circle API for CCTP attestation
     console.log('\n📍 STEP 1/2: Polling Circle API for CCTP attestation...');
     const attestation = await pollCCTPAttestation(
       arbitrumTxHash, 
-      config.DOMAINS.ARBITRUM_SEPOLIA // Domain 3
+      config.DOMAINS.ARBITRUM // Domain 3
     );
     console.log('✅ Attestation received');
+
+    if (attestation.destinationDomain === undefined || attestation.destinationDomain === null) {
+      throw new Error('Circle attestation did not include a destination domain');
+    }
+    const destinationDomain = Number(attestation.destinationDomain);
+    const destinationChain = getChainNameFromDomain(destinationDomain);
     
     // Update status
     jobStatuses.set(disputeId, {
       status: 'executing_receive',
-      message: 'Executing CCTP receive on OP...',
+      message: `Executing CCTP receive on ${destinationChain}...`,
       txHash: arbitrumTxHash
     });
     
-    // STEP 2: Execute CCTP receive on OP
-    // ⚠️ On mainnet: must use CCTPTransceiver.receive() not MessageTransmitter.receiveMessage()
-    console.log('\n📍 STEP 2/2: Executing CCTP receive on OP...');
-    const result = config.isMainnet()
-      ? await executeReceiveOnOptimism(attestation)
-      : await executeReceiveMessageOnOpSepolia(attestation);
+    // STEP 2: Execute CCTP receive on the attested destination chain.
+    console.log(`\n📍 STEP 2/2: Executing CCTP receive on ${destinationChain}...`);
+    const result = await executeReceiveMessage(attestation, destinationChain);
     
     if (result.alreadyCompleted) {
       console.log('✅ USDC already transferred to winner (completed by CCTP)');
@@ -1274,7 +1291,9 @@ process.on('SIGINT', async () => {
   if (eventListenerInterval) {
     clearInterval(eventListenerInterval);
   }
-  await pool.end();
+  if (typeof pool.end === 'function') {
+    await pool.end();
+  }
   process.exit(0);
 });
 
@@ -1283,7 +1302,9 @@ process.on('SIGTERM', async () => {
   if (eventListenerInterval) {
     clearInterval(eventListenerInterval);
   }
-  await pool.end();
+  if (typeof pool.end === 'function') {
+    await pool.end();
+  }
   process.exit(0);
 });
 // build-stamp: 2026-02-27

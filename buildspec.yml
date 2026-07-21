@@ -1,0 +1,41 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 256309399568.dkr.ecr.us-east-1.amazonaws.com
+  build:
+    commands:
+      - |
+        set -e
+        docker build \
+          --build-arg VITE_NETWORK_MODE='mainnet' \
+          --build-arg VITE_BACKEND_URL='' \
+          --build-arg VITE_BACKEND_API_URL='' \
+          --build-arg VITE_ARBITRUM_MAINNET_RPC_URL='https://arb1.arbitrum.io/rpc' \
+          --build-arg VITE_OPTIMISM_MAINNET_RPC_URL='https://mainnet.optimism.io' \
+          --build-arg VITE_ETHEREUM_MAINNET_RPC_URL='https://cloudflare-eth.com' \
+          --build-arg VITE_XDC_MAINNET_RPC_URL='https://erpc.xinfin.network' \
+          --build-arg VITE_ARBITRUM_SEPOLIA_RPC_URL='' \
+          --build-arg VITE_OPTIMISM_SEPOLIA_RPC_URL='' \
+          --build-arg VITE_ETHEREUM_SEPOLIA_RPC_URL='' \
+          --build-arg VITE_BASE_SEPOLIA_RPC_URL='' \
+          --build-arg VITE_GENESIS_CONTRACT_ADDRESS='0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294' \
+          --build-arg VITE_NOWJC_CONTRACT_ADDRESS='0x8EfbF240240613803B9c9e716d4b5AD1388aFd99' \
+          --build-arg VITE_PROFILE_GENESIS_ADDRESS='0x794809471215cBa5cE56c7d9F402eDd85F9eBa2E' \
+          --build-arg VITE_LOWJC_CONTRACT_ADDRESS='0xDae5036a1d9E7C6CE953604FF238E13BD2B83951' \
+          --build-arg VITE_ARBITRUM_GENESIS_ADDRESS='0xE8f7963fF3cE9f7dB129e3f619abd71cBB5Bb294' \
+          --build-arg VITE_NATIVE_ARB_LOWJC_ADDRESS='0x8EfbF240240613803B9c9e716d4b5AD1388aFd99' \
+          --build-arg VITE_NATIVE_ARB_ATHENA_ADDRESS='0xE6B9d996b56162cD7eDec3a83aE72943ee7C46Bf' \
+          --build-arg VITE_LAYERZERO_OPTIONS_VALUE='0x000301001101000000000000000000000000000F4240' \
+          --build-arg VITE_POLYGON_RPC_URL='' \
+          -t $REPOSITORY_URI:$IMAGE_TAG .
+        docker push $REPOSITORY_URI:$IMAGE_TAG
+        printf '{"image":"%s:%s"}' "$REPOSITORY_URI" "$IMAGE_TAG" > image-detail.json
+  post_build:
+    commands:
+      - echo Build phase complete
+
+artifacts:
+  files:
+    - image-detail.json

@@ -392,7 +392,8 @@ export default function ReleasePayment() {
       const cctpBuffer = BigInt(web3.utils.toWei('0.0003', 'ether')); // CCTP sendFast fee
       const totalFee = lzFee + cctpBuffer;
 
-      setTransactionStatus(`💰 Network fee: ~${parseFloat(web3.utils.fromWei(totalFee.toString(), 'ether')).toFixed(5)} ETH — Please confirm in MetaMask`);
+      const nativeSymbol = jobChainConfig.nativeCurrency?.symbol || 'ETH';
+      setTransactionStatus(`💰 Network fee: ~${parseFloat(web3.utils.fromWei(totalFee.toString(), 'ether')).toFixed(5)} ${nativeSymbol} — Please confirm in MetaMask`);
 
       const gasPrice = await web3.eth.getGasPrice();
 
@@ -405,8 +406,7 @@ export default function ReleasePayment() {
         from: walletAddress,
         value: totalFee.toString(),
         gas: 800000,
-        maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
-        maxFeePerGas: gasPrice
+        gasPrice: gasPrice.toString()
       });
 
 
@@ -717,8 +717,7 @@ export default function ReleasePayment() {
         from: walletAddress,
         value: lzFeeLock.toString(),
         gas: 600000,
-        maxPriorityFeePerGas: web3.utils.toWei('0.001', 'gwei'),
-        maxFeePerGas: gasPriceLock
+        gasPrice: gasPriceLock.toString()
       });
 
 

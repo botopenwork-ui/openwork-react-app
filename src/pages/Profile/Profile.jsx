@@ -42,9 +42,6 @@ export default function Profile() {
     // Detects if the user is on a mobile device
     const isMobile = useMobileDetection();
   
-    // State to track if the core element is being hovered over
-    const [coreHovered, setCoreHovered] = useState(false);
-  
     // Hook from react-router-dom to handle navigation between pages
     const navigate = useNavigate();
   
@@ -167,11 +164,9 @@ export default function Profile() {
             id="core-home"
             onMouseEnter={() => {
               setButtonsVisible(true);
-              setCoreHovered(true);
             }}
             onMouseLeave={() => {
               setButtonsVisible(false);
-              setCoreHovered(false);
             }}
           >
             <img src="/core.svg" alt="The Core" className="core-image" />

@@ -1,12 +1,13 @@
 # Profile Management
 
-Profiles are created on Optimism and stored on Arbitrum. They include IPFS-linked data, portfolio items, referrer info, and on-chain ratings.
+Profiles are created on Optimism or XDC and stored on Arbitrum. They include IPFS-linked data, portfolio items, referrer info, and on-chain ratings.
 
 ## Contract Addresses
 
 | Contract | Chain | Address |
 |----------|-------|---------|
 | LOWJC (entry point) | Optimism | `0x620205A4Ff0E652fF03a890d2A677de878a1dB63` |
+| LOWJC (entry point) | XDC | `0x5cF21bFb944B6851048F9ac18a8C84F6323a8ce7` |
 | NativeProfileGenesis (storage) | Arbitrum | `0x794809471215cBa5cE56c7d9F402eDd85F9eBa2E` |
 | NativeProfileManager (logic) | Arbitrum | `0x51285003A01319c2f46BB2954384BCb69AfB1b45` |
 
@@ -26,8 +27,8 @@ Profile details (name, bio, skills, avatar, etc.) are stored on IPFS. The blockc
 ## Create a Profile
 
 **Who:** Any user
-**Chain:** Optimism
-**Prerequisites:** ETH for gas + LZ fee
+**Chain:** Optimism or XDC
+**Prerequisites:** Native gas token plus the live LZ fee quote
 
 ```solidity
 function createProfile(
@@ -45,7 +46,7 @@ function createProfile(
 
 **Flow:**
 ```
-LOWJC (Optimism)
+LOWJC (Optimism or XDC)
   → LayerZero → NativeBridge (Arbitrum)
     → NativeProfileManager → NativeProfileGenesis (stores profile)
 ```
@@ -55,7 +56,7 @@ LOWJC (Optimism)
 ## Update Profile
 
 **Who:** Profile owner
-**Chain:** Optimism
+**Chain:** Optimism or XDC
 
 ```solidity
 function updateProfile(
@@ -69,7 +70,7 @@ Updates the IPFS hash to point to new profile data. Previous data remains on IPF
 ## Add Portfolio Item
 
 **Who:** Profile owner
-**Chain:** Optimism
+**Chain:** Optimism or XDC
 
 ```solidity
 function addPortfolio(
@@ -85,7 +86,7 @@ Adds a new IPFS hash to the user's portfolio array. Portfolio items can showcase
 After a job is completed, both parties can rate each other.
 
 **Who:** Job giver or job taker (the other party)
-**Chain:** Optimism
+**Chain:** Optimism or XDC
 
 ```solidity
 function rate(
@@ -110,7 +111,7 @@ function rate(
 ```
 1. Upload profile data to IPFS (JSON with name, bio, skills, avatar URL, etc.)
 2. Get the IPFS hash (e.g., "QmXy...")
-3. Call LOWJC.createProfile(ipfsHash, referrerAddress, nativeOptions, { value: 0.0005 ETH })
+3. Call LOWJC.createProfile(ipfsHash, referrerAddress, nativeOptions, { value: liveBridgeQuoteWithBuffer })
 4. Wait for LZ message to reach Arbitrum
 5. Profile stored in NativeProfileGenesis
 ```
@@ -120,7 +121,7 @@ function rate(
 ```
 1. Upload updated profile data to IPFS
 2. Get new IPFS hash
-3. Call LOWJC.updateProfile(newIpfsHash, nativeOptions, { value: 0.0005 ETH })
+3. Call LOWJC.updateProfile(newIpfsHash, nativeOptions, { value: liveBridgeQuoteWithBuffer })
 ```
 
 ### Add Portfolio Work
@@ -128,14 +129,14 @@ function rate(
 ```
 1. Upload portfolio item to IPFS (could be images, documents, project details)
 2. Get IPFS hash
-3. Call LOWJC.addPortfolio(portfolioHash, nativeOptions, { value: 0.0005 ETH })
+3. Call LOWJC.addPortfolio(portfolioHash, nativeOptions, { value: liveBridgeQuoteWithBuffer })
 ```
 
 ### Rate After a Job
 
 ```
 1. Wait for job to complete
-2. Call LOWJC.rate(jobId, otherPartyAddress, rating, nativeOptions, { value: 0.0005 ETH })
+2. Call LOWJC.rate(jobId, otherPartyAddress, rating, nativeOptions, { value: liveBridgeQuoteWithBuffer })
 ```
 
 ## Reading Profile Data

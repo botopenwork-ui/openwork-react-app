@@ -156,6 +156,17 @@ router.get('/contracts', (req, res) => {
           USDC: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85'
         }
       },
+      xdc: {
+        chainId: 50,
+        role: 'Local chain — user-facing, routes state through Arbitrum',
+        contracts: {
+          LOWJC: '0x5cF21bFb944B6851048F9ac18a8C84F6323a8ce7',
+          LocalLZOpenworkBridge: '0x74566644782e98c87a12E8Fc6f7c4c72e2908a36',
+          CCTPTransceiver: '0x00c70838cA0de7F1Eb192Bd7a11A7F2e14407510',
+          LocalAthena: '0x4756294bE516f73e8D1984E7a94E4ABaffA94c4d',
+          USDC: '0xfA2958CB79b0491CC627c1557F441eF849Ca8eb1'
+        }
+      },
       ethereum: {
         chainId: 1,
         role: 'Main chain — governance, OWORK token',
@@ -172,6 +183,7 @@ router.get('/contracts', (req, res) => {
       chainIdentifiers: {
         arbitrum: { chainId: 42161, lzEid: 30110, cctpDomain: 3 },
         optimism: { chainId: 10, lzEid: 30111, cctpDomain: 2 },
+        xdc: { chainId: 50, lzEid: 30365, cctpDomain: 18 },
         ethereum: { chainId: 1, lzEid: 30101, cctpDomain: 0 }
       }
     }

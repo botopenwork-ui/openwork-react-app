@@ -18,7 +18,7 @@ import FileUpload from "../../components/FileUpload/FileUpload";
 
 // Multi-chain support
 import { useChainDetection, useWalletAddress } from "../../hooks/useChainDetection";
-import { postJob as postJobMultiChain } from "../../services/localChainService";
+import { getReadOnlyWeb3 } from "../../services/localChainService";
 import { getLocalChains, getNativeChain, isMainnet } from "../../config/chainConfig";
 
 // Cross-chain monitoring
@@ -116,7 +116,7 @@ export default function PostJob() {
             const decoded = Web3.utils.hexToUtf8("0x" + cleanChunk);
             
             // Match EID-jobNumber pattern (e.g., "40161-6", "40232-5")
-            // EIDs are 5 digits: 40161 (ETH), 40232 (OP), 40231 (ARB), 40245 (BASE)
+            // EIDs are 5 digits: 40161 (ETH), 40232 (OP), 40231 (ARB), 40245 (BASE), 30365 (XDC)
             if (decoded.match(/^40\d{3}-\d+$/)) {
               return decoded;
             }
@@ -456,8 +456,13 @@ export default function PostJob() {
           // Step 4: Prepare contract parameters - USE DETECTED CHAIN CONFIG
           const lowjcAddress = chainConfig.contracts.lowjc;
           const layerzeroOptions = chainConfig.layerzero.options;
+          const quoteWeb3 = getReadOnlyWeb3(chainId);
           
           const contract = new web3.eth.Contract(
+            JobContractABI,
+            lowjcAddress,
+          );
+          const readContract = new quoteWeb3.eth.Contract(
             JobContractABI,
             lowjcAddress,
           );
@@ -465,7 +470,7 @@ export default function PostJob() {
           // Step 5: Get LayerZero fee quote
           setTransactionStatus("Getting LayerZero fee quote...");
 
-          const bridgeAddress = await contract.methods.bridge().call();
+          const bridgeAddress = await readContract.methods.bridge().call();
 
           const bridgeABI = [{
             "inputs": [
@@ -478,27 +483,29 @@ export default function PostJob() {
             "type": "function"
           }];
           
-          const bridgeContract = new web3.eth.Contract(bridgeABI, bridgeAddress);
+          const bridgeContract = new quoteWeb3.eth.Contract(bridgeABI, bridgeAddress);
           
           // Get current job count to predict next jobId - MUST USE LAYERZERO EID
-          const jobCounter = await contract.methods.getJobCount().call();
+          const jobCounter = await readContract.methods.getJobCount().call();
           const layerZeroEid = chainConfig.layerzero.eid; // Get EID from chain config
           const predictedJobId = `${layerZeroEid}-${Number(jobCounter) + 1}`; // Use LayerZero EID, not chain ID
           
           // Encode payload with predicted jobId
-          const payload = web3.eth.abi.encodeParameters(
+          const payload = quoteWeb3.eth.abi.encodeParameters(
             ['string', 'string', 'address', 'string', 'string[]', 'uint256[]'],
             ['postJob', predictedJobId, fromAddress, jobDetailHash, milestoneHashes, milestoneAmounts]
           );
           
           const quotedFee = await bridgeContract.methods.quoteNativeChain(payload, layerzeroOptions).call();
           
-          // Dynamic fee from LayerZero quote — add +30% buffer for safety
-          const feeToUse = (BigInt(quotedFee) * BigInt(130) / BigInt(100)).toString();
+          // Use the exact LayerZero quote. The bridge's refund address is LOWJC,
+          // so an app-side overpayment would not reliably return to the user.
+          const feeToUse = BigInt(quotedFee).toString();
           
           // Show fee estimate before MetaMask opens
           const feeEth = parseFloat(web3.utils.fromWei(feeToUse, 'ether')).toFixed(5);
-          setTransactionStatus(`💰 Network fee: ~${feeEth} ETH — Please confirm in MetaMask`);
+          const nativeSymbol = chainConfig.nativeCurrency?.symbol || 'ETH';
+          setTransactionStatus(`💰 Network fee: ~${feeEth} ${nativeSymbol} — Please confirm in MetaMask`);
           
           contract.methods
             .postJob(
@@ -509,9 +516,9 @@ export default function PostJob() {
             )
             .send({
               from: fromAddress,
-              value: feeToUse, // LZ quote + 30% buffer
+              value: feeToUse, // Exact LayerZero quote
               gas: 600000,
-              gasPrice: await web3.eth.getGasPrice(),
+              gasPrice: await quoteWeb3.eth.getGasPrice(),
             })
             .on("receipt", function (receipt) {
               
@@ -619,6 +626,7 @@ export default function PostJob() {
         }
       } catch (error) {
         console.error("Error in handleSubmit:", error);
+        setTransactionStatus(`❌ ${error?.message || "Unable to prepare the job transaction"}`);
         setLoadingT(false);
         setIsProcessing(false);
       }

@@ -58,14 +58,26 @@ Governance and token.
 | OWORK Token | `0x765D70496Ef775F6ba1cB7465c2e0B296eB50d87` | ERC20 |
 | ETHLZOpenworkBridge | `0x20Fa268106A3C532cF9F733005Ab48624105c42F` | Non-Upgradeable |
 
+## Mainnet — XDC Network (Local Chain)
+
+All six OpenWork deployments below are verified on XDCScan. The supported application route is XDC ↔ Arbitrum.
+
+| Contract | Address | Type |
+|----------|---------|------|
+| LOWJC | `0x5cF21bFb944B6851048F9ac18a8C84F6323a8ce7` | UUPS Proxy |
+| LocalAthena | `0x4756294bE516f73e8D1984E7a94E4ABaffA94c4d` | UUPS Proxy |
+| LocalLZOpenworkBridge | `0x74566644782e98c87a12E8Fc6f7c4c72e2908a36` | Non-Upgradeable |
+| Standard CCTPTransceiver | `0x00c70838cA0de7F1Eb192Bd7a11A7F2e14407510` | Non-Upgradeable |
+| USDC | `0xfA2958CB79b0491CC627c1557F441eF849Ca8eb1` | External |
+
 ## External Dependencies
 
-| Contract | Arbitrum | Optimism | Ethereum |
-|----------|----------|----------|----------|
-| USDC | `0xaf88d065e77c8cC2239327C5EDb3A432268e5831` | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` | — |
-| LZ Endpoint V2 | `0x1a44076050125825900e736c501f859c50fE728c` | `0x1a44076050125825900e736c501f859c50fE728c` | `0x1a44076050125825900e736c501f859c50fE728c` |
-| TokenMessengerV2 (CCTP) | `0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d` | `0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d` | `0xBd3fa81B58Ba92a82136038B25aDec7066af3155` |
-| MessageTransmitterV2 (CCTP) | `0x81D40F21F12A8F0E3252Bccb954D722d4c464B64` | `0x4D41f22c5a0e5c74090899E5a8Fb597a8842b3e8` | `0x0a992d191deec32afe36203ad87d7d289a738f81` |
+| Contract | Arbitrum | Optimism | XDC | Ethereum |
+|----------|----------|----------|-----|----------|
+| USDC | `0xaf88d065e77c8cC2239327C5EDb3A432268e5831` | `0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85` | `0xfA2958CB79b0491CC627c1557F441eF849Ca8eb1` | — |
+| LZ Endpoint V2 | `0x1a44076050125825900e736c501f859c50fE728c` | `0x1a44076050125825900e736c501f859c50fE728c` | `0x1a44076050125825900e736c501f859c50fE728c` | `0x1a44076050125825900e736c501f859c50fE728c` |
+| TokenMessengerV2 (CCTP) | `0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d` | `0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d` | `0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d` | `0xBd3fa81B58Ba92a82136038B25aDec7066af3155` |
+| MessageTransmitterV2 (CCTP) | `0x81D40F21F12A8F0E3252Bccb954D722d4c464B64` | `0x4D41f22c5a0e5c74090899E5a8Fb597a8842b3e8` | `0x81D40F21F12A8F0E3252Bccb954D722d4c464B64` | `0x0a992d191deec32afe36203ad87d7d289a738f81` |
 
 ## Chain Quick Reference
 
@@ -73,6 +85,7 @@ Governance and token.
 |-------|----------|--------|-------------|------|
 | Arbitrum One | 42161 | 30110 | 3 | Native (state + escrow) |
 | Optimism | 10 | 30111 | 2 | Local (user-facing) |
+| XDC Network | 50 | 30365 | 18 | Local (user-facing) |
 | Ethereum | 1 | 30101 | 0 | Main (governance + token) |
 
 ## RPC Endpoints
@@ -80,6 +93,7 @@ Governance and token.
 Standard public RPCs:
 - Arbitrum: `https://arb1.arbitrum.io/rpc`
 - Optimism: `https://mainnet.optimism.io`
+- XDC: `https://rpc.xdc.network`
 - Ethereum: `https://eth.llamarpc.com`
 
 ## Deployer

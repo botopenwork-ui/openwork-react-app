@@ -1,5 +1,7 @@
 import Web3 from 'web3';
 import ProfileGenesisABI from '../ABIs/profile-genesis_ABI.json';
+import { getLOWJCContract } from './localChainService';
+import { getChainConfig } from '../config/chainConfig';
 
 /**
  * Portfolio Service for blockchain and IPFS operations
@@ -254,20 +256,35 @@ export const updatePortfolioOnBlockchain = async (walletAddress, index, newPortf
 export const deletePortfolioFromBlockchain = async (walletAddress, index) => {
   try {
     const web3 = new Web3(window.ethereum);
+    const chainId = Number(await web3.eth.getChainId());
+    const chainConfig = getChainConfig(chainId);
+    if (!chainConfig?.allowed || !chainConfig.layerzero?.options) {
+      throw new Error(`Portfolio deletion is not available on chain ${chainId}`);
+    }
 
-    // Get LOWJC contract
-    const lowjcAddress = import.meta.env.VITE_LOWJC_CONTRACT_ADDRESS;
-    const LOWJCABI = (await import('../ABIs/lowjc_ABI.json')).default;
-    const lowjcContract = new web3.eth.Contract(LOWJCABI, lowjcAddress);
-
-    // Get LayerZero options from env
-    const lzOptions = import.meta.env.VITE_LAYERZERO_OPTIONS_VALUE || '0x000301001101000000000000000000000000000F4240';
+    const lowjcContract = await getLOWJCContract(chainId);
+    const lzOptions = chainConfig.layerzero.options;
+    const bridgeAddress = await lowjcContract.methods.bridge().call();
+    const bridgeContract = new web3.eth.Contract([{
+      inputs: [{ type: 'bytes' }, { type: 'bytes' }],
+      name: 'quoteNativeChain',
+      outputs: [{ type: 'uint256' }],
+      stateMutability: 'view',
+      type: 'function'
+    }], bridgeAddress);
+    const payload = web3.eth.abi.encodeParameters(
+      ['string', 'address', 'uint256'],
+      ['removePortfolioItem', walletAddress, index]
+    );
+    const rawFee = await bridgeContract.methods.quoteNativeChain(payload, lzOptions).call();
+    const lzFee = ((BigInt(rawFee) * 130n) / 100n).toString();
+    const gasPrice = await web3.eth.getGasPrice();
 
     // Estimate gas for the transaction
     const gasEstimate = await lowjcContract.methods.removePortfolioItem(
       index,
       lzOptions
-    ).estimateGas({ from: walletAddress, value: web3.utils.toWei('0.01', 'ether') });
+    ).estimateGas({ from: walletAddress, value: lzFee, gasPrice });
 
     // Send transaction (convert BigInt properly)
     const gasWithBuffer = Math.floor(Number(gasEstimate) * 1.2);
@@ -276,8 +293,9 @@ export const deletePortfolioFromBlockchain = async (walletAddress, index) => {
       lzOptions
     ).send({
       from: walletAddress,
-      value: web3.utils.toWei('0.01', 'ether'), // LayerZero fee
-      gas: gasWithBuffer
+      value: lzFee,
+      gas: gasWithBuffer,
+      gasPrice
     });
 
     return tx;

@@ -52,7 +52,7 @@ Common errors across OpenWork contracts, what causes them, and how to fix them.
 GET https://iris-api.circle.com/v2/messages/{sourceDomain}?transactionHash={txHash}
 ```
 
-- `sourceDomain`: 2 = Optimism, 3 = Arbitrum, 0 = Ethereum
+- `sourceDomain`: 2 = Optimism, 3 = Arbitrum, 18 = XDC, 0 = Ethereum
 
 ## LayerZero Message Issues
 
@@ -67,7 +67,7 @@ GET https://scan.layerzero-api.com/v1/messages/tx/{txHash}
 | Issue | Cause | Fix |
 |-------|-------|-----|
 | Message not delivered | Insufficient gas in `_nativeOptions` | Use recommended 500,000 gas: `0x0003010011010000000000000000000000000007a120` |
-| Insufficient `msg.value` | Not enough ETH sent for LZ fee | Send at least 0.0005 ETH as `msg.value` |
+| Insufficient `msg.value` | Native value is below the live LZ quote | Re-quote the bridge and submit the quoted fee plus the application buffer |
 | Peer not set | Bridge contract doesn't have peer configured | Admin must call `setPeer()` on the bridge |
 
 ## Transaction Troubleshooting
@@ -75,8 +75,8 @@ GET https://scan.layerzero-api.com/v1/messages/tx/{txHash}
 ### "Transaction reverted"
 
 1. **Check USDC approval** — Did you approve enough USDC to the LOWJC contract?
-2. **Check USDC balance** — Do you have enough USDC on Optimism?
-3. **Check ETH balance** — Do you have ETH for gas + LZ fee on Optimism?
+2. **Check USDC balance** — Do you have enough USDC on the selected local chain?
+3. **Check native balance** — Do you have enough ETH or XDC for gas plus the live LZ fee?
 4. **Check job status** — Is the job in the correct state for the operation?
 5. **Check caller** — Are you the job giver (for payment operations)?
 

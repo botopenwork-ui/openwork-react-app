@@ -10,6 +10,24 @@ import ToolTipContent from "../../components/ToolTipContent/ToolTipContent";
 import ToolTipMilestone from "../../components/ToolTipMilestone/ToolTipMilestone";
 import { getNativeChain, isMainnet } from "../../config/chainConfig";
 
+const COMMISSION_ABI = [
+  {
+    inputs: [{ internalType: "uint256", name: "amount", type: "uint256" }],
+    name: "calculateCommission",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+];
+
+function formatUsdcUnits(units) {
+  const value = BigInt(units);
+  const roundedHundredths = (value + 5000n) / 10000n;
+  const whole = roundedHundredths / 100n;
+  const fraction = (roundedHundredths % 100n).toString().padStart(2, "0");
+  return `${whole}.${fraction}`;
+}
+
 // Dynamic network mode functions
 function getGenesisAddress() {
   const nativeChain = getNativeChain();
@@ -22,29 +40,6 @@ function getArbitrumRpc() {
     : import.meta.env.VITE_ARBITRUM_SEPOLIA_RPC_URL;
 }
 
-const MILESTONETOOLTIPITEMS = [
-  {
-    title: "MILESTONE 1",
-    amount: "25",
-  },
-  {
-    title: "MILESTONE 2",
-    amount: "25",
-  },
-  {
-    title: "MILESTONE 3",
-    amount: "25",
-  },
-  {
-    title: "PLATFORM FEES",
-    amount: "5",
-  },
-  {
-    title: "TOTAL COMPENSATION",
-    amount: "75",
-  },
-];
-
 export default function SingleJobDetails() {
   const [buttonFlex2, setButtonFlex2] = useState(false);
   const { jobId } = useParams();
@@ -55,15 +50,15 @@ export default function SingleJobDetails() {
   const [amountPaid, setAmountPaid] = useState(0);
   const [amountReceived, setAmountReceived] = useState(0);
   const [amountLocked, setAmountLocked] = useState(0);
+  const [amountToBePaid, setAmountToBePaid] = useState(0);
+  const [platformFee, setPlatformFee] = useState(null);
   const [buttonsVisible, setButtonsVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [payHover, setPayHover] = useState(false);
   const [receiveHover, SetReceiveHover] = useState(false);
   const coreRef = useRef(null);
   const [isElementReady, setIsElementReady] = useState(false);
-  const [milestoneTooltipItems, setMilestoneTooltipItems] = useState(
-    MILESTONETOOLTIPITEMS,
-  );
+  const [milestoneTooltipItems, setMilestoneTooltipItems] = useState([]);
 
   const [copiedAddress, setCopiedAddress] = useState(null);
 
@@ -216,8 +211,14 @@ export default function SingleJobDetails() {
           }
         }
 
-        // Calculate amounts from milestones (assuming USDT with 6 decimals)
-        const totalBudget = jobData.milestonePayments.reduce(
+        // Final milestones become authoritative when a job starts. Before that,
+        // use the milestones posted with the job.
+        const payableMilestones = jobData.finalMilestones?.length > 0
+          ? jobData.finalMilestones
+          : jobData.milestonePayments;
+
+        // Calculate amounts from milestones (USDC uses 6 decimals).
+        const totalBudget = payableMilestones.reduce(
           (sum, milestone) => {
             return sum + parseFloat(milestone.amount);
           },
@@ -248,22 +249,50 @@ export default function SingleJobDetails() {
         const formattedTotalBudget = (totalBudget / 1000000).toFixed(2);
         const formattedAmountPaid = (totalPaidAmount / 1000000).toFixed(2);
         const formattedLockedAmount = (lockedAmount / 1000000).toFixed(2);
+        const formattedAmountToBePaid = (
+          Math.max(totalBudget - totalPaidAmount, 0) / 1000000
+        ).toFixed(2);
 
         // Update milestone tooltip with actual data
         const updatedTooltipItems = [];
-        if (jobData.finalMilestones && jobData.finalMilestones.length > 0) {
-          jobData.finalMilestones.forEach((milestone, index) => {
+        if (payableMilestones.length > 0) {
+          payableMilestones.forEach((milestone, index) => {
             updatedTooltipItems.push({
               title: `MILESTONE ${index + 1}`,
               amount: (parseFloat(milestone.amount) / 1000000).toFixed(2),
             });
           });
         }
-        // Calculate platform fee: 1% of total budget, minimum 1 USDC
-        const platformFee = Math.max(parseFloat(formattedTotalBudget) * 0.01, 1).toFixed(2);
+
+        // Commission settings are governance-controlled, so the live NOWJC
+        // calculation is the only reliable source. Sum per milestone because
+        // commission is charged when each milestone payment is released.
+        let formattedPlatformFee = null;
+        try {
+          const nativeChain = getNativeChain();
+          const commissionContract = new web3.eth.Contract(
+            COMMISSION_ABI,
+            nativeChain?.contracts?.nowjc,
+          );
+          const commissions = await Promise.all(
+            payableMilestones.map((milestone) =>
+              commissionContract.methods
+                .calculateCommission(milestone.amount.toString())
+                .call(),
+            ),
+          );
+          const totalCommission = commissions.reduce(
+            (sum, commission) => sum + BigInt(commission.toString()),
+            0n,
+          );
+          formattedPlatformFee = formatUsdcUnits(totalCommission);
+        } catch (commissionError) {
+          console.warn("Failed to read live platform fee:", commissionError);
+        }
+
         updatedTooltipItems.push({
           title: "PLATFORM FEES",
-          amount: platformFee,
+          amount: formattedPlatformFee ?? "—",
         });
         updatedTooltipItems.push({
           title: "TOTAL COMPENSATION",
@@ -284,7 +313,7 @@ export default function SingleJobDetails() {
           milestones: jobData.finalMilestones,
           currentMilestone: currentMilestone,
           completedMilestones: completedMilestones,
-          totalMilestones: jobData.milestonePayments.length,
+          totalMilestones: payableMilestones.length,
           jobGiverProfile,
           jobTakerProfile,
           contractId: genesisAddress,
@@ -294,6 +323,10 @@ export default function SingleJobDetails() {
         setAmountPaid(parseFloat(formattedAmountPaid));
         setAmountReceived(parseFloat(formattedAmountPaid)); // In this context, amount received = amount paid
         setAmountLocked(parseFloat(formattedLockedAmount));
+        setAmountToBePaid(parseFloat(formattedAmountToBePaid));
+        setPlatformFee(
+          formattedPlatformFee === null ? null : parseFloat(formattedPlatformFee),
+        );
 
         setLoading(false);
         setIsElementReady(true);
@@ -432,8 +465,8 @@ export default function SingleJobDetails() {
             {hovered ? (
               <>
                 <span>Fees:</span>
-                <span>5</span>
-                <img src="/xdc.svg" alt="" />
+                <span>{platformFee === null ? "—" : formatAmount(platformFee)}</span>
+                <img src="/xdc.svg" alt="USDC" />
               </>
             ) : (
               <div className="titleBottom">
@@ -682,7 +715,7 @@ export default function SingleJobDetails() {
           >
             <img src="/core.svg" alt="Core" className="coreImage" />
             <span className="coreText">
-              {formatAmount(amountLocked)}
+              {formatAmount(amountLocked > 0 ? amountLocked : amountToBePaid)}
               <img
                 src="/xdc.svg"
                 alt="USDC Icon"
@@ -690,7 +723,9 @@ export default function SingleJobDetails() {
                 id="usdc"
               />
               <br />
-              <p id="amount-locked">AMOUNT LOCKED</p>
+              <p id="amount-locked">
+                {amountLocked > 0 ? "AMOUNT LOCKED" : "AMOUNT TO BE PAID"}
+              </p>
             </span>
           </div>
         </div>

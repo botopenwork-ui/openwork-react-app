@@ -1,5 +1,35 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { isMainnet } from '../config/chainConfig';
+import {
+  getActiveChainConfig,
+  getChainConfig as getConfiguredChain,
+  getChainLogo,
+  isMainnet,
+} from '../config/chainConfig';
+
+const WALLET_REQUEST_TIMEOUT_MS = 45_000;
+
+function getWalletErrorCode(error) {
+  const code = error?.code ?? error?.data?.originalError?.code;
+  return code === undefined || code === null ? null : Number(code);
+}
+
+function isPendingWalletRequest(error) {
+  const message = String(error?.message || '').toLowerCase();
+  return getWalletErrorCode(error) === -32002 || message.includes('already pending');
+}
+
+function requestWithTimeout(request, message) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      const error = new Error(message);
+      error.code = 'WALLET_REQUEST_TIMEOUT';
+      reject(error);
+    }, WALLET_REQUEST_TIMEOUT_MS);
+  });
+
+  return Promise.race([request, timeout]).finally(() => clearTimeout(timeoutId));
+}
 
 /**
  * Custom hook for reliable chain detection and switching
@@ -10,86 +40,34 @@ export function useChainDetection(walletAddress) {
   const [currentChainId, setCurrentChainId] = useState(null);
   const [isDetecting, setIsDetecting] = useState(true);
   const [isSwitching, setIsSwitching] = useState(false);
+  const [switchStatus, setSwitchStatus] = useState('');
 
   // Supported chains configuration - varies by network mode
   const SUPPORTED_CHAINS = useMemo(() => {
-    if (isMainnet()) {
-      return {
-        42161: { name: 'Arbitrum', icon: '/arbitrum-chain.png', fullName: 'Arbitrum One' },
-        10: { name: 'Optimism', icon: '/optimism-chain.png', fullName: 'Optimism' },
-        1: { name: 'Ethereum', icon: '/ethereum-chain.png', fullName: 'Ethereum' }
-      };
-    }
-    // Testnet
-    return {
-      421614: { name: 'Arbitrum', icon: '/arbitrum-chain.png', fullName: 'Arbitrum Sepolia' },
-      11155111: { name: 'Ethereum', icon: '/ethereum-chain.png', fullName: 'Ethereum Sepolia' },
-      11155420: { name: 'Optimism', icon: '/optimism-chain.png', fullName: 'OP Sepolia' },
-      84532: { name: 'Base', icon: '/base-chain.png', fullName: 'Base Sepolia' }
-    };
+    return Object.fromEntries(
+      Object.entries(getActiveChainConfig()).map(([chainId, config]) => [
+        Number(chainId),
+        {
+          name: config.shortName || config.name,
+          icon: getChainLogo(Number(chainId)),
+          fullName: config.name,
+        },
+      ])
+    );
   }, []);
 
   // Get chain config for adding to MetaMask
-  const getChainConfig = useCallback((chainId) => {
-    // Mainnet configs
-    const mainnetConfigs = {
-      42161: {
-        chainId: `0x${(42161).toString(16)}`,
-        chainName: 'Arbitrum One',
-        nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-        rpcUrls: ['https://arb1.arbitrum.io/rpc'],
-        blockExplorerUrls: ['https://arbiscan.io']
-      },
-      10: {
-        chainId: `0x${(10).toString(16)}`,
-        chainName: 'Optimism',
-        nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-        rpcUrls: ['https://mainnet.optimism.io'],
-        blockExplorerUrls: ['https://optimistic.etherscan.io']
-      },
-      1: {
-        chainId: `0x${(1).toString(16)}`,
-        chainName: 'Ethereum',
-        nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-        rpcUrls: ['https://eth.llamarpc.com'],
-        blockExplorerUrls: ['https://etherscan.io']
-      }
-    };
+  const getWalletChainConfig = useCallback((chainId) => {
+    const config = getConfiguredChain(chainId);
+    if (!config) return null;
 
-    // Testnet configs
-    const testnetConfigs = {
-      421614: {
-        chainId: `0x${(421614).toString(16)}`,
-        chainName: 'Arbitrum Sepolia',
-        nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-        rpcUrls: ['https://sepolia-rollup.arbitrum.io/rpc'],
-        blockExplorerUrls: ['https://sepolia.arbiscan.io']
-      },
-      11155111: {
-        chainId: `0x${(11155111).toString(16)}`,
-        chainName: 'Ethereum Sepolia',
-        nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-        rpcUrls: ['https://rpc.sepolia.org'],
-        blockExplorerUrls: ['https://sepolia.etherscan.io']
-      },
-      11155420: {
-        chainId: `0x${(11155420).toString(16)}`,
-        chainName: 'OP Sepolia',
-        nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-        rpcUrls: ['https://sepolia.optimism.io'],
-        blockExplorerUrls: ['https://sepolia-optimism.etherscan.io']
-      },
-      84532: {
-        chainId: `0x${(84532).toString(16)}`,
-        chainName: 'Base Sepolia',
-        nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-        rpcUrls: ['https://sepolia.base.org'],
-        blockExplorerUrls: ['https://sepolia.basescan.org']
-      }
+    return {
+      chainId: `0x${Number(chainId).toString(16)}`,
+      chainName: config.name,
+      nativeCurrency: config.nativeCurrency,
+      rpcUrls: [config.rpcUrl],
+      blockExplorerUrls: [config.blockExplorer],
     };
-
-    const configs = isMainnet() ? mainnetConfigs : testnetConfigs;
-    return configs[chainId];
   }, []);
 
   // Core detection function
@@ -150,63 +128,96 @@ export function useChainDetection(walletAddress) {
 
     setIsSwitching(true);
     const chainIdHex = `0x${targetChainId.toString(16)}`;
+    const walletConfig = getWalletChainConfig(targetChainId);
+    const chainName = walletConfig?.chainName || `chain ${targetChainId}`;
+    setSwitchStatus(`Switching to ${chainName}…`);
 
     try {
       console.log('🔄 Switching to chain:', targetChainId);
 
       // Try to switch
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: chainIdHex }]
-      });
+      await requestWithTimeout(
+        window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: chainIdHex }]
+        }),
+        `MetaMask did not finish switching to ${chainName}.`
+      );
 
       console.log('✅ Successfully switched to chain:', targetChainId);
-      setIsSwitching(false);
+      setCurrentChainId(Number(targetChainId));
       return true;
 
     } catch (switchError) {
       // Chain not added to MetaMask
-      if (switchError.code === 4902) {
+      if (getWalletErrorCode(switchError) === 4902) {
         console.log('📝 Chain not found, adding...');
+        setSwitchStatus(`Approve ${chainName} in MetaMask…`);
 
         try {
-          const config = getChainConfig(targetChainId);
-          if (!config) {
+          if (!walletConfig) {
             alert('Chain configuration not found');
-            setIsSwitching(false);
             return false;
           }
-          await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [config]
-          });
+
+          await requestWithTimeout(
+            window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [walletConfig]
+            }),
+            `MetaMask is waiting for approval to add ${chainName}.`
+          );
+
+          // Some wallets add a chain without selecting it. Verify the final
+          // state explicitly instead of leaving the selector optimistic.
+          setSwitchStatus(`Switching to ${chainName}…`);
+          await requestWithTimeout(
+            window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: chainIdHex }]
+            }),
+            `MetaMask added ${chainName} but did not finish switching to it.`
+          );
 
           console.log('✅ Successfully added and switched to chain:', targetChainId);
-          setIsSwitching(false);
+          setCurrentChainId(Number(targetChainId));
           return true;
 
         } catch (addError) {
           console.error('🔴 Error adding chain:', addError);
-          alert(`Failed to add network. Please add it manually in MetaMask.`);
-          setIsSwitching(false);
+          if (addError?.code === 'WALLET_REQUEST_TIMEOUT' || isPendingWalletRequest(addError)) {
+            alert(`Open MetaMask and approve the pending ${chainName} network request. The page has stopped waiting and will update automatically after approval.`);
+          } else if (getWalletErrorCode(addError) !== 4001) {
+            alert(`Failed to add ${chainName}. Please add it manually in MetaMask.`);
+          }
           return false;
         }
       }
       // User rejected
-      else if (switchError.code === 4001) {
+      else if (getWalletErrorCode(switchError) === 4001) {
         console.log('❌ User rejected network switch');
-        setIsSwitching(false);
+        return false;
+      }
+      // MetaMask already has an unanswered request open.
+      else if (isPendingWalletRequest(switchError)) {
+        alert(`A MetaMask network request is already pending. Open MetaMask and approve or reject it, then try again.`);
+        return false;
+      }
+      else if (switchError?.code === 'WALLET_REQUEST_TIMEOUT') {
+        alert(`Open MetaMask and finish the pending switch to ${chainName}. The page has stopped waiting.`);
         return false;
       }
       // Other errors
       else {
         console.error('🔴 Error switching chain:', switchError);
         alert(`Failed to switch network: ${switchError.message}`);
-        setIsSwitching(false);
         return false;
       }
+    } finally {
+      setIsSwitching(false);
+      setSwitchStatus('');
     }
-  }, [getChainConfig]);
+  }, [getWalletChainConfig]);
 
   // Effect: Detect chain when wallet connects
   useEffect(() => {
@@ -236,6 +247,7 @@ export function useChainDetection(walletAddress) {
       console.log('🔄 Chain changed to:', chainId);
       setCurrentChainId(chainId);
       setIsSwitching(false);
+      setSwitchStatus('');
     };
 
     const handleAccountsChanged = (accounts) => {
@@ -276,6 +288,7 @@ export function useChainDetection(walletAddress) {
     currentChainId,
     isDetecting,
     isSwitching,
+    switchStatus,
     switchToChain,
     supportedChains: SUPPORTED_CHAINS,
     isMainnetMode: isMainnet()

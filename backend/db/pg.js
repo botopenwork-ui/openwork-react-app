@@ -1,24 +1,31 @@
 const { Pool } = require('pg');
 
-// Detect Cloud Run environment
-const isCloudRun = !!process.env.K_SERVICE;
+const LOCAL_DB_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
-// If in Cloud Run but DB_HOST not configured, skip pool entirely
-const dbConfigured = !isCloudRun || !!process.env.DB_HOST;
+// Detect managed runtimes where localhost is the app container, not a database.
+const isCloudRun = !!process.env.K_SERVICE;
+const isAppRunner = !!process.env.AWS_APPRUNNER_SERVICE_ID || process.env.OPENWORK_MANAGED_RUNTIME === 'true';
+const isManagedRuntime = isCloudRun || isAppRunner;
+const dbHost = process.env.DB_HOST;
+
+// In managed runtimes, skip DB unless an external host is explicitly configured.
+const dbConfigured = isManagedRuntime
+  ? !!dbHost && !LOCAL_DB_HOSTS.has(dbHost)
+  : true;
 
 let pool;
 
 if (!dbConfigured) {
   // Return a stub that rejects immediately — startServer catches this gracefully
-  const reject = () => Promise.reject(new Error('DB_HOST not configured in Cloud Run'));
+  const reject = () => Promise.reject(new Error('DB_HOST not configured for managed runtime'));
   pool = { query: reject, connect: reject, on: () => {} };
 } else {
-  const poolConfig = isCloudRun
+  const poolConfig = isManagedRuntime
     ? {
         user: process.env.DB_USER,
         password: process.env.DB_PASSWORD,
         database: process.env.DB_NAME,
-        host: process.env.DB_HOST, // /cloudsql/openwork-480320:us-central1:openwork-db
+        host: dbHost,
       }
     : {
         user: process.env.DB_USER || 'postgres',

@@ -104,6 +104,12 @@ async function executeReceiveMessage(attestationData, destinationChain = 'Optimi
   // Normalize chain name for comparison
   const chainLower = destinationChain.toLowerCase();
 
+  // XDC uses the deployed Standard CCTP transceiver wrapper. This preserves
+  // replay protection and the deployment's receive-path accounting.
+  if (config.isMainnet() && chainLower.includes('xdc')) {
+    return executeReceiveOnXdc(attestationData);
+  }
+
   if (chainLower.includes('optimism') || chainLower.includes('op')) {
     rpcUrl = config.OPTIMISM_RPC;
     transmitterAddress = config.MESSAGE_TRANSMITTER_OP;
@@ -116,6 +122,9 @@ async function executeReceiveMessage(attestationData, destinationChain = 'Optimi
   } else if (chainLower.includes('ethereum') || chainLower.includes('eth')) {
     rpcUrl = config.ETHEREUM_RPC;
     transmitterAddress = config.MESSAGE_TRANSMITTER_OP; // Eth uses same transmitter pattern
+  } else if (chainLower.includes('xdc')) {
+    rpcUrl = config.XDC_RPC;
+    transmitterAddress = config.MESSAGE_TRANSMITTER_XDC;
   } else {
     console.warn(`⚠️ Unknown chain "${destinationChain}", defaulting to Optimism`);
     rpcUrl = config.OPTIMISM_RPC;
@@ -227,78 +236,114 @@ async function executeReceiveMessage(attestationData, destinationChain = 'Optimi
   }
 }
 
+async function executeReceiveOnCctpTransceiver(
+  attestationData,
+  { chainName, rpcUrl, transceiverAddress, nativeSymbol }
+) {
+  console.log(`\n🔗 ========== EXECUTING RECEIVE ON ${chainName.toUpperCase()} (CCTPTransceiver) ==========`);
+  console.log(`   Network Mode: ${config.NETWORK_MODE}`);
+
+  if (!rpcUrl || !transceiverAddress) {
+    throw new Error(`${chainName} CCTP receive configuration is incomplete`);
+  }
+  if (!config.WALL2_PRIVATE_KEY) {
+    throw new Error('Service wallet private key is not configured');
+  }
+
+  const web3 = new Web3(rpcUrl);
+  const privateKey = config.WALL2_PRIVATE_KEY.startsWith('0x')
+    ? config.WALL2_PRIVATE_KEY
+    : `0x${config.WALL2_PRIVATE_KEY}`;
+  const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+  web3.eth.accounts.wallet.add(account);
+
+  const selector = '0x7376ee1f'; // receive(bytes,bytes)
+  const encodedArgs = web3.eth.abi.encodeParameters(
+    ['bytes', 'bytes'],
+    [attestationData.message, attestationData.attestation]
+  );
+  const calldata = selector + encodedArgs.slice(2);
+
+  console.log(`   CCTPTransceiver: ${transceiverAddress}`);
+  console.log(`   Service Wallet: ${account.address}`);
+
+  try {
+    await web3.eth.call({ to: transceiverAddress, from: account.address, data: calldata });
+    console.log('   Static call: ✅ would succeed');
+  } catch (staticErr) {
+    if (staticErr.message.includes('Nonce already used') || staticErr.message.includes('Already processed')) {
+      console.log('✅ Already completed');
+      return { transactionHash: null, alreadyCompleted: true };
+    }
+    throw new Error(`${chainName} CCTPTransceiver.receive() static call failed: ${staticErr.message}`);
+  }
+
+  try {
+    const gasEstimate = await web3.eth.estimateGas({
+      to: transceiverAddress,
+      from: account.address,
+      data: calldata,
+    });
+    const gasLimit = Math.ceil(Number(gasEstimate) * 1.3);
+    const gasPrice = await web3.eth.getGasPrice();
+    const requiredWei = BigInt(gasLimit) * BigInt(gasPrice);
+    const balance = BigInt(await web3.eth.getBalance(account.address));
+
+    console.log(`   Gas: ${gasEstimate} → ${gasLimit} (with 30% buffer)`);
+    console.log(`   Service Wallet Balance: ${web3.utils.fromWei(balance.toString(), 'ether')} ${nativeSymbol}`);
+    if (balance < requiredWei) {
+      throw new Error(
+        `Service wallet balance too low on ${chainName}: needs about ` +
+        `${web3.utils.fromWei(requiredWei.toString(), 'ether')} ${nativeSymbol}`
+      );
+    }
+
+    const nonce = await web3.eth.getTransactionCount(account.address, 'pending');
+    const signedTx = await web3.eth.accounts.signTransaction({
+      to: transceiverAddress,
+      data: calldata,
+      gas: gasLimit,
+      gasPrice,
+      nonce,
+    }, privateKey);
+    const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+    console.log(`✅ ${chainName} CCTPTransceiver.receive() completed:`, {
+      txHash: receipt.transactionHash,
+      gasUsed: receipt.gasUsed,
+    });
+    return { transactionHash: receipt.transactionHash, alreadyCompleted: false };
+  } catch (error) {
+    if (error.message.includes('Nonce already used') || error.message.includes('Already processed')) {
+      console.log('✅ Already completed');
+      return { transactionHash: null, alreadyCompleted: true };
+    }
+    throw new Error(`${chainName} CCTPTransceiver.receive() failed: ${error.message}`);
+  }
+}
+
+function executeReceiveOnOptimism(attestationData) {
+  return executeReceiveOnCctpTransceiver(attestationData, {
+    chainName: 'Optimism',
+    rpcUrl: config.OPTIMISM_RPC,
+    transceiverAddress: config.CCTP_OP_ADDRESS,
+    nativeSymbol: 'ETH',
+  });
+}
+
+function executeReceiveOnXdc(attestationData) {
+  return executeReceiveOnCctpTransceiver(attestationData, {
+    chainName: 'XDC',
+    rpcUrl: config.XDC_RPC,
+    transceiverAddress: config.CCTP_XDC_ADDRESS,
+    nativeSymbol: 'XDC',
+  });
+}
+
 module.exports = {
   executeReceiveOnArbitrum,
   executeReceiveMessage,
+  executeReceiveOnOptimism,
+  executeReceiveOnXdc,
   // Keep for backward compatibility
   executeReceiveMessageOnOpSepolia: (attestation) => executeReceiveMessage(attestation, 'OP Sepolia'),
-  // Correct OP mainnet receive — must use CCTPTransceiver.receive(), NOT MessageTransmitter.receiveMessage()
-  // Direct MT call fails with "Invalid signature: not attester" on OP mainnet (attester set mismatch)
-  executeReceiveOnOptimism: async function(attestationData) {
-    console.log('\n🔗 ========== EXECUTING RECEIVE ON OPTIMISM (CCTPTransceiver) ==========');
-    console.log(`   Network Mode: ${config.NETWORK_MODE}`);
-    const web3 = new Web3(config.OPTIMISM_RPC);
-    const privateKey = config.WALL2_PRIVATE_KEY.startsWith('0x')
-      ? config.WALL2_PRIVATE_KEY
-      : `0x${config.WALL2_PRIVATE_KEY}`;
-    const account = web3.eth.accounts.privateKeyToAccount(privateKey);
-    web3.eth.accounts.wallet.add(account);
-
-    const balance = await web3.eth.getBalance(account.address);
-    const balanceEth = parseFloat(web3.utils.fromWei(balance, 'ether'));
-    console.log(`   Service Wallet: ${account.address} (${balanceEth.toFixed(6)} ETH)`);
-    if (balanceEth < 0.0005) {
-      throw new Error(`Service wallet ETH too low on Optimism: ${balanceEth.toFixed(6)} ETH`);
-    }
-
-    // ⚠️ CRITICAL: Must call CCTPTransceiver.receive(), NOT MessageTransmitter.receiveMessage()
-    // Direct MT call fails with "Invalid signature: not attester" on OP mainnet
-    // Selector: keccak256("receive(bytes,bytes)") = 0x7376ee1f
-    const cctpTransceiverAddress = config.CCTP_OP_ADDRESS; // 0x586C700ACFA1D129Ba2C6a6E673c55d586c32f15
-    const selector = '0x7376ee1f';
-    const encodedArgs = web3.eth.abi.encodeParameters(
-      ['bytes', 'bytes'],
-      [attestationData.message, attestationData.attestation]
-    );
-    const calldata = selector + encodedArgs.slice(2);
-
-    console.log(`   CCTPTransceiver: ${cctpTransceiverAddress}`);
-    console.log(`   selector: ${selector} (receive(bytes,bytes))`);
-
-    try {
-      // Static call first
-      await web3.eth.call({ to: cctpTransceiverAddress, from: account.address, data: calldata });
-      console.log('   Static call: ✅ would succeed');
-    } catch (staticErr) {
-      if (staticErr.message.includes('Nonce already used')) {
-        console.log('✅ Already completed (nonce already used)');
-        return { transactionHash: null, alreadyCompleted: true };
-      }
-      throw new Error(`CCTPTransceiver.receive() static call failed: ${staticErr.message}`);
-    }
-
-    try {
-      const gasEstimate = await web3.eth.estimateGas({ to: cctpTransceiverAddress, from: account.address, data: calldata });
-      const gasLimit = Math.ceil(Number(gasEstimate) * 1.3);
-      console.log(`   Gas: ${gasEstimate} → ${gasLimit} (with 30% buffer)`);
-
-      const nonce = await web3.eth.getTransactionCount(account.address, 'latest');
-      const gasPrice = await web3.eth.getGasPrice();
-      const signedTx = await web3.eth.accounts.signTransaction({
-        to: cctpTransceiverAddress, data: calldata, gas: gasLimit,
-        gasPrice, nonce
-      }, privateKey);
-      const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-      console.log(`✅ OP CCTPTransceiver.receive() completed:`, {
-        txHash: receipt.transactionHash, gasUsed: receipt.gasUsed
-      });
-      return { transactionHash: receipt.transactionHash, alreadyCompleted: false };
-    } catch (error) {
-      if (error.message.includes('Nonce already used')) {
-        console.log('✅ Already completed (nonce already used)');
-        return { transactionHash: null, alreadyCompleted: true };
-      }
-      throw new Error(`OP CCTPTransceiver.receive() failed: ${error.message}`);
-    }
-  }
 };

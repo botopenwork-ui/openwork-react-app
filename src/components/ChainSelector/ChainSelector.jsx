@@ -28,6 +28,7 @@ const ChainSelector = ({ walletAddress }) => {
     currentChainId,
     isDetecting,
     isSwitching,
+    switchStatus,
     switchToChain,
     supportedChains
   } = useChainDetection(walletAddress);
@@ -87,7 +88,7 @@ const ChainSelector = ({ walletAddress }) => {
       >
         <img src={currentChain.icon} alt={currentChain.name} className="chain-icon" />
         <span>
-          {isSwitching ? "Switching..." : currentChain.name}
+          {isSwitching ? (switchStatus || "Switching…") : currentChain.name}
           {isUnknownChain && " (Unknown)"}
         </span>
         <img src="/chevron-down-small.svg" alt="dropdown" className="dropdown-icon" />

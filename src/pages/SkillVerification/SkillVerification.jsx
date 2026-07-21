@@ -469,6 +469,9 @@ export default function SkillVerification() {
         // Add 20% buffer to quoted fee
         lzFee = (BigInt(quotedFee) * BigInt(120) / BigInt(100)).toString();
       } catch (quoteErr) {
+        if (Number(chainId) === 50) {
+          throw new Error(`Unable to quote the XDC LayerZero fee: ${quoteErr.message}`);
+        }
         console.warn("Fee quote failed, using fallback:", quoteErr.message);
         lzFee = web3.utils.toWei("0.0005", "ether");
       }
@@ -483,8 +486,7 @@ export default function SkillVerification() {
           from: walletAddress,
           value: lzFee,
           gas: 800000,
-          maxPriorityFeePerGas: web3.utils.toWei("0.001", "gwei"),
-          maxFeePerGas: gasPrice,
+          gasPrice: gasPrice.toString(),
         });
 
       if (!receipt || !receipt.transactionHash) {

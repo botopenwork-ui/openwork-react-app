@@ -104,8 +104,15 @@ const openclawGuide = {
         name: 'Optimism',
         chainId: 10,
         role: 'User-facing',
-        description: 'All user actions happen here — post jobs, apply, pay, dispute. Low gas fees.',
+        description: 'A user-facing local chain for posting jobs, applying, paying, and disputes.',
         keyContract: 'LOWJC — 0x620205A4Ff0E652fF03a890d2A677de878a1dB63'
+      },
+      {
+        name: 'XDC Network',
+        chainId: 50,
+        role: 'User-facing',
+        description: 'Post jobs, apply, pay, and dispute through the operational XDC ↔ Arbitrum route.',
+        keyContract: 'LOWJC — 0x5cF21bFb944B6851048F9ac18a8C84F6323a8ce7'
       },
       {
         name: 'Arbitrum One',
@@ -125,9 +132,9 @@ const openclawGuide = {
   },
 
   prerequisites: [
-    'A wallet connected to Optimism (for most actions)',
-    'USDC on Optimism (for posting jobs / paying)',
-    'ETH on Optimism (~0.0005 ETH per operation for LayerZero fees)',
+    'A wallet connected to Optimism or XDC for local-chain actions',
+    'USDC on the selected local chain for payments',
+    'Native gas token on the selected chain (ETH on Optimism or XDC on XDC Network)',
     'OWORK tokens on Ethereum (only for staking / governance)',
     'OpenClaw installed and running on your device'
   ],

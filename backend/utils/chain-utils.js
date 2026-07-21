@@ -12,12 +12,13 @@ const EID_TO_CHAIN_ID = {
   40161: 11155111,  // Ethereum Sepolia
   40231: 421614,    // Arbitrum Sepolia
   40245: 84532,     // Base Sepolia
-  // Mainnets (for future)
+  // Mainnets
   30111: 10,        // OP Mainnet
   30101: 1,         // Ethereum Mainnet
   30110: 42161,     // Arbitrum One
   30184: 8453,      // Base Mainnet
-  30109: 137        // Polygon
+  30109: 137,       // Polygon
+  30365: 50         // XDC Network
 };
 
 // Chain ID → CCTP Domain mapping
@@ -33,7 +34,8 @@ const CHAIN_TO_DOMAIN = {
   10: 2,            // OP Mainnet
   42161: 3,         // Arbitrum One
   8453: 6,          // Base Mainnet
-  137: 7            // Polygon
+  137: 7,           // Polygon
+  50: 18            // XDC Network
 };
 
 // Chain ID → Chain Name mapping
@@ -46,8 +48,13 @@ const CHAIN_NAMES = {
   10: 'Optimism',
   42161: 'Arbitrum One',
   8453: 'Base',
-  137: 'Polygon'
+  137: 'Polygon',
+  50: 'XDC Network'
 };
+
+const DOMAIN_TO_CHAIN_NAME = Object.fromEntries(
+  Object.entries(CHAIN_TO_DOMAIN).map(([chainId, domain]) => [domain, CHAIN_NAMES[chainId]])
+);
 
 /**
  * Extract Chain ID from job ID
@@ -81,7 +88,7 @@ function getChainIdFromJobId(jobId) {
 /**
  * Extract CCTP domain from job ID
  * @param {string} jobId - Format: "eid-jobNumber" (e.g., "40161-3")
- * @returns {number} CCTP domain (0, 2, 3, 6, or 7)
+ * @returns {number} CCTP domain (0, 2, 3, 6, 7, or 18)
  * @throws {Error} If job ID is invalid or chain doesn't support CCTP
  */
 function getDomainFromJobId(jobId) {
@@ -111,6 +118,19 @@ function getChainNameFromJobId(jobId) {
 }
 
 /**
+ * Resolve a CCTP destination domain to the backend's canonical chain name.
+ * The attestation is authoritative for payment routing.
+ */
+function getChainNameFromDomain(domain) {
+  const normalizedDomain = Number(domain);
+  const chainName = DOMAIN_TO_CHAIN_NAME[normalizedDomain];
+  if (!chainName) {
+    throw new Error(`Unknown CCTP destination domain: ${domain}`);
+  }
+  return chainName;
+}
+
+/**
  * Get chain configuration from job ID
  * @param {string} jobId - Format: "eid-jobNumber"
  * @returns {object} Chain configuration object
@@ -132,6 +152,7 @@ module.exports = {
   getDomainFromJobId,
   getChainIdFromJobId,
   getChainNameFromJobId,
+  getChainNameFromDomain,
   getChainConfigFromJobId,
   EID_TO_CHAIN_ID,
   CHAIN_TO_DOMAIN,

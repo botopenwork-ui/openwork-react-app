@@ -28,6 +28,7 @@ IMPORTANT: Only embed <tool> when the user has explicitly confirmed they want to
 
 function getContractAddressesSection() {
   const op = MAINNET_CHAIN_CONFIG[10];
+  const xdc = MAINNET_CHAIN_CONFIG[50];
   const arb = MAINNET_CHAIN_CONFIG[42161];
   return `
 ## MAINNET CONTRACT ADDRESSES
@@ -38,6 +39,13 @@ function getContractAddressesSection() {
 - Local Bridge: ${op?.contracts?.localBridge || 'N/A'}
 - USDC: ${op?.contracts?.usdc || 'N/A'}
 - Block Explorer: ${op?.blockExplorer || 'https://optimistic.etherscan.io'}
+
+### XDC Network (Chain ID: 50) — Local chain for job operations
+- LOWJC (Local OpenWork Job Contract): ${xdc?.contracts?.lowjc || 'N/A'}
+- Athena Client: ${xdc?.contracts?.athenaClient || 'N/A'}
+- Local Bridge: ${xdc?.contracts?.localBridge || 'N/A'}
+- USDC: ${xdc?.contracts?.usdc || 'N/A'}
+- Block Explorer: ${xdc?.blockExplorer || 'https://xdcscan.com'}
 
 ### Arbitrum One (Chain ID: 42161) — Native data hub
 - NOWJC (Native OpenWork Job Contract): ${arb?.contracts?.nowjc || 'N/A'}
@@ -61,7 +69,7 @@ export function buildOppyChatContext(walletState = {}) {
   } else if (!walletState.connected) {
     context += `- MetaMask: Installed but NOT connected\n- Status: User needs to connect wallet\n`;
   } else if (!walletState.isCorrectChain) {
-    context += `- MetaMask: Connected (${walletState.address})\n- Chain: ${walletState.chainId} (NOT a supported chain)\n- Supported chains: Arbitrum One (0xa4b1), Optimism (0xa), Ethereum (0x1), Base (0x2105)\n`;
+    context += `- MetaMask: Connected (${walletState.address})\n- Chain: ${walletState.chainId} (NOT a supported chain)\n- Transaction chains: Arbitrum One (0xa4b1), Optimism (0xa), XDC Network (0x32)\n- Governance chain: Ethereum (0x1)\n`;
   } else {
     context += `- MetaMask: Connected ✓\n- Address: ${walletState.address}\n- Chain: ${walletState.chainId} ✓\n`;
   }

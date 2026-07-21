@@ -1,6 +1,6 @@
 const { pollCCTPAttestation } = require('../utils/cctp-poller');
 const { executeReceiveMessage } = require('../utils/tx-executor');
-const { getDomainFromJobId, getChainNameFromJobId } = require('../utils/chain-utils');
+const { getDomainFromJobId, getChainNameFromJobId, getChainNameFromDomain } = require('../utils/chain-utils');
 const { saveCCTPTransfer, updateCCTPStatus } = require('../utils/cctp-storage');
 const config = require('../config');
 
@@ -45,6 +45,12 @@ async function processSettleDispute(disputeId, jobId, sourceTxHash) {
       config.DOMAINS.ARBITRUM // Domain 3 for both testnet and mainnet
     );
     console.log('✅ Attestation received');
+
+    if (attestation.destinationDomain !== undefined && attestation.destinationDomain !== null) {
+      destinationDomain = Number(attestation.destinationDomain);
+      destinationChain = getChainNameFromDomain(destinationDomain);
+      console.log(`   Attested Destination: ${destinationChain} (Domain ${destinationDomain})`);
+    }
     
     // Update - attestation received
     await updateCCTPStatus(jobId, 'settleDispute', {

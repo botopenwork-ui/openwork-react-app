@@ -10,10 +10,16 @@ const config = require('../config');
  */
 async function pollCCTPAttestation(txHash, sourceDomain, timeout = config.CCTP_ATTESTATION_TIMEOUT) {
   console.log(`🔍 Starting CCTP attestation polling for tx: ${txHash} (Domain ${sourceDomain})`);
+
+  // XDC uses Circle Standard Transfer finality, which can take materially
+  // longer than the Fast Transfer paths used by the other local chains.
+  const effectiveTimeout = Number(sourceDomain) === 18
+    ? Math.max(timeout, 30 * 60 * 1000)
+    : timeout;
   
   const apiUrl = `${config.CIRCLE_API_BASE_URL}/${sourceDomain}?transactionHash=${txHash}`;
   const startTime = Date.now();
-  const endTime = startTime + timeout;
+  const endTime = startTime + effectiveTimeout;
   let attempts = 0;
 
   // Note: only timeout controls the loop — MAX_RETRY_ATTEMPTS is ignored here
@@ -47,17 +53,18 @@ async function pollCCTPAttestation(txHash, sourceDomain, timeout = config.CCTP_A
           return {
             message: message.message,
             attestation: message.attestation,
-            mintRecipient: message.decodedMessage?.mintRecipient,
-            amount: message.decodedMessage?.amount
+            mintRecipient: message.decodedMessage?.decodedMessageBody?.mintRecipient,
+            amount: message.decodedMessage?.decodedMessageBody?.amount,
+            destinationDomain: message.destinationDomain ?? message.decodedMessage?.destinationDomain
           };
         }
         
-        console.log(`⏳ CCTP status: ${message.status} (attempt ${attempts}, elapsed ${Math.round((Date.now()-startTime)/1000)}s/${timeout/1000}s)`);
+        console.log(`⏳ CCTP status: ${message.status} (attempt ${attempts}, elapsed ${Math.round((Date.now()-startTime)/1000)}s/${effectiveTimeout/1000}s)`);
         if (message.status === 'pending_confirmations') {
              console.log('   Note: Waiting for block confirmations on source chain...');
         }
       } else {
-        console.log(`📡 No CCTP messages indexed yet (attempt ${attempts}, elapsed ${Math.round((Date.now()-startTime)/1000)}s/${timeout/1000}s)...`);
+        console.log(`📡 No CCTP messages indexed yet (attempt ${attempts}, elapsed ${Math.round((Date.now()-startTime)/1000)}s/${effectiveTimeout/1000}s)...`);
       }
       
       // Wait before next poll
@@ -69,7 +76,7 @@ async function pollCCTPAttestation(txHash, sourceDomain, timeout = config.CCTP_A
     }
   }
   
-  throw new Error(`CCTP attestation timeout after ${attempts} attempts (${timeout / 1000}s) for tx: ${txHash}`);
+  throw new Error(`CCTP attestation timeout after ${attempts} attempts (${effectiveTimeout / 1000}s) for tx: ${txHash}`);
 }
 
 /**

@@ -1,32 +1,33 @@
 # Cross-Chain Architecture
 
-OpenWork operates across three blockchains, each with a specific role. Cross-chain communication uses LayerZero V2 for messaging and Circle CCTP V2 for USDC transfers.
+OpenWork operates across four mainnet blockchains, each with a specific role. Cross-chain communication uses LayerZero V2 for messaging and Circle CCTP V2 for USDC transfers.
 
 ## Chain Roles
 
 | Chain | Role | What Lives Here |
 |-------|------|-----------------|
 | **Optimism** | Local chain (user-facing) | LOWJC, LocalAthena — where users submit transactions |
+| **XDC Network** | Local chain (user-facing) | LOWJC, LocalAthena — routes all application messages through Arbitrum |
 | **Arbitrum One** | Native chain (source of truth) | NOWJC, Genesis, NativeAthena, Rewards, Profiles — all state storage and business logic |
 | **Ethereum** | Main chain (governance) | ETHOpenworkDAO, ETHRewardsContract, OWORK token |
 
 ## Why Three Chains?
 
-- **Optimism** has low gas fees, making it cheap for users to interact
+- **Optimism** and **XDC** provide user-facing local entry points
 - **Arbitrum** is the single source of truth — all job data, profiles, and escrow live here
 - **Ethereum** hosts governance and the OWORK token for maximum security and decentralization
 
 ## Data Flow Pattern
 
 ```
-User on Optimism
+User on Optimism or XDC
   → LOWJC (minimal local state)
     → LayerZero message → NativeBridge on Arbitrum
       → NOWJC (full state in Genesis)
         → CCTP USDC transfer (if payment involved)
 ```
 
-Users only interact with Optimism. The system handles everything else automatically.
+Users interact with Optimism or XDC. The system handles the Arbitrum state synchronization automatically.
 
 ## Chain Identifiers
 
@@ -34,6 +35,7 @@ Users only interact with Optimism. The system handles everything else automatica
 |-------|----------|---------------|-------------|
 | Arbitrum One | 42161 | 30110 | 3 |
 | Optimism | 10 | 30111 | 2 |
+| XDC Network | 50 | 30365 | 18 |
 | Ethereum | 1 | 30101 | 0 |
 
 ### Testnet
@@ -54,9 +56,10 @@ LayerZero V2 handles all cross-chain state sync. Bridge contracts on each chain 
 |-------|----------------|---------|
 | Arbitrum | NativeLZOpenworkBridge V2 | `0x1bC57d93eC9F9214EDe2e81281A26Ac0E01A9A5F` |
 | Optimism | LocalLZOpenworkBridge | `0x74566644782e98c87a12E8Fc6f7c4c72e2908a36` |
+| XDC | LocalLZOpenworkBridge | `0x74566644782e98c87a12E8Fc6f7c4c72e2908a36` |
 | Ethereum | ETHLZOpenworkBridge | `0x20Fa268106A3C532cF9F733005Ab48624105c42F` |
 
-### Message Types (Optimism → Arbitrum)
+### Message Types (Local Chain → Arbitrum)
 
 | Action | Source Function | Destination Handler |
 |--------|----------------|---------------------|
@@ -99,7 +102,7 @@ This encodes 500,000 gas (0x07a120). Standard for most operations.
 
 ### LZ Fee
 
-Typical cost: **~0.0003-0.0005 ETH** sent as `msg.value`.
+The cost is the live bridge quote and can vary materially by source chain. XDC operations pay the quote in XDC. Do not use a fixed fallback.
 
 To estimate fees:
 ```solidity
@@ -129,6 +132,7 @@ Circle CCTP V2 handles all USDC movement between chains.
 |-------|---------|
 | Arbitrum | `0x765D70496Ef775F6ba1cB7465c2e0B296eB50d87` |
 | Optimism | `0x586C700ACFA1D129Ba2C6a6E673c55d586c32f15` |
+| XDC | `0x00c70838cA0de7F1Eb192Bd7a11A7F2e14407510` (Standard Transfer) |
 
 ### Checking CCTP Transfer Status
 
@@ -136,7 +140,7 @@ Circle CCTP V2 handles all USDC movement between chains.
 GET https://iris-api.circle.com/v2/messages/{sourceDomain}?transactionHash={txHash}
 ```
 
-- `sourceDomain`: 2 = Optimism, 3 = Arbitrum
+- `sourceDomain`: 2 = Optimism, 3 = Arbitrum, 18 = XDC
 - Status: `pending_confirmations` → `complete`
 - If `delayReason: "insufficient_fee"` — transfer uses slow path (~15-20 min)
 
@@ -156,3 +160,5 @@ function receive(
 - CCTP transfers require a manual `receive()` call on the destination chain
 - Current contracts use `maxFee = 1000` (0.001 USDC) — may result in slow-path transfers
 - NOWJC has a 0.01% fee tolerance for received amounts
+- XDC Standard Transfer attestations can take longer than fast-transfer routes
+- Direct XDC ↔ Ethereum application messaging is not enabled; XDC routes through Arbitrum
